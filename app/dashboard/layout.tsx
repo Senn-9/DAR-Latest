@@ -6,7 +6,7 @@ import {
   RiCloseLine, RiMenuLine, RiDashboardLine, RiFileList3Line,
   RiMoneyDollarCircleLine, RiCalendarLine, RiFileTextLine,
   RiSearchLine, RiCalendar2Line, RiArrowLeftSLine, RiArrowRightSLine,
-  RiBellLine, RiMoreLine
+  RiBellLine
 } from "react-icons/ri";
 
 const navItems = [
@@ -105,7 +105,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
 
       {/* Overlay (mobile only) */}
       {isOpen && (
@@ -115,9 +115,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Calendar Modal */}
       {showCalendar && <CalendarModal onClose={() => setShowCalendar(false)} />}
 
-      {/* Sidebar */}
-      <aside className={`pt-10 fixed top-0 left-0 h-full w-70 bg-emerald-900 shadow-slate-500 shadow-md text-lg z-30 min-h-screen transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0`}>
-
+      {/* Sidebar — fixed, never scrolls with page */}
+      <aside className={`
+        pt-10 fixed top-0 left-0 h-screen w-70 bg-emerald-900 shadow-slate-500 shadow-md
+        text-lg z-30 overflow-y-auto transition-transform duration-300
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        md:relative md:translate-x-0 md:flex md:flex-col md:shrink-0
+      `}>
         <div className="flex items-center gap-3 px-6 mb-4">
           <img src="/logo.png" alt="logo" className="w-10 h-10 object-cover rounded-full" />
           <span className="text-white font-bold text-lg">DAR Procurement</span>
@@ -143,11 +147,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
       </aside>
 
-      {/* Right side */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* Right side — takes remaining width, scrolls independently */}
+      <div className="flex flex-col flex-1 min-w-0 md:ml-0 overflow-hidden">
 
-        {/* Topbar */}
-        <header className="w-full bg-white px-4 md:px-6 py-3 flex items-center gap-2">
+        {/* Topbar — sticky at top */}
+        <header className="shrink-0 w-full bg-white px-4 md:px-6 py-3 flex items-center gap-2 sticky top-0 z-10 shadow-sm">
 
           {/* Hamburger (mobile only) */}
           <button
@@ -157,8 +161,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {isOpen ? <RiCloseLine size={24} /> : <RiMenuLine size={24} />}
           </button>
 
-          {/* Main topbar container — bordered box like in the screenshot */}
-          <div className="flex flex-1 items-center border border-stone-200 rounded-lg overflow-hidden divide-x divide-blue-200">
+          {/* Topbar bordered container */}
+          <div className="flex flex-1 items-center border border-stone-200 rounded-lg overflow-hidden divide-x divide-stone-200">
 
             {/* Search */}
             <div className="flex items-center gap-2 px-4 py-2 flex-1">
@@ -187,8 +191,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 md:p-6">
+        {/* Page content — this is the only thing that scrolls */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
 
