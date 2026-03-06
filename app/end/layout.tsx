@@ -8,13 +8,16 @@ import {
   RiSearchLine, RiCalendar2Line, RiArrowLeftSLine, RiArrowRightSLine,
   RiBellLine
 } from "react-icons/ri";
+import SignOutButton from "@/components/SignOutButton";
+
+
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", href: "/end", icon: <RiDashboardLine size={25} /> },
-  { id: "procurement", label: "Procurement", href: "/end/procurement", icon: <RiFileList3Line size={25} /> },
-  { id: "budget", label: "Budget", href: "/end/budget", icon: <RiMoneyDollarCircleLine size={25} /> },
-  { id: "calendar", label: "Calendar", href: "/end/calendar", icon: <RiCalendarLine size={25} /> },
-  { id: "access logs", label: "Access Logs", href: "/end/accessLogs", icon: <RiFileTextLine size={25} /> },
+  { id: "dashboard", label: "Dashboard", href: "/admn", icon: <RiDashboardLine size={25} /> },
+  { id: "procurement", label: "Procurement", href: "/admn/procurement", icon: <RiFileList3Line size={25} /> },
+  { id: "budget", label: "Budget", href: "/admn/budget", icon: <RiMoneyDollarCircleLine size={25} /> },
+  { id: "calendar", label: "Calendar", href: "/admn/calendar", icon: <RiCalendarLine size={25} /> },
+  { id: "access logs", label: "Access Logs", href: "/admn/accessLogs", icon: <RiFileTextLine size={25} /> },
 ];
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -144,6 +147,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {item.label}
             </button>
           ))}
+          <div className="flex justify-center mt-115">
+            <SignOutButton />
+          </div>
         </nav>
       </aside>
 

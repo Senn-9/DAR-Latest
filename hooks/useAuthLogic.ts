@@ -2,67 +2,121 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import type { DatabaseUser } from '@/types/user'
 
 export function useAuthLogic() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(true)      // Added to handle the "Reverse Guard" check
+  const [loading, setLoading] = useState(true) // Reverse Guard check
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentUser, setCurrentUser] = useState<DatabaseUser | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
-  // Reverse Guard
+  // Initialize user from localStorage on mount
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // If user exists, find their role and send them to their dashboard
-        const { data: profile } = await supabase
-          .from('profile')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        if (profile?.role === 'super-admin' || profile?.role === 'admin') {
-          router.push('/admn')
-        } else {
-          router.push('/end')
-        }
-      } else {
-        // No user found, stop loading and show the login form
-        setLoading(false)
+    try {
+      // Check if user data is stored in localStorage from previous login
+      const storedUser = localStorage.getItem('currentUser')
+      
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        setCurrentUser(user as DatabaseUser)
+        setIsAuthenticated(true)
       }
+      
+      // Always set loading to false - let individual guards handle redirects
+      setLoading(false)
+    } catch (err) {
+      console.error('Auth check error:', err)
+      setLoading(false)
     }
-    checkUser()
-  }, [router, supabase])
+  }, [])
 
-  const handleLogin = async () => {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email, password
-    })
+  const handleLogin = async (): Promise<{ success: boolean; message?: string }> => {
+    if (!email.trim() || !password.trim()) {
+      const message = 'Please enter both email and password'
+      setError(message)
+      return { success: false, message }
+    }
 
-    if (authError) return alert(authError.message)
-    
-    // Fetch the role from your 'profile' table
-    const { data: profile } = await supabase
-      .from('profile')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single()
+    try {
+      setError(null)
+      console.log('Attempting sign in with:', email)
 
-    // CHECK THE ROLE AND REDIRECT
-    if (profile?.role === 'super-admin' || profile?.role === 'admin') {
-      router.push('/admn')
-    } else if (profile?.role === 'end-user' || profile?.role === 'user') {
-      router.push('/end')
-    } else {
-      alert("Role not found. Check your profile table!")
+      // Query the users table directly for email and password match
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password)
+        .single()
+
+      if (profileError) {
+        console.error('Sign-in Error:', profileError.message)
+        setError('Invalid email or password')
+        return { success: false, message: 'Invalid email or password' }
+      }
+
+      if (!profile) {
+        const message = 'Invalid email or password'
+        setError(message)
+        return { success: false, message }
+      }
+
+      console.log('Sign-in successful:', profile.email)
+      setCurrentUser(profile as DatabaseUser)
+      setIsAuthenticated(true)
+
+      // Save user to localStorage for reverse guard check
+      localStorage.setItem('currentUser', JSON.stringify(profile))
+
+      // Redirect based on user id
+      if (profile.id === 1) {
+        // id 1 = admin
+        router.push('/admn')
+      } else {
+        // All other users go to end page
+        router.push('/end')
+      }
+
+      return { success: true }
+    } catch (err) {
+      console.error('Sign in error:', err)
+      const message = 'An error occurred during sign in'
+      setError(message)
+      return { success: false, message }
+    }
+  }
+
+  const handleSignOut = async (): Promise<void> => {
+    try {
+      setIsAuthenticated(false)
+      setCurrentUser(null)
+      setEmail('')
+      setPassword('')
+      setError(null)
+      localStorage.removeItem('currentUser')
+      router.push('/')
+    } catch (err) {
+      console.error('Sign out error:', err)
+      setError('An error occurred during sign out')
     }
   }
 
   // Return everything the page needs to function
   return {
-    email, setEmail,
-    password, setPassword,
-    loading, handleLogin
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    isAuthenticated,
+    currentUser,
+    error,
+    setError,
+    handleLogin,
+    handleSignOut,
   }
 }

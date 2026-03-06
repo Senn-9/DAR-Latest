@@ -1,38 +1,48 @@
 'use client'
-import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function SignOutButton() {
-  const supabase = createClient()
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
-    // 1. Tell Supabase to end the session
-    const { error } = await supabase.auth.signOut()
+    try {
+      setIsLoading(true)
 
-    if (error) {
-      alert("Error signing out: " + error.message)
-    } else {
-      // 2. Clear the screen and send them to the login page
+      // 1. Clear user data from localStorage
+      localStorage.removeItem('currentUser')
+
+      // 2. Optional: Clear any other auth-related data
+      localStorage.removeItem('authToken')
+      sessionStorage.clear()
+
+      // 3. Redirect to login page
       router.push('/')
-      // 3. Optional: Refresh to clear any sensitive data from memory
+
+      // 4. Refresh to clear any sensitive data from memory
       router.refresh()
+    } catch (error) {
+      console.error('Error signing out:', error)
+      alert('Error signing out. Please try again.')
+      setIsLoading(false)
     }
   }
 
   return (
-    <button 
+    <button
       onClick={handleSignOut}
-      style={{
-        padding: '8px 16px',
-        backgroundColor: '#ff4444',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }}
+      disabled={isLoading}
+      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
     >
-      Sign Out
+      {isLoading ? (
+        <>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          Signing out...
+        </>
+      ) : (
+        'Sign Out'
+      )}
     </button>
   )
 }
