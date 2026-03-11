@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 type Division = {
   division_name: string;
@@ -15,12 +16,14 @@ type User = {
   username: string;
   user_id: string;
   password: string;
+  role_id: number;
   divisions?: Division;
   roles?: Roles;
 };
 
 export default function PGPage() {
   const supabase = createClient();
+  const router = useRouter();
 
   const [users, setUsers] = useState<User[]>([]);
   const [loginUserID, setLoginUserID] = useState("");
@@ -35,6 +38,7 @@ export default function PGPage() {
           username,
           user_id,
           password,
+          role_id,
           divisions (
             division_name
           ),
@@ -58,25 +62,39 @@ export default function PGPage() {
   const handleLogin = () => {
     const matchedUser = users.find(
       (user) =>
-        user.user_id === loginUserID &&
-        user.password === loginPassword
+        user.user_id === loginUserID && user.password === loginPassword
     );
 
     if (!matchedUser) {
       console.log("Login failed");
       setLoginResult("Invalid user ID or password");
       return;
-    }
+    };
 
-    console.log("Login Successful:", matchedUser);
+    const roleId = matchedUser.role_id;
 
-    const divisionName =
-      matchedUser.divisions?.division_name ?? "Unknown Division";
+    // console.log("Login Successful:", matchedUser);
 
-    const roleNames =
-      matchedUser.roles?.role_name ?? "Unknown Role";
+    switch (roleId) {
+      case 1: // Admin
+        router.push("/pg/administrator"); 
+        break;
+      case 6: // End user
+        router.push("/pg/pg2");
+        break;
+      };
 
-    setLoginResult(`Welcome ${matchedUser.username} (${divisionName}, ${roleNames})`);
+    // const divisionName =
+    //   matchedUser.divisions?.division_name ?? "Unknown Division";
+
+    // const roleNames =
+    //   matchedUser.roles?.role_name ?? "Unknown Role";
+
+    // setLoginResult(`Welcome ${matchedUser.username} (${divisionName}, ${roleNames})`);
+
+    // if (roleNames === "Admin") {
+    //   router.push("/pg/administrator");
+    // };
   };
 
   return (
