@@ -310,8 +310,8 @@ export default function Procurement() {
 
       <div className="flex flex-col gap-6 p-6 bg-gray-50 min-h-screen">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Purchase Request Dashboard</h1>
-          <p className="text-gray-600 mt-1">Review and manage purchase requests</p>
+          <h1 className="text-3xl font-bold text-gray-900">Division Head Review</h1>
+          <p className="text-gray-600 mt-1">As a division head, review and sign this PR to forward it to the BAC for numbering and APP certification</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

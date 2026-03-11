@@ -30,7 +30,7 @@ type PRRecord = {
   items?: any[]
 }
 
-const STATUS_OPTIONS = ['pending', 'approved', 'in progress', 'overdue', 'rejected']
+const STATUS_OPTIONS = ['pending', 'approved', 'in progress', 'overdue', 'rejected', 'in progress (bac)']
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-400',
@@ -38,6 +38,7 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-500',
   'in progress': 'bg-blue-500',
   completed: 'bg-gray-400',
+  'in progress (bac)': 'bg-blue-500',
 }
 
 function uid() {

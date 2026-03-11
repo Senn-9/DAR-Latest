@@ -13,9 +13,9 @@ import SignOutButton from "@/components/SignOutButton";
 
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", href: "/admn", icon: <RiDashboardLine size={25} /> },
-  { id: "procurement", label: "Procurement", href: "/admn/procurement", icon: <RiFileList3Line size={25} /> },
-  { id: "budget", label: "Budget", href: "/admn/budget", icon: <RiMoneyDollarCircleLine size={25} /> },
+  { id: "dashboard", label: "Head", href: "/admn", icon: <RiDashboardLine size={25} /> },
+  { id: "procurement", label: "End User", href: "/admn/procurement", icon: <RiFileList3Line size={25} /> },
+  { id: "budget", label: "BAC", href: "/admn/budget", icon: <RiMoneyDollarCircleLine size={25} /> },
   { id: "calendar", label: "Calendar", href: "/admn/calendar", icon: <RiCalendarLine size={25} /> },
   { id: "access logs", label: "Access Logs", href: "/admn/accessLogs", icon: <RiFileTextLine size={25} /> },
 ];
