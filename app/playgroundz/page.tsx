@@ -1,117 +1,86 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { useState } from "react";
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [prRequests, setPRRequests] = useState<any[]>([]);
-  const [prItems, setPRItems] = useState<any[]>([]);
-  const supabase = createClient();
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select(`
-          id,
-          username,
-          email,
-          created_at,
-          divisions (
-            division_name
-          )
-        `);
-
-      if (error) {
-        console.error(error);
-      } else {
-        setUsers(data || []);
-      }
-    };
-
-    const fetchPRItems = async () => {
-      const { data, error } = await supabase
-        .from("purchase_request_items")
-        .select(`
-          id,
-          description,
-          purchase_requests (pr_no, office_section, resp_code)
-        `);
-      
-      if (error) {
-        console.error(error);
-      } else {
-        setPRItems(data || []); // ✅ now works
-      }
-    }
-
-    const fetchPRRequests = async () => {
-      const { data, error } = await supabase
-        .from("purchase_requests")
-        .select(`
-          id,
-          pr_no,
-          office_section,
-          resp_code
-        `);
-
-      if (error) {
-        console.error(error);
-      } else {
-        setPRRequests(data || []); // ✅ now works
-      }
-    };
-
-    fetchUsers();
-    fetchPRItems();
-    fetchPRRequests(); // ✅ call the function
-  }, []);
+export default function ProcurementPage() {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="text-black">
-      <h1 className="text-xl font-bold mb-2">Users</h1>
+      {/* Open Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="px-4 py-2 bg-blue-600 text-black rounded"
+      >
+        New Procurement Request
+      </button>
 
-      {users.map((user) => (
-        <div key={user.id}>
-          <p>Username: {user.username}</p>
-          <p>Email: {user.email}</p>
-          <p>Division: {user.divisions?.division_name}</p>
-          <p>Created At: {user.created_at}</p>
+      {/* Modal */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          onClick={() => setIsOpen(false)}
+        >
+          {/* Blurred Background */}
+          <div className="absolute inset-0 backdrop-blur-md bg-black/40 z-40" />
+          
+          {/* Modal Content - click stops propagation */}
+          <div
+            className="relative bg-white border border-black rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 z-50 text-black"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold text-black">Procurement Request Form</h1>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
 
-          <div className="flex items-center">
-            -------------------------------------------------------------------
+            {/* Your form content goes here */}
+            <div className="space-y-6">
+              {/* pr_form section */}
+              <div className="grid grid-cols-2 gap-4 border-b pb-6">
+                <input className="border p-2 text-black" placeholder="Entity Name" />
+                <input className="border p-2 text-black" placeholder="PR Number" />
+                <input className="border p-2 text-black" placeholder="Fund Cluster" />
+                <input className="border p-2 text-black" placeholder="Office Section" />
+              </div>
+
+              {/* pr_item section */}
+              <div className="grid grid-cols-2 gap-4 border-b pb-6">
+                <input className="border p-2 text-black" placeholder="Stock Number" />
+                <input className="border p-2 text-black" placeholder="Unit" />
+                <input className="border p-2 text-black" placeholder="Description" />
+                <input className="border p-2 text-black" placeholder="Quantity" />
+                <input className="border p-2 text-black" placeholder="Unit Cost" />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2 border text-black rounded hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                  Submit
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-      ))}
-
-      <h1 className="text-xl font-bold mb-2">PR Items</h1>
-
-      {prItems.map((item) => (
-        <div key={item.id}>
-          <p>ID: {item.id}</p>
-          <p>PR No: {item.purchase_requests?.pr_no}</p>
-          <p>Office Section: {item.purchase_requests?.office_section}</p>
-          <p>Resp Code: {item.purchase_requests?.resp_code}</p>
-          <p>Description: {item.description}</p>
-        </div>
-      ))}
-
-      <h1 className="text-xl font-bold mb-2">PR Requests</h1>
-
-      {prRequests.map((pr) => (
-        <div key={pr.id}>
-          <p>PR No: {pr.pr_no}</p>
-          <p>Office Section: {pr.office_section}</p>
-          <p>Resp Code: {pr.resp_code}</p>
-
-          <div className="flex items-center">
-            ----------------------------------------------
-          </div>
-        </div>
-
-      ))}
+      {/* Your table stays outside */}
+      <div className="p-8 text-black">
+        <h2 className="text-xl font-bold mb-4">Purchase Request Overview</h2>
+        {/* table code */}
+      </div>
     </div>
   );
 }
