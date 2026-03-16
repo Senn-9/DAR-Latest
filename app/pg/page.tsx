@@ -71,30 +71,10 @@ export default function PGPage() {
       return;
     };
 
-    const roleId = matchedUser.role_id;
-
-    // console.log("Login Successful:", matchedUser);
-
-    switch (roleId) {
-      case 1: // Admin
-        router.push("/pg/administrator"); 
-        break;
-      case 6: // End user
-        router.push("/pg/pg2");
-        break;
-      };
-
-    // const divisionName =
-    //   matchedUser.divisions?.division_name ?? "Unknown Division";
-
-    // const roleNames =
-    //   matchedUser.roles?.role_name ?? "Unknown Role";
-
-    // setLoginResult(`Welcome ${matchedUser.username} (${divisionName}, ${roleNames})`);
-
-    // if (roleNames === "Admin") {
-    //   router.push("/pg/administrator");
-    // };
+    // Store user data in localStorage
+    localStorage.setItem('currentUser', JSON.stringify(matchedUser));
+    
+    router.push("/pg/pg2");
   };
 
   return (

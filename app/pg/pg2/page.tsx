@@ -17,6 +17,14 @@ export default function ProcurementPage() {
     created_at: string;
   }
 
+  type CurrentUser = {
+    username: string;
+    user_id: string;
+    role_id: number;
+    divisions?: { division_name: string };
+    roles?: { role_name: string };
+  }
+
   const [formData, setFormData] = useState({
     entity_name: "",
     fund_cluster: "",
@@ -41,6 +49,18 @@ export default function ProcurementPage() {
   }]);
 
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Fetch logged-in user from localStorage on component mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      setIsAdmin(user.role_id === 1);
+    }
+  }, []);
 
   const addItem = () => {
     setItems([...items, {
@@ -143,6 +163,42 @@ export default function ProcurementPage() {
   return (
 
     <div className="p-8 max-w-4xl mx-auto space-y-6 text-black">
+      
+      {/* Logged-in User Credentials Display */}
+      {currentUser && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm font-semibold text-blue-900">Logged in as:</p>
+          <p className="text-lg font-bold text-blue-800">{currentUser.username}</p>
+          <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-blue-700">
+            <div>
+              <span className="font-semibold">User ID:</span> {currentUser.user_id}
+            </div>
+            <div>
+              <span className="font-semibold">Division:</span> {currentUser.divisions?.division_name || "N/A"}
+            </div>
+            <div>
+              <span className="font-semibold">Role:</span> {currentUser.roles?.role_name || "N/A"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role-Based Admin Button */}
+      {currentUser && (
+        <div className="mb-6">
+          <button
+            disabled={!isAdmin}
+            className={`px-6 py-3 rounded font-bold transition-colors ${
+              isAdmin
+                ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                : "bg-gray-400 text-gray-600 cursor-not-allowed"
+            }`}
+          >
+            {isAdmin ? "Admin Panel" : "Admin Only (Disabled)"}
+          </button>
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-4">Procurement Request Form</h1>
 
 
@@ -207,7 +263,8 @@ export default function ProcurementPage() {
           <h2 className="text-xl font-bold">Procurement Items</h2>
           <button
             onClick={addItem}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            disabled={!isAdmin}
+            className="disabled:bg-gray-400 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             + Add Item
           </button>
         </div>
@@ -226,6 +283,7 @@ export default function ProcurementPage() {
 
             <input 
               className="border p-2"
+              // disabled={!isAdmin}
               placeholder="Stock Number"
               value={item.stock_num}
               onChange={(e) => updateItem(index, 'stock_num', e.target.value)} />
@@ -272,7 +330,7 @@ export default function ProcurementPage() {
 
       <button
         onClick={handleSubmit}
-        disabled={loading}
+        disabled={loading || !isAdmin}
         className="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 disabled:bg-gray-400">
           {loading ? "Saving..." : "Submit Procurement Request"}
         </button>
