@@ -49,9 +49,9 @@ export function useAuthLogic() {
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('username', email)
         .eq('password', password)
-        .single()
+        .maybeSingle()
 
       if (profileError) {
         console.error('Sign-in Error:', profileError.message)

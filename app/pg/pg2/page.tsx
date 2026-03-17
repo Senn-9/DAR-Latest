@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import SignoutModal from "@/components/SignOutModal";
 
 export default function ProcurementPage() {
   const supabase = createClient();
@@ -51,6 +52,7 @@ export default function ProcurementPage() {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [signoutModalOpen, setSignoutModalOpen] = useState(false);
 
   // Fetch logged-in user from localStorage on component mount
   useEffect(() => {
@@ -199,6 +201,12 @@ export default function ProcurementPage() {
         </div>
       )}
 
+      <button
+        onClick={() => setSignoutModalOpen(true)}
+        className="px-4 py-2 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition-colors">
+        Sign Out
+      </button>
+
       <h1 className="text-2xl font-bold mb-4">Procurement Request Form</h1>
 
 
@@ -325,6 +333,7 @@ export default function ProcurementPage() {
               value={item.created_at.split('T')[0]}
               onChange={(e) => updateItem(index, 'created_at', e.target.value)} />
           </div>
+          
         ))}
       </div>
 
@@ -363,6 +372,12 @@ export default function ProcurementPage() {
 
         </table>
       </div>
+
+      {/* Signout Modal */}
+      <SignoutModal 
+        open={signoutModalOpen}
+        onClose={() => setSignoutModalOpen(false)}
+      />
 
     </div>
 
