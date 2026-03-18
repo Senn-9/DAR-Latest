@@ -1,11 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine } from "react-icons/ri";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+type CurrentUser = {
+  username: string;
+  user_id: string;
+  role_id: number;
+  divisions?: { division_name: string };
+  roles?: { role_name: string };
+}
+
+export default function Layout({ children }: { children: ReactNode }) {
   const [activeButton, setActiveButton] = useState("dashboard");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+    }
+  }, [])
 
   const buttons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/pg/pg2" },
@@ -17,8 +34,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="text-lg bg-emerald-900 p-4 text-white w-80">
-        <div className="">
+      <div className="text-lg bg-emerald-900 p-4 text-white w-80 flex flex-col">
+        
+        <div className="flex-1">
+
+          <div>SIGMABALLS</div>
+          
           {buttons.map((btn) => (
             <Link key={btn.id} href={btn.href}>
               <button
@@ -28,8 +49,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   transition-all duration-200
                   ${
                     activeButton === btn.id
-                      ? "rounded-full bg-emerald-500"
-                      : "rounded-full hover:bg-emerald-500"
+                      ? "rounded-full bg-white/10"
+                      : "rounded-full hover:bg-white/10"
                   }
                 `}
               >
@@ -38,9 +59,41 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </div>
+
+        {currentUser && (
+            <div className="border-t-1 border-emerald-700 bg-white/10 rounded-xl p-4 mb-2">
+              <div className="flex flex-row items-center gap-3">
+                <div className="text-white w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-2xl font-bold">
+                  {currentUser.username.charAt(0)}
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-white ">{currentUser.username}</p>
+                  <p className="text-emerald-500 text-sm font-semibold">{currentUser.roles?.role_name || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="border-t-1 border-emerald-700 mt-3 mb-3"></div>
+
+              <div className="flex flex-row justify-between">
+                <p className="text-sm font-semibold text-emerald-500">ROLE:</p>
+                <p className="text-sm font-semibold text-emerald-500">{currentUser.roles?.role_name || "N/A"}</p>
+              </div>
+
+              <div className="flex flex-row justify-between">
+                <p className="text-sm font-semibold text-emerald-500">DIVISION:</p>
+                <p className="text-sm font-semibold text-emerald-500">{currentUser.divisions?.division_name || "N/A"}</p>
+              </div>
+              
+              {/* <p className="text-lg font-bold text-blue-800">{currentUser.user_id}</p>
+              <p className="text-lg font-bold text-blue-800">{currentUser.divisions?.division_name || "N/A"}</p>
+              <p className="text-lg font-bold text-blue-800">{currentUser.roles?.role_name || "N/A"}</p> */}
+            </div>
+          )}
+
+          <div>SKIBI</div>
+          
       </div>
 
-      {/* Main content */}
       <div className="flex-1 overflow-auto">
         {children}
       </div>
