@@ -272,9 +272,15 @@ function PRModal({
     setLoading(true);
 
     try {
+      // Automatically set status to 1 (Pending)
+      const formDataWithStatus = {
+        ...formData,
+        status_id: 1
+      };
+
       const { data: formResult, error: formError } = await supabase
         .from("pr_form")
-        .insert([formData])
+        .insert([formDataWithStatus])
         .select()
         .single();
 
@@ -284,7 +290,7 @@ function PRModal({
         return;
       }
 
-      // FIX: Filter empty items and only insert items with descriptions, ensuring pr_id is correctly set
+      // FIX: Filter empty items and only insert items with descriptions, ensuring pr_id is correctly set and total_cost is calculated
       const itemsToInsert = items
         .filter((item) => item.description.trim() !== "")
         .map((item) => ({
@@ -294,6 +300,7 @@ function PRModal({
           description: item.description,
           quantity: item.quantity || "0",
           unit_cost: item.unit_cost || "0",
+          total_cost: getItemTotal(item).toFixed(2),
         }));
 
       console.log("Form Result PR_ID:", formResult.pr_id);

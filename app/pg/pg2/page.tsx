@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
+import PRModalComponent from "@/components/PRModalComponent";
 
 export default function ProcurementPage() {
+
+  const handlePRSaved = () => {
+    console.log("PR was saved!");
+  };
+
   const supabase = createClient();
-  type PRItem = { description: string } //pr_item table
+  type PRItem = { description: string; total_cost: number } //pr_item table
   type PRListRow = { entity_name: string; pr_num: string; pr_item?: PRItem[] } //pr_form table with pr_item relation
   type ItemDataType = {
     stock_num: string;
@@ -19,11 +25,16 @@ export default function ProcurementPage() {
   }
 
   type CurrentUser = {
+    fullname: string;
     username: string;
-    user_id: string;
     role_id: number;
     divisions?: { division_name: string };
     roles?: { role_name: string };
+  }
+
+  type PRStatus = {
+    id: number;
+    status_name: string;
   }
 
   const [formData, setFormData] = useState({
@@ -37,6 +48,7 @@ export default function ProcurementPage() {
     req_designation: "",
     app_by: "",
     app_designation: "",
+    status_id: "",
   });
 
   const [items, setItems] = useState<ItemDataType[]>([{
@@ -53,6 +65,8 @@ export default function ProcurementPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
+  const [prStatuses, setPRStatuses] = useState<PRStatus[]>([]);
+  const [list, setList] = useState<PRListRow[]>([]);
 
   // Fetch logged-in user from localStorage on component mount
   useEffect(() => {
@@ -63,6 +77,46 @@ export default function ProcurementPage() {
       setIsAdmin(user.role_id === 1);
     }
   }, []);
+
+  // Fetch PR Statuses from pr_status table
+  useEffect(() => {
+    const fetchPRStatuses = async () => {
+      const { data, error } = await supabase
+        .from("pr_status")
+        .select("id, status_name");
+
+      if (error) {
+        console.error("Error fetching PR statuses:", error);
+      } else {
+        setPRStatuses((data || []) as PRStatus[]);
+      }
+    };
+    fetchPRStatuses();
+  }, [supabase]);
+
+  // Fetch PR Data
+  useEffect(() => {
+    const fetchPRData = async () => {
+      const { data, error } = await supabase
+        .from("pr_form")
+        .select(`
+          entity_name,
+          pr_num,
+          pr_item (
+            *
+            )
+        `)
+        
+
+      if (error) {
+        console.error("Error fetching data:", error);
+      } else {
+        setList((data || []) as PRListRow[]);
+      }
+
+    };
+    fetchPRData();
+  }, [supabase]);
 
   const addItem = () => {
     setItems([...items, {
@@ -123,6 +177,7 @@ export default function ProcurementPage() {
         req_designation: "",
         app_by: "",
         app_designation: "",
+        status_id: "",
       });
       setItems([{
         stock_num: "",
@@ -138,29 +193,13 @@ export default function ProcurementPage() {
     setLoading(false);
   };
 
-  const [list, setList] = useState<PRListRow[]>([]);
-  useEffect(() => {
-    const fetchPRData = async () => {
-      const { data, error } = await supabase
-        .from("pr_form")
-        .select(`
-          entity_name,
-          pr_num,
-          pr_item (
-            description
-            )
-        `)
-        
+  // Get status name by ID
+  const getStatusName = (statusId: string | number) => {
+    const status = prStatuses.find(s => s.id === Number(statusId));
+    return status ? status.status_name : "Unknown";
+  };
 
-      if (error) {
-        console.error("Error fetching data:", error);
-      } else {
-        setList((data || []) as PRListRow[]);
-      }
 
-    };
-    fetchPRData();
-  }, [supabase]);
 
   return (
 
@@ -170,10 +209,10 @@ export default function ProcurementPage() {
       {currentUser && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-sm font-semibold text-blue-900">Logged in as:</p>
-          <p className="text-lg font-bold text-blue-800">{currentUser.username}</p>
+          <p className="text-lg font-bold text-blue-800">{currentUser.fullname}</p>
           <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-blue-700">
             <div>
-              <span className="font-semibold">User ID:</span> {currentUser.user_id}
+              <span className="font-semibold">User ID:</span> {currentUser.username}
             </div>
             <div>
               <span className="font-semibold">Division:</span> {currentUser.divisions?.division_name || "N/A"}
@@ -201,6 +240,10 @@ export default function ProcurementPage() {
         </div>
       )}
 
+      <div className="mb-6">
+        <PRModalComponent onSave={handlePRSaved} />
+      </div>
+
       <button
         onClick={() => setSignoutModalOpen(true)}
         className="px-4 py-2 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition-colors">
@@ -208,6 +251,10 @@ export default function ProcurementPage() {
       </button>
 
       <h1 className="text-2xl font-bold mb-4">Procurement Request Form</h1>
+
+      <div className="text-black font-semibold text-lg">
+        Status: <span className="text-blue-600">{formData.status_id ? getStatusName(formData.status_id) : "Not Selected"}</span>
+      </div>
 
 
       {/* pr_form table */}
@@ -262,6 +309,19 @@ export default function ProcurementPage() {
           value={formData.app_designation}
           onChange={(e) => setFormData({...formData, app_designation: e.target.value})} />
 
+        {/* PR Status Dropdown */}
+        <select 
+          className="border p-2 col-span-2"
+          value={formData.status_id}
+          onChange={(e) => setFormData({...formData, status_id: e.target.value})}>
+          <option value="">Select Status</option>
+          {prStatuses.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.status_name}
+            </option>
+          ))}
+        </select>
+
       </div>
 
 
@@ -291,7 +351,6 @@ export default function ProcurementPage() {
 
             <input 
               className="border p-2"
-              // disabled={!isAdmin}
               placeholder="Stock Number"
               value={item.stock_num}
               onChange={(e) => updateItem(index, 'stock_num', e.target.value)} />
@@ -354,6 +413,7 @@ export default function ProcurementPage() {
               <th className="border p-2 text-left">Entity Name</th>
               <th className="border p-2 text-left">PR Number</th>
               <th className="border p-2 text-left">Items / Descriptions</th>
+              <th className="border p-2 text-left">Total Cost</th>
             </tr>
           </thead>
 
@@ -365,6 +425,10 @@ export default function ProcurementPage() {
                 <td className="border p-2 text-sm text-gray-600">
                   {form.pr_item && form.pr_item.length > 0
                     ? form.pr_item.map((item: any) => item.description).join(", ") : "No items"}
+                </td>
+                <td className="border p-2 font-medium">
+                  {form.pr_item && form.pr_item.length > 0
+                    ? form.pr_item.map((item: any) => item.total_cost).join(", ") : "N/A"}
                 </td>
               </tr>
             ))}
@@ -383,4 +447,4 @@ export default function ProcurementPage() {
 
   );
 
-};
+}

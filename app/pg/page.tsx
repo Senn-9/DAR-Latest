@@ -13,8 +13,8 @@ type Roles = {
 };
 
 type User = {
+  fullname: string;
   username: string;
-  user_id: string;
   password: string;
   role_id: number;
   divisions?: Division;
@@ -35,8 +35,8 @@ export default function PGPage() {
       const { data, error } = await supabase
         .from("users")
         .select(`
+          fullname,
           username,
-          user_id,
           password,
           role_id,
           divisions (
@@ -62,7 +62,7 @@ export default function PGPage() {
   const handleLogin = () => {
     const matchedUser = users.find(
       (user) =>
-        user.user_id === loginUserID && user.password === loginPassword
+        user.username === loginUserID && user.password === loginPassword
     );
 
     if (!matchedUser) {
