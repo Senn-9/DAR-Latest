@@ -18,6 +18,16 @@ type ItemDataType = {
   unit_cost: string;
   total_cost: string;
   created_at: string;
+  division: string;
+};
+
+type CurrentUser = {
+  fullname: string;
+  username: string;
+  role_id: number;
+  division_id?: number;
+  divisions?: { division_name: string };
+  roles?: { role_name: string };
 };
 
 const tdStyle: React.CSSProperties = {
@@ -48,6 +58,7 @@ function emptyItem(): ItemDataType {
     quantity: "",
     unit_cost: "",
     total_cost: "",
+    division: "",
     created_at: new Date().toISOString(),
   };
 }
@@ -221,6 +232,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     entity_name: "",
     fund_cluster: "",
     office_section: "",
+    division: "",
     pr_num: "",
     responsibility_code: "",
     purpose: "",
@@ -234,6 +246,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const [items, setItems] = useState<ItemDataType[]>([emptyItem()]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"form" | "preview">("form");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     if (modalOpen) document.body.style.overflow = "hidden";
@@ -241,6 +254,27 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       document.body.style.overflow = "";
     };
   }, [modalOpen]);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser) as CurrentUser;
+        setCurrentUser(user);
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentUser?.divisions?.division_name) {
+      setFormData((prev) => ({
+        ...prev,
+        office_section: currentUser.divisions!.division_name,
+      }));
+    }
+  }, [currentUser]);
 
   const addItem = () => {
     setItems([...items, emptyItem()]);
@@ -272,7 +306,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       // Automatically set status to 1 (Pending)
       const formDataWithStatus = {
         ...formData,
-        status_id: 1
+        status_id: 1,
+        division: currentUser?.division_id ?? null,
       };
 
       const { data: formResult, error: formError } = await supabase
@@ -345,6 +380,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       entity_name: "",
       fund_cluster: "",
       office_section: "",
+      division: "",
       pr_num: "",
       responsibility_code: "",
       purpose: "",
@@ -431,7 +467,12 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
-                          <input className={inputCls} placeholder="Procurement" value={formData.office_section} onChange={(e) => setFormData({ ...formData, office_section: e.target.value })} />
+                          <input
+                            className={inputCls}
+                            placeholder="Procurement"
+                            value={formData.office_section}
+                            readOnly
+                          />
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date *</label>

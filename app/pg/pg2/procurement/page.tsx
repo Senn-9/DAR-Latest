@@ -12,8 +12,14 @@ export default function ProcurementPage() {
   };
 
   const supabase = createClient();
-  type PRItem = { description: string; total_cost: number } //pr_item table
-  type PRListRow = { entity_name: string; pr_num: string; pr_item?: PRItem[] } //pr_form table with pr_item relation
+  type PRItem = { description: string; total_cost: number };
+  type PRListRow = {
+    entity_name: string;
+    pr_num: string;
+    office_section: string;
+    status_id: number | null;
+    pr_item?: PRItem[];
+  };
 
   type CurrentUser = {
     fullname: string;
@@ -71,26 +77,35 @@ export default function ProcurementPage() {
           .select(`
             entity_name,
             pr_num,
+            office_section,
+            status_id,
             pr_item (
               *
-              )
+            )
           `)
 
         if (error) {
           console.error("Error fetching data:", error);
         } else {
-          setList((data || []) as PRListRow[]);
+          // Filter PRs to show only those matching user's division
+          const filteredData = (data || []).filter((pr) => {
+            // Admins can see all PRs
+            if (isAdmin) return true;
+            // Regular users see only PRs matching their division
+            return pr.office_section === currentUser?.divisions?.division_name;
+          });
+          setList(filteredData as PRListRow[]);
         }
       } finally {
         setLoading(false);
       }
     };
     fetchPRData();
-  }, [supabase]);
+  }, [supabase, isAdmin, currentUser]);
 
   return (
 
-    <div className="p-8 max-w-4xl mx-auto space-y-6 text-black">
+    <div className="p-8 w-full space-y-6 text-black">
       
       {/* Logged-in User Credentials Display */}
       {currentUser && (
@@ -156,30 +171,58 @@ export default function ProcurementPage() {
           <p className="text-gray-600 text-lg">No purchase requests found.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse border border-gray-300">
+        <div className="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+          <table className="min-w-full border-collapse bg-white">
 
-            <thead className="bg-gray-100">
+            <thead className="bg-emerald-700 text-white">
               <tr>
-                <th className="border p-2 text-left">Entity Name</th>
-                <th className="border p-2 text-left">PR Number</th>
-                <th className="border p-2 text-left">Items / Descriptions</th>
-                <th className="border p-2 text-left">Total Cost</th>
+                <th className="p-3 text-center text-sm font-semibold tracking-wide">Entity Name</th>
+                <th className="p-3 text-center text-sm font-semibold tracking-wide">PR Number</th>
+                <th className="p-3 text-center text-sm font-semibold tracking-wide">Office / Section</th>
+                <th className="p-3 text-center text-sm font-semibold tracking-wide">Status</th>
+                <th className="p-3 text-left text-sm font-semibold tracking-wide">Items / Descriptions</th>
+                <th className="p-3 text-left text-sm font-semibold tracking-wide">Total Cost</th>
               </tr>
             </thead>
 
             <tbody>
               {list.map((form, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="border p-2 font-medium">{form.entity_name}</td>
-                  <td className="border p-2">{form.pr_num}</td>
-                  <td className="border p-2 text-sm text-gray-600">
+                <tr key={index} className="border-2 border-gray-200 transition-colors hover:bg-emerald-50">
+                  <td className="p-3 font-medium text-center text-sm text-gray-800">
+                    {form.entity_name}
+                  </td>
+                  <td className="p-3 text-center text-sm font-bold text-gray-700">
+                    {form.pr_num}
+                  </td>
+                  <td className="p-3 text-center text-sm font-medium text-emerald-700">
+                    {form.office_section || "N/A"}
+                  </td>
+                  <td className="p-3 flex items-center justify-center">
+                    {(() => {
+                      const status = prStatuses.find((s) => s.id === form.status_id);
+                      const name = status?.status_name || "N/A";
+                      const key = name.toLowerCase();
+                      let cls =
+                        "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ";
+                      if (key.includes("pending")) {
+                        cls += "bg-yellow-100 text-yellow-800 border-yellow-200";
+                      } else if (key.includes("approve")) {
+                        cls += "bg-emerald-100 text-emerald-800 border-emerald-200";
+                      } else if (key.includes("reject")) {
+                        cls += "bg-red-100 text-red-800 border-red-200";
+                      } else {
+                        cls += "bg-gray-100 text-gray-800 border-gray-200";
+                      }
+                      return <span className={cls}>{name}</span>;
+                    })()}
+                  </td>
+                  <td className="p-3 text-sm text-gray-600">
                     {form.pr_item && form.pr_item.length > 0
                       ? form.pr_item.map((item: any) => item.description).join(", ") : "No items"}
                   </td>
-                  <td className="border p-2 font-medium">
+                  <td className="p-3 font-semibold text-emerald-700">
                     {form.pr_item && form.pr_item.length > 0
-                      ? form.pr_item.map((item: any) => item.total_cost).join(", ") : "N/A"}
+                      ? form.pr_item.map((item: any) => `₱${Number(item.total_cost).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`).join(", ") : "N/A"}
                   </td>
                 </tr>
               ))}

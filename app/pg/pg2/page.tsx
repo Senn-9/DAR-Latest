@@ -2,27 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import SignoutModal from "@/components/SignOutModal";
-import PRModalComponent from "@/components/PRModalComponent";
+import { RiEyeLine, RiMessage2Line, RiShareForwardLine } from "react-icons/ri";
 
-export default function ProcurementPage() {
-
-  const handlePRSaved = () => {
-    console.log("PR was saved!");
-  };
-
+export default function DashboardPage() {
   const supabase = createClient();
-  type PRItem = { description: string; total_cost: number } //pr_item table
-  type PRListRow = { entity_name: string; pr_num: string; pr_item?: PRItem[] } //pr_form table with pr_item relation
-  type ItemDataType = {
-    stock_num: string;
-    unit: string;
-    description: string;
-    quantity: string;
-    unit_cost: string;
-    total_cost: string;
-    created_at: string;
-  }
+  type PRItem = { description: string; total_cost: number };
+  type PRListRow = {
+    pr_id: number;
+    entity_name: string;
+    pr_num: string;
+    office_section: string;
+    status_id: number | null;
+    pr_item?: PRItem[];
+  };
 
   type CurrentUser = {
     fullname: string;
@@ -30,47 +22,22 @@ export default function ProcurementPage() {
     role_id: number;
     divisions?: { division_name: string };
     roles?: { role_name: string };
-  }
+  };
 
   type PRStatus = {
     id: number;
     status_name: string;
-  }
+  };
 
-  const [formData, setFormData] = useState({
-    entity_name: "",
-    fund_cluster: "",
-    office_section: "",
-    pr_num: "",
-    responsibility_code: "",
-    purpose: "",
-    req_by: "",
-    req_designation: "",
-    app_by: "",
-    app_designation: "",
-    status_id: "",
-  });
-
-  const [items, setItems] = useState<ItemDataType[]>([{
-    stock_num: "",
-    unit: "",
-    description: "",
-    quantity: "",
-    unit_cost: "",
-    total_cost: "",
-    created_at: new Date().toISOString()
-  }]);
-
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [signoutModalOpen, setSignoutModalOpen] = useState(false);
   const [prStatuses, setPRStatuses] = useState<PRStatus[]>([]);
   const [list, setList] = useState<PRListRow[]>([]);
 
   // Fetch logged-in user from localStorage on component mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
+    const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
@@ -97,354 +64,174 @@ export default function ProcurementPage() {
   // Fetch PR Data
   useEffect(() => {
     const fetchPRData = async () => {
-      const { data, error } = await supabase
-        .from("pr_form")
-        .select(`
-          entity_name,
-          pr_num,
-          pr_item (
-            *
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("pr_form")
+          .select(`
+            pr_id,
+            entity_name,
+            pr_num,
+            office_section,
+            status_id,
+            pr_item (
+              *
             )
-        `)
-        
+          `)
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching data:", error);
-      } else {
-        setList((data || []) as PRListRow[]);
+        if (error) {
+          console.error("Error fetching data:", error);
+        } else {
+          // Filter PRs to show only those matching user's division
+          const filteredData = (data || []).filter((pr) => {
+            // Admins can see all PRs
+            if (isAdmin) return true;
+            // Regular users see only PRs matching their division
+            return pr.office_section === currentUser?.divisions?.division_name;
+          });
+          setList(filteredData as PRListRow[]);
+        }
+      } finally {
+        setLoading(false);
       }
-
     };
     fetchPRData();
-  }, [supabase]);
+  }, [supabase, isAdmin, currentUser]);
 
-  const addItem = () => {
-    setItems([...items, {
-      stock_num: "",
-      unit: "",
-      description: "",
-      quantity: "",
-      unit_cost: "",
-      total_cost: "",
-      created_at: new Date().toISOString()
-    }]);
+  const handleAction = (action: string, prId: number) => {
+    console.log(`${action} PR #${prId}`);
+    // Implement actual logic for View, Remarks, Forward here
   };
-
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateItem = (index: number, field: keyof ItemDataType, value: string) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    setItems(updatedItems);
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-
-    const { data: formResult, error: formError } = await supabase
-      .from("pr_form")
-      .insert([formData])
-      .select()
-      .single(); 
-
-    if (formError) {
-      alert("Error saving data: " + formError.message);
-      setLoading(false);
-      return;
-    }
-
-    const itemsToInsert = items.map(item => ({ ...item, pr_id: formResult.pr_id }));
-    const { error: itemError } = await supabase
-      .from("pr_item")
-      .insert(itemsToInsert);
-
-    if (itemError) {
-      alert("Form saved but error saving items: " + itemError.message);
-    } else {
-      alert("Data saved successfully!");
-      setFormData({
-        entity_name: "",
-        fund_cluster: "",
-        office_section: "",
-        pr_num: "",
-        responsibility_code: "",
-        purpose: "",
-        req_by: "",
-        req_designation: "",
-        app_by: "",
-        app_designation: "",
-        status_id: "",
-      });
-      setItems([{
-        stock_num: "",
-        unit: "",
-        description: "",
-        quantity: "",
-        unit_cost: "",
-        total_cost: "",
-        created_at: new Date().toISOString()
-      }]);
-    }
-
-    setLoading(false);
-  };
-
-  // Get status name by ID
-  const getStatusName = (statusId: string | number) => {
-    const status = prStatuses.find(s => s.id === Number(statusId));
-    return status ? status.status_name : "Unknown";
-  };
-
-
 
   return (
-
-    <div className="p-8 max-w-4xl mx-auto space-y-6 text-black">
-      
-      {/* Logged-in User Credentials Display */}
-      {currentUser && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm font-semibold text-blue-900">Logged in as:</p>
-          <p className="text-lg font-bold text-blue-800">{currentUser.fullname}</p>
-          <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-blue-700">
-            <div>
-              <span className="font-semibold">User ID:</span> {currentUser.username}
-            </div>
-            <div>
-              <span className="font-semibold">Division:</span> {currentUser.divisions?.division_name || "N/A"}
-            </div>
-            <div>
-              <span className="font-semibold">Role:</span> {currentUser.roles?.role_name || "N/A"}
-            </div>
-          </div>
+    <div className="p-8 w-full space-y-6 text-black">
+      {/* Dashboard Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+          <p className="text-gray-500 text-sm mt-1">Manage and track your purchase requests.</p>
         </div>
-      )}
+      </div>
 
-      {/* Role-Based Admin Button */}
-      {currentUser && (
-        <div className="mb-6">
-          <button
-            disabled={!isAdmin}
-            className={`px-6 py-3 rounded font-bold transition-colors ${
-              isAdmin
-                ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-                : "bg-gray-400 text-gray-600 cursor-not-allowed"
-            }`}
-          >
-            {isAdmin ? "Admin Panel" : "Admin Only (Disabled)"}
-          </button>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-500">
+          <p className="text-sm text-gray-500 font-medium">Total Requests</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">{list.length}</p>
         </div>
-      )}
-
-      <div className="mb-6">
-        <PRModalComponent onSave={handlePRSaved} />
-      </div>
-
-      <button
-        onClick={() => setSignoutModalOpen(true)}
-        className="px-4 py-2 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition-colors">
-        Sign Out
-      </button>
-
-      <h1 className="text-2xl font-bold mb-4">Procurement Request Form</h1>
-
-      <div className="text-black font-semibold text-lg">
-        Status: <span className="text-blue-600">{formData.status_id ? getStatusName(formData.status_id) : "Not Selected"}</span>
-      </div>
-
-
-      {/* pr_form table */}
-      <div className="grid grid-cols-2 gap-4 border-b pb-6">
-        <input className="border p-2"
-          placeholder="Entity Name"
-          value={formData.entity_name}
-          onChange={(e) => setFormData({...formData, entity_name: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="PR Number"
-          value={formData.pr_num}
-          onChange={(e) => setFormData({...formData, pr_num: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Fund Cluster"
-          value={formData.fund_cluster}
-          onChange={(e) => setFormData({...formData, fund_cluster: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Office Section"
-          value={formData.office_section}
-          onChange={(e) => setFormData({...formData, office_section: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Responsibility Code"
-          value={formData.responsibility_code}
-          onChange={(e) => setFormData({...formData, responsibility_code: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Purpose"
-          value={formData.purpose}
-          onChange={(e) => setFormData({...formData, purpose: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Requested By"
-          value={formData.req_by}
-          onChange={(e) => setFormData({...formData, req_by: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Requested Designation"
-          value={formData.req_designation}
-          onChange={(e) => setFormData({...formData, req_designation: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Approved By"
-          value={formData.app_by}
-          onChange={(e) => setFormData({...formData, app_by: e.target.value})} />
-
-        <input className="border p-2"
-          placeholder="Approved Designation"
-          value={formData.app_designation}
-          onChange={(e) => setFormData({...formData, app_designation: e.target.value})} />
-
-        {/* PR Status Dropdown */}
-        <select 
-          className="border p-2 col-span-2"
-          value={formData.status_id}
-          onChange={(e) => setFormData({...formData, status_id: e.target.value})}>
-          <option value="">Select Status</option>
-          {prStatuses.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.status_name}
-            </option>
-          ))}
-        </select>
-
-      </div>
-
-
-      {/* pr_item table - Multiple Items */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Procurement Items</h2>
-          <button
-            onClick={addItem}
-            disabled={!isAdmin}
-            className="disabled:bg-gray-400 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            + Add Item
-          </button>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-yellow-400">
+          <p className="text-sm text-gray-500 font-medium">Pending</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">
+            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('pending')).length}
+          </p>
         </div>
-
-        {items.map((item, index) => (
-          <div key={index} className="grid grid-cols-2 gap-4 border p-4 rounded bg-gray-50 relative">
-            <div className="absolute top-2 right-2">
-              {items.length > 1 && (
-                <button
-                  onClick={() => removeItem(index)}
-                  className="text-red-600 hover:text-red-800 p-1 text-lg font-bold">
-                  ×
-                </button>
-              )}
-            </div>
-
-            <input 
-              className="border p-2"
-              placeholder="Stock Number"
-              value={item.stock_num}
-              onChange={(e) => updateItem(index, 'stock_num', e.target.value)} />
-
-            <input 
-              className="border p-2"
-              placeholder="Unit"
-              value={item.unit}
-              onChange={(e) => updateItem(index, 'unit', e.target.value)} />
-
-            <input 
-              className="border p-2 col-span-2"
-              placeholder="Description"
-              value={item.description}
-              onChange={(e) => updateItem(index, 'description', e.target.value)} />
-
-            <input 
-              className="border p-2"
-              placeholder="Quantity"
-              value={item.quantity}
-              onChange={(e) => updateItem(index, 'quantity', e.target.value)} />
-
-            <input 
-              className="border p-2"
-              placeholder="Unit Cost"
-              value={item.unit_cost}
-              onChange={(e) => updateItem(index, 'unit_cost', e.target.value)} />
-
-            <input 
-              className="border p-2"
-              placeholder="Total Cost"
-              value={item.total_cost}
-              onChange={(e) => updateItem(index, 'total_cost', e.target.value)} />
-
-            <input 
-              className="border p-2"
-              placeholder="Created At"
-              type="date"
-              value={item.created_at.split('T')[0]}
-              onChange={(e) => updateItem(index, 'created_at', e.target.value)} />
-          </div>
-          
-        ))}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-400">
+          <p className="text-sm text-gray-500 font-medium">Approved</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">
+            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('approve')).length}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-red-400">
+          <p className="text-sm text-gray-500 font-medium">Rejected</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">
+            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('reject')).length}
+          </p>
+        </div>
       </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={loading || !isAdmin}
-        className="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 disabled:bg-gray-400">
-          {loading ? "Saving..." : "Submit Procurement Request"}
-        </button>
-
-
-      <h2 className="text-xl font-bold mb-4">Purchase Request Overview</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse border border-gray-300">
-
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-2 text-left">Entity Name</th>
-              <th className="border p-2 text-left">PR Number</th>
-              <th className="border p-2 text-left">Items / Descriptions</th>
-              <th className="border p-2 text-left">Total Cost</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {list.map((form, index) => (
-              <tr key={index} className="border-b">
-                <td className="border p-2 font-medium">{form.entity_name}</td>
-                <td className="border p-2">{form.pr_num}</td>
-                <td className="border p-2 text-sm text-gray-600">
-                  {form.pr_item && form.pr_item.length > 0
-                    ? form.pr_item.map((item: any) => item.description).join(", ") : "No items"}
-                </td>
-                <td className="border p-2 font-medium">
-                  {form.pr_item && form.pr_item.length > 0
-                    ? form.pr_item.map((item: any) => item.total_cost).join(", ") : "N/A"}
-                </td>
-              </tr>
+      {/* PR Table */}
+      <div className="bg-white shadow-md rounded-lg border border-emerald-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-emerald-100 bg-emerald-50/30 flex justify-between items-center">
+          <h2 className="font-semibold text-emerald-800 tracking-wide">Recent Purchase Requests</h2>
+        </div>
+        
+        {loading ? (
+          <div className="p-8 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
             ))}
-          </tbody>
-
-        </table>
+          </div>
+        ) : list.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            No purchase requests found for your division.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse bg-white">
+              <thead className="bg-emerald-700 text-white">
+                <tr>
+                  <th className="p-3 text-left text-sm font-semibold tracking-wide">PR Number</th>
+                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Office / Section</th>
+                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Status</th>
+                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Total Cost</th>
+                  <th className="p-3 text-center text-sm font-semibold tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((form, index) => (
+                  <tr key={index} className="border-b border-gray-100 hover:bg-emerald-50 transition-colors">
+                    <td className="p-3 text-sm font-medium text-gray-800 bg-white">
+                      {form.pr_num}
+                    </td>
+                    <td className="p-3 text-sm font-medium text-emerald-700 bg-emerald-50/30">
+                      {form.office_section || "N/A"}
+                    </td>
+                    <td className="p-3 bg-white">
+                      {(() => {
+                        const status = prStatuses.find((s) => s.id === form.status_id);
+                        const name = status?.status_name || "N/A";
+                        const key = name.toLowerCase();
+                        let cls = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ";
+                        if (key.includes("pending")) {
+                          cls += "bg-yellow-100 text-yellow-800 border-yellow-200";
+                        } else if (key.includes("approve")) {
+                          cls += "bg-emerald-100 text-emerald-800 border-emerald-200";
+                        } else if (key.includes("reject")) {
+                          cls += "bg-red-100 text-red-800 border-red-200";
+                        } else {
+                          cls += "bg-gray-100 text-gray-800 border-gray-200";
+                        }
+                        return <span className={cls}>{name}</span>;
+                      })()}
+                    </td>
+                    <td className="p-3 font-semibold text-emerald-700 bg-emerald-50/30">
+                      {form.pr_item && form.pr_item.length > 0
+                        ? `₱${form.pr_item.reduce((sum, item) => sum + Number(item.total_cost || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "N/A"}
+                    </td>
+                    <td className="p-3 bg-white">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleAction('View', form.pr_id)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="View"
+                        >
+                          <RiEyeLine size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleAction('Remarks', form.pr_id)}
+                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                          title="Remarks"
+                        >
+                          <RiMessage2Line size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleAction('Forward', form.pr_id)}
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          title="Forward"
+                        >
+                          <RiShareForwardLine size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {/* Signout Modal */}
-      <SignoutModal 
-        open={signoutModalOpen}
-        onClose={() => setSignoutModalOpen(false)}
-      />
-
     </div>
-
   );
-
 }

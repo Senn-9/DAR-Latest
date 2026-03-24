@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
+import { useSelectedLayoutSegment } from "next/navigation";
 import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine } from "react-icons/ri";
 import { MdLogout } from "react-icons/md";
 import SignoutModal from "@/components/SignOutModal";
@@ -15,6 +16,14 @@ type CurrentUser = {
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const buttons = [
+    { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/pg/pg2", segment: null },
+    { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/pg/pg2/procurement", segment: "procurement" },
+    { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/pg/pg2/budget", segment: "budget" },
+    { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/pg/pg2/logs", segment: "logs" },
+  ];
+
+  const segment = useSelectedLayoutSegment();
   const [activeButton, setActiveButton] = useState("dashboard");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
@@ -26,25 +35,22 @@ export default function Layout({ children }: { children: ReactNode }) {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
     }
+  }, []);
 
-    // Load stored active button
-    const storedActiveButton = localStorage.getItem('activeButton');
-    if (storedActiveButton) {
-      setActiveButton(storedActiveButton);
+  useEffect(() => {
+    const matchedButton = buttons.find((btn) =>
+      (btn.segment === null && segment === null) ||
+      btn.segment === segment
+    );
+
+    if (matchedButton) {
+      setActiveButton(matchedButton.id);
+      localStorage.setItem("activeButton", matchedButton.id);
     }
-  }, [])
+  }, [segment]);
 
-  const buttons = [
-    { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/pg/pg2" },
-    { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/pg/pg2/procurement" },
-    { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/pg/pg2/budget" },
-    { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/pg/pg2/logs" },
-  ];
-
-  // Save active button to localStorage whenever it changes
   const handleButtonClick = (buttonId: string) => {
     setActiveButton(buttonId);
-    localStorage.setItem('activeButton', buttonId);
   };
 
   return (

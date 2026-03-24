@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
 type Division = {
+  division_id: number;
   division_name: string;
 };
 
@@ -17,6 +18,7 @@ type User = {
   username: string;
   password: string;
   role_id: number;
+  division_id: number;
   divisions?: Division;
   roles?: Roles;
 };
@@ -39,7 +41,9 @@ export default function PGPage() {
           username,
           password,
           role_id,
+          division_id,
           divisions (
+            division_id,
             division_name
           ),
           roles (
