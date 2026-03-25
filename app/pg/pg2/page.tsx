@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { RiEyeLine, RiMessage2Line, RiShareForwardLine } from "react-icons/ri";
+import {
+  RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
+  RiSearchLine, RiArrowUpLine, RiArrowDownLine,
+  RiArrowLeftLine, RiArrowRightLine,
+} from "react-icons/ri";
 
 export default function DashboardPage() {
   const supabase = createClient();
+
   type PRItem = { description: string; total_cost: number };
   type PRListRow = {
     pr_id: number;
@@ -15,7 +20,6 @@ export default function DashboardPage() {
     status_id: number | null;
     pr_item?: PRItem[];
   };
-
   type CurrentUser = {
     fullname: string;
     username: string;
@@ -23,214 +27,380 @@ export default function DashboardPage() {
     divisions?: { division_name: string };
     roles?: { role_name: string };
   };
+  type PRStatus = { id: number; status_name: string };
 
-  type PRStatus = {
-    id: number;
-    status_name: string;
-  };
-
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin]       = useState(false);
   const [prStatuses, setPRStatuses] = useState<PRStatus[]>([]);
-  const [list, setList] = useState<PRListRow[]>([]);
+  const [list, setList]             = useState<PRListRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortField, setSortField]   = useState<"pr_num" | "office_section" | "total_cost">("pr_num");
+  const [sortDir, setSortDir]       = useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
-  // Fetch logged-in user from localStorage on component mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
+    const stored = localStorage.getItem("currentUser");
+    if (stored) {
+      const user = JSON.parse(stored);
       setCurrentUser(user);
       setIsAdmin(user.role_id === 1);
     }
   }, []);
 
-  // Fetch PR Statuses from pr_status table
   useEffect(() => {
-    const fetchPRStatuses = async () => {
-      const { data, error } = await supabase
-        .from("pr_status")
-        .select("id, status_name");
-
-      if (error) {
-        console.error("Error fetching PR statuses:", error);
-      } else {
-        setPRStatuses((data || []) as PRStatus[]);
-      }
-    };
-    fetchPRStatuses();
+    supabase.from("pr_status").select("id, status_name").then(({ data, error }) => {
+      if (!error) setPRStatuses((data || []) as PRStatus[]);
+    });
   }, [supabase]);
 
-  // Fetch PR Data
   useEffect(() => {
-    const fetchPRData = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("pr_form")
-          .select(`
-            pr_id,
-            entity_name,
-            pr_num,
-            office_section,
-            status_id,
-            pr_item (
-              *
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error("Error fetching data:", error);
-        } else {
-          // Filter PRs to show only those matching user's division
-          const filteredData = (data || []).filter((pr) => {
-            // Admins can see all PRs
-            if (isAdmin) return true;
-            // Regular users see only PRs matching their division
-            return pr.office_section === currentUser?.divisions?.division_name;
-          });
-          setList(filteredData as PRListRow[]);
-        }
-      } finally {
-        setLoading(false);
+    const fetch = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("pr_form")
+        .select("pr_id, entity_name, pr_num, office_section, status_id, pr_item (*)")
+        .order("created_at", { ascending: false });
+      if (!error) {
+        setList(
+          (data || []).filter((pr) =>
+            isAdmin ? true : pr.office_section === currentUser?.divisions?.division_name
+          ) as PRListRow[]
+        );
       }
+      setLoading(false);
     };
-    fetchPRData();
+    fetch();
   }, [supabase, isAdmin, currentUser]);
 
-  const handleAction = (action: string, prId: number) => {
-    console.log(`${action} PR #${prId}`);
-    // Implement actual logic for View, Remarks, Forward here
+  const getStatusInfo = (statusId: number | null) => {
+    const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
+    const k = name.toLowerCase();
+    if (k.includes("pending"))        return { name, color: "pending" };
+    if (k.includes("processing"))     return { name, color: "processing" };
+    if (k.includes("canvassing"))     return { name, color: "canvassing" };
+    if (k.includes("bac resolution")) return { name, color: "bac" };
+    if (k.includes("aaa issuance"))   return { name, color: "aaa" };
+    if (k.includes("po"))             return { name, color: "po" };
+    if (k.includes("approve"))        return { name, color: "approved" };
+    if (k.includes("reject"))         return { name, color: "rejected" };
+    return { name, color: "default" };
   };
 
+  const BADGE_CLASS: Record<string, string> = {
+    pending:    "bg-amber-50 text-amber-800 border border-amber-200",
+    processing: "bg-blue-50 text-blue-800 border border-blue-200",
+    canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
+    bac:        "bg-purple-50 text-purple-800 border border-purple-200",
+    aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
+    po:         "bg-teal-50 text-teal-800 border border-teal-200",
+    approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    rejected:   "bg-red-50 text-red-800 border border-red-200",
+    default:    "bg-gray-100 text-gray-700 border border-gray-200",
+  };
+
+  const getTotalCost = (pr: PRListRow) =>
+    pr.pr_item?.reduce((s, i) => s + Number(i.total_cost || 0), 0) ?? 0;
+
+  const totalBudget = list.reduce((s, pr) => s + getTotalCost(pr), 0);
+
+  const count = (kw: string) =>
+    list.filter((i) => prStatuses.find((s) => s.id === i.status_id)?.status_name.toLowerCase().includes(kw)).length;
+
+  const pendingCount    = count("pending");
+  const processingCount = count("processing");
+  const canvassingCount = count("canvassing");
+  const approvedCount   = count("approve");
+  const rejectedCount   = count("reject");
+
+  const handleSort = (f: typeof sortField) => {
+    if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(f); setSortDir("asc"); }
+    setCurrentPage(1);
+  };
+
+  const filteredList = list
+    .filter((pr) => {
+      const matchSearch =
+        pr.pr_num.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const { color } = getStatusInfo(pr.status_id);
+      return matchSearch && (statusFilter === "all" || color === statusFilter);
+    })
+    .sort((a, b) => {
+      const aVal = sortField === "total_cost" ? getTotalCost(a) : (a[sortField] || "");
+      const bVal = sortField === "total_cost" ? getTotalCost(b) : (b[sortField] || "");
+      return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
+  const pagedList  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const SortIcon = ({ field }: { field: typeof sortField }) => (
+    <span className={`inline-flex ml-1 ${sortField === field ? "opacity-100" : "opacity-30"}`}>
+      {sortField === field && sortDir === "desc"
+        ? <RiArrowDownLine size={12} />
+        : <RiArrowUpLine size={12} />}
+    </span>
+  );
+
+  const STATUS_OPTIONS = [
+    { value: "all",        label: "All Statuses" },
+    { value: "pending",    label: "Pending" },
+    { value: "processing", label: "Processing" },
+    { value: "canvassing", label: "Canvassing" },
+    { value: "bac",        label: "BAC Resolution" },
+    { value: "aaa",        label: "AAA Issuance" },
+    { value: "po",         label: "PO" },
+    { value: "approved",   label: "Approved" },
+    { value: "rejected",   label: "Rejected" },
+  ];
+
+  const STAT_CARDS = [
+    { label: "Total",       value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50",  border: "border-emerald-100" },
+    { label: "Pending",     value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",    border: "border-amber-100"   },
+    { label: "Processing",  value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",     border: "border-blue-100"    },
+    { label: "Canvassing",  value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",   border: "border-violet-100"  },
+    { label: "Approved",    value: approvedCount,   icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",    border: "border-green-100"   },
+    { label: "Rejected",    value: rejectedCount,   icon: <RiCloseCircleLine size={20} />,    iconBg: "bg-red-100",     iconColor: "text-red-500",     numColor: "text-red-500",     cardBg: "bg-red-50",      border: "border-red-100"     },
+  ];
+
+  const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+      acc.push(p);
+      return acc;
+    }, []);
+
   return (
-    <div className="p-8 w-full space-y-6 text-black">
-      {/* Dashboard Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage and track your purchase requests.</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { font-family: 'Sora', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tr-row:hover td { background-color: #f0fdf4 !important; }
+        .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
+      `}</style>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-500">
-          <p className="text-sm text-gray-500 font-medium">Total Requests</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{list.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-yellow-400">
-          <p className="text-sm text-gray-500 font-medium">Pending</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('pending')).length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-400">
-          <p className="text-sm text-gray-500 font-medium">Approved</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('approve')).length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-red-400">
-          <p className="text-sm text-gray-500 font-medium">Rejected</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {list.filter(item => prStatuses.find(s => s.id === item.status_id)?.status_name.toLowerCase().includes('reject')).length}
-          </p>
-        </div>
-      </div>
+      <div className="w-full p-6 md:p-10 space-y-6">
 
-      {/* PR Table */}
-      <div className="bg-white shadow-md rounded-lg border border-emerald-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-emerald-100 bg-emerald-50/30 flex justify-between items-center">
-          <h2 className="font-semibold text-emerald-800 tracking-wide">Recent Purchase Requests</h2>
+        {/* ── HEADER ── */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
+            <h1 className="text-3xl font-bold text-gray-900">Purchase Requests</h1>
+            {currentUser && (
+              <p className="text-sm text-gray-400 mt-1">
+                Signed in as <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+                {currentUser.divisions?.division_name && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                    {currentUser.divisions.division_name}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="mono text-xs text-gray-400">Total Budget Tracked</p>
+            <p className="mono text-2xl font-bold text-emerald-700">
+              ₱{totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
         </div>
-        
-        {loading ? (
-          <div className="p-8 space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
-            ))}
+
+        {/* ── STAT CARDS ── */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
+            <div
+              key={label}
+              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+            >
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
+                {icon}
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">{label}</p>
+                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── TABLE PANEL ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+          {/* Controls row */}
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Purchase Requests</h2>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Filter pills */}
+              {STATUS_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
+                    ${statusFilter === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+
+              {/* Search */}
+              <div className="relative flex items-center">
+                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search PR or section…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
+                />
+              </div>
+            </div>
           </div>
-        ) : list.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No purchase requests found for your division.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse bg-white">
-              <thead className="bg-emerald-700 text-white">
-                <tr>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wide">PR Number</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Office / Section</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Status</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wide">Total Cost</th>
-                  <th className="p-3 text-center text-sm font-semibold tracking-wide">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((form, index) => (
-                  <tr key={index} className="border-b border-gray-100 hover:bg-emerald-50 transition-colors">
-                    <td className="p-3 text-sm font-medium text-gray-800 bg-white">
-                      {form.pr_num}
-                    </td>
-                    <td className="p-3 text-sm font-medium text-emerald-700 bg-emerald-50/30">
-                      {form.office_section || "N/A"}
-                    </td>
-                    <td className="p-3 bg-white">
-                      {(() => {
-                        const status = prStatuses.find((s) => s.id === form.status_id);
-                        const name = status?.status_name || "N/A";
-                        const key = name.toLowerCase();
-                        let cls = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ";
-                        if (key.includes("pending")) {
-                          cls += "bg-yellow-100 text-yellow-800 border-yellow-200";
-                        } else if (key.includes("approve")) {
-                          cls += "bg-emerald-100 text-emerald-800 border-emerald-200";
-                        } else if (key.includes("reject")) {
-                          cls += "bg-red-100 text-red-800 border-red-200";
-                        } else {
-                          cls += "bg-gray-100 text-gray-800 border-gray-200";
-                        }
-                        return <span className={cls}>{name}</span>;
-                      })()}
-                    </td>
-                    <td className="p-3 font-semibold text-emerald-700 bg-emerald-50/30">
-                      {form.pr_item && form.pr_item.length > 0
-                        ? `₱${form.pr_item.reduce((sum, item) => sum + Number(item.total_cost || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : "N/A"}
-                    </td>
-                    <td className="p-3 bg-white">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleAction('View', form.pr_id)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="View"
+
+          {/* Table */}
+          {loading ? (
+            <div className="p-8 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <RiFileListLine size={38} className="opacity-30 mb-3" />
+              <p className="text-sm font-medium">No purchase requests found.</p>
+              <p className="text-xs mt-1">Try adjusting your search or filter.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                      {([
+                        { label: "PR Number",        field: "pr_num" as const,         align: "text-left"   },
+                        { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
+                        { label: "Description",      field: null,                       align: "text-left"   },
+                        { label: "Status",           field: null,                       align: "text-center" },
+                        { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
+                      ] as const).map(({ label, field, align }) => (
+                        <th
+                          key={label}
+                          onClick={field ? () => handleSort(field) : undefined}
+                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
                         >
-                          <RiEyeLine size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleAction('Remarks', form.pr_id)}
-                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                          title="Remarks"
-                        >
-                          <RiMessage2Line size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleAction('Forward', form.pr_id)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="Forward"
-                        >
-                          <RiShareForwardLine size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                          <span className="inline-flex items-center gap-0.5">
+                            {label}
+                            {field && <SortIcon field={field} />}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedList.map((form, index) => {
+                      const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
+                      const cost = getTotalCost(form);
+                      const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                      const desc = form.pr_item?.map((i) => i.description).filter(Boolean).join("; ");
+                      return (
+                        <tr key={form.pr_id} className="tr-row border-b border-gray-100 transition-colors">
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_num}</td>
+                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                            {form.office_section || <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
+                            {desc
+                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                              {statusName}
+                            </span>
+                          </td>
+                          <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
+                            {cost > 0
+                              ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                              : <span className="text-gray-300 font-normal">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── PAGINATION FOOTER ── */}
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                {/* Count */}
+                <span>
+                  Showing{" "}
+                  <span className="font-semibold text-gray-700">
+                    {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
+                  </span>{" "}
+                  of <span className="font-semibold text-gray-700">{filteredList.length}</span> requests
+                  {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
+                </span>
+
+                {/* Page buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <RiArrowLeftLine size={14} />
+                  </button>
+
+                  {pageNums.map((p, i) =>
+                    p === "…" ? (
+                      <span key={`e${i}`} className="px-1 text-gray-400">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p as number)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all
+                          ${currentPage === p
+                            ? "bg-emerald-700 text-white border-emerald-700"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <RiArrowRightLine size={14} />
+                  </button>
+                </div>
+
+                {/* Filtered total */}
+                <span className="mono">
+                  Filtered total:{" "}
+                  <span className="font-semibold text-emerald-700">
+                    ₱{filteredList.reduce((s, pr) => s + getTotalCost(pr), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
