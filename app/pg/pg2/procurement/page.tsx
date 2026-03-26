@@ -75,6 +75,9 @@ export default function ProcurementPage() {
   };
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    (currentUser?.username?.toLowerCase() === "bac") ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -103,7 +106,7 @@ export default function ProcurementPage() {
           .order("created_at", { ascending: false });
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin) return true;
+            if (isAdmin || isBACAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -113,7 +116,7 @@ export default function ProcurementPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser]);
+  }, [supabase, isAdmin, currentUser, isBACAccount]);
 
   const getStatusInfo = (statusId: number | null) => {
     const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
@@ -238,22 +241,22 @@ export default function ProcurementPage() {
               <p className="text-sm text-gray-400 mt-1">
                 Signed in as{" "}
                 <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
-                {currentUser.roles?.role_name && (
-                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                    {currentUser.roles.role_name}
-                  </span>
-                )}
                 {currentUser.divisions?.division_name && (
-                  <span className="ml-2 px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
                     {currentUser.divisions.division_name}
                   </span>
                 )}
+                {/* {currentUser.divisions?.division_name && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                    {currentUser.divisions.division_name}
+                  </span>
+                )} */}
               </p>
             )}
           </div>
 
           {/* Create PR Button — unchanged, just moved here */}
-          <PRModalComponent onSave={handlePRSaved} />
+          {!isBACAccount && <PRModalComponent onSave={handlePRSaved} />}
         </div>
 
         {/* ── STAT CARDS ── */}
@@ -393,7 +396,7 @@ export default function ProcurementPage() {
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
                               {/* Edit — hidden for Division Head (unless admin) */}
-                              {(isAdmin || !isDivisionHead) && (
+                              {(isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_num)}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
@@ -411,7 +414,7 @@ export default function ProcurementPage() {
                               </button>
 
                               {/* Submit — regular users only, hidden once status is no longer Pending (status_id !== 1) */}
-                              {!isAdmin && !isDivisionHead && form.status_id === 1 && (
+                              {!isAdmin && !isDivisionHead && !isBACAccount && form.status_id === 1 && (
                                 <button
                                   onClick={() => setSubmitConfirm({ prId: form.pr_id, prNum: form.pr_num })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all whitespace-nowrap"
@@ -421,7 +424,7 @@ export default function ProcurementPage() {
                               )}
 
                               {/* Process — admin always, Division Head only when status_id = 2 */}
-                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && !isBACAccount && (
                                 <button
                                   onClick={() => console.log("Process", form.pr_num)}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
@@ -430,14 +433,23 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Remarks — admin always, Division Head only when status_id = 2 */}
-                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                              {/* Remarks/Process based on role */}
+                              {isBACAccount ? (
                                 <button
-                                  onClick={() => console.log("Remarks", form.pr_num)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all whitespace-nowrap"
+                                  onClick={() => console.log("Process", form.pr_num)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
                                 >
-                                  Remarks
+                                  Process
                                 </button>
+                              ) : (
+                                (isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                                  <button
+                                    onClick={() => console.log("Remarks", form.pr_num)}
+                                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all whitespace-nowrap"
+                                  >
+                                    Remarks
+                                  </button>
+                                )
                               )}
                             </div>
                           </td>
