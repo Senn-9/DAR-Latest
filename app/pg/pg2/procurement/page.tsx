@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
+import ProcessPRModal from "@/components/ProcessPRModal";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
@@ -45,6 +46,7 @@ export default function ProcurementPage() {
   const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage]   = useState(1);
   const [viewPrId, setViewPrId]         = useState<number | null>(null);
+  const [processTarget, setProcessTarget] = useState<{ prId: number; prNum: string; statusId: number | null } | null>(null);
   const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNum: string } | null>(null);
   const [submitting, setSubmitting]     = useState(false);
   const PAGE_SIZE = 10;
@@ -62,15 +64,16 @@ export default function ProcurementPage() {
       .eq("pr_id", submitConfirm.prId);
     setSubmitting(false);
     setSubmitConfirm(null);
-    if (error) {
-      console.error("Error submitting PR:", error);
-      return;
-    }
-    // Update local list so UI reflects immediately
+    if (error) { console.error("Error submitting PR:", error); return; }
     setList((prev) =>
-      prev.map((pr) =>
-        pr.pr_id === submitConfirm.prId ? { ...pr, status_id: 2 } : pr
-      )
+      prev.map((pr) => pr.pr_id === submitConfirm.prId ? { ...pr, status_id: 2 } : pr)
+    );
+  };
+
+  // Called by ProcessPRModal after a successful update
+  const handleProcessed = (prId: number, newStatusId: number) => {
+    setList((prev) =>
+      prev.map((pr) => pr.pr_id === prId ? { ...pr, status_id: newStatusId } : pr)
     );
   };
 
@@ -174,9 +177,9 @@ export default function ProcurementPage() {
     .sort((a, b) => {
       let aVal: string | number = "";
       let bVal: string | number = "";
-      if (sortField === "total_cost")   { aVal = getTotalCost(a); bVal = getTotalCost(b); }
+      if (sortField === "total_cost")      { aVal = getTotalCost(a); bVal = getTotalCost(b); }
       else if (sortField === "created_at") { aVal = a.created_at || ""; bVal = b.created_at || ""; }
-      else                              { aVal = a[sortField] || ""; bVal = b[sortField] || ""; }
+      else                                 { aVal = a[sortField] || ""; bVal = b[sortField] || ""; }
       return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
     });
 
@@ -246,29 +249,17 @@ export default function ProcurementPage() {
                     {currentUser.divisions.division_name}
                   </span>
                 )}
-                {/* {currentUser.divisions?.division_name && (
-                  <span className="ml-2 px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                    {currentUser.divisions.division_name}
-                  </span>
-                )} */}
               </p>
             )}
           </div>
-
-          {/* Create PR Button — unchanged, just moved here */}
-          {!isBACAccount && <PRModalComponent onSave={handlePRSaved} />}
+          {!(isBACAccount || isDivisionHead) && <PRModalComponent onSave={handlePRSaved} />}
         </div>
 
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
-            <div
-              key={label}
-              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
-            >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
-                {icon}
-              </div>
+            <div key={label} className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
@@ -279,28 +270,19 @@ export default function ProcurementPage() {
 
         {/* ── TABLE PANEL ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-          {/* Controls row */}
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Requests</h2>
-
             <div className="flex flex-wrap items-center gap-2">
               {STATUS_OPTIONS.map(({ value, label }) => (
                 <button
                   key={value}
                   onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
-                    ${statusFilter === value
-                      ? "bg-emerald-700 text-white border-emerald-700"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
-                    }`}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${statusFilter === value ? "bg-emerald-700 text-white border-emerald-700" : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"}`}
                 >
                   {label}
                 </button>
               ))}
-
               <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
                 <input
@@ -314,12 +296,9 @@ export default function ProcurementPage() {
             </div>
           </div>
 
-          {/* Table */}
           {loading ? (
             <div className="p-8 space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" />
-              ))}
+              {[...Array(5)].map((_, i) => <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" />)}
             </div>
           ) : filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -334,14 +313,14 @@ export default function ProcurementPage() {
                   <thead>
                     <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
                       {([
-                        { label: "Entity Name",      field: null,                          align: "text-left"   },
-                        { label: "PR Number",        field: "pr_num" as const,            align: "text-left"   },
-                        { label: "Date",             field: "created_at" as const,        align: "text-left"   },
-                        { label: "Office / Section", field: "office_section" as const,    align: "text-left"   },
-                        { label: "Description",      field: null,                          align: "text-left"   },
-                        { label: "Status",           field: null,                          align: "text-center" },
-                        { label: "Total Cost",       field: "total_cost" as const,        align: "text-right"  },
-                        { label: "Actions",          field: null,                          align: "text-center" },
+                        { label: "Entity Name",      field: null,                       align: "text-left"   },
+                        { label: "PR Number",        field: "pr_num" as const,          align: "text-left"   },
+                        { label: "Date",             field: "created_at" as const,      align: "text-left"   },
+                        { label: "Office / Section", field: "office_section" as const,  align: "text-left"   },
+                        { label: "Description",      field: null,                       align: "text-left"   },
+                        { label: "Status",           field: null,                       align: "text-center" },
+                        { label: "Total Cost",       field: "total_cost" as const,      align: "text-right"  },
+                        { label: "Actions",          field: null,                       align: "text-center" },
                       ] as const).map(({ label, field, align }) => (
                         <th
                           key={label}
@@ -349,8 +328,7 @@ export default function ProcurementPage() {
                           className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
                         >
                           <span className="inline-flex items-center gap-0.5">
-                            {label}
-                            {field && <SortIcon field={field} />}
+                            {label}{field && <SortIcon field={field} />}
                           </span>
                         </th>
                       ))}
@@ -367,9 +345,7 @@ export default function ProcurementPage() {
                           <td className={`px-5 py-3.5 font-medium text-gray-700 ${rowBg}`}>
                             {form.entity_name || <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
-                            {form.pr_num}
-                          </td>
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_num}</td>
                           <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
@@ -379,9 +355,7 @@ export default function ProcurementPage() {
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
                           <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
-                            {desc
-                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
-                              : <span className="text-gray-300">—</span>}
+                            {desc ? <span className="line-clamp-2 leading-snug">{desc}</span> : <span className="text-gray-300">—</span>}
                           </td>
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
@@ -389,13 +363,12 @@ export default function ProcurementPage() {
                             </span>
                           </td>
                           <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
-                            {cost > 0
-                              ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                              : <span className="text-gray-300 font-normal">—</span>}
+                            {cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : <span className="text-gray-300 font-normal">—</span>}
                           </td>
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
-                              {/* Edit — hidden for Division Head (unless admin) */}
+
+                              {/* Edit — not for Division Head or BAC (unless admin) */}
                               {(isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_num)}
@@ -413,7 +386,7 @@ export default function ProcurementPage() {
                                 View
                               </button>
 
-                              {/* Submit — regular users only, hidden once status is no longer Pending (status_id !== 1) */}
+                              {/* Submit — regular users only, only when Pending (status_id=1) */}
                               {!isAdmin && !isDivisionHead && !isBACAccount && form.status_id === 1 && (
                                 <button
                                   onClick={() => setSubmitConfirm({ prId: form.pr_id, prNum: form.pr_num })}
@@ -423,34 +396,16 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Process — admin always, Division Head only when status_id = 2 */}
-                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && !isBACAccount && (
+                              {/* Process — admin always, Division Head when status_id=2, BAC always */}
+                              {(isAdmin || (isDivisionHead && form.status_id === 2) || isBACAccount) && (
                                 <button
-                                  onClick={() => console.log("Process", form.pr_num)}
+                                  onClick={() => setProcessTarget({ prId: form.pr_id, prNum: form.pr_num, statusId: form.status_id })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
                                 >
                                   Process
                                 </button>
                               )}
 
-                              {/* Remarks/Process based on role */}
-                              {isBACAccount ? (
-                                <button
-                                  onClick={() => console.log("Process", form.pr_num)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
-                                >
-                                  Process
-                                </button>
-                              ) : (
-                                (isAdmin || (isDivisionHead && form.status_id === 2)) && (
-                                  <button
-                                    onClick={() => console.log("Remarks", form.pr_num)}
-                                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all whitespace-nowrap"
-                                  >
-                                    Remarks
-                                  </button>
-                                )
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -468,47 +423,25 @@ export default function ProcurementPage() {
                     {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
                   </span>{" "}
                   of <span className="font-semibold text-gray-700">{filteredList.length}</span> requests
-                  {statusFilter !== "all" && (
-                    <span className="text-gray-400 ml-1">(filtered from {list.length})</span>
-                  )}
+                  {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
                 </span>
-
                 <div className="flex items-center gap-1">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((p) => p - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                     <RiArrowLeftLine size={14} />
                   </button>
-
                   {pageNums.map((p, i) =>
                     p === "…" ? (
                       <span key={`e${i}`} className="px-1 text-gray-400">…</span>
                     ) : (
-                      <button
-                        key={p}
-                        onClick={() => setCurrentPage(p as number)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all
-                          ${currentPage === p
-                            ? "bg-emerald-700 text-white border-emerald-700"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
-                          }`}
-                      >
+                      <button key={p} onClick={() => setCurrentPage(p as number)} className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all ${currentPage === p ? "bg-emerald-700 text-white border-emerald-700" : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"}`}>
                         {p}
                       </button>
                     )
                   )}
-
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                     <RiArrowRightLine size={14} />
                   </button>
                 </div>
-
                 <span className="mono">
                   Filtered total:{" "}
                   <span className="font-semibold text-emerald-700">
@@ -526,13 +459,11 @@ export default function ProcurementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSubmitConfirm(null)} />
           <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            {/* Icon */}
             <div className="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-full mx-auto mb-4">
               <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            {/* Text */}
             <h3 className="text-lg font-bold text-gray-900 text-center">Submit Purchase Request?</h3>
             <p className="text-sm text-gray-500 text-center mt-2">
               You are about to submit{" "}
@@ -541,28 +472,13 @@ export default function ProcurementPage() {
               <span className="font-semibold text-blue-700">Processing (Division Head)</span>.
             </p>
             <p className="text-xs text-gray-400 text-center mt-1">This action cannot be undone.</p>
-            {/* Buttons */}
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setSubmitConfirm(null)}
-                disabled={submitting}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-all disabled:opacity-50"
-              >
+              <button onClick={() => setSubmitConfirm(null)} disabled={submitting} className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-all disabled:opacity-50">
                 No, Cancel
               </button>
-              <button
-                onClick={handleSubmitPR}
-                disabled={submitting}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
+              <button onClick={handleSubmitPR} disabled={submitting} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {submitting ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Submitting…
-                  </>
+                  <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Submitting…</>
                 ) : "Yes, Submit"}
               </button>
             </div>
@@ -570,16 +486,24 @@ export default function ProcurementPage() {
         </div>
       )}
 
-      {/* View PR Modal */}
+      {/* ── PROCESS PR MODAL ── */}
+      {processTarget && (
+        <ProcessPRModal
+          prId={processTarget.prId}
+          prNum={processTarget.prNum}
+          currentStatusId={processTarget.statusId}
+          onClose={() => setProcessTarget(null)}
+          onProcessed={handleProcessed}
+        />
+      )}
+
+      {/* ── VIEW PR MODAL ── */}
       {viewPrId !== null && (
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
-      {/* Signout Modal — kept intact, just no trigger button on page */}
-      <SignoutModal
-        open={signoutModalOpen}
-        onClose={() => setSignoutModalOpen(false)}
-      />
+      {/* ── SIGNOUT MODAL ── */}
+      <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
     </div>
   );
 }
