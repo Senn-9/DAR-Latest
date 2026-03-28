@@ -18,6 +18,7 @@ export default function DashboardPage() {
     pr_num: string;
     office_section: string;
     status_id: number | null;
+    created_at?: string;
     pr_item?: PRItem[];
   };
   type CurrentUser = {
@@ -29,16 +30,16 @@ export default function DashboardPage() {
   };
   type PRStatus = { id: number; status_name: string };
 
-  const [loading, setLoading]       = useState(true);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isAdmin, setIsAdmin]       = useState(false);
-  const [prStatuses, setPRStatuses] = useState<PRStatus[]>([]);
-  const [list, setList]             = useState<PRListRow[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading]           = useState(true);
+  const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin]           = useState(false);
+  const [prStatuses, setPRStatuses]     = useState<PRStatus[]>([]);
+  const [list, setList]                 = useState<PRListRow[]>([]);
+  const [searchQuery, setSearchQuery]   = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField]   = useState<"pr_num" | "office_section" | "total_cost">("pr_num");
-  const [sortDir, setSortDir]       = useState<"asc" | "desc">("asc");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField]       = useState<"pr_num" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage]   = useState(1);
   const PAGE_SIZE = 10;
 
   useEffect(() => {
@@ -57,11 +58,11 @@ export default function DashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("pr_form")
-        .select("pr_id, entity_name, pr_num, office_section, status_id, pr_item (*)")
+        .select("pr_id, entity_name, pr_num, office_section, status_id, created_at, pr_item (*)")
         .order("created_at", { ascending: false });
       if (!error) {
         setList(
@@ -72,7 +73,7 @@ export default function DashboardPage() {
       }
       setLoading(false);
     };
-    fetch();
+    fetchData();
   }, [supabase, isAdmin, currentUser]);
 
   const getStatusInfo = (statusId: number | null) => {
@@ -117,7 +118,7 @@ export default function DashboardPage() {
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(f); setSortDir("asc"); }
+    else { setSortField(f); setSortDir(f === "created_at" ? "desc" : "asc"); }
     setCurrentPage(1);
   };
 
@@ -130,8 +131,11 @@ export default function DashboardPage() {
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
-      const aVal = sortField === "total_cost" ? getTotalCost(a) : (a[sortField] || "");
-      const bVal = sortField === "total_cost" ? getTotalCost(b) : (b[sortField] || "");
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+      if (sortField === "total_cost")      { aVal = getTotalCost(a); bVal = getTotalCost(b); }
+      else if (sortField === "created_at") { aVal = a.created_at || ""; bVal = b.created_at || ""; }
+      else                                 { aVal = a[sortField] || ""; bVal = b[sortField] || ""; }
       return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
     });
 
@@ -159,12 +163,12 @@ export default function DashboardPage() {
   ];
 
   const STAT_CARDS = [
-    { label: "Total",       value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50",  border: "border-emerald-100" },
-    { label: "Pending",     value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",    border: "border-amber-100"   },
-    { label: "Processing",  value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",     border: "border-blue-100"    },
-    { label: "Canvassing",  value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",   border: "border-violet-100"  },
-    { label: "Approved",    value: approvedCount,   icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",    border: "border-green-100"   },
-    { label: "Rejected",    value: rejectedCount,   icon: <RiCloseCircleLine size={20} />,    iconBg: "bg-red-100",     iconColor: "text-red-500",     numColor: "text-red-500",     cardBg: "bg-red-50",      border: "border-red-100"     },
+    { label: "Total",      value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
+    { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
+    { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
+    { label: "Approved",   value: approvedCount,   icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
+    { label: "Rejected",   value: rejectedCount,   icon: <RiCloseCircleLine size={20} />,    iconBg: "bg-red-100",     iconColor: "text-red-500",     numColor: "text-red-500",     cardBg: "bg-red-50",     border: "border-red-100"     },
   ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -174,6 +178,46 @@ export default function DashboardPage() {
       acc.push(p);
       return acc;
     }, []);
+
+  /* ── FULL-PAGE LOADING SCREEN ── */
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-6">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          * { font-family: 'Sora', sans-serif; }
+          @keyframes spin-slow { to { transform: rotate(360deg); } }
+          .spin-slow { animation: spin-slow 1.4s linear infinite; }
+          @keyframes pulse-dot { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+          .dot { width: 8px; height: 8px; border-radius: 9999px; background: #059669; animation: pulse-dot 1.2s infinite ease-in-out; }
+          .dot:nth-child(2) { animation-delay: 0.2s; }
+          .dot:nth-child(3) { animation-delay: 0.4s; }
+        `}</style>
+        <div className="relative">
+          <svg className="spin-slow w-16 h-16" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="28" stroke="#d1fae5" strokeWidth="6" />
+            <path d="M32 4 a28 28 0 0 1 28 28" stroke="#059669" strokeWidth="6" strokeLinecap="round" />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <RiFileListLine size={22} className="text-emerald-600" />
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-600 text-center mb-3">Loading purchase requests…</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="dot" />
+            <div className="dot" />
+            <div className="dot" />
+          </div>
+        </div>
+        {/* Skeleton cards */}
+        <div className="w-full max-w-4xl px-8 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-11 bg-gray-200 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -190,7 +234,7 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
-            <h1 className="text-3xl font-bold text-gray-900">Purchase Requests</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             {currentUser && (
               <p className="text-sm text-gray-400 mt-1">
                 Signed in as <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
@@ -234,9 +278,7 @@ export default function DashboardPage() {
           {/* Controls row */}
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Purchase Requests</h2>
-
             <div className="flex flex-wrap items-center gap-2">
-              {/* Filter pills */}
               {STATUS_OPTIONS.map(({ value, label }) => (
                 <button
                   key={value}
@@ -250,11 +292,7 @@ export default function DashboardPage() {
                   {label}
                 </button>
               ))}
-
-              {/* Divider */}
               <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-
-              {/* Search */}
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
                 <input
@@ -269,13 +307,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Table */}
-          {loading ? (
-            <div className="p-8 space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : filteredList.length === 0 ? (
+          {filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
               <p className="text-sm font-medium">No purchase requests found.</p>
@@ -291,6 +323,7 @@ export default function DashboardPage() {
                         { label: "PR Number",        field: "pr_num" as const,         align: "text-left"   },
                         { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
                         { label: "Description",      field: null,                       align: "text-left"   },
+                        { label: "Date",             field: "created_at" as const,     align: "text-left"   },
                         { label: "Status",           field: null,                       align: "text-center" },
                         { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
                       ] as const).map(({ label, field, align }) => (
@@ -324,6 +357,11 @@ export default function DashboardPage() {
                               ? <span className="line-clamp-2 leading-snug">{desc}</span>
                               : <span className="text-gray-300">—</span>}
                           </td>
+                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                            {form.created_at
+                              ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                              : <span className="text-gray-300">—</span>}
+                          </td>
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
@@ -343,7 +381,6 @@ export default function DashboardPage() {
 
               {/* ── PAGINATION FOOTER ── */}
               <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-                {/* Count */}
                 <span>
                   Showing{" "}
                   <span className="font-semibold text-gray-700">
@@ -352,8 +389,6 @@ export default function DashboardPage() {
                   of <span className="font-semibold text-gray-700">{filteredList.length}</span> requests
                   {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
                 </span>
-
-                {/* Page buttons */}
                 <div className="flex items-center gap-1">
                   <button
                     disabled={currentPage === 1}
@@ -362,7 +397,6 @@ export default function DashboardPage() {
                   >
                     <RiArrowLeftLine size={14} />
                   </button>
-
                   {pageNums.map((p, i) =>
                     p === "…" ? (
                       <span key={`e${i}`} className="px-1 text-gray-400">…</span>
@@ -380,7 +414,6 @@ export default function DashboardPage() {
                       </button>
                     )
                   )}
-
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => p + 1)}
@@ -389,8 +422,6 @@ export default function DashboardPage() {
                     <RiArrowRightLine size={14} />
                   </button>
                 </div>
-
-                {/* Filtered total */}
                 <span className="mono">
                   Filtered total:{" "}
                   <span className="font-semibold text-emerald-700">

@@ -15,8 +15,6 @@ import {
   RiFileLine,
 } from "react-icons/ri";
 
-type PRStatus = { id: number; status_name: string };
-
 interface ProcessPRModalProps {
   prId: number;
   prNum: string;
@@ -26,72 +24,24 @@ interface ProcessPRModalProps {
 }
 
 type FlagOption = {
-  value: string;
+  id: number;
   label: string;
+  slug: string;
   description: string;
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
 };
 
-const FLAG_OPTIONS: FlagOption[] = [
-  {
-    value: "no_flag",
-    label: "No flag",
-    description: "Leave flag unset",
-    icon: <RiSubtractLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "complete",
-    label: "Complete",
-    description: "All information is correct and complete.",
-    icon: <RiCheckboxCircleLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "incomplete_info",
-    label: "Incomplete Info",
-    description: "Required fields or attachments are missing.",
-    icon: <RiInformationLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "wrong_information",
-    label: "Wrong Information",
-    description: "Submitted data contains errors that must be corrected.",
-    icon: <RiCloseCircleLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "needs_revision",
-    label: "Needs Revision",
-    description: "Minor corrections needed before forwarding.",
-    icon: <RiPencilLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "on_hold",
-    label: "On Hold",
-    description: "Processing paused pending clarification.",
-    icon: <RiPauseCircleLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-  {
-    value: "urgent",
-    label: "Urgent",
-    description: "Requires immediate attention.",
-    icon: <RiAlertLine size={16} />,
-    iconBg: "bg-gray-100",
-    iconColor: "text-gray-500",
-  },
-];
+const iconForSlug = (slug: string) => {
+  if (slug === "complete") return <RiCheckboxCircleLine size={16} />;
+  if (slug === "incomplete_info") return <RiInformationLine size={16} />;
+  if (slug === "wrong_information") return <RiCloseCircleLine size={16} />;
+  if (slug === "needs_revision") return <RiPencilLine size={16} />;
+  if (slug === "on_hold") return <RiPauseCircleLine size={16} />;
+  if (slug === "urgent") return <RiAlertLine size={16} />;
+  return <RiSubtractLine size={16} />;
+};
 
 const inputCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300";
@@ -105,14 +55,13 @@ export default function ProcessPRModal({
 }: ProcessPRModalProps) {
   const supabase = createClient();
 
-  const [prStatuses, setPRStatuses]   = useState<PRStatus[]>([]);
   const [processing, setProcessing]   = useState(false);
+  const [flagOptions, setFlagOptions] = useState<FlagOption[]>([]);
   const [showFlagPicker, setShowFlagPicker] = useState(false);
   const [formData, setFormData] = useState({
-    new_status_id: "" as string | number,
-    flag:          "no_flag",
-    remarks:       "",
-    attachment:    null as File | null,
+    flagId:     1,
+    remarks:    "",
+    attachment: null as File | null,
   });
 
   useEffect(() => {
@@ -121,57 +70,128 @@ export default function ProcessPRModal({
   }, []);
 
   useEffect(() => {
-    supabase.from("pr_status").select("id, status_name").then(({ data, error }) => {
-      if (!error) setPRStatuses((data || []) as PRStatus[]);
-    });
+    const fetchFlags = async () => {
+      const { data } = await supabase.from("status_flag").select("id, flag_name").order("id", { ascending: true });
+      const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
+      const opts: FlagOption[] = (data || []).map((row: { id: number; flag_name: string }) => ({
+        id: row.id,
+        label: row.flag_name,
+        slug: toSlug(row.flag_name),
+        description:
+          row.flag_name === "Complete" ? "All information is correct and complete." :
+          row.flag_name === "Incomplete Info" ? "Required fields or attachments are missing." :
+          row.flag_name === "Wrong Information" ? "Submitted data contains errors that must be corrected." :
+          row.flag_name === "Needs Revision" ? "Minor corrections needed before forwarding." :
+          row.flag_name === "On Hold" ? "Processing paused pending clarification." :
+          row.flag_name === "Urgent" ? "Requires immediate attention." :
+          "Leave flag unset",
+        icon: iconForSlug(toSlug(row.flag_name)),
+        iconBg: "bg-gray-100",
+        iconColor: "text-gray-500",
+      }));
+      setFlagOptions(opts);
+      const noFlag = opts.find((o) => o.slug === "no_flag")?.id ?? opts[0]?.id ?? 1;
+      setFormData((prev) => ({ ...prev, flagId: noFlag }));
+    };
+    fetchFlags();
   }, [supabase]);
 
-  const selectedFlag = FLAG_OPTIONS.find((f) => f.value === formData.flag) ?? FLAG_OPTIONS[0];
-  const currentStatus = prStatuses.find((s) => s.id === currentStatusId)?.status_name || "Unknown";
+    const selectedFlag = flagOptions.find((f) => f.id === formData.flagId) ?? {
+    id: 1,
+    label: "No Flag",
+    description: "Leave flag unset",
+    icon: iconForSlug("no_flag"),
+    iconBg: "bg-gray-100",
+    iconColor: "text-gray-500",
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setFormData((prev) => ({ ...prev, attachment: file }));
   };
 
-  const handleProcess = async () => {
-    if (!formData.new_status_id) {
-      alert("Please select a new status.");
-      return;
-    }
+  const doProcess = async (targetStatus: number, successText: string) => {
     setProcessing(true);
-
-    const updatePayload: Record<string, any> = {
-      status_id: Number(formData.new_status_id),
-      flag:      formData.flag !== "no_flag" ? formData.flag : null,
-      remarks:   formData.remarks.trim() || null,
-    };
-
-    // If there's an attachment, upload it first
+    let remarkText = formData.remarks.trim();
+    let attachmentPublicUrl: string | null = null;
     if (formData.attachment) {
-      const ext  = formData.attachment.name.split(".").pop();
+      const ext = formData.attachment.name.split(".").pop() || "bin";
       const path = `pr_attachments/${prId}_${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("attachments")
-        .upload(path, formData.attachment);
-      if (!uploadErr) updatePayload.attachment_path = path;
+      const uploadRes = await supabase.storage.from("attachments").upload(path, formData.attachment);
+      if (!uploadRes.error) {
+        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+        attachmentPublicUrl = pub.publicUrl;
+        if (attachmentPublicUrl) {
+          remarkText = remarkText ? `${remarkText} Attachment: ${attachmentPublicUrl}` : `Attachment: ${attachmentPublicUrl}`;
+        }
+      } else {
+        setProcessing(false);
+        alert("Attachment upload failed: " + uploadRes.error.message);
+        return;
+      }
     }
-
-    const { error } = await supabase
-      .from("pr_form")
-      .update(updatePayload)
-      .eq("pr_id", prId);
-
-    setProcessing(false);
-
-    if (error) {
-      console.error("Error processing PR:", error);
-      alert("Error processing PR: " + error.message);
+    const { error: updateErr } = await supabase.from("pr_form").update({ status_id: targetStatus }).eq("pr_id", prId);
+    if (updateErr) {
+      setProcessing(false);
+      alert("Error updating PR status: " + updateErr.message);
       return;
     }
-
-    onProcessed(prId, Number(formData.new_status_id));
+    let userId: number | null = null;
+    let storedUser: { id?: number; username?: string; email?: string } | null = null;
+    try {
+      const s = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
+      if (s) storedUser = JSON.parse(s) as { id?: number; username?: string; email?: string };
+      if (typeof storedUser?.id === "number") userId = storedUser.id;
+    } catch {}
+    if (userId === null && storedUser?.username) {
+      const { data } = await supabase.from("users").select("id").eq("username", storedUser.username).maybeSingle();
+      if (data && typeof (data as { id?: number }).id === "number") userId = (data as { id: number }).id;
+    }
+    if (userId === null && storedUser?.email) {
+      const { data } = await supabase.from("users").select("id").eq("email", storedUser.email).maybeSingle();
+      if (data && typeof (data as { id?: number }).id === "number") userId = (data as { id: number }).id;
+    }
+    if (userId === null) {
+      setProcessing(false);
+      alert("Cannot determine user id for remark.");
+      return;
+    }
+    const statusFlagId = selectedFlag.id;
+    const { error: remarksErr } = await supabase.from("remarks").insert({
+      prform_id: prId,
+      remark: remarkText || null,
+      status_flag_id: statusFlagId,
+      user_id: userId,
+    });
+    if (remarksErr) {
+      setProcessing(false);
+      alert("Error saving remark: " + remarksErr.message);
+      return;
+    }
+    setProcessing(false);
+    alert(successText);
+    onProcessed(prId, targetStatus);
     onClose();
+  };
+
+  const handleSendToBAC = async () => {
+    const k = selectedFlag.label.toLowerCase();
+    const allowed = k === "complete" || k === "urgent";
+    if (!allowed) {
+      alert("Send to BAC is allowed only for Complete or Urgent flags.");
+      return;
+    }
+    await doProcess(3, `PR ${prNum} sent to BAC`);
+  };
+
+  const handleReturnToEndUser = async () => {
+    const k = selectedFlag.label.toLowerCase();
+    const blocked = k === "complete" || k === "urgent";
+    if (blocked) {
+      alert("Return to End User is available for flags other than Complete or Urgent.");
+      return;
+    }
+    await doProcess(1, `PR ${prNum} returned to End User (Pending)`);
   };
 
   return (
@@ -193,31 +213,11 @@ export default function ProcessPRModal({
         {/* ── BODY ── */}
         <div className="px-6 py-6 space-y-5 overflow-y-auto max-h-[70vh]">
 
-          {/* Current status */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
-            <span className="font-semibold">Current Status:</span>
-            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-semibold">
-              {currentStatus}
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+            <span className="font-semibold">Selected Flag:</span>
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full font-semibold">
+              {selectedFlag.label}
             </span>
-          </div>
-
-          {/* Update Status */}
-          <div>
-            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-              Update Status <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.new_status_id}
-              onChange={(e) => setFormData({ ...formData, new_status_id: e.target.value })}
-              className={inputCls}
-            >
-              <option value="">— Select new status —</option>
-              {prStatuses
-                .filter((s) => s.id !== currentStatusId)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>{s.status_name}</option>
-                ))}
-            </select>
           </div>
 
           {/* ── STATUS FLAG ── */}
@@ -227,7 +227,7 @@ export default function ProcessPRModal({
             {/* Trigger button */}
             <button
               type="button"
-              onClick={() => setShowFlagPicker((v) => !v)}
+              onClick={() => setShowFlagPicker(true)}
               className="w-full flex items-center gap-3 px-3 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
             >
               <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${selectedFlag.iconBg} ${selectedFlag.iconColor}`}>
@@ -237,46 +237,58 @@ export default function ProcessPRModal({
                 <p className="text-sm font-semibold text-gray-800">{selectedFlag.label}</p>
                 <p className="text-xs text-gray-400 truncate">{selectedFlag.description}</p>
               </div>
-              <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${showFlagPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            {/* Flag picker dropdown */}
+            {/* Flag picker MODAL */}
             {showFlagPicker && (
-              <div className="mt-1 border border-gray-200 rounded-xl overflow-hidden shadow-lg bg-white">
-                {/* Picker header */}
-                <div className="px-4 py-3 bg-gray-800 text-white">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Processing Flag</p>
-                  <p className="text-base font-bold mt-0.5">Select Status Flag</p>
-                </div>
-                {/* Options */}
-                <div className="divide-y divide-gray-100">
-                  {FLAG_OPTIONS.map((flag) => {
-                    const isSelected = formData.flag === flag.value;
-                    return (
-                      <button
-                        key={flag.value}
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, flag: flag.value });
-                          setShowFlagPicker(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${isSelected ? "bg-gray-50" : "hover:bg-gray-50"}`}
-                      >
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${flag.iconBg} ${flag.iconColor}`}>
-                          {flag.icon}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-gray-800">{flag.label}</p>
-                          <p className="text-xs text-gray-400">{flag.description}</p>
-                        </div>
-                        {isSelected && (
-                          <RiCheckboxCircleLine size={18} className="text-emerald-600 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowFlagPicker(false)} />
+                <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                  {/* Modal header */}
+                  <div className="px-5 py-4 bg-gray-800 text-white flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Processing Flag</p>
+                      <p className="text-base font-bold mt-0.5">Select Status Flag</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowFlagPicker(false)}
+                      className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+                    >
+                      <RiCloseLine size={20} />
+                    </button>
+                  </div>
+                  {/* Options */}
+              <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                {flagOptions.map((flag) => {
+                  const isSelected = formData.flagId === flag.id;
+                  return (
+                    <button
+                      key={flag.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, flagId: flag.id });
+                        setShowFlagPicker(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${isSelected ? "bg-gray-50" : "hover:bg-gray-50"}`}
+                    >
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${flag.iconBg} ${flag.iconColor}`}>
+                        {flag.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-800">{flag.label}</p>
+                        <p className="text-xs text-gray-400">{flag.description}</p>
+                      </div>
+                      {isSelected && (
+                        <RiCheckboxCircleLine size={18} className="text-emerald-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
                 </div>
               </div>
             )}
@@ -344,24 +356,18 @@ export default function ProcessPRModal({
             Cancel
           </button>
           <button
-            onClick={handleProcess}
-            disabled={processing || !formData.new_status_id}
+            onClick={handleReturnToEndUser}
+            disabled={processing || ["complete", "urgent"].includes(selectedFlag.label.toLowerCase())}
+            className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {processing ? "Processing…" : "Return to End User"}
+          </button>
+          <button
+            onClick={handleSendToBAC}
+            disabled={processing || !["complete", "urgent"].includes(selectedFlag.label.toLowerCase())}
             className="flex-1 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {processing ? (
-              <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Processing…
-              </>
-            ) : (
-              <>
-                <RiCheckboxCircleLine size={16} />
-                Confirm Process
-              </>
-            )}
+            {processing ? "Processing…" : "Send to BAC"}
           </button>
         </div>
 

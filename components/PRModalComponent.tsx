@@ -306,6 +306,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       // Automatically set status to 1 (Pending)
       const formDataWithStatus = {
         ...formData,
+        created_at: new Date().toISOString(),
         status_id: 1,
         division: currentUser?.division_id ?? null,
       };

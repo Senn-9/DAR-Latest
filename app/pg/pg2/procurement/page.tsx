@@ -34,26 +34,26 @@ export default function ProcurementPage() {
   };
   type PRStatus = { id: number; status_name: string };
 
-  const [loading, setLoading]           = useState(true);
-  const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null);
-  const [isAdmin, setIsAdmin]           = useState(false);
+  const [loading, setLoading]             = useState(true);
+  const [currentUser, setCurrentUser]     = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin]             = useState(false);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
-  const [prStatuses, setPRStatuses]     = useState<PRStatus[]>([]);
-  const [list, setList]                 = useState<PRListRow[]>([]);
-  const [searchQuery, setSearchQuery]   = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField]       = useState<"pr_num" | "office_section" | "total_cost" | "created_at">("created_at");
-  const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
-  const [currentPage, setCurrentPage]   = useState(1);
-  const [viewPrId, setViewPrId]         = useState<number | null>(null);
+  const [prStatuses, setPRStatuses]       = useState<PRStatus[]>([]);
+  const [list, setList]                   = useState<PRListRow[]>([]);
+  const [flagNameById, setFlagNameById]   = useState<Record<number, string>>({});
+  const [latestFlagByPr, setLatestFlagByPr] = useState<Record<number, number | null>>({});
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [statusFilter, setStatusFilter]   = useState("all");
+  const [sortField, setSortField]         = useState<"pr_num" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortDir, setSortDir]             = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage]     = useState(1);
+  const [viewPrId, setViewPrId]           = useState<number | null>(null);
   const [processTarget, setProcessTarget] = useState<{ prId: number; prNum: string; statusId: number | null } | null>(null);
   const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNum: string } | null>(null);
-  const [submitting, setSubmitting]     = useState(false);
+  const [submitting, setSubmitting]       = useState(false);
   const PAGE_SIZE = 10;
 
-  const handlePRSaved = () => {
-    console.log("PR was saved!");
-  };
+  const handlePRSaved = () => { console.log("PR was saved!"); };
 
   const handleSubmitPR = async () => {
     if (!submitConfirm) return;
@@ -70,7 +70,6 @@ export default function ProcurementPage() {
     );
   };
 
-  // Called by ProcessPRModal after a successful update
   const handleProcessed = (prId: number, newStatusId: number) => {
     setList((prev) =>
       prev.map((pr) => pr.pr_id === prId ? { ...pr, status_id: newStatusId } : pr)
@@ -81,6 +80,7 @@ export default function ProcurementPage() {
   const isBACAccount =
     (currentUser?.username?.toLowerCase() === "bac") ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -97,6 +97,16 @@ export default function ProcurementPage() {
       if (!error) setPRStatuses((data || []) as PRStatus[]);
     };
     fetchPRStatuses();
+  }, [supabase]);
+
+  useEffect(() => {
+    const fetchStatusFlags = async () => {
+      const { data } = await supabase.from("status_flag").select("id, flag_name");
+      const map: Record<number, string> = {};
+      (data || []).forEach((r: { id: number; flag_name: string }) => { map[r.id] = r.flag_name; });
+      setFlagNameById(map);
+    };
+    fetchStatusFlags();
   }, [supabase]);
 
   useEffect(() => {
@@ -120,6 +130,26 @@ export default function ProcurementPage() {
     };
     fetchPRData();
   }, [supabase, isAdmin, currentUser, isBACAccount]);
+
+  useEffect(() => {
+    const fetchLatestFlags = async () => {
+      const ids = list.map((p) => p.pr_id);
+      if (ids.length === 0) { setLatestFlagByPr({}); return; }
+      const { data, error } = await supabase
+        .from("remarks")
+        .select("prform_id, status_flag_id, created_at")
+        .in("prform_id", ids)
+        .order("created_at", { ascending: false });
+      if (!error) {
+        const map: Record<number, number | null> = {};
+        (data || []).forEach((r: { prform_id: number; status_flag_id: number | null }) => {
+          if (map[r.prform_id] === undefined) map[r.prform_id] = r.status_flag_id ?? null;
+        });
+        setLatestFlagByPr(map);
+      }
+    };
+    fetchLatestFlags();
+  }, [supabase, list]);
 
   const getStatusInfo = (statusId: number | null) => {
     const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
@@ -145,6 +175,17 @@ export default function ProcurementPage() {
     approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
     rejected:   "bg-red-50 text-red-800 border border-red-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
+  };
+
+  const FLAG_BADGE: Record<string, string> = {
+    "no flag":         "bg-gray-100 text-gray-700 border border-gray-200",
+    "complete":        "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    "incomplete info": "bg-amber-50 text-amber-800 border border-amber-200",
+    "wrong information": "bg-red-50 text-red-800 border border-red-200",
+    "needs revision":  "bg-indigo-50 text-indigo-800 border border-indigo-200",
+    "on hold":         "bg-blue-50 text-blue-800 border border-blue-200",
+    "urgent":          "bg-rose-50 text-rose-800 border border-rose-200",
+    default:           "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
   const getTotalCost = (pr: PRListRow) =>
@@ -175,11 +216,20 @@ export default function ProcurementPage() {
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
-      let aVal: string | number = "";
-      let bVal: string | number = "";
-      if (sortField === "total_cost")      { aVal = getTotalCost(a); bVal = getTotalCost(b); }
-      else if (sortField === "created_at") { aVal = a.created_at || ""; bVal = b.created_at || ""; }
-      else                                 { aVal = a[sortField] || ""; bVal = b[sortField] || ""; }
+      let aVal: number | string = "";
+      let bVal: number | string = "";
+      if (sortField === "total_cost") {
+        aVal = getTotalCost(a);
+        bVal = getTotalCost(b);
+      } else if (sortField === "created_at") {
+        const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+        aVal = at;
+        bVal = bt;
+      } else {
+        aVal = a[sortField] || "";
+        bVal = b[sortField] || "";
+      }
       return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
     });
 
@@ -222,6 +272,45 @@ export default function ProcurementPage() {
       acc.push(p);
       return acc;
     }, []);
+
+  /* ── FULL-PAGE LOADING SCREEN ── */
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-6">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          * { font-family: 'Sora', sans-serif; }
+          @keyframes spin-slow { to { transform: rotate(360deg); } }
+          .spin-slow { animation: spin-slow 1.4s linear infinite; }
+          @keyframes pulse-dot { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+          .dot { width: 8px; height: 8px; border-radius: 9999px; background: #059669; animation: pulse-dot 1.2s infinite ease-in-out; }
+          .dot:nth-child(2) { animation-delay: 0.2s; }
+          .dot:nth-child(3) { animation-delay: 0.4s; }
+        `}</style>
+        <div className="relative">
+          <svg className="spin-slow w-16 h-16" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="28" stroke="#d1fae5" strokeWidth="6" />
+            <path d="M32 4 a28 28 0 0 1 28 28" stroke="#059669" strokeWidth="6" strokeLinecap="round" />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <RiFileListLine size={22} className="text-emerald-600" />
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-600 text-center mb-3">Loading purchase requests…</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="dot" />
+            <div className="dot" />
+            <div className="dot" />
+          </div>
+        </div>
+        <div className="w-full max-w-4xl px-8 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-11 bg-gray-200 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -313,17 +402,18 @@ export default function ProcurementPage() {
                   <thead>
                     <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
                       {([
-                        { label: "Entity Name",      field: null,                       align: "text-left"   },
-                        { label: "PR Number",        field: "pr_num" as const,          align: "text-left"   },
-                        { label: "Date",             field: "created_at" as const,      align: "text-left"   },
-                        { label: "Office / Section", field: "office_section" as const,  align: "text-left"   },
+                        { label: "PR Number",        field: null,                      align: "text-left"   },
+                        { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
                         { label: "Description",      field: null,                       align: "text-left"   },
+                        { label: "Date",             field: "created_at" as const,     align: "text-left"   },
                         { label: "Status",           field: null,                       align: "text-center" },
-                        { label: "Total Cost",       field: "total_cost" as const,      align: "text-right"  },
+                        { label: "Status Flag",      field: null,                       align: "text-center" },
+                        { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
                         { label: "Actions",          field: null,                       align: "text-center" },
                       ] as const).map(({ label, field, align }) => (
                         <th
                           key={label}
+                          style={{ display: label === "Status Flag" && !isEndUser ? "none" as const : undefined }}
                           onClick={field ? () => handleSort(field) : undefined}
                           className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
                         >
@@ -342,29 +432,58 @@ export default function ProcurementPage() {
                       const desc = form.pr_item?.map((i) => i.description).filter(Boolean).join("; ");
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
-                          <td className={`px-5 py-3.5 font-medium text-gray-700 ${rowBg}`}>
-                            {form.entity_name || <span className="text-gray-300">—</span>}
+
+                          {/* PR Number */}
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                            {form.pr_num}
                           </td>
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_num}</td>
+
+                          {/* Office / Section */}
+                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                            {form.office_section || <span className="text-gray-300">—</span>}
+                          </td>
+
+                          {/* Description */}
+                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
+                            {desc ? <span className="line-clamp-2 leading-snug">{desc}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+
+                          {/* Date */}
                           <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
-                            {form.office_section || <span className="text-gray-300">—</span>}
-                          </td>
-                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
-                            {desc ? <span className="line-clamp-2 leading-snug">{desc}</span> : <span className="text-gray-300">—</span>}
-                          </td>
+
+                          {/* Status */}
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
                             </span>
                           </td>
+
+                          {/* Status Flag */}
+                          {isEndUser && (
+                            <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                              {(() => {
+                                const fid = latestFlagByPr[form.pr_id] ?? null;
+                                const fname = fid ? flagNameById[fid] : "No Flag";
+                                const key = (fname || "No Flag").toLowerCase();
+                                return (
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${FLAG_BADGE[key] ?? FLAG_BADGE.default}`}>
+                                    {fname}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                          )}
+
+                          {/* Total Cost */}
                           <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : <span className="text-gray-300 font-normal">—</span>}
                           </td>
+
+                          {/* Actions */}
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
 
