@@ -77,7 +77,20 @@ export default function DashboardPage() {
   }, [supabase, isAdmin, currentUser]);
 
   const getStatusInfo = (statusId: number | null) => {
-    const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
+    // const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
+    const fallback: Record<number, string> = {
+      1: "Pending",
+      2: "Processing (Division Head)",
+      3: "Processing (BAC)",
+      4: "Canvassing",
+      5: "BAC Resolution",
+      6: "AAA Issuance",
+      7: "PO",
+      8: "Approved",
+      9: "Rejected",
+    };
+    const fromDb = prStatuses.find((s) => s.id === statusId)?.status_name;
+    const name = fromDb || (statusId ? fallback[statusId] || "Unknown" : "Unknown");
     const k = name.toLowerCase();
     if (k.includes("pending"))        return { name, color: "pending" };
     if (k.includes("processing"))     return { name, color: "processing" };
@@ -107,14 +120,14 @@ export default function DashboardPage() {
 
   const totalBudget = list.reduce((s, pr) => s + getTotalCost(pr), 0);
 
-  const count = (kw: string) =>
-    list.filter((i) => prStatuses.find((s) => s.id === i.status_id)?.status_name.toLowerCase().includes(kw)).length;
+  const countByColor = (color: string) =>
+    list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
 
-  const pendingCount    = count("pending");
-  const processingCount = count("processing");
-  const canvassingCount = count("canvassing");
-  const approvedCount   = count("approve");
-  const rejectedCount   = count("reject");
+  const pendingCount    = countByColor("pending");
+  const processingCount = countByColor("processing");
+  const canvassingCount = countByColor("canvassing");
+  const approvedCount   = countByColor("approved");
+  const rejectedCount   = countByColor("rejected");
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -131,11 +144,20 @@ export default function DashboardPage() {
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
-      let aVal: string | number = "";
-      let bVal: string | number = "";
-      if (sortField === "total_cost")      { aVal = getTotalCost(a); bVal = getTotalCost(b); }
-      else if (sortField === "created_at") { aVal = a.created_at || ""; bVal = b.created_at || ""; }
-      else                                 { aVal = a[sortField] || ""; bVal = b[sortField] || ""; }
+      let aVal: number | string = "";
+      let bVal: number | string = "";
+      if (sortField === "total_cost") {
+        aVal = getTotalCost(a);
+        bVal = getTotalCost(b);
+      } else if (sortField === "created_at") {
+        const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+        aVal = at;
+        bVal = bt;
+      } else {
+        aVal = a[sortField] || "";
+        bVal = b[sortField] || "";
+      }
       return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
     });
 

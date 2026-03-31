@@ -152,7 +152,19 @@ export default function ProcurementPage() {
   }, [supabase, list]);
 
   const getStatusInfo = (statusId: number | null) => {
-    const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
+    const fallback: Record<number, string> = {
+      1: "Pending",
+      2: "Processing (Division Head)",
+      3: "Processing (BAC)",
+      4: "Canvassing",
+      5: "BAC Resolution",
+      6: "AAA Issuance",
+      7: "PO",
+      8: "Approved",
+      9: "Rejected",
+    };
+    const fromDb = prStatuses.find((s) => s.id === statusId)?.status_name;
+    const name = fromDb || (statusId ? fallback[statusId] || "Unknown" : "Unknown");
     const k = name.toLowerCase();
     if (k.includes("pending"))        return { name, color: "pending" };
     if (k.includes("processing"))     return { name, color: "processing" };
@@ -191,14 +203,14 @@ export default function ProcurementPage() {
   const getTotalCost = (pr: PRListRow) =>
     pr.pr_item?.reduce((s, i) => s + Number(i.total_cost || 0), 0) ?? 0;
 
-  const count = (kw: string) =>
-    list.filter((i) => prStatuses.find((s) => s.id === i.status_id)?.status_name.toLowerCase().includes(kw)).length;
+  const countByColor = (color: string) =>
+    list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
 
-  const pendingCount    = count("pending");
-  const processingCount = count("processing");
-  const canvassingCount = count("canvassing");
-  const approvedCount   = count("approve");
-  const rejectedCount   = count("reject");
+  const pendingCount    = countByColor("pending");
+  const processingCount = countByColor("processing");
+  const canvassingCount = countByColor("canvassing");
+  const approvedCount   = countByColor("approved");
+  const rejectedCount   = countByColor("rejected");
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));

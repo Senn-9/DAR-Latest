@@ -108,11 +108,39 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "21px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
-              Entity Name: <span style={{ fontWeight: "normal" }}>{formData.entity_name}</span>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", flexWrap: "nowrap" }}>
+                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>Entity Name:</span>
+                <span
+                  style={{
+                    fontWeight: "normal",
+                    borderBottom: "1px solid #000",
+                    paddingBottom: "1px",
+                    whiteSpace: "nowrap",
+                    minWidth: "140px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {formData.entity_name}
+                </span>
+              </div>
             </td>
             <td style={{ borderBottom: "1px solid black" }}></td>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
-              Fund Cluster: <span style={{ fontWeight: "normal" }}>{formData.fund_cluster}</span>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", flexWrap: "nowrap" }}>
+                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>Fund Cluster:</span>
+                <span
+                  style={{
+                    fontWeight: "normal",
+                    borderBottom: "1px solid #000",
+                    paddingBottom: "1px",
+                    whiteSpace: "nowrap",
+                    minWidth: "100px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {formData.fund_cluster}
+                </span>
+              </div>
             </td>
           </tr>
           <tr style={{ height: "14px" }}>
@@ -136,7 +164,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "22.5px" }}>
             <th style={thStyle}>Stock/
-                Property No.</th>
+              Property No.</th>
             <th style={thStyle}>Unit</th>
             <th style={thStyle}>Item Description</th>
             <th style={thStyle}>Quantity</th>
@@ -229,7 +257,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    entity_name: "",
+    entity_name: "DAR CAMSUR 1",  // ← default value
     fund_cluster: "",
     office_section: "",
     division: "",
@@ -303,7 +331,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     setLoading(true);
 
     try {
-      // Automatically set status to 1 (Pending)
       const formDataWithStatus = {
         ...formData,
         created_at: new Date().toISOString(),
@@ -323,7 +350,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         return;
       }
 
-      // FIX: Filter empty items and only insert items with descriptions, ensuring pr_id is correctly set and total_cost is calculated
       const itemsToInsert = items
         .filter((item) => item.description.trim() !== "")
         .map((item) => ({
@@ -362,7 +388,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         resetForm();
         setModalOpen(false);
         if (onSave) onSave();
-        // Force a small delay to ensure data is committed
         setTimeout(() => {
           window.location.reload();
         }, 500);
@@ -378,9 +403,9 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
 
   const resetForm = () => {
     setFormData({
-      entity_name: "",
+      entity_name: "DAR CAMSUR 1",  // ← reset also restores the default
       fund_cluster: "",
-      office_section: "",
+      office_section: currentUser?.divisions?.division_name || "",
       division: "",
       pr_num: "",
       responsibility_code: "",
@@ -413,14 +438,11 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 <p className="text-emerald-100 text-sm mt-1">Appendix 60 · Official Government Form</p>
               </div>
               <div className="flex items-center gap-4">
-                {/* Tab Toggle Buttons */}
                 <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
                   <button
                     onClick={() => setTab("form")}
                     className={`px-5 py-2 text-sm font-semibold transition-all ${
-                      tab === "form"
-                        ? "bg-white text-emerald-700"
-                        : "text-white hover:bg-white/10"
+                      tab === "form" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
                     }`}
                   >
                     Form
@@ -428,9 +450,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                   <button
                     onClick={() => setTab("preview")}
                     className={`px-5 py-2 text-sm font-semibold transition-all ${
-                      tab === "preview"
-                        ? "bg-white text-emerald-700"
-                        : "text-white hover:bg-white/10"
+                      tab === "preview" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
                     }`}
                   >
                     Preview
@@ -444,7 +464,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
 
             {/* Body */}
             <div className="flex flex-1 overflow-hidden">
-              {/* Form Side - 40% (2/5) */}
+              {/* Form Side */}
               <div className={`${tab === "form" ? "flex" : "hidden"} md:flex flex-[2] flex-col overflow-hidden border-r border-gray-200`}>
                 <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
                   {/* Header Information */}
@@ -453,7 +473,12 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name</label>
-                        <input className={inputCls} placeholder="e.g. Department of Education" value={formData.entity_name} onChange={(e) => setFormData({ ...formData, entity_name: e.target.value })} />
+                        <input
+                          className={inputCls}
+                          placeholder="e.g. DAR CAMSUR 1"
+                          value={formData.entity_name}
+                          onChange={(e) => setFormData({ ...formData, entity_name: e.target.value })}
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -468,12 +493,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
-                          <input
-                            className={inputCls}
-                            placeholder="Procurement"
-                            value={formData.office_section}
-                            readOnly
-                          />
+                          <input className={inputCls} placeholder="Procurement" value={formData.office_section} readOnly />
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date *</label>
@@ -580,7 +600,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 </div>
               </div>
 
-              {/* Preview Side - 60% (3/5) */}
+              {/* Preview Side */}
               <div className={`${tab === "preview" ? "flex" : "hidden"} md:flex flex-[3] overflow-y-auto bg-gray-100 flex-col`}>
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="flex items-center justify-between mb-4">
@@ -600,8 +620,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       )}
 
       {/* Create Button */}
-      <button 
-        onClick={() => setModalOpen(true)} 
+      <button
+        onClick={() => setModalOpen(true)}
         className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
       >
         <RiAddLine size={20} /> Create PR
