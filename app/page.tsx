@@ -1,111 +1,122 @@
-'use client'
-import { useAuthLogic } from '@/hooks/useAuthLogic'
-import { useLoginGuard } from '../hooks/useLoginGuard'
-import { useState } from 'react'
+"use client";
 
-export default function LoginPage() {
-  const { 
-    email, 
-    setEmail, 
-    password, 
-    setPassword, 
-    error,
-    setError,
-    handleLogin 
-  } = useAuthLogic()
+import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
-  const { canShowLogin, loading } = useLoginGuard()
-  const [isLoggingIn, setIsLoggingIn] = useState(false)
+type Division = {
+  division_id: number;
+  division_name: string;
+};
 
-  if (loading) {
-    // If we are still checking the session, show a spinner
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+type Roles = {
+  role_name: string;
+};
 
-  // If user is already logged in, don't show login form (guard will redirect)
-  if (!canShowLogin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    )
-  }
+type User = {
+  fullname: string;
+  username: string;
+  password: string;
+  role_id: number;
+  division_id: number;
+  divisions?: Division;
+  roles?: Roles;
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoggingIn(true)
-    setError(null)
+export default function PGPage() {
+  const supabase = createClient();
+  const router = useRouter();
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loginUserID, setLoginUserID] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginResult, setLoginResult] = useState("");
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select(`
+          fullname,
+          username,
+          password,
+          role_id,
+          division_id,
+          divisions (
+            division_id,
+            division_name
+          ),
+          roles (
+            role_name
+          )
+        `)
+        .returns<User[]>();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setUsers(data || []);
+    };
+
+    fetchUsers();
+  }, []);
+
+  const handleLogin = () => {
+    const matchedUser = users.find(
+      (user) =>
+        user.username === loginUserID && user.password === loginPassword
+    );
+
+    if (!matchedUser) {
+      console.log("Login failed");
+      setLoginResult("Invalid user ID or password");
+      return;
+    };
+
+    // Store user data in localStorage
+    localStorage.setItem('currentUser', JSON.stringify(matchedUser));
     
-    const result = await handleLogin()
-    
-    if (!result.success) {
-      setIsLoggingIn(false)
-    }
-    // If successful, handleLogin will redirect, so we don't need to reset loading
-  }
+    router.push("/Dashboard");
+  };
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">Login</h1>
-        
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
+    <div className="text-black p-6">
+
+      <h1 className="text-xl font-bold mb-4">Mock Login</h1>
+
+      <div className="flex flex-col gap-3 w-64">
+
+        <input
+          type="text"
+          placeholder="User ID"
+          value={loginUserID}
+          onChange={(e) => setLoginUserID(e.target.value)}
+          className="border p-2"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={loginPassword}
+          onChange={(e) => setLoginPassword(e.target.value)}
+          className="border p-2"
+        />
+
+        <button
+          onClick={handleLogin}
+          className="bg-blue-500 text-white p-2 rounded"
+        >
+          Login
+        </button>
+
+        {loginResult && (
+          <p className="mt-2 font-medium">{loginResult}</p>
         )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input 
-              className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              type="text" 
-              placeholder="Email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoggingIn}
-              required
-            />
-          </div>
-          
-          <div>
-            <input 
-              className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              type="password" 
-              placeholder="Password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoggingIn}
-              required
-            />
-          </div>
-          
-          <button 
-            type="submit"
-            disabled={isLoggingIn}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isLoggingIn ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Logging in...
-              </>
-            ) : (
-              'Log In'
-            )}
-          </button>
-        </form>
+
       </div>
-    </main>
-  )
+
+    </div>
+  );
 }

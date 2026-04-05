@@ -6,6 +6,8 @@ import SignoutModal from "@/components/SignOutModal";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
 import ProcessPRModal from "@/components/ProcessPRModal";
+import BACProcessModal from "@/components/BACProcessModal";
+import PARPOProcessModal from "@/components/PARPOProcessModal";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
@@ -15,15 +17,17 @@ import {
 export default function ProcurementPage() {
   const supabase = createClient();
 
-  type PRItem = { description: string; total_cost: number };
+  type PRItem = { description: string; subtotal: number };
   type PRListRow = {
-    pr_id: number;
+    id: number;
     entity_name: string;
-    pr_num: string;
+    pr_no: string;
     office_section: string;
+    status: string;
     status_id: number | null;
     created_at?: string;
-    pr_item?: PRItem[];
+    total_cost: number;
+    purchase_request_items?: PRItem[];
   };
   type CurrentUser = {
     fullname: string;
@@ -32,24 +36,24 @@ export default function ProcurementPage() {
     divisions?: { division_name: string };
     roles?: { role_name: string };
   };
-  type PRStatus = { id: number; status_name: string };
 
   const [loading, setLoading]             = useState(true);
   const [currentUser, setCurrentUser]     = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
-  const [prStatuses, setPRStatuses]       = useState<PRStatus[]>([]);
   const [list, setList]                   = useState<PRListRow[]>([]);
   const [flagNameById, setFlagNameById]   = useState<Record<number, string>>({});
   const [latestFlagByPr, setLatestFlagByPr] = useState<Record<number, number | null>>({});
   const [searchQuery, setSearchQuery]     = useState("");
   const [statusFilter, setStatusFilter]   = useState("all");
-  const [sortField, setSortField]         = useState<"pr_num" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortField, setSortField]         = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir]             = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage]     = useState(1);
   const [viewPrId, setViewPrId]           = useState<number | null>(null);
-  const [processTarget, setProcessTarget] = useState<{ prId: number; prNum: string; statusId: number | null } | null>(null);
-  const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNum: string } | null>(null);
+  const [processTarget, setProcessTarget] = useState<{ prId: number; prNo: string; statusId: number | null } | null>(null);
+  const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNo: string } | null>(null);
+  const [bacProcessTarget, setBACProcessTarget] = useState<{ prId: number; prNo: string } | null>(null);
+  const [parpoProcessTarget, setPARPOProcessTarget] = useState<{ prId: number; prNo: string } | null>(null);
   const [submitting, setSubmitting]       = useState(false);
   const PAGE_SIZE = 10;
 
@@ -59,20 +63,25 @@ export default function ProcurementPage() {
     if (!submitConfirm) return;
     setSubmitting(true);
     const { error } = await supabase
-      .from("pr_form")
-      .update({ status_id: 2 })
-      .eq("pr_id", submitConfirm.prId);
+      .from("purchase_requests")
+      .update({ status_id: 2, status: "Processing (Division Head)" })
+      .eq("id", submitConfirm.prId);
     setSubmitting(false);
     setSubmitConfirm(null);
     if (error) { console.error("Error submitting PR:", error); return; }
     setList((prev) =>
-      prev.map((pr) => pr.pr_id === submitConfirm.prId ? { ...pr, status_id: 2 } : pr)
+      prev.map((pr) => pr.id === submitConfirm.prId ? { ...pr, status_id: 2, status: "Processing (Division Head)" } : pr)
     );
   };
 
-  const handleProcessed = (prId: number, newStatusId: number) => {
+  const handleProcessed = (prId: number, newStatusId: number, newStatus?: string) => {
     setList((prev) =>
-      prev.map((pr) => pr.pr_id === prId ? { ...pr, status_id: newStatusId } : pr)
+      prev.map((pr) => {
+        if (pr.id === prId) {
+          return { ...pr, status_id: newStatusId, ...(newStatus && { status: newStatus }) };
+        }
+        return pr;
+      })
     );
   };
 
@@ -80,7 +89,10 @@ export default function ProcurementPage() {
   const isBACAccount =
     (currentUser?.username?.toLowerCase() === "bac") ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
-  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount;
+  const isPARPOAccount =
+    (currentUser?.username?.toLowerCase() === "parpo") ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -90,14 +102,6 @@ export default function ProcurementPage() {
       setIsAdmin(user.role_id === 1);
     }
   }, []);
-
-  useEffect(() => {
-    const fetchPRStatuses = async () => {
-      const { data, error } = await supabase.from("pr_status").select("id, status_name");
-      if (!error) setPRStatuses((data || []) as PRStatus[]);
-    };
-    fetchPRStatuses();
-  }, [supabase]);
 
   useEffect(() => {
     const fetchStatusFlags = async () => {
@@ -114,12 +118,12 @@ export default function ProcurementPage() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from("pr_form")
-          .select(`pr_id, entity_name, pr_num, office_section, status_id, created_at, pr_item (*)`)
+          .from("purchase_requests")
+          .select(`id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)`)
           .order("created_at", { ascending: false });
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -129,21 +133,21 @@ export default function ProcurementPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount]);
 
   useEffect(() => {
     const fetchLatestFlags = async () => {
-      const ids = list.map((p) => p.pr_id);
+      const ids = list.map((p) => p.id);
       if (ids.length === 0) { setLatestFlagByPr({}); return; }
       const { data, error } = await supabase
         .from("remarks")
-        .select("prform_id, status_flag_id, created_at")
-        .in("prform_id", ids)
+        .select("pr_id, status_flag_id, created_at")
+        .in("pr_id", ids)
         .order("created_at", { ascending: false });
       if (!error) {
         const map: Record<number, number | null> = {};
-        (data || []).forEach((r: { prform_id: number; status_flag_id: number | null }) => {
-          if (map[r.prform_id] === undefined) map[r.prform_id] = r.status_flag_id ?? null;
+        (data || []).forEach((r: { pr_id: number; status_flag_id: number | null }) => {
+          if (map[r.pr_id] === undefined) map[r.pr_id] = r.status_flag_id ?? null;
         });
         setLatestFlagByPr(map);
       }
@@ -152,29 +156,23 @@ export default function ProcurementPage() {
   }, [supabase, list]);
 
   const getStatusInfo = (statusId: number | null) => {
-    const fallback: Record<number, string> = {
-      1: "Pending",
-      2: "Processing (Division Head)",
-      3: "Processing (BAC)",
-      4: "Canvassing",
-      5: "BAC Resolution",
-      6: "AAA Issuance",
-      7: "PO",
-      8: "Approved",
-      9: "Rejected",
+    const statusMap: Record<number, { name: string; color: string }> = {
+      1: { name: "Pending", color: "pending" },
+      2: { name: "Processing (Division Head)", color: "processing" },
+      3: { name: "Processing (BAC)", color: "processing" },
+      4: { name: "Processing (Budget)", color: "processing" },
+      5: { name: "Processing (PARPO)", color: "processing" },
+      6: { name: "Canvassing (Reception)", color: "canvassing" },
+      8: { name: "Canvassing (Releasing)", color: "canvassing" },
+      9: { name: "Canvassing (Collection)", color: "canvassing" },
+      10: { name: "BAC Resolution", color: "bac" },
+      11: { name: "AAA Issuance", color: "aaa" },
+      12: { name: "PO (Review)", color: "po" },
+      13: { name: "PO (Create)", color: "po" },
+      14: { name: "ORS Processing", color: "approved" },
     };
-    const fromDb = prStatuses.find((s) => s.id === statusId)?.status_name;
-    const name = fromDb || (statusId ? fallback[statusId] || "Unknown" : "Unknown");
-    const k = name.toLowerCase();
-    if (k.includes("pending"))        return { name, color: "pending" };
-    if (k.includes("processing"))     return { name, color: "processing" };
-    if (k.includes("canvassing"))     return { name, color: "canvassing" };
-    if (k.includes("bac resolution")) return { name, color: "bac" };
-    if (k.includes("aaa issuance"))   return { name, color: "aaa" };
-    if (k.includes("po"))             return { name, color: "po" };
-    if (k.includes("approve"))        return { name, color: "approved" };
-    if (k.includes("reject"))         return { name, color: "rejected" };
-    return { name, color: "default" };
+
+    return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
@@ -200,9 +198,6 @@ export default function ProcurementPage() {
     default:           "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
-  const getTotalCost = (pr: PRListRow) =>
-    pr.pr_item?.reduce((s, i) => s + Number(i.total_cost || 0), 0) ?? 0;
-
   const countByColor = (color: string) =>
     list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
 
@@ -221,7 +216,7 @@ export default function ProcurementPage() {
   const filteredList = list
     .filter((pr) => {
       const matchSearch =
-        pr.pr_num.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const { color } = getStatusInfo(pr.status_id);
@@ -231,8 +226,8 @@ export default function ProcurementPage() {
       let aVal: number | string = "";
       let bVal: number | string = "";
       if (sortField === "total_cost") {
-        aVal = getTotalCost(a);
-        bVal = getTotalCost(b);
+        aVal = a.total_cost || 0;
+        bVal = b.total_cost || 0;
       } else if (sortField === "created_at") {
         const at = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -439,15 +434,15 @@ export default function ProcurementPage() {
                   <tbody>
                     {pagedList.map((form, index) => {
                       const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
-                      const cost = getTotalCost(form);
+                      const cost = form.total_cost || 0;
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const desc = form.pr_item?.map((i) => i.description).filter(Boolean).join("; ");
+                      const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
 
                           {/* PR Number */}
                           <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
-                            {form.pr_num}
+                            {form.pr_no}
                           </td>
 
                           {/* Office / Section */}
@@ -478,7 +473,7 @@ export default function ProcurementPage() {
                           {isEndUser && (
                             <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                               {(() => {
-                                const fid = latestFlagByPr[form.pr_id] ?? null;
+                                const fid = latestFlagByPr[form.id] ?? null;
                                 const fname = fid ? flagNameById[fid] : "No Flag";
                                 const key = (fname || "No Flag").toLowerCase();
                                 return (
@@ -502,7 +497,7 @@ export default function ProcurementPage() {
                               {/* Edit — not for Division Head or BAC (unless admin) */}
                               {(isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
-                                  onClick={() => console.log("Edit", form.pr_num)}
+                                  onClick={() => console.log("Edit", form.pr_no)}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
                                 >
                                   Edit
@@ -511,7 +506,7 @@ export default function ProcurementPage() {
 
                               {/* View — everyone */}
                               <button
-                                onClick={() => setViewPrId(form.pr_id)}
+                                onClick={() => setViewPrId(form.id)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
                               >
                                 View
@@ -520,7 +515,7 @@ export default function ProcurementPage() {
                               {/* Submit — regular users only, only when Pending (status_id=1) */}
                               {!isAdmin && !isDivisionHead && !isBACAccount && form.status_id === 1 && (
                                 <button
-                                  onClick={() => setSubmitConfirm({ prId: form.pr_id, prNum: form.pr_num })}
+                                  onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all whitespace-nowrap"
                                 >
                                   Submit
@@ -528,12 +523,32 @@ export default function ProcurementPage() {
                               )}
 
                               {/* Process — admin always, Division Head when status_id=2, BAC always */}
-                              {(isAdmin || (isDivisionHead && form.status_id === 2) || isBACAccount) && (
+                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button
-                                  onClick={() => setProcessTarget({ prId: form.pr_id, prNum: form.pr_num, statusId: form.status_id })}
+                                  onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
                                 >
                                   Process
+                                </button>
+                              )}
+
+                              {/* BAC Process — BAC account only when status is 3 (Processing BAC) */}
+                              {isBACAccount && form.status_id === 3 && (
+                                <button
+                                  onClick={() => setBACProcessTarget({ prId: form.id, prNo: form.pr_no })}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
+                                >
+                                  BAC Process
+                                </button>
+                              )}
+
+                              {/* PARPO Process — PARPO account only when status is 5 (Processing PARPO) */}
+                              {isPARPOAccount && form.status_id === 5 && (
+                                <button
+                                  onClick={() => setPARPOProcessTarget({ prId: form.id, prNo: form.pr_no })}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-all whitespace-nowrap"
+                                >
+                                  PARPO Process
                                 </button>
                               )}
 
@@ -576,7 +591,7 @@ export default function ProcurementPage() {
                 <span className="mono">
                   Filtered total:{" "}
                   <span className="font-semibold text-emerald-700">
-                    ₱{filteredList.reduce((s, pr) => s + getTotalCost(pr), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </span>
               </div>
@@ -598,7 +613,7 @@ export default function ProcurementPage() {
             <h3 className="text-lg font-bold text-gray-900 text-center">Submit Purchase Request?</h3>
             <p className="text-sm text-gray-500 text-center mt-2">
               You are about to submit{" "}
-              <span className="font-semibold text-gray-800 font-mono">{submitConfirm.prNum}</span>{" "}
+              <span className="font-semibold text-gray-800 font-mono">{submitConfirm.prNo}</span>{" "}
               for Division Head review. This will update the status to{" "}
               <span className="font-semibold text-blue-700">Processing (Division Head)</span>.
             </p>
@@ -621,10 +636,40 @@ export default function ProcurementPage() {
       {processTarget && (
         <ProcessPRModal
           prId={processTarget.prId}
-          prNum={processTarget.prNum}
+          prNum={processTarget.prNo}
           currentStatusId={processTarget.statusId}
           onClose={() => setProcessTarget(null)}
           onProcessed={handleProcessed}
+        />
+      )}
+
+      {/* ── BAC PROCESS MODAL ── */}
+      {bacProcessTarget && (
+        <BACProcessModal
+          prId={bacProcessTarget.prId}
+          currentPrNo={bacProcessTarget.prNo}
+          onClose={() => setBACProcessTarget(null)}
+          onProcessed={(prId: number) => {
+            setList((prev) =>
+              prev.map((pr) => pr.id === prId ? { ...pr } : pr)
+            );
+            setBACProcessTarget(null);
+          }}
+        />
+      )}
+
+      {/* ── PARPO PROCESS MODAL ── */}
+      {parpoProcessTarget && (
+        <PARPOProcessModal
+          prId={parpoProcessTarget.prId}
+          currentPrNo={parpoProcessTarget.prNo}
+          onClose={() => setPARPOProcessTarget(null)}
+          onProcessed={(prId: number) => {
+            setList((prev) =>
+              prev.map((pr) => pr.id === prId ? { ...pr, status_id: 3, status: "Processing (BAC)" } : pr)
+            );
+            setPARPOProcessTarget(null);
+          }}
         />
       )}
 

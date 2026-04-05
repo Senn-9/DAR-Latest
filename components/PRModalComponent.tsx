@@ -149,7 +149,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               {formData.office_section}
             </td>
             <td colSpan={2} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_num}</span>
+              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no}</span>
             </td>
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
               Date:
@@ -159,7 +159,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "15px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              Responsibility Center Code : <span style={{ fontWeight: "normal" }}>{formData.responsibility_code}</span>
+              Responsibility Center Code : <span style={{ fontWeight: "normal" }}>{formData.resp_code}</span>
             </td>
           </tr>
           <tr style={{ height: "22.5px" }}>
@@ -215,16 +215,16 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
               Printed Name :
             </td>
-            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_by}</td>
-            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_by}</td>
+            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_name}</td>
+            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_name}</td>
             <td style={{ borderRight: "1px solid black" }}></td>
           </tr>
           <tr style={{ height: "14.75px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
               Designation :
             </td>
-            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_designation}</td>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_designation}</td>
+            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_desig}</td>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_desig}</td>
             <td style={{ borderBottom: "1px solid black", borderRight: "1px solid black" }}></td>
           </tr>
         </tbody>
@@ -260,14 +260,13 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     entity_name: "DAR CAMSUR 1",  // ← default value
     fund_cluster: "",
     office_section: "",
-    division: "",
-    pr_num: "",
-    responsibility_code: "",
+    pr_no: "",
+    resp_code: "",
     purpose: "",
-    req_by: "",
-    req_designation: "",
-    app_by: "",
-    app_designation: "",
+    req_name: "",
+    req_desig: "",
+    app_name: "",
+    app_desig: "",
     created_at: new Date().toISOString().slice(0, 10),
   });
 
@@ -323,7 +322,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const grandTotal = getGrandTotal(items);
 
   const handleSubmit = async () => {
-    if (!formData.pr_num) {
+    if (!formData.pr_no) {
       alert("❌ Error: PR Number is required!");
       return;
     }
@@ -332,14 +331,25 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
 
     try {
       const formDataWithStatus = {
-        ...formData,
+        entity_name: formData.entity_name,
+        fund_cluster: formData.fund_cluster,
+        office_section: formData.office_section,
+        pr_no: formData.pr_no,
+        resp_code: formData.resp_code,
+        purpose: formData.purpose,
+        req_name: formData.req_name,
+        req_desig: formData.req_desig,
+        app_name: formData.app_name,
+        app_desig: formData.app_desig,
         created_at: new Date().toISOString(),
         status_id: 1,
-        division: currentUser?.division_id ?? null,
+        status: "Pending",
+        total_cost: Math.round(grandTotal),
+        division_id: currentUser?.division_id ?? null,
       };
 
       const { data: formResult, error: formError } = await supabase
-        .from("pr_form")
+        .from("purchase_requests")
         .insert([formDataWithStatus])
         .select()
         .single();
@@ -353,16 +363,16 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       const itemsToInsert = items
         .filter((item) => item.description.trim() !== "")
         .map((item) => ({
-          pr_id: formResult.pr_id,
-          stock_num: item.stock_num || "",
+          pr_id: formResult.id,
+          stock_no: item.stock_num || "",
           unit: item.unit || "",
           description: item.description,
-          quantity: item.quantity || "0",
-          unit_cost: item.unit_cost || "0",
-          total_cost: getItemTotal(item).toFixed(2),
+          quantity: parseInt(item.quantity) || 0,
+          unit_price: parseInt(item.unit_cost) || 0,
+          subtotal: Math.round(getItemTotal(item)),
         }));
 
-      console.log("Form Result PR_ID:", formResult.pr_id);
+      console.log("Form Result PR_ID:", formResult.id);
       console.log("Items to insert:", itemsToInsert);
 
       if (itemsToInsert.length === 0) {
@@ -374,7 +384,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       }
 
       const { data: itemData, error: itemError } = await supabase
-        .from("pr_item")
+        .from("purchase_request_items")
         .insert(itemsToInsert)
         .select();
 
@@ -406,14 +416,13 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       entity_name: "DAR CAMSUR 1",  // ← reset also restores the default
       fund_cluster: "",
       office_section: currentUser?.divisions?.division_name || "",
-      division: "",
-      pr_num: "",
-      responsibility_code: "",
+      pr_no: "",
+      resp_code: "",
       purpose: "",
-      req_by: "",
-      req_designation: "",
-      app_by: "",
-      app_designation: "",
+      req_name: "",
+      req_desig: "",
+      app_name: "",
+      app_desig: "",
       created_at: new Date().toISOString().slice(0, 10),
     });
     setItems([emptyItem()]);
@@ -487,7 +496,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number *</label>
-                          <input className={inputCls} placeholder="PR-2024-001" value={formData.pr_num} onChange={(e) => setFormData({ ...formData, pr_num: e.target.value })} />
+                          <input className={inputCls} placeholder="PR-2024-001" value={formData.pr_no} onChange={(e) => setFormData({ ...formData, pr_no: e.target.value })} />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -502,7 +511,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                       </div>
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center Code</label>
-                        <input className={inputCls} placeholder="e.g. 10001" value={formData.responsibility_code} onChange={(e) => setFormData({ ...formData, responsibility_code: e.target.value })} />
+                        <input className={inputCls} placeholder="e.g. 10001" value={formData.resp_code} onChange={(e) => setFormData({ ...formData, resp_code: e.target.value })} />
                       </div>
                     </div>
                   </div>
@@ -569,15 +578,15 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Requested By</label>
-                        <input className={inputCls} placeholder="Full name" value={formData.req_by} onChange={(e) => setFormData({ ...formData, req_by: e.target.value })} />
+                        <input className={inputCls} placeholder="Full name" value={formData.req_name} onChange={(e) => setFormData({ ...formData, req_name: e.target.value })} />
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={inputCls} placeholder="Position/Title" value={formData.req_designation} onChange={(e) => setFormData({ ...formData, req_designation: e.target.value })} />
+                        <input className={inputCls} placeholder="Position/Title" value={formData.req_desig} onChange={(e) => setFormData({ ...formData, req_desig: e.target.value })} />
                       </div>
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Approved By</label>
-                        <input className={inputCls} placeholder="Full name" value={formData.app_by} onChange={(e) => setFormData({ ...formData, app_by: e.target.value })} />
+                        <input className={inputCls} placeholder="Full name" value={formData.app_name} onChange={(e) => setFormData({ ...formData, app_name: e.target.value })} />
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={inputCls} placeholder="Position/Title" value={formData.app_designation} onChange={(e) => setFormData({ ...formData, app_designation: e.target.value })} />
+                        <input className={inputCls} placeholder="Position/Title" value={formData.app_desig} onChange={(e) => setFormData({ ...formData, app_desig: e.target.value })} />
                       </div>
                     </div>
                   </div>

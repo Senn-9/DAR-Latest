@@ -8,14 +8,13 @@ import {
 } from "react-icons/ri";
 
 type ItemDataType = {
-  stock_num: string;
+  stock_no: string;
   unit: string;
   description: string;
   quantity: string;
-  unit_cost: string;
-  total_cost: string;
+  unit_price: string;
+  subtotal: string;
   created_at: string;
-  division: string;
 };
 
 const tdStyle: React.CSSProperties = {
@@ -41,19 +40,18 @@ const readonlyCls =
 
 function emptyItem(): ItemDataType {
   return {
-    stock_num: "",
+    stock_no: "",
     unit: "",
     description: "",
     quantity: "",
-    unit_cost: "",
-    total_cost: "",
-    division: "",
+    unit_price: "",
+    subtotal: "",
     created_at: new Date().toISOString(),
   };
 }
 
 function getItemTotal(item: ItemDataType): number {
-  return (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0);
+  return (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
 }
 
 function getGrandTotal(items: ItemDataType[]): number {
@@ -110,7 +108,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               {formData.office_section}
             </td>
             <td colSpan={2} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_num}</span>
+              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no}</span>
             </td>
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
               Date:<br />
@@ -119,7 +117,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "15px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              Responsibility Center Code: <span style={{ fontWeight: "normal" }}>{formData.responsibility_code}</span>
+              Responsibility Center Code: <span style={{ fontWeight: "normal" }}>{formData.resp_code}</span>
             </td>
           </tr>
           <tr style={{ height: "22.5px" }}>
@@ -135,11 +133,11 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             const total = getItemTotal(item);
             return (
               <tr key={idx} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_num}</td>
+                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
                 <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px" }}>{item.description}</td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""}</td>
+                <td style={{ ...tdStyle, textAlign: "right" }}>{item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""}</td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>{total > 0 ? total.toFixed(2) : ""}</td>
               </tr>
             );
@@ -171,14 +169,14 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "12px" }}>
             <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Printed Name :</td>
-            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_by}</td>
-            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_by}</td>
+            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_name}</td>
+            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_name}</td>
             <td style={{ borderRight: "1px solid black" }}></td>
           </tr>
           <tr style={{ height: "14.75px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Designation :</td>
-            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_designation}</td>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_designation}</td>
+            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_desig}</td>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_desig}</td>
             <td style={{ borderBottom: "1px solid black", borderRight: "1px solid black" }}></td>
           </tr>
         </tbody>
@@ -208,14 +206,13 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
     entity_name: "",
     fund_cluster: "",
     office_section: "",
-    division: "",
-    pr_num: "",
-    responsibility_code: "",
+    pr_no: "",
+    resp_code: "",
     purpose: "",
-    req_by: "",
-    req_designation: "",
-    app_by: "",
-    app_designation: "",
+    req_name: "",
+    req_desig: "",
+    app_name: "",
+    app_desig: "",
     created_at: "",
   });
 
@@ -234,9 +231,9 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
     const fetchPR = async () => {
       setLoading(true);
       const { data: form, error: formErr } = await supabase
-        .from("pr_form")
+        .from("purchase_requests")
         .select("*")
-        .eq("pr_id", prId)
+        .eq("id", prId)
         .single();
 
       if (formErr || !form) {
@@ -246,36 +243,34 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
       }
 
       setFormData({
-        entity_name:        form.entity_name        || "",
-        fund_cluster:       form.fund_cluster        || "",
-        office_section:     form.office_section      || "",
-        division:           form.division            || "",
-        pr_num:             form.pr_num              || "",
-        responsibility_code: form.responsibility_code || "",
-        purpose:            form.purpose             || "",
-        req_by:             form.req_by              || "",
-        req_designation:    form.req_designation     || "",
-        app_by:             form.app_by              || "",
-        app_designation:    form.app_designation     || "",
-        created_at:         form.created_at?.slice(0, 10) || "",
+        entity_name:  form.entity_name   || "",
+        fund_cluster: form.fund_cluster  || "",
+        office_section: form.office_section || "",
+        pr_no:        form.pr_no         || "",
+        resp_code:    form.resp_code     || "",
+        purpose:      form.purpose       || "",
+        req_name:     form.req_name      || "",
+        req_desig:    form.req_desig     || "",
+        app_name:     form.app_name      || "",
+        app_desig:    form.app_desig     || "",
+        created_at:   form.created_at?.slice(0, 10) || "",
       });
 
       const { data: itemData, error: itemErr } = await supabase
-        .from("pr_item")
+        .from("purchase_request_items")
         .select("*")
         .eq("pr_id", prId);
 
       if (!itemErr && itemData) {
         setItems(
           itemData.map((i: any) => ({
-            stock_num:  i.stock_num  || "",
-            unit:       i.unit       || "",
-            description:i.description|| "",
-            quantity:   String(i.quantity  ?? ""),
-            unit_cost:  String(i.unit_cost ?? ""),
-            total_cost: String(i.total_cost ?? ""),
-            division:   i.division   || "",
-            created_at: i.created_at || new Date().toISOString(),
+            stock_no:   i.stock_no    || "",
+            unit:       i.unit        || "",
+            description: i.description || "",
+            quantity:   String(i.quantity   ?? ""),
+            unit_price: String(i.unit_price ?? ""),
+            subtotal:   String(i.subtotal   ?? ""),
+            created_at: i.created_at  || new Date().toISOString(),
           }))
         );
       }
@@ -362,7 +357,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number</label>
-                          <input className={readonlyCls} value={formData.pr_num} readOnly tabIndex={-1} />
+                          <input className={readonlyCls} value={formData.pr_no} readOnly tabIndex={-1} />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -377,7 +372,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                       </div>
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center Code</label>
-                        <input className={readonlyCls} value={formData.responsibility_code} readOnly tabIndex={-1} />
+                        <input className={readonlyCls} value={formData.resp_code} readOnly tabIndex={-1} />
                       </div>
                     </div>
                   </div>
@@ -403,7 +398,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
-                                <input className={readonlyCls} value={item.stock_num} readOnly tabIndex={-1} />
+                                <input className={readonlyCls} value={item.stock_no} readOnly tabIndex={-1} />
                               </div>
                               <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
@@ -417,7 +412,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
-                                <input className={readonlyCls} value={item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""} readOnly tabIndex={-1} />
+                                <input className={readonlyCls} value={item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""} readOnly tabIndex={-1} />
                               </div>
                               <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
@@ -442,15 +437,15 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Requested By</label>
-                        <input className={readonlyCls} value={formData.req_by} readOnly tabIndex={-1} />
+                        <input className={readonlyCls} value={formData.req_name} readOnly tabIndex={-1} />
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={readonlyCls} value={formData.req_designation} readOnly tabIndex={-1} />
+                        <input className={readonlyCls} value={formData.req_desig} readOnly tabIndex={-1} />
                       </div>
                       <div>
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Approved By</label>
-                        <input className={readonlyCls} value={formData.app_by} readOnly tabIndex={-1} />
+                        <input className={readonlyCls} value={formData.app_name} readOnly tabIndex={-1} />
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={readonlyCls} value={formData.app_designation} readOnly tabIndex={-1} />
+                        <input className={readonlyCls} value={formData.app_desig} readOnly tabIndex={-1} />
                       </div>
                     </div>
                   </div>

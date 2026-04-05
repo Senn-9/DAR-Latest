@@ -20,7 +20,7 @@ interface ProcessPRModalProps {
   prNum: string;
   currentStatusId: number | null;
   onClose: () => void;
-  onProcessed: (prId: number, newStatusId: number) => void;
+  onProcessed: (prId: number, newStatusId: number, newStatus?: string) => void;
 }
 
 type FlagOption = {
@@ -63,6 +63,18 @@ export default function ProcessPRModal({
     remarks:    "",
     attachment: null as File | null,
   });
+
+  const statusMap: Record<number, string> = {
+    1: "Pending",
+    2: "Processing (Division Head)",
+    3: "Processing (BAC)",
+    4: "Canvassing",
+    5: "BAC Resolution",
+    6: "AAA Issuance",
+    7: "PO",
+    8: "Approved",
+    9: "Rejected",
+  };
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -130,7 +142,7 @@ export default function ProcessPRModal({
         return;
       }
     }
-    const { error: updateErr } = await supabase.from("pr_form").update({ status_id: targetStatus }).eq("pr_id", prId);
+    const { error: updateErr } = await supabase.from("purchase_requests").update({ status_id: targetStatus, status: statusMap[targetStatus] }).eq("id", prId);
     if (updateErr) {
       setProcessing(false);
       alert("Error updating PR status: " + updateErr.message);
@@ -158,7 +170,7 @@ export default function ProcessPRModal({
     }
     const statusFlagId = selectedFlag.id;
     const { error: remarksErr } = await supabase.from("remarks").insert({
-      prform_id: prId,
+      pr_id: prId,
       remark: remarkText || null,
       status_flag_id: statusFlagId,
       user_id: userId,
@@ -170,7 +182,7 @@ export default function ProcessPRModal({
     }
     setProcessing(false);
     alert(successText);
-    onProcessed(prId, targetStatus);
+    onProcessed(prId, targetStatus, statusMap[targetStatus]);
     onClose();
   };
 

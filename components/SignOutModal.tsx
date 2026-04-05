@@ -20,7 +20,7 @@ export default function SignoutModal({
     localStorage.removeItem('currentUser');
     
     // Redirect to login page
-    router.push("/pg");
+    router.push("/");
     
     setLoading(false);
     onClose();

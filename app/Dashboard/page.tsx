@@ -11,15 +11,17 @@ import {
 export default function DashboardPage() {
   const supabase = createClient();
 
-  type PRItem = { description: string; total_cost: number };
+  type PRItem = { description: string; subtotal: number };
   type PRListRow = {
-    pr_id: number;
+    id: number;
     entity_name: string;
-    pr_num: string;
+    pr_no: string;
     office_section: string;
+    status: string;
     status_id: number | null;
     created_at?: string;
-    pr_item?: PRItem[];
+    total_cost: number;
+    purchase_request_items?: PRItem[];
   };
   type CurrentUser = {
     fullname: string;
@@ -28,16 +30,14 @@ export default function DashboardPage() {
     divisions?: { division_name: string };
     roles?: { role_name: string };
   };
-  type PRStatus = { id: number; status_name: string };
 
   const [loading, setLoading]           = useState(true);
   const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin]           = useState(false);
-  const [prStatuses, setPRStatuses]     = useState<PRStatus[]>([]);
   const [list, setList]                 = useState<PRListRow[]>([]);
   const [searchQuery, setSearchQuery]   = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField]       = useState<"pr_num" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortField, setSortField]       = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage]   = useState(1);
   const PAGE_SIZE = 10;
@@ -52,17 +52,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    supabase.from("pr_status").select("id, status_name").then(({ data, error }) => {
-      if (!error) setPRStatuses((data || []) as PRStatus[]);
-    });
-  }, [supabase]);
-
-  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       const { data, error } = await supabase
-        .from("pr_form")
-        .select("pr_id, entity_name, pr_num, office_section, status_id, created_at, pr_item (*)")
+        .from("purchase_requests")
+        .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)")
         .order("created_at", { ascending: false });
       if (!error) {
         setList(
@@ -76,31 +70,17 @@ export default function DashboardPage() {
     fetchData();
   }, [supabase, isAdmin, currentUser]);
 
-  const getStatusInfo = (statusId: number | null) => {
-    // const name = prStatuses.find((s) => s.id === statusId)?.status_name || "Unknown";
-    const fallback: Record<number, string> = {
-      1: "Pending",
-      2: "Processing (Division Head)",
-      3: "Processing (BAC)",
-      4: "Canvassing",
-      5: "BAC Resolution",
-      6: "AAA Issuance",
-      7: "PO",
-      8: "Approved",
-      9: "Rejected",
-    };
-    const fromDb = prStatuses.find((s) => s.id === statusId)?.status_name;
-    const name = fromDb || (statusId ? fallback[statusId] || "Unknown" : "Unknown");
-    const k = name.toLowerCase();
-    if (k.includes("pending"))        return { name, color: "pending" };
-    if (k.includes("processing"))     return { name, color: "processing" };
-    if (k.includes("canvassing"))     return { name, color: "canvassing" };
-    if (k.includes("bac resolution")) return { name, color: "bac" };
-    if (k.includes("aaa issuance"))   return { name, color: "aaa" };
-    if (k.includes("po"))             return { name, color: "po" };
-    if (k.includes("approve"))        return { name, color: "approved" };
-    if (k.includes("reject"))         return { name, color: "rejected" };
-    return { name, color: "default" };
+  const getStatusInfo = (status: string | null) => {
+    const k = (status || "unknown").toLowerCase();
+    if (k.includes("pending"))        return { name: status || "Unknown", color: "pending" };
+    if (k.includes("processing"))     return { name: status || "Unknown", color: "processing" };
+    if (k.includes("canvassing"))     return { name: status || "Unknown", color: "canvassing" };
+    if (k.includes("bac resolution")) return { name: status || "Unknown", color: "bac" };
+    if (k.includes("aaa issuance"))   return { name: status || "Unknown", color: "aaa" };
+    if (k.includes("po"))             return { name: status || "Unknown", color: "po" };
+    if (k.includes("approve"))        return { name: status || "Unknown", color: "approved" };
+    if (k.includes("reject"))         return { name: status || "Unknown", color: "rejected" };
+    return { name: status || "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
@@ -115,13 +95,10 @@ export default function DashboardPage() {
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
-  const getTotalCost = (pr: PRListRow) =>
-    pr.pr_item?.reduce((s, i) => s + Number(i.total_cost || 0), 0) ?? 0;
-
-  const totalBudget = list.reduce((s, pr) => s + getTotalCost(pr), 0);
+  const totalBudget = list.reduce((s, pr) => s + (pr.total_cost || 0), 0);
 
   const countByColor = (color: string) =>
-    list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
+    list.reduce((n, i) => (getStatusInfo(i.status).color === color ? n + 1 : n), 0);
 
   const pendingCount    = countByColor("pending");
   const processingCount = countByColor("processing");
@@ -138,17 +115,17 @@ export default function DashboardPage() {
   const filteredList = list
     .filter((pr) => {
       const matchSearch =
-        pr.pr_num.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const { color } = getStatusInfo(pr.status_id);
+      const { color } = getStatusInfo(pr.status);
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
       let aVal: number | string = "";
       let bVal: number | string = "";
       if (sortField === "total_cost") {
-        aVal = getTotalCost(a);
-        bVal = getTotalCost(b);
+        aVal = a.total_cost || 0;
+        bVal = b.total_cost || 0;
       } else if (sortField === "created_at") {
         const at = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -342,7 +319,7 @@ export default function DashboardPage() {
                   <thead>
                     <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
                       {([
-                        { label: "PR Number",        field: "pr_num" as const,         align: "text-left"   },
+                        { label: "PR Number",        field: "pr_no" as const,         align: "text-left"   },
                         { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
                         { label: "Description",      field: null,                       align: "text-left"   },
                         { label: "Date",             field: "created_at" as const,     align: "text-left"   },
@@ -364,13 +341,13 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {pagedList.map((form, index) => {
-                      const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
-                      const cost = getTotalCost(form);
+                      const { name: statusName, color: statusColor } = getStatusInfo(form.status);
+                      const cost = form.total_cost || 0;
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const desc = form.pr_item?.map((i) => i.description).filter(Boolean).join("; ");
+                      const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
                       return (
-                        <tr key={form.pr_id} className="tr-row border-b border-gray-100 transition-colors">
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_num}</td>
+                        <tr key={form.id} className="tr-row border-b border-gray-100 transition-colors">
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_no}</td>
                           <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
@@ -447,7 +424,7 @@ export default function DashboardPage() {
                 <span className="mono">
                   Filtered total:{" "}
                   <span className="font-semibold text-emerald-700">
-                    ₱{filteredList.reduce((s, pr) => s + getTotalCost(pr), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </span>
               </div>
