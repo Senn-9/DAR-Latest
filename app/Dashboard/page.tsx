@@ -7,6 +7,7 @@ import {
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
 } from "react-icons/ri";
+import AnalyticsDashboard from "../analytics/analytics";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -430,6 +431,11 @@ export default function DashboardPage() {
               </div>
             </>
           )}
+        </div>
+
+        {/* ── ANALYTICS SECTION ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <AnalyticsDashboard />
         </div>
       </div>
     </div>
