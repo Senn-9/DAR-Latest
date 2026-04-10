@@ -8,6 +8,8 @@ import ViewPRModal from "@/components/Viewprmodal";
 import ProcessPRModal from "@/components/ProcessPRModal";
 import BACProcessModal from "@/components/BACProcessModal";
 import PARPOProcessModal from "@/components/PARPOProcessModal";
+import BudgetProcessModal from "@/components/BudgetProcessModal";
+import { useRouter } from "next/navigation";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
@@ -18,23 +20,49 @@ export default function ProcurementPage() {
   const supabase = createClient();
 
   type PRItem = { description: string; subtotal: number };
+
   type PRListRow = {
     id: number;
     entity_name: string;
     pr_no: string;
     office_section: string;
+    resp_code: string;
+    purpose: string;
+    total_cost: number;
     status: string;
     status_id: number | null;
+    fund_cluster: string;
+    req_name: string;
+    app_name: string;
+    app_no: string;
     created_at?: string;
-    total_cost: number;
     purchase_request_items?: PRItem[];
   };
+
   type CurrentUser = {
     fullname: string;
     username: string;
     role_id: number;
     divisions?: { division_name: string };
     roles?: { role_name: string };
+  };
+
+  // ── Budget process target now carries full prData ──────────────────────────
+  type BudgetTarget = {
+    prId: number;
+    prNo: string;
+    prData: {
+      office_section?: string;
+      purpose?: string;
+      total_cost?: number;
+      status?: string;
+      entity_name?: string;
+      fund_cluster?: string;
+      req_name?: string;
+      app_name?: string;
+      app_no?: string;
+      resp_code?: string;
+    };
   };
 
   const [loading, setLoading]             = useState(true);
@@ -52,9 +80,14 @@ export default function ProcurementPage() {
   const [viewPrId, setViewPrId]           = useState<number | null>(null);
   const [processTarget, setProcessTarget] = useState<{ prId: number; prNo: string; statusId: number | null } | null>(null);
   const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNo: string } | null>(null);
-  const [bacProcessTarget, setBACProcessTarget] = useState<{ prId: number; prNo: string } | null>(null);
+  const [bacProcessTarget, setBACProcessTarget]     = useState<{ prId: number; prNo: string } | null>(null);
   const [parpoProcessTarget, setPARPOProcessTarget] = useState<{ prId: number; prNo: string } | null>(null);
+  const [budgetProcessTarget, setBudgetProcessTarget] = useState<BudgetTarget | null>(null); // ← updated type
   const [submitting, setSubmitting]       = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract">("pr"); //added tabs
+  const router = useRouter();
+
   const PAGE_SIZE = 10;
 
   const handlePRSaved = () => { console.log("PR was saved!"); };
@@ -70,29 +103,35 @@ export default function ProcurementPage() {
     setSubmitConfirm(null);
     if (error) { console.error("Error submitting PR:", error); return; }
     setList((prev) =>
-      prev.map((pr) => pr.id === submitConfirm.prId ? { ...pr, status_id: 2, status: "Processing (Division Head)" } : pr)
+      prev.map((pr) =>
+        pr.id === submitConfirm.prId
+          ? { ...pr, status_id: 2, status: "Processing (Division Head)" }
+          : pr
+      )
     );
   };
 
   const handleProcessed = (prId: number, newStatusId: number, newStatus?: string) => {
     setList((prev) =>
-      prev.map((pr) => {
-        if (pr.id === prId) {
-          return { ...pr, status_id: newStatusId, ...(newStatus && { status: newStatus }) };
-        }
-        return pr;
-      })
+      prev.map((pr) =>
+        pr.id === prId
+          ? { ...pr, status_id: newStatusId, ...(newStatus && { status: newStatus }) }
+          : pr
+      )
     );
   };
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
-    (currentUser?.username?.toLowerCase() === "bac") ||
+    currentUser?.username?.toLowerCase() === "bac" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
   const isPARPOAccount =
-    (currentUser?.username?.toLowerCase() === "parpo") ||
+    currentUser?.username?.toLowerCase() === "parpo" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
-  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount;
+  const isBudgetAccount =
+    currentUser?.username?.toLowerCase() === "budget" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -119,11 +158,17 @@ export default function ProcurementPage() {
         setLoading(true);
         const { data, error } = await supabase
           .from("purchase_requests")
-          .select(`id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)`)
+          .select(`
+            id, entity_name, pr_no, office_section, resp_code,
+            purpose, total_cost, is_high_value, status, status_id,
+            fund_cluster, req_name, app_name, app_no,
+            created_at, purchase_request_items (*)
+          `)
           .order("created_at", { ascending: false });
+
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -133,7 +178,7 @@ export default function ProcurementPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
 
   useEffect(() => {
     const fetchLatestFlags = async () => {
@@ -157,21 +202,20 @@ export default function ProcurementPage() {
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
-      1: { name: "Pending", color: "pending" },
-      2: { name: "Processing (Division Head)", color: "processing" },
-      3: { name: "Processing (BAC)", color: "processing" },
-      4: { name: "Processing (Budget)", color: "processing" },
-      5: { name: "Processing (PARPO)", color: "processing" },
-      6: { name: "Canvassing (Reception)", color: "canvassing" },
-      8: { name: "Canvassing (Releasing)", color: "canvassing" },
-      9: { name: "Canvassing (Collection)", color: "canvassing" },
-      10: { name: "BAC Resolution", color: "bac" },
-      11: { name: "AAA Issuance", color: "aaa" },
-      12: { name: "PO (Review)", color: "po" },
-      13: { name: "PO (Create)", color: "po" },
-      14: { name: "ORS Processing", color: "approved" },
+      1:  { name: "Pending",                   color: "pending"    },
+      2:  { name: "Processing (Division Head)", color: "processing" },
+      3:  { name: "Processing (BAC)",           color: "processing" },
+      4:  { name: "Processing (Budget)",        color: "processing" },
+      5:  { name: "Processing (PARPO)",         color: "processing" },
+      6:  { name: "Canvassing (Reception)",     color: "canvassing" },
+      8:  { name: "Canvassing (Releasing)",     color: "canvassing" },
+      9:  { name: "Canvassing (Collection)",    color: "canvassing" },
+      10: { name: "BAC Resolution",             color: "bac"        },
+      11: { name: "AAA Issuance",               color: "aaa"        },
+      12: { name: "PO (Review)",                color: "po"         },
+      13: { name: "PO (Create)",                color: "po"         },
+      14: { name: "ORS Processing",             color: "approved"   },
     };
-
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
 
@@ -188,14 +232,14 @@ export default function ProcurementPage() {
   };
 
   const FLAG_BADGE: Record<string, string> = {
-    "no flag":         "bg-gray-100 text-gray-700 border border-gray-200",
-    "complete":        "bg-emerald-50 text-emerald-800 border border-emerald-200",
-    "incomplete info": "bg-amber-50 text-amber-800 border border-amber-200",
+    "no flag":           "bg-gray-100 text-gray-700 border border-gray-200",
+    "complete":          "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    "incomplete info":   "bg-amber-50 text-amber-800 border border-amber-200",
     "wrong information": "bg-red-50 text-red-800 border border-red-200",
-    "needs revision":  "bg-indigo-50 text-indigo-800 border border-indigo-200",
-    "on hold":         "bg-blue-50 text-blue-800 border border-blue-200",
-    "urgent":          "bg-rose-50 text-rose-800 border border-rose-200",
-    default:           "bg-gray-100 text-gray-700 border border-gray-200",
+    "needs revision":    "bg-indigo-50 text-indigo-800 border border-indigo-200",
+    "on hold":           "bg-blue-50 text-blue-800 border border-blue-200",
+    "urgent":            "bg-rose-50 text-rose-800 border border-rose-200",
+    default:             "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
   const countByColor = (color: string) =>
@@ -229,10 +273,8 @@ export default function ProcurementPage() {
         aVal = a.total_cost || 0;
         bVal = b.total_cost || 0;
       } else if (sortField === "created_at") {
-        const at = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
-        aVal = at;
-        bVal = bt;
+        aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
+        bVal = b.created_at ? new Date(b.created_at).getTime() : 0;
       } else {
         aVal = a[sortField] || "";
         bVal = b[sortField] || "";
@@ -284,7 +326,8 @@ export default function ProcurementPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-6">
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
           * { font-family: 'Sora', sans-serif; }
           @keyframes spin-slow { to { transform: rotate(360deg); } }
           .spin-slow { animation: spin-slow 1.4s linear infinite; }
@@ -305,9 +348,7 @@ export default function ProcurementPage() {
         <div>
           <p className="text-sm font-semibold text-gray-600 text-center mb-3">Loading purchase requests…</p>
           <div className="flex items-center justify-center gap-1.5">
-            <div className="dot" />
-            <div className="dot" />
-            <div className="dot" />
+            <div className="dot" /><div className="dot" /><div className="dot" />
           </div>
         </div>
         <div className="w-full max-w-4xl px-8 space-y-3">
@@ -351,10 +392,34 @@ export default function ProcurementPage() {
           {!(isBACAccount || isDivisionHead) && <PRModalComponent onSave={handlePRSaved} />}
         </div>
 
+        {/* ── TABS ── */}
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+          {([
+            { key: "pr",       label: "Purchase Request",   href: null                        },
+            { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"      },
+            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract"     },
+          ] as const).map(({ key, label, href }) => (
+            <button
+              key={key}
+              onClick={() => href && router.push(href)}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                key === "pr"
+                  ? "bg-emerald-700 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
-            <div key={label} className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}>
+            <div
+              key={label}
+              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+            >
               <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
@@ -373,7 +438,11 @@ export default function ProcurementPage() {
                 <button
                   key={value}
                   onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${statusFilter === value ? "bg-emerald-700 text-white border-emerald-700" : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"}`}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                    statusFilter === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                  }`}
                 >
                   {label}
                 </button>
@@ -392,11 +461,7 @@ export default function ProcurementPage() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="p-8 space-y-3">
-              {[...Array(5)].map((_, i) => <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" />)}
-            </div>
-          ) : filteredList.length === 0 ? (
+          {filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
               <p className="text-sm font-medium">No purchase requests found.</p>
@@ -411,16 +476,16 @@ export default function ProcurementPage() {
                       {([
                         { label: "PR Number",        field: null,                      align: "text-left"   },
                         { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
-                        { label: "Description",      field: null,                       align: "text-left"   },
+                        { label: "Description",      field: null,                      align: "text-left"   },
                         { label: "Date",             field: "created_at" as const,     align: "text-left"   },
-                        { label: "Status",           field: null,                       align: "text-center" },
-                        { label: "Status Flag",      field: null,                       align: "text-center" },
+                        { label: "Status",           field: null,                      align: "text-center" },
+                        { label: "Status Flag",      field: null,                      align: "text-center" },
                         { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
-                        { label: "Actions",          field: null,                       align: "text-center" },
+                        { label: "Actions",          field: null,                      align: "text-center" },
                       ] as const).map(({ label, field, align }) => (
                         <th
                           key={label}
-                          style={{ display: label === "Status Flag" && !isEndUser ? "none" as const : undefined }}
+                          style={{ display: label === "Status Flag" && !isEndUser ? "none" : undefined }}
                           onClick={field ? () => handleSort(field) : undefined}
                           className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
                         >
@@ -434,9 +499,10 @@ export default function ProcurementPage() {
                   <tbody>
                     {pagedList.map((form, index) => {
                       const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
-                      const cost = form.total_cost || 0;
+                      const cost  = form.total_cost || 0;
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+                      const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
 
@@ -452,7 +518,9 @@ export default function ProcurementPage() {
 
                           {/* Description */}
                           <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
-                            {desc ? <span className="line-clamp-2 leading-snug">{desc}</span> : <span className="text-gray-300">—</span>}
+                            {desc
+                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
+                              : <span className="text-gray-300">—</span>}
                           </td>
 
                           {/* Date */}
@@ -469,13 +537,13 @@ export default function ProcurementPage() {
                             </span>
                           </td>
 
-                          {/* Status Flag */}
+                          {/* Status Flag — end users only */}
                           {isEndUser && (
                             <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                               {(() => {
-                                const fid = latestFlagByPr[form.id] ?? null;
+                                const fid   = latestFlagByPr[form.id] ?? null;
                                 const fname = fid ? flagNameById[fid] : "No Flag";
-                                const key = (fname || "No Flag").toLowerCase();
+                                const key   = (fname || "No Flag").toLowerCase();
                                 return (
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${FLAG_BADGE[key] ?? FLAG_BADGE.default}`}>
                                     {fname}
@@ -487,15 +555,55 @@ export default function ProcurementPage() {
 
                           {/* Total Cost */}
                           <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
-                            {cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : <span className="text-gray-300 font-normal">—</span>}
+                            {cost > 0
+                              ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                              : <span className="text-gray-300 font-normal">—</span>}
                           </td>
 
-                          {/* Actions */}
+                          {/* ── ACTIONS ── */}
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
 
-                              {/* Edit — not for Division Head or BAC (unless admin) */}
-                              {(isAdmin || (!isDivisionHead && !isBACAccount)) && (
+                              {/* Budget account — View + Budget Process */}
+                              {isBudgetAccount && (
+                                <>
+                                  <button
+                                    onClick={() => setViewPrId(form.id)}
+                                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                                  >
+                                    View
+                                  </button>
+                                  {form.status_id === 4 && (
+                                    <button
+                                      onClick={() =>
+                                        setBudgetProcessTarget({
+                                          prId: form.id,
+                                          prNo:  form.pr_no,
+                                          // ← pass all prData fields from the row
+                                          prData: {
+                                            office_section: form.office_section,
+                                            purpose:        form.purpose,
+                                            total_cost:     form.total_cost,
+                                            status:         form.status,
+                                            entity_name:    form.entity_name,
+                                            fund_cluster:   form.fund_cluster,
+                                            req_name:       form.req_name,
+                                            app_name:       form.app_name,
+                                            app_no:         form.app_no,
+                                            resp_code:      form.resp_code,
+                                          },
+                                        })
+                                      }
+                                      className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all whitespace-nowrap"
+                                    >
+                                      Budget Process
+                                    </button>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Edit — not for Division Head / BAC / Budget (unless admin) */}
+                              {!isBudgetAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_no)}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
@@ -504,16 +612,18 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* View — everyone */}
-                              <button
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
-                              >
-                                View
-                              </button>
+                              {/* View — everyone except budget (already has View above) */}
+                              {!isBudgetAccount && (
+                                <button
+                                  onClick={() => setViewPrId(form.id)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                                >
+                                  View
+                                </button>
+                              )}
 
-                              {/* Submit — regular users only, only when Pending (status_id=1) */}
-                              {!isAdmin && !isDivisionHead && !isBACAccount && form.status_id === 1 && (
+                              {/* Submit — regular end users, Pending only */}
+                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && form.status_id === 1 && (
                                 <button
                                   onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all whitespace-nowrap"
@@ -522,8 +632,8 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Process — admin always, Division Head when status_id=2, BAC always */}
-                              {(isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                              {/* Process — admin always, Division Head when status_id=2 */}
+                              {!isBudgetAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button
                                   onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
@@ -532,8 +642,8 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* BAC Process — BAC account only when status is 3 (Processing BAC) */}
-                              {isBACAccount && form.status_id === 3 && (
+                              {/* BAC Process — BAC account, status_id=3 */}
+                              {!isBudgetAccount && isBACAccount && form.status_id === 3 && (
                                 <button
                                   onClick={() => setBACProcessTarget({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
@@ -542,8 +652,8 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* PARPO Process — PARPO account only when status is 5 (Processing PARPO) */}
-                              {isPARPOAccount && form.status_id === 5 && (
+                              {/* PARPO Process — PARPO account, status_id=5 */}
+                              {!isBudgetAccount && isPARPOAccount && form.status_id === 5 && (
                                 <button
                                   onClick={() => setPARPOProcessTarget({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-all whitespace-nowrap"
@@ -572,19 +682,35 @@ export default function ProcurementPage() {
                   {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
                     <RiArrowLeftLine size={14} />
                   </button>
                   {pageNums.map((p, i) =>
                     p === "…" ? (
                       <span key={`e${i}`} className="px-1 text-gray-400">…</span>
                     ) : (
-                      <button key={p} onClick={() => setCurrentPage(p as number)} className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all ${currentPage === p ? "bg-emerald-700 text-white border-emerald-700" : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"}`}>
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p as number)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all ${
+                          currentPage === p
+                            ? "bg-emerald-700 text-white border-emerald-700"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                        }`}
+                      >
                         {p}
                       </button>
                     )
                   )}
-                  <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
                     <RiArrowRightLine size={14} />
                   </button>
                 </div>
@@ -619,12 +745,26 @@ export default function ProcurementPage() {
             </p>
             <p className="text-xs text-gray-400 text-center mt-1">This action cannot be undone.</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setSubmitConfirm(null)} disabled={submitting} className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-all disabled:opacity-50">
+              <button
+                onClick={() => setSubmitConfirm(null)}
+                disabled={submitting}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-all disabled:opacity-50"
+              >
                 No, Cancel
               </button>
-              <button onClick={handleSubmitPR} disabled={submitting} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              <button
+                onClick={handleSubmitPR}
+                disabled={submitting}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
                 {submitting ? (
-                  <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Submitting…</>
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Submitting…
+                  </>
                 ) : "Yes, Submit"}
               </button>
             </div>
@@ -650,9 +790,7 @@ export default function ProcurementPage() {
           currentPrNo={bacProcessTarget.prNo}
           onClose={() => setBACProcessTarget(null)}
           onProcessed={(prId: number) => {
-            setList((prev) =>
-              prev.map((pr) => pr.id === prId ? { ...pr } : pr)
-            );
+            setList((prev) => prev.map((pr) => (pr.id === prId ? { ...pr } : pr)));
             setBACProcessTarget(null);
           }}
         />
@@ -665,10 +803,22 @@ export default function ProcurementPage() {
           currentPrNo={parpoProcessTarget.prNo}
           onClose={() => setPARPOProcessTarget(null)}
           onProcessed={(prId: number) => {
-            setList((prev) =>
-              prev.map((pr) => pr.id === prId ? { ...pr, status_id: 3, status: "Processing (BAC)" } : pr)
-            );
+            setList((prev) => prev.map((pr) => (pr.id === prId ? { ...pr } : pr)));
             setPARPOProcessTarget(null);
+          }}
+        />
+      )}
+
+      {/* ── BUDGET PROCESS MODAL ── */}
+      {budgetProcessTarget && (
+        <BudgetProcessModal
+          prId={budgetProcessTarget.prId}
+          currentPrNo={budgetProcessTarget.prNo}
+          prData={budgetProcessTarget.prData}  
+          onClose={() => setBudgetProcessTarget(null)}
+          onProcessed={(prId: number) => {
+            setList((prev) => prev.map((pr) => (pr.id === prId ? { ...pr } : pr)));
+            setBudgetProcessTarget(null);
           }}
         />
       )}

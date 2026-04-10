@@ -1,0 +1,514 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import SignoutModal from "@/components/SignOutModal";
+import ViewPRModal from "@/components/Viewprmodal";
+import CanvassProcessModal from "@/components/Canvassing/CanvassProcessModal";
+import {
+  RiFileListLine, RiSearchLine,
+  RiArrowUpLine, RiArrowDownLine,
+  RiArrowLeftLine, RiArrowRightLine,
+} from "react-icons/ri";
+
+export default function CanvassPage() {
+  const supabase = createClient();
+  const router = useRouter();
+
+  type PRItem = { description: string; subtotal: number };
+
+  type PRListRow = {
+    id: number;
+    entity_name: string;
+    pr_no: string;
+    office_section: string;
+    resp_code: string;
+    purpose: string;
+    total_cost: number;
+    status: string;
+    status_id: number | null;
+    fund_cluster: string;
+    req_name: string;
+    app_name: string;
+    app_no: string;
+    created_at?: string;
+    purchase_request_items?: PRItem[];
+  };
+
+  type CurrentUser = {
+    fullname: string;
+    username: string;
+    role_id: number;
+    divisions?: { division_name: string };
+    roles?: { role_name: string };
+  };
+
+  const [loading, setLoading]         = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin]         = useState(false);
+  const [signoutModalOpen, setSignoutModalOpen] = useState(false);
+  const [list, setList]               = useState<PRListRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortField, setSortField]     = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [viewPrId, setViewPrId]       = useState<number | null>(null);
+  const PAGE_SIZE = 10;
+
+  const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
+
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount =
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isBudgetAccount =
+    currentUser?.username?.toLowerCase() === "budget" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      setIsAdmin(user.role_id === 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchPRData = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("purchase_requests")
+          .select(`
+            id, entity_name, pr_no, office_section, resp_code,
+            purpose, total_cost, status, status_id,
+            fund_cluster, req_name, app_name, app_no,
+            created_at, purchase_request_items (*)
+          `)
+          .in("status_id", [6, 7, 8, 9, 10, 11])
+          .order("created_at", { ascending: false });
+
+        if (!error) {
+          const filteredData = (data || []).filter((pr) => {
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
+            return pr.office_section === currentUser?.divisions?.division_name;
+          });
+          setList(filteredData as PRListRow[]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPRData();
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
+
+  const getStatusInfo = (statusId: number | null) => {
+    const statusMap: Record<number, { name: string; color: string }> = {
+      6:  { name: "Canvassing (Reception)",  color: "canvassing" },
+      7:  { name: "Canvassing (Processing)", color: "canvassing" },
+      8:  { name: "Canvassing (Releasing)",  color: "canvassing" },
+      9:  { name: "Canvassing (Collection)", color: "canvassing" },
+      10: { name: "BAC Resolution",          color: "bac"        },
+      11: { name: "Abstract of Awards",            color: "aaa"        },
+    };
+    return statusMap[statusId!] || { name: "Unknown", color: "default" };
+  };
+
+  const BADGE_CLASS: Record<string, string> = {
+    canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
+    bac:        "bg-purple-50 text-purple-800 border border-purple-200",
+    aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
+    default:    "bg-gray-100 text-gray-700 border border-gray-200",
+  };
+
+  const STATUS_OPTIONS = [
+    { value: "all",        label: "All" },
+    { value: "canvassing", label: "Canvassing" },
+    { value: "bac",        label: "BAC Resolution" },
+    { value: "aaa",        label: "Abstract of Awards" },
+  ];
+
+  const countByColor = (color: string) =>
+    list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
+
+  const STAT_CARDS = [
+    { label: "Total",          value: list.length,               cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
+    { label: "Canvassing",     value: countByColor("canvassing"), cardBg: "bg-violet-50",  border: "border-violet-100",  iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600"  },
+    { label: "BAC Resolution", value: countByColor("bac"),        cardBg: "bg-purple-50",  border: "border-purple-100",  iconBg: "bg-purple-100",  iconColor: "text-purple-600",  numColor: "text-purple-600"  },
+    { label: "AAA Issuance",   value: countByColor("aaa"),        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600"    },
+  ];
+
+  const handleSort = (f: typeof sortField) => {
+    if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(f); setSortDir(f === "created_at" ? "desc" : "asc"); }
+    setCurrentPage(1);
+  };
+
+  const filteredList = list
+    .filter((pr) => {
+      const matchSearch =
+        pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const { color } = getStatusInfo(pr.status_id);
+      return matchSearch && (statusFilter === "all" || color === statusFilter);
+    })
+    .sort((a, b) => {
+      let aVal: number | string = "";
+      let bVal: number | string = "";
+      if (sortField === "total_cost") {
+        aVal = a.total_cost || 0; bVal = b.total_cost || 0;
+      } else if (sortField === "created_at") {
+        aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
+        bVal = b.created_at ? new Date(b.created_at).getTime() : 0;
+      } else {
+        aVal = a[sortField] || ""; bVal = b[sortField] || "";
+      }
+      return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
+  const pagedList  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const SortIcon = ({ field }: { field: typeof sortField }) => (
+    <span className={`inline-flex ml-1 ${sortField === field ? "opacity-100" : "opacity-30"}`}>
+      {sortField === field && sortDir === "desc"
+        ? <RiArrowDownLine size={12} />
+        : <RiArrowUpLine size={12} />}
+    </span>
+  );
+
+  const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+      acc.push(p);
+      return acc;
+    }, []);
+
+  /* ── LOADING SCREEN ── */
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-6">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          * { font-family: 'Sora', sans-serif; }
+          @keyframes spin-slow { to { transform: rotate(360deg); } }
+          .spin-slow { animation: spin-slow 1.4s linear infinite; }
+          @keyframes pulse-dot { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+          .dot { width: 8px; height: 8px; border-radius: 9999px; background: #059669; animation: pulse-dot 1.2s infinite ease-in-out; }
+          .dot:nth-child(2) { animation-delay: 0.2s; }
+          .dot:nth-child(3) { animation-delay: 0.4s; }
+        `}</style>
+        <div className="relative">
+          <svg className="spin-slow w-16 h-16" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="28" stroke="#d1fae5" strokeWidth="6" />
+            <path d="M32 4 a28 28 0 0 1 28 28" stroke="#059669" strokeWidth="6" strokeLinecap="round" />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <RiFileListLine size={22} className="text-emerald-600" />
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-600 text-center mb-3">Loading canvass records…</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="dot" /><div className="dot" /><div className="dot" />
+          </div>
+        </div>
+        <div className="w-full max-w-4xl px-8 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-11 bg-gray-200 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { font-family: 'Sora', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tr-row:hover td { background-color: #f5f3ff !important; }
+        .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
+      `}</style>
+
+      <div className="w-full p-6 md:p-10 space-y-6">
+
+        {/* ── HEADER ── */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
+            <h1 className="text-3xl font-bold text-gray-900">Canvass</h1>
+            {currentUser && (
+              <p className="text-sm text-gray-400 mt-1">
+                Signed in as{" "}
+                <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+                {currentUser.divisions?.division_name && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                    {currentUser.divisions.division_name}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ── TABS ── */}
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+          {([
+            { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
+            { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
+            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
+          ] as const).map(({ key, label, href }) => (
+            <button
+              key={key}
+              onClick={() => router.push(href)}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                key === "canvass"
+                  ? "bg-emerald-700 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── STAT CARDS ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {STAT_CARDS.map(({ label, value, cardBg, border, iconBg, iconColor, numColor }) => (
+            <div
+              key={label}
+              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+            >
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
+                <RiFileListLine size={20} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">{label}</p>
+                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── TABLE PANEL ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">Canvass Records</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                    statusFilter === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+              <div className="relative flex items-center">
+                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search PR, entity or section…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
+                />
+              </div>
+            </div>
+          </div>
+
+          {filteredList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <RiFileListLine size={38} className="opacity-30 mb-3" />
+              <p className="text-sm font-medium">No canvass records found.</p>
+              <p className="text-xs mt-1">Try adjusting your search or filter.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                      {([
+                        { label: "PR Number",        field: null,                      align: "text-left"   },
+                        { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
+                        { label: "Description",      field: null,                      align: "text-left"   },
+                        { label: "Date",             field: "created_at" as const,     align: "text-left"   },
+                        { label: "Status",           field: null,                      align: "text-center" },
+                        { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
+                        { label: "Actions",          field: null,                      align: "text-center" },
+                      ] as const).map(({ label, field, align }) => (
+                        <th
+                          key={label}
+                          onClick={field ? () => handleSort(field) : undefined}
+                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
+                        >
+                          <span className="inline-flex items-center gap-0.5">
+                            {label}{field && <SortIcon field={field} />}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedList.map((form, index) => {
+                      const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
+                      const cost  = form.total_cost || 0;
+                      const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                      const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+
+                      return (
+                        <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
+
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                            {form.pr_no}
+                          </td>
+
+                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                            {form.office_section || <span className="text-gray-300">—</span>}
+                          </td>
+
+                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
+                            {desc
+                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+
+                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                            {form.created_at
+                              ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+
+                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                              {statusName}
+                            </span>
+                          </td>
+
+                          <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
+                            {cost > 0
+                              ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                              : <span className="text-gray-300 font-normal">—</span>}
+                          </td>
+
+                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setViewPrId(form.id)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                              >
+                                View
+                              </button>
+
+                              {/* Process — BAC account, status_id in canvass flow */}
+                              {!isBudgetAccount && isBACAccount && [6, 7, 8, 9, 10, 11].includes(form.status_id ?? -1) && (
+                                <button
+                                  onClick={() => setProcessTarget(form)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                >
+                                  Process
+                                </button>
+                              )}
+
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── PAGINATION FOOTER ── */}
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                <span>
+                  Showing{" "}
+                  <span className="font-semibold text-gray-700">
+                    {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
+                  </span>{" "}
+                  of <span className="font-semibold text-gray-700">{filteredList.length}</span> records
+                  {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <RiArrowLeftLine size={14} />
+                  </button>
+                  {pageNums.map((p, i) =>
+                    p === "…" ? (
+                      <span key={`e${i}`} className="px-1 text-gray-400">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p as number)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all ${
+                          currentPage === p
+                            ? "bg-emerald-700 text-white border-emerald-700"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <RiArrowRightLine size={14} />
+                  </button>
+                </div>
+                <span className="mono">
+                  Filtered total:{" "}
+                  <span className="font-semibold text-emerald-700">
+                    ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── VIEW PR MODAL ── */}
+      {viewPrId !== null && (
+        <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
+      )}
+
+      {/* ── PROCESS MODAL ── */}
+      {processTarget && (
+        <CanvassProcessModal
+          pr={processTarget}
+          onClose={() => setProcessTarget(null)}
+          onUpdated={(prId, patch) => {
+            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, ...patch } : p)));
+            setProcessTarget((prev) => (prev && prev.id === prId ? { ...prev, ...patch } : prev));
+          }}
+        />
+      )}
+
+      {/* ── SIGNOUT MODAL ── */}
+      <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
+    </div>
+  );
+}

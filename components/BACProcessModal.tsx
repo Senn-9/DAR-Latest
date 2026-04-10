@@ -89,8 +89,8 @@ export default function BACProcessModal({
         .update({ 
           pr_no: formData.prNo,
           app_no: formData.appNo,
-          status_id: 5,
-          status: "Processing (PARPO)",
+          status_id: 4,
+          status: "Processing (Budget)",
         })
         .eq("id", prId);
 
