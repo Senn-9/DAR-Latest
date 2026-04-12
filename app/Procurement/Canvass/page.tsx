@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import CanvassProcessModal from "@/components/Canvassing/CanvassProcessModal";
+import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -16,7 +17,13 @@ export default function CanvassPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  type PRItem = { description: string; subtotal: number };
+  type PRItem = {
+    description: string;
+    subtotal?: number | null;
+    unit?: string | null;
+    quantity?: number | string | null;
+    unit_price?: number | string | null;
+  };
 
   type PRListRow = {
     id: number;
@@ -58,6 +65,7 @@ export default function CanvassPage() {
   const PAGE_SIZE = 10;
 
   const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
+  const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -409,11 +417,19 @@ export default function CanvassPage() {
 
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
+                              {/* <button
                                 onClick={() => setViewPrId(form.id)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
                               >
                                 View
+                              </button> */}
+
+                              <button
+                                type="button"
+                                onClick={() => setViewCanvassTarget(form)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-all whitespace-nowrap"
+                              >
+                                View Canvass
                               </button>
 
                               {/* Process — BAC account, status_id in canvass flow */}
@@ -495,11 +511,28 @@ export default function CanvassPage() {
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
+      {viewCanvassTarget && (
+        <ViewCanvass
+          pr={viewCanvassTarget}
+          onClose={() => setViewCanvassTarget(null)}
+          onViewRfq={() => {
+            const id = viewCanvassTarget.id;
+            setViewCanvassTarget(null);
+            setViewPrId(id);
+          }}
+        />
+      )}
+
       {/* ── PROCESS MODAL ── */}
       {processTarget && (
         <CanvassProcessModal
           pr={processTarget}
           onClose={() => setProcessTarget(null)}
+          onViewRfq={() => {
+            const id = processTarget.id;
+            setProcessTarget(null);
+            setViewPrId(id);
+          }}
           onUpdated={(prId, patch) => {
             setList((prev) => prev.map((p) => (p.id === prId ? { ...p, ...patch } : p)));
             setProcessTarget((prev) => (prev && prev.id === prId ? { ...prev, ...patch } : prev));

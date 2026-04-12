@@ -1,7 +1,7 @@
 export type ID = number
-export type Timestamp = string // ISO string from Supabase
+export type Timestamp = string
 
-// ───────────────── USERS / ROLES ─────────────────
+// ───────────────── USERS ─────────────────
 export type User = {
   id: ID
   created_at: Timestamp
@@ -126,6 +126,7 @@ export type CanvassSession = {
   deadline: Timestamp | null
   status: string | null
   bac_no: string | null
+  aaa_prefill_assignment_id: ID | null // ✅ NEW
 }
 
 export type CanvassEntry = {
@@ -140,6 +141,9 @@ export type CanvassEntry = {
   total_price: number | null
   is_winning: boolean | null
   created_at: Timestamp
+  tin_no: string | null            // ✅ NEW
+  delivery_days: string | null     // ✅ NEW
+  assignment_id: ID | null         // ✅ NEW
 }
 
 export type CanvasserAssignment = {
@@ -173,7 +177,7 @@ export type AAADocument = {
   particulars: string | null
 }
 
-// ───────────────── ORS ─────────────────
+// ───────────────── ORS (UPDATED) ─────────────────
 export type ORSEntry = {
   id: ID
   ors_no: string | null
@@ -188,6 +192,18 @@ export type ORSEntry = {
   notes: string | null
   created_at: Timestamp
   updated_at: Timestamp | null
+
+  // ✅ NEW FIELDS
+  fund_cluster: string | null
+  responsibility_center: string | null
+  particulars: string | null
+  mfo_pap: string | null
+  uacs_code: string | null
+  prepared_by_name: string | null
+  prepared_by_desig: string | null
+  approved_by_name: string | null
+  approved_by_desig: string | null
+  date_created: string | null
 }
 
 // ───────────────── PROPOSALS ─────────────────

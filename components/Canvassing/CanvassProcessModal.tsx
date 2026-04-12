@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import CanvassingReceptionModal from "@/components/Canvassing/CanvassingReceptionModal";
 import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
+import ReleasedCanvasserEntryButton from "@/components/Canvassing/ReleasedCanvasserEntryButton";
+import CollectCanvassStepPanel from "@/components/Canvassing/CollectCanvassStepPanel";
 import { RiCloseLine, RiCheckboxCircleLine, RiArrowRightSLine } from "react-icons/ri";
 
 type Props = {
@@ -23,6 +25,8 @@ type Props = {
   };
   onClose: () => void;
   onUpdated: (prId: number, patch: Partial<{ status_id: number | null; status: string }>) => void;
+  /** Open full PR (RFQ) view; used from canvasser quotation modal */
+  onViewRfq?: () => void;
 };
 
 type StepKey = "pr_received" | "release" | "collect" | "resolution" | "aaa";
@@ -47,7 +51,7 @@ const stepIndexForStatusId = (statusId: number | null): number => {
 const formatCurrency = (val?: number) =>
   val != null ? `₱${val.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—";
 
-export default function CanvassProcessModal({ pr, onClose, onUpdated }: Props) {
+export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq }: Props) {
   const [activeStep, setActiveStep] = useState<StepKey>("pr_received");
 
   useEffect(() => {
@@ -186,8 +190,20 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated }: Props) {
           )}
 
           {activeStep === "collect" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-sm text-gray-500">
-              Collect step UI coming next.
+            <div className="space-y-4">
+              <CollectCanvassStepPanel
+                prId={pr.id}
+                prNo={pr.pr_no}
+                readonly={isPastStep}
+                onViewRfq={onViewRfq}
+                onPreviousStep={() => setActiveStep("release")}
+                onNextStep={() => setActiveStep("resolution")}
+                canGoNextStep={unlockedIdx >= 3}
+                onAdvancedToResolution={(prId) => {
+                  onUpdated(prId, { status_id: 10, status: "BAC Resolution" });
+                }}
+              />
+              <ReleasedCanvasserEntryButton prId={pr.id} prNo={pr.pr_no} onViewRfq={onViewRfq} />
             </div>
           )}
 
@@ -207,4 +223,3 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated }: Props) {
     </div>
   );
 }
-
