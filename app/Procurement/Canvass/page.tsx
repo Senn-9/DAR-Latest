@@ -65,6 +65,8 @@ export default function CanvassPage() {
   const PAGE_SIZE = 10;
 
   const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
+  /** When set with processTarget, CanvassProcessModal opens on BAC Resolution (e.g. from View). */
+  const [processInitialStep, setProcessInitialStep] = useState<"resolution" | null>(null);
   const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
@@ -435,7 +437,10 @@ export default function CanvassPage() {
                               {/* Process — BAC account, status_id in canvass flow */}
                               {!isBudgetAccount && isBACAccount && [6, 7, 8, 9, 10, 11].includes(form.status_id ?? -1) && (
                                 <button
-                                  onClick={() => setProcessTarget(form)}
+                                  onClick={() => {
+                                    setProcessInitialStep(null);
+                                    setProcessTarget(form);
+                                  }}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
                                 >
                                   Process
@@ -520,17 +525,29 @@ export default function CanvassPage() {
             setViewCanvassTarget(null);
             setViewPrId(id);
           }}
+          onOpenResolutionProcess={() => {
+            const pr = viewCanvassTarget;
+            setViewCanvassTarget(null);
+            setProcessInitialStep("resolution");
+            setProcessTarget(pr);
+          }}
         />
       )}
 
       {/* ── PROCESS MODAL ── */}
       {processTarget && (
         <CanvassProcessModal
+          key={`${processTarget.id}-${processInitialStep ?? "default"}`}
           pr={processTarget}
-          onClose={() => setProcessTarget(null)}
+          initialStep={processInitialStep ?? undefined}
+          onClose={() => {
+            setProcessTarget(null);
+            setProcessInitialStep(null);
+          }}
           onViewRfq={() => {
             const id = processTarget.id;
             setProcessTarget(null);
+            setProcessInitialStep(null);
             setViewPrId(id);
           }}
           onUpdated={(prId, patch) => {

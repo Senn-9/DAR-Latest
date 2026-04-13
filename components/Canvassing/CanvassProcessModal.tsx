@@ -1,13 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CanvassingReceptionModal from "@/components/Canvassing/CanvassingReceptionModal";
 import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
 import ReleasedCanvasserEntryButton from "@/components/Canvassing/ReleasedCanvasserEntryButton";
 import CollectCanvassStepPanel from "@/components/Canvassing/CollectCanvassStepPanel";
+import CanvassResolutionDetailsPanel from "@/components/Canvassing/CanvassResolutionDetailsPanel";
+import CanvassAAADetailsPanel from "@/components/Canvassing/CanvassAAADetailsPanel";
 import { RiCloseLine, RiCheckboxCircleLine, RiArrowRightSLine } from "react-icons/ri";
 
+type StepKey = "pr_received" | "release" | "collect" | "resolution" | "aaa";
+
+const steps: { key: StepKey; label: string }[] = [
+  { key: "pr_received", label: "PR Received" },
+  { key: "release", label: "Release" },
+  { key: "collect", label: "Collect" },
+  { key: "resolution", label: "Resolution" },
+  { key: "aaa", label: "AAA" },
+];
+
+const RESOLUTION_STEP_INDEX = steps.findIndex((s) => s.key === "resolution");
+
 type Props = {
+  /** When opening the modal (e.g. from View), land on this step instead of the status-derived step. */
+  initialStep?: StepKey | null;
   pr: {
     id: number;
     pr_no: string;
@@ -29,16 +45,6 @@ type Props = {
   onViewRfq?: () => void;
 };
 
-type StepKey = "pr_received" | "release" | "collect" | "resolution" | "aaa";
-
-const steps: { key: StepKey; label: string }[] = [
-  { key: "pr_received", label: "PR Received" },
-  { key: "release", label: "Release" },
-  { key: "collect", label: "Collect" },
-  { key: "resolution", label: "Resolution" },
-  { key: "aaa", label: "AAA" },
-];
-
 const stepIndexForStatusId = (statusId: number | null): number => {
   if (statusId === 6) return 0;
   if (statusId === 8) return 1;
@@ -51,8 +57,11 @@ const stepIndexForStatusId = (statusId: number | null): number => {
 const formatCurrency = (val?: number) =>
   val != null ? `₱${val.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—";
 
-export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq }: Props) {
-  const [activeStep, setActiveStep] = useState<StepKey>("pr_received");
+export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdated, onViewRfq }: Props) {
+  const [activeStep, setActiveStep] = useState<StepKey>(() => {
+    if (initialStep) return initialStep;
+    return steps[stepIndexForStatusId(pr.status_id)]?.key ?? "pr_received";
+  });
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -63,14 +72,19 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq 
 
   const unlockedIdx = useMemo(() => stepIndexForStatusId(pr.status_id), [pr.status_id]);
 
+  /** Only sync the active tab when PR status changes — not on mount — so Resolution clicks are not reset. */
+  const prevStatusIdRef = useRef(pr.status_id);
   useEffect(() => {
-    // Default to current status step (never jump backwards past unlocked)
-    const idx = unlockedIdx;
-    setActiveStep(steps[idx]?.key ?? "pr_received");
-  }, [unlockedIdx]);
+    if (prevStatusIdRef.current === pr.status_id) return;
+    prevStatusIdRef.current = pr.status_id;
+    setActiveStep(steps[stepIndexForStatusId(pr.status_id)]?.key ?? "pr_received");
+  }, [pr.status_id]);
 
-  const canOpen = (key: StepKey) => {
-    const idx = steps.findIndex((s) => s.key === key);
+  /**
+   * Step tab gating. Resolution is always reachable (bypass). Index fallback in case key ever mismatches in builds.
+   */
+  const stepTabUnlocked = (idx: number, key: StepKey) => {
+    if (key === "resolution" || idx === RESOLUTION_STEP_INDEX) return true;
     return idx <= unlockedIdx;
   };
 
@@ -127,8 +141,9 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq 
           <div className="mt-5 flex items-center gap-3 overflow-x-auto pb-1">
             {steps.map((s, idx) => {
               const active = activeStep === s.key;
-              const unlocked = idx <= unlockedIdx;
+              const unlocked = stepTabUnlocked(idx, s.key);
               const done = idx < unlockedIdx;
+              const isResolution = s.key === "resolution" || idx === RESOLUTION_STEP_INDEX;
               return (
                 <button
                   key={s.key}
@@ -138,14 +153,24 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq 
                     active
                       ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                       : unlocked
-                      ? "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      ? isResolution
+                        ? "bg-white border-emerald-200/70 text-emerald-900 hover:bg-emerald-50/80 cursor-pointer"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                       : "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
                   }`}
                   disabled={!unlocked}
                 >
                   <span
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${
-                      done ? "bg-emerald-600 text-white" : active ? "bg-emerald-700 text-white" : unlocked ? "bg-gray-200 text-gray-700" : "bg-gray-100 text-gray-300"
+                      done
+                        ? "bg-emerald-600 text-white"
+                        : active
+                          ? "bg-emerald-700 text-white"
+                          : unlocked
+                            ? isResolution
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-gray-200 text-gray-700"
+                            : "bg-gray-100 text-gray-300"
                     }`}
                   >
                     {done ? <RiCheckboxCircleLine size={16} /> : idx + 1}
@@ -174,6 +199,19 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq 
                 }}
               />
             </div>
+          )}
+
+          {activeStep === "resolution" && (
+            <CanvassResolutionDetailsPanel
+              key={pr.id}
+              prId={pr.id}
+              prNo={pr.pr_no}
+              canCompleteWorkflow={pr.status_id === 10}
+              onWorkflowComplete={(prId) => {
+                onUpdated(prId, { status_id: 11, status: "Abstract of Awards" });
+                setActiveStep("aaa");
+              }}
+            />
           )}
 
           {activeStep === "release" && (
@@ -207,16 +245,8 @@ export default function CanvassProcessModal({ pr, onClose, onUpdated, onViewRfq 
             </div>
           )}
 
-          {activeStep === "resolution" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-sm text-gray-500">
-              Resolution step UI coming next.
-            </div>
-          )}
-
           {activeStep === "aaa" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-sm text-gray-500">
-              Abstract of Awards (AAA) step UI coming next.
-            </div>
+            <CanvassAAADetailsPanel prId={pr.id} prNo={pr.pr_no} />
           )}
         </div>
       </div>

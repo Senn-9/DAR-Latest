@@ -78,9 +78,13 @@ type Props = {
   pr: ViewCanvassPR;
   onClose: () => void;
   onViewRfq: () => void;
+  /** Opens the process modal on BAC Resolution so the user can edit (stepper is otherwise non-interactive here). */
+  onOpenResolutionProcess?: () => void;
 };
 
-export default function ViewCanvass({ pr, onClose, onViewRfq }: Props) {
+const RESOLUTION_STEP_INDEX = steps.findIndex((s) => s.key === "resolution");
+
+export default function ViewCanvass({ pr, onClose, onViewRfq, onOpenResolutionProcess }: Props) {
   const [lineItemsOpen, setLineItemsOpen] = useState(true);
 
   useEffect(() => {
@@ -173,38 +177,64 @@ export default function ViewCanvass({ pr, onClose, onViewRfq }: Props) {
             </div>
           </div>
 
-          {/* Stepper — same visual language as CanvassProcessModal (read-only) */}
+          {/* Stepper — same visual language as CanvassProcessModal; Resolution can open the process modal when wired */}
           <div className="mt-5 flex items-center gap-3 overflow-x-auto pb-1">
             {steps.map((s, idx) => {
               const active = idx === unlockedIdx;
               const unlocked = idx <= unlockedIdx;
               const done = idx < unlockedIdx;
-              return (
-                <div
-                  key={s.key}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all whitespace-nowrap shrink-0 ${
-                    active
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                      : unlocked
-                        ? "bg-white border-gray-200 text-gray-600"
-                        : "bg-gray-50 border-gray-200 text-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${
-                      done
-                        ? "bg-emerald-600 text-white"
-                        : active
-                          ? "bg-emerald-700 text-white"
-                          : unlocked
-                            ? "bg-gray-200 text-gray-700"
-                            : "bg-gray-100 text-gray-300"
-                    }`}
-                  >
+              const isResolution = s.key === "resolution" || idx === RESOLUTION_STEP_INDEX;
+              const openProcess = isResolution && onOpenResolutionProcess;
+
+              const shellCls = `flex items-center gap-2 px-3 py-2 rounded-xl border transition-all whitespace-nowrap shrink-0 ${
+                active
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : unlocked
+                    ? openProcess
+                      ? "bg-white border-emerald-200/70 text-emerald-900 hover:bg-emerald-50/80 cursor-pointer"
+                      : "bg-white border-gray-200 text-gray-600"
+                    : openProcess
+                      ? "bg-white border-emerald-200/70 text-emerald-900 hover:bg-emerald-50/80 cursor-pointer"
+                      : "bg-gray-50 border-gray-200 text-gray-300"
+              }`;
+
+              const circleCls = `w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${
+                done
+                  ? "bg-emerald-600 text-white"
+                  : active
+                    ? "bg-emerald-700 text-white"
+                    : unlocked
+                      ? openProcess
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-gray-200 text-gray-700"
+                      : openProcess
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-gray-100 text-gray-300"
+              }`;
+
+              const inner = (
+                <>
+                  <span className={circleCls}>
                     {done ? <RiCheckboxCircleLine size={16} /> : idx + 1}
                   </span>
                   <span className="text-xs font-extrabold">{s.label}</span>
                   {idx < steps.length - 1 && <RiArrowRightSLine className="text-gray-300" size={18} />}
+                </>
+              );
+
+              return openProcess ? (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={onOpenResolutionProcess}
+                  className={shellCls}
+                  title="Open process workflow to edit BAC Resolution"
+                >
+                  {inner}
+                </button>
+              ) : (
+                <div key={s.key} className={shellCls}>
+                  {inner}
                 </div>
               );
             })}

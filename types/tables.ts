@@ -126,7 +126,7 @@ export type CanvassSession = {
   deadline: Timestamp | null
   status: string | null
   bac_no: string | null
-  aaa_prefill_assignment_id: ID | null // ✅ NEW
+  // aaa_prefill_assignment_id: ID | null // ✅ NEW
 }
 
 export type CanvassEntry = {
