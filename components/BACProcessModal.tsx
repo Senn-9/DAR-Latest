@@ -125,6 +125,7 @@ export default function BACProcessModal({
           pr_id: prId,
           remark: remarkText || null,
           user_id: userId || null,
+          status_flag_id: 2,
         });
 
         if (remarksErr) {

@@ -11,7 +11,6 @@ const inputCls =
   "w-full px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50/90 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition placeholder:text-gray-400";
 
 const selectCls = `${inputCls} appearance-none bg-[length:1.25rem] bg-[right_0.65rem_center] bg-no-repeat pr-10`;
-// Chevron via inline SVG data URI for consistent look across browsers
 const selectChevron =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
 
@@ -65,13 +64,22 @@ export default function CanvassResolutionDetailsPanel({
   const [resolutionId, setResolutionId] = useState<number | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
 
+  // Existing fields
   const [resolutionNo, setResolutionNo] = useState("");
   const [preparedBy, setPreparedBy] = useState<string>("");
   const [resolvedAt, setResolvedAt] = useState("");
   const [notes, setNotes] = useState("");
   const [mode, setMode] = useState("");
 
-  /** Placeholder BAC number when no session exists yet (e.g. user opens Resolution before PR Received). */
+  // New fields
+  const [divisionId, setDivisionId] = useState<number | null>(null);
+  const [whereas1, setWhereas1] = useState("");
+  const [whereas2, setWhereas2] = useState("");
+  const [whereas3, setWhereas3] = useState("");
+  const [nowThereforeText, setNowThereforeText] = useState("");
+  const [resolvedAtPlace, setResolvedAtPlace] = useState("");
+
+  /** Placeholder BAC number when no session exists yet. */
   const autoBacNo = `AUTO-${prNo || String(prId)}`;
 
   /** Always reads from DB (no stale sessionId) so load/save stay consistent. */
@@ -146,6 +154,11 @@ export default function CanvassResolutionDetailsPanel({
         setResolvedAt(toDatetimeLocalValue(row.resolved_at));
         setNotes(row.notes ?? "");
         setMode(row.mode ?? "");
+        setWhereas1(row.whereas_1 ?? "");
+        setWhereas2(row.whereas_2 ?? "");
+        setWhereas3(row.whereas_3 ?? "");
+        setNowThereforeText(row.now_therefore_text ?? "");
+        setResolvedAtPlace(row.resolved_at_place ?? "");
       } else {
         setResolutionId(null);
         setResolutionNo("");
@@ -153,8 +166,14 @@ export default function CanvassResolutionDetailsPanel({
         setResolvedAt("");
         setNotes("");
         setMode("");
+        setWhereas1("");
+        setWhereas2("");
+        setWhereas3("");
+        setNowThereforeText("");
+        setResolvedAtPlace("");
       }
 
+      // Resolve current user
       let currentUserId: number | null = null;
       try {
         const s = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
@@ -177,8 +196,21 @@ export default function CanvassResolutionDetailsPanel({
         /* ignore */
       }
 
+      // Auto-set prepared_by from current user if not already set
       if (!row?.prepared_by && currentUserId != null) {
         setPreparedBy(String(currentUserId));
+      }
+
+      // Fetch division_id from current user's profile
+      if (currentUserId != null) {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("division_id")
+          .eq("id", currentUserId)
+          .maybeSingle();
+        if (userRow && typeof (userRow as { division_id?: number }).division_id === "number") {
+          setDivisionId((userRow as { division_id: number }).division_id);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load resolution data.");
@@ -209,6 +241,12 @@ export default function CanvassResolutionDetailsPanel({
       resolved_at: fromDatetimeLocalValue(resolvedAt),
       notes: notes.trim() || null,
       mode: mode.trim(),
+      division_id: divisionId,
+      whereas_1: whereas1.trim() || null,
+      whereas_2: whereas2.trim() || null,
+      whereas_3: whereas3.trim() || null,
+      now_therefore_text: nowThereforeText.trim() || null,
+      resolved_at_place: resolvedAtPlace.trim() || null,
     };
   };
 
@@ -219,6 +257,12 @@ export default function CanvassResolutionDetailsPanel({
     resolved_at: string | null;
     notes: string | null;
     mode: string;
+    division_id: number | null;
+    whereas_1: string | null;
+    whereas_2: string | null;
+    whereas_3: string | null;
+    now_therefore_text: string | null;
+    resolved_at_place: string | null;
   }) => {
     if (resolutionId != null) {
       const { error: updErr } = await supabase.from("bac_resolution").update(payload).eq("id", resolutionId);
@@ -320,6 +364,7 @@ export default function CanvassResolutionDetailsPanel({
         </div>
 
         <div className="space-y-4">
+          {/* Resolution No. + PR Reference */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -345,6 +390,7 @@ export default function CanvassResolutionDetailsPanel({
             </div>
           </div>
 
+          {/* Mode of Procurement */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Mode of Procurement <span className="text-red-500">*</span>
@@ -366,6 +412,7 @@ export default function CanvassResolutionDetailsPanel({
             </div>
           </div>
 
+          {/* Prepared by + Resolved at */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Prepared by</label>
@@ -396,6 +443,19 @@ export default function CanvassResolutionDetailsPanel({
             </div>
           </div>
 
+          {/* Place of Resolution */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Place of Resolution</label>
+            <input
+              type="text"
+              className={inputCls}
+              value={resolvedAtPlace}
+              onChange={(e) => setResolvedAtPlace(e.target.value)}
+              placeholder="e.g. Quezon City"
+            />
+          </div>
+
+          {/* Notes */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes</label>
             <textarea
@@ -406,14 +466,79 @@ export default function CanvassResolutionDetailsPanel({
               rows={4}
             />
           </div>
-
-          <p className="text-[11px] text-gray-400 font-medium">
-            {sessionId != null
-              ? `Linked to canvass session #${sessionId} (set automatically for this PR).`
-              : "Saving will create a canvass session for this PR if one does not exist yet."}
-          </p>
         </div>
       </div>
+
+      {/* Whereas Clauses */}
+      <div>
+        <div className="flex items-center gap-3 mb-5">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 whitespace-nowrap">
+            Whereas clauses
+          </h3>
+          <div className="flex-1 h-px bg-gray-200" aria-hidden />
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Whereas 1</label>
+            <textarea
+              className={`${inputCls} min-h-[80px] resize-y`}
+              value={whereas1}
+              onChange={(e) => setWhereas1(e.target.value)}
+              placeholder="First whereas clause…"
+              rows={3}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Whereas 2</label>
+            <textarea
+              className={`${inputCls} min-h-[80px] resize-y`}
+              value={whereas2}
+              onChange={(e) => setWhereas2(e.target.value)}
+              placeholder="Second whereas clause…"
+              rows={3}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Whereas 3</label>
+            <textarea
+              className={`${inputCls} min-h-[80px] resize-y`}
+              value={whereas3}
+              onChange={(e) => setWhereas3(e.target.value)}
+              placeholder="Third whereas clause…"
+              rows={3}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Now Therefore */}
+      <div>
+        <div className="flex items-center gap-3 mb-5">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 whitespace-nowrap">
+            Now therefore
+          </h3>
+          <div className="flex-1 h-px bg-gray-200" aria-hidden />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Now Therefore Text</label>
+          <textarea
+            className={`${inputCls} min-h-[80px] resize-y`}
+            value={nowThereforeText}
+            onChange={(e) => setNowThereforeText(e.target.value)}
+            placeholder="Now, therefore, be it resolved…"
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <p className="text-[11px] text-gray-400 font-medium">
+        {sessionId != null
+          ? `Linked to canvass session #${sessionId} (set automatically for this PR).`
+          : "Saving will create a canvass session for this PR if one does not exist yet."}
+        {divisionId != null && ` · Division #${divisionId} auto-assigned from your account.`}
+      </p>
 
       <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
         <button

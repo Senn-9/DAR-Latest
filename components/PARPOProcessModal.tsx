@@ -85,6 +85,7 @@ export default function PARPOProcessModal({
         pr_id: prId,
         remark: remarks.trim(),
         user_id: userId || null,
+        status_flag_id: 2,
       });
 
       if (remarksErr) {

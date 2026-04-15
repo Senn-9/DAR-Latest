@@ -13,9 +13,9 @@ type StepKey = "pr_received" | "release" | "collect" | "resolution" | "aaa";
 
 const steps: { key: StepKey; label: string }[] = [
   { key: "pr_received", label: "PR Received" },
+  { key: "resolution", label: "Resolution" },
   { key: "release", label: "Release" },
   { key: "collect", label: "Collect" },
-  { key: "resolution", label: "Resolution" },
   { key: "aaa", label: "AAA" },
 ];
 
@@ -47,10 +47,10 @@ type Props = {
 
 const stepIndexForStatusId = (statusId: number | null): number => {
   if (statusId === 6) return 0;
-  if (statusId === 8) return 1;
-  if (statusId === 9) return 2;
-  if (statusId === 10) return 3;
-  if (statusId === 11) return 4;
+  if (statusId === 8) return 2; // release
+  if (statusId === 9) return 3; // collect
+  if (statusId === 10) return 1; // resolution
+  if (statusId === 11) return 4; // aaa
   return 0;
 };
 

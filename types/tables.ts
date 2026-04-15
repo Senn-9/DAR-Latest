@@ -126,7 +126,6 @@ export type CanvassSession = {
   deadline: Timestamp | null
   status: string | null
   bac_no: string | null
-  // aaa_prefill_assignment_id: ID | null // ✅ NEW
 }
 
 export type CanvassEntry = {
@@ -141,9 +140,10 @@ export type CanvassEntry = {
   total_price: number | null
   is_winning: boolean | null
   created_at: Timestamp
-  tin_no: string | null            // ✅ NEW
-  delivery_days: string | null     // ✅ NEW
-  assignment_id: ID | null         // ✅ NEW
+  tin_no: string | null
+  delivery_days: string | null
+  assignment_id: ID | null
+  supplier_address: string | null // ✅ NEW
 }
 
 export type CanvasserAssignment = {
@@ -154,6 +154,8 @@ export type CanvasserAssignment = {
   released_at: Timestamp | null
   returned_at: Timestamp | null
   status: string | null
+  quotation_no: string | null   // ✅ NEW
+  rfq_index: number | null      // ✅ NEW
 }
 
 // ───────────────── BAC / AAA ─────────────────
@@ -165,6 +167,25 @@ export type BacResolution = {
   resolved_at: Timestamp | null
   notes: string | null
   mode: string | null
+  division_id: ID | null
+
+  // ✅ NEW FIELDS
+  whereas_1: string | null
+  whereas_2: string | null
+  whereas_3: string | null
+  now_therefore_text: string | null
+  resolved_at_place: string | null
+}
+
+export type BacResolutionPR = {
+  id: ID
+  resolution_id: ID
+  pr_id: ID | null
+  pr_no: string
+  pr_date: string | null
+  estimated_cost: number
+  end_user: string | null
+  recommended_mode: string | null
 }
 
 export type AAADocument = {
@@ -177,7 +198,7 @@ export type AAADocument = {
   particulars: string | null
 }
 
-// ───────────────── ORS (UPDATED) ─────────────────
+// ───────────────── ORS ─────────────────
 export type ORSEntry = {
   id: ID
   ors_no: string | null
@@ -193,7 +214,6 @@ export type ORSEntry = {
   created_at: Timestamp
   updated_at: Timestamp | null
 
-  // ✅ NEW FIELDS
   fund_cluster: string | null
   responsibility_center: string | null
   particulars: string | null
