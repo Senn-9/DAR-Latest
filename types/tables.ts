@@ -85,36 +85,6 @@ export type PurchaseRequestItem = {
   created_at: Timestamp
 }
 
-// ───────────────── PR FORM ─────────────────
-export type PRForm = {
-  pr_id: ID
-  entity_name: string | null
-  fund_cluster: string | null
-  office_section: string | null
-  pr_num: string
-  responsibility_code: string | null
-  created_at: Timestamp
-  purpose: string | null
-  req_by: string | null
-  req_designation: string | null
-  app_by: string | null
-  app_designation: string | null
-  status_id: ID | null
-  division: ID | null
-}
-
-export type PRItem = {
-  prItem_id: ID
-  created_at: Timestamp
-  stock_num: string | null
-  unit: string | null
-  description: string | null
-  quantity: string | null
-  unit_cost: string | null
-  total_cost: string | null
-  pr_id: ID | null
-}
-
 // ───────────────── CANVASS ─────────────────
 export type CanvassSession = {
   id: ID
@@ -143,7 +113,7 @@ export type CanvassEntry = {
   tin_no: string | null
   delivery_days: string | null
   assignment_id: ID | null
-  supplier_address: string | null // ✅ NEW
+  supplier_address: string | null
 }
 
 export type CanvasserAssignment = {
@@ -154,11 +124,11 @@ export type CanvasserAssignment = {
   released_at: Timestamp | null
   returned_at: Timestamp | null
   status: string | null
-  quotation_no: string | null   // ✅ NEW
-  rfq_index: number | null      // ✅ NEW
+  quotation_no: string | null
+  rfq_index: number | null
 }
 
-// ───────────────── BAC / AAA ─────────────────
+// ───────────────── BAC ─────────────────
 export type BacResolution = {
   id: ID
   session_id: ID | null
@@ -168,8 +138,6 @@ export type BacResolution = {
   notes: string | null
   mode: string | null
   division_id: ID | null
-
-  // ✅ NEW FIELDS
   whereas_1: string | null
   whereas_2: string | null
   whereas_3: string | null
@@ -188,6 +156,7 @@ export type BacResolutionPR = {
   recommended_mode: string | null
 }
 
+// ───────────────── AAA ─────────────────
 export type AAADocument = {
   id: ID
   session_id: ID | null
@@ -196,6 +165,82 @@ export type AAADocument = {
   prepared_at: Timestamp | null
   file_url: string | null
   particulars: string | null
+}
+
+// ───────────────── DELIVERY (NEW CORE FLOW) ─────────────────
+export type Delivery = {
+  id: ID
+  po_id: ID | null
+  po_no: string
+  supplier: string | null
+  office_section: string | null
+  division_id: ID | null
+  status_id: ID
+  delivery_no: string
+  dr_no: string | null
+  soa_no: string | null
+  notes: string | null
+  created_by: ID | null
+  created_at: Timestamp
+  updated_at: Timestamp | null
+  expected_delivery_date: string | null
+}
+
+// ───────────────── DV (DISBURSEMENT VOUCHER) ─────────────────
+export type DVDocument = {
+  id: ID
+  delivery_id: ID
+  dv_no: string | null
+  fund_cluster: string | null
+  ors_no: string | null
+  payee: string | null
+  payee_tin: string | null
+  address: string | null
+  particulars: string | null
+  responsibility_center: string | null
+  mfo_pap: string | null
+  amount_due: string | null
+  mode_of_payment: string | null
+  certified_by: string | null
+  approved_by: string | null
+  created_by: ID | null
+  created_at: Timestamp
+  updated_at: Timestamp | null
+}
+
+// ───────────────── IAR ─────────────────
+export type IARDocument = {
+  id: ID
+  delivery_id: ID
+  iar_no: string | null
+  po_no: string | null
+  invoice_no: string | null
+  invoice_date: string | null
+  requisitioning_office: string | null
+  responsibility_center: string | null
+  inspected_at: string | null
+  received_at: string | null
+  inspector_name: string | null
+  supply_officer_name: string | null
+  created_by: ID | null
+  created_at: Timestamp
+  updated_at: Timestamp | null
+}
+
+// ───────────────── LOA ─────────────────
+export type LOADocument = {
+  id: ID
+  delivery_id: ID
+  loa_no: string | null
+  po_no: string | null
+  invoice_no: string | null
+  invoice_date: string | null
+  accepted_at: string | null
+  accepted_by_name: string | null
+  accepted_by_title: string | null
+  created_by: ID | null
+  created_at: Timestamp
+  updated_at: Timestamp | null
 }
 
 // ───────────────── ORS ─────────────────
@@ -213,7 +258,6 @@ export type ORSEntry = {
   notes: string | null
   created_at: Timestamp
   updated_at: Timestamp | null
-
   fund_cluster: string | null
   responsibility_center: string | null
   particulars: string | null
@@ -224,15 +268,6 @@ export type ORSEntry = {
   approved_by_name: string | null
   approved_by_desig: string | null
   date_created: string | null
-}
-
-// ───────────────── PROPOSALS ─────────────────
-export type Proposal = {
-  id: ID
-  created_at: Timestamp
-  proposal_no: number | null
-  division_id: ID | null
-  pr_id: ID | null
 }
 
 // ───────────────── PURCHASE ORDER ─────────────────
@@ -278,7 +313,7 @@ export type PurchaseOrderItem = {
   subtotal: number | null
 }
 
-// ───────────────── REMARKS ─────────────────
+// ───────────────── REMARKS (UPDATED) ─────────────────
 export type Remark = {
   id: ID
   remark: string | null
@@ -288,4 +323,6 @@ export type Remark = {
   status_flag_id: ID | null
   prform_id: ID | null
   po_id: ID | null
+  delivery_id: ID | null
+  phase: "pr" | "po" | "delivery" | "payment" | "system" | null
 }
