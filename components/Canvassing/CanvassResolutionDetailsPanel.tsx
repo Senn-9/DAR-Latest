@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { BacResolution } from "@/types/tables";
 import { RiArrowRightLine } from "react-icons/ri";
@@ -30,6 +30,10 @@ type Props = {
   /** When true, "Resolve & Complete BAC Workflow" saves resolution and advances PR to AAA (status 11). */
   canCompleteWorkflow?: boolean;
   onWorkflowComplete?: (prId: number) => void;
+  /** Callback to expose submit handler to parent for custom submission flow. */
+  onSubmit?: (submitFn: () => Promise<boolean | undefined>) => void;
+  /** Hide internal buttons when using external submit (e.g., modal footer). */
+  hideActions?: boolean;
 };
 
 function toDatetimeLocalValue(iso: string | null): string {
@@ -52,6 +56,8 @@ export default function CanvassResolutionDetailsPanel({
   prNo,
   canCompleteWorkflow = false,
   onWorkflowComplete,
+  onSubmit,
+  hideActions = false,
 }: Props) {
   const supabase = createClient();
 
@@ -78,6 +84,31 @@ export default function CanvassResolutionDetailsPanel({
   const [whereas3, setWhereas3] = useState("");
   const [nowThereforeText, setNowThereforeText] = useState("");
   const [resolvedAtPlace, setResolvedAtPlace] = useState("");
+
+  // Refs to avoid stale closure when handleSave is called from parent
+  const resolutionNoRef = useRef(resolutionNo);
+  const modeRef = useRef(mode);
+  const preparedByRef = useRef(preparedBy);
+  const resolvedAtRef = useRef(resolvedAt);
+  const notesRef = useRef(notes);
+  const divisionIdRef = useRef(divisionId);
+  const whereas1Ref = useRef(whereas1);
+  const whereas2Ref = useRef(whereas2);
+  const whereas3Ref = useRef(whereas3);
+  const nowThereforeTextRef = useRef(nowThereforeText);
+  const resolvedAtPlaceRef = useRef(resolvedAtPlace);
+
+  useEffect(() => { resolutionNoRef.current = resolutionNo; }, [resolutionNo]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { preparedByRef.current = preparedBy; }, [preparedBy]);
+  useEffect(() => { resolvedAtRef.current = resolvedAt; }, [resolvedAt]);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
+  useEffect(() => { divisionIdRef.current = divisionId; }, [divisionId]);
+  useEffect(() => { whereas1Ref.current = whereas1; }, [whereas1]);
+  useEffect(() => { whereas2Ref.current = whereas2; }, [whereas2]);
+  useEffect(() => { whereas3Ref.current = whereas3; }, [whereas3]);
+  useEffect(() => { nowThereforeTextRef.current = nowThereforeText; }, [nowThereforeText]);
+  useEffect(() => { resolvedAtPlaceRef.current = resolvedAtPlace; }, [resolvedAtPlace]);
 
   /** Placeholder BAC number when no session exists yet. */
   const autoBacNo = `AUTO-${prNo || String(prId)}`;
@@ -173,24 +204,15 @@ export default function CanvassResolutionDetailsPanel({
         setResolvedAtPlace("");
       }
 
-      // Resolve current user
+      // Get current user from localStorage (division_id should be stored there from login)
       let currentUserId: number | null = null;
+      let currentDivisionId: number | null = null;
       try {
         const s = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
         if (s) {
-          const u = JSON.parse(s) as { id?: number; username?: string; email?: string };
+          const u = JSON.parse(s) as { id?: number; division_id?: number };
           if (typeof u.id === "number") currentUserId = u.id;
-          else if (u.username) {
-            const { data } = await supabase.from("users").select("id").eq("username", u.username).maybeSingle();
-            if (data && typeof (data as { id?: number }).id === "number") {
-              currentUserId = (data as { id: number }).id;
-            }
-          } else if (u.email) {
-            const { data } = await supabase.from("users").select("id").eq("email", u.email).maybeSingle();
-            if (data && typeof (data as { id?: number }).id === "number") {
-              currentUserId = (data as { id: number }).id;
-            }
-          }
+          if (typeof u.division_id === "number") currentDivisionId = u.division_id;
         }
       } catch {
         /* ignore */
@@ -201,16 +223,9 @@ export default function CanvassResolutionDetailsPanel({
         setPreparedBy(String(currentUserId));
       }
 
-      // Fetch division_id from current user's profile
-      if (currentUserId != null) {
-        const { data: userRow } = await supabase
-          .from("users")
-          .select("division_id")
-          .eq("id", currentUserId)
-          .maybeSingle();
-        if (userRow && typeof (userRow as { division_id?: number }).division_id === "number") {
-          setDivisionId((userRow as { division_id: number }).division_id);
-        }
+      // Set division_id from localStorage
+      if (currentDivisionId != null) {
+        setDivisionId(currentDivisionId);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load resolution data.");
@@ -226,27 +241,40 @@ export default function CanvassResolutionDetailsPanel({
   }, [load]);
 
   const validateAndBuildPayload = (sid: number) => {
-    if (!resolutionNo.trim()) {
+    // Use refs to get latest values (avoid stale closure from onSubmit callback)
+    const currentResolutionNo = resolutionNoRef.current;
+    const currentMode = modeRef.current;
+    const currentPreparedBy = preparedByRef.current;
+    const currentResolvedAt = resolvedAtRef.current;
+    const currentNotes = notesRef.current;
+    const currentDivisionId = divisionIdRef.current;
+    const currentWhereas1 = whereas1Ref.current;
+    const currentWhereas2 = whereas2Ref.current;
+    const currentWhereas3 = whereas3Ref.current;
+    const currentNowThereforeText = nowThereforeTextRef.current;
+    const currentResolvedAtPlace = resolvedAtPlaceRef.current;
+
+    if (!currentResolutionNo.trim()) {
       setError("Resolution No. is required.");
       return null;
     }
-    if (!mode.trim()) {
+    if (!currentMode.trim()) {
       setError("Mode of Procurement is required.");
       return null;
     }
     return {
       session_id: sid,
-      resolution_no: resolutionNo.trim(),
-      prepared_by: preparedBy ? Number(preparedBy) : null,
-      resolved_at: fromDatetimeLocalValue(resolvedAt),
-      notes: notes.trim() || null,
-      mode: mode.trim(),
-      division_id: divisionId,
-      whereas_1: whereas1.trim() || null,
-      whereas_2: whereas2.trim() || null,
-      whereas_3: whereas3.trim() || null,
-      now_therefore_text: nowThereforeText.trim() || null,
-      resolved_at_place: resolvedAtPlace.trim() || null,
+      resolution_no: currentResolutionNo.trim(),
+      prepared_by: currentPreparedBy ? Number(currentPreparedBy) : null,
+      resolved_at: fromDatetimeLocalValue(currentResolvedAt),
+      notes: currentNotes.trim() || null,
+      mode: currentMode.trim(),
+      division_id: currentDivisionId,
+      whereas_1: currentWhereas1.trim() || null,
+      whereas_2: currentWhereas2.trim() || null,
+      whereas_3: currentWhereas3.trim() || null,
+      now_therefore_text: currentNowThereforeText.trim() || null,
+      resolved_at_place: currentResolvedAtPlace.trim() || null,
     };
   };
 
@@ -274,6 +302,7 @@ export default function CanvassResolutionDetailsPanel({
       .insert(payload)
       .select("id")
       .single();
+
     if (insErr) throw insErr;
     const newId =
       inserted && typeof (inserted as { id?: number }).id === "number" ? (inserted as { id: number }).id : null;
@@ -293,12 +322,19 @@ export default function CanvassResolutionDetailsPanel({
       const hadExistingRow = resolutionId != null;
       await persistResolution(payload);
       setSuccess(hadExistingRow ? "Resolution updated." : "Resolution saved.");
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save resolution.");
+      return false;
     } finally {
       setSavingKind(null);
     }
   };
+
+  // Expose submit handler to parent via callback
+  useEffect(() => {
+    onSubmit?.(handleSave);
+  }, [onSubmit, handleSave]);
 
   const handleResolveAndComplete = async () => {
     if (!canCompleteWorkflow || !onWorkflowComplete) return;
@@ -540,37 +576,39 @@ export default function CanvassResolutionDetailsPanel({
         {divisionId != null && ` · Division #${divisionId} auto-assigned from your account.`}
       </p>
 
-      <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={savingKind !== null}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-extrabold transition-all disabled:opacity-60"
-        >
-          {savingKind === "save" ? "Saving…" : resolutionId != null ? "Update resolution" : "Save resolution"}
-        </button>
+      {!hideActions && (
+        <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={savingKind !== null}
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-extrabold transition-all disabled:opacity-60"
+          >
+            {savingKind === "save" ? "Saving…" : resolutionId != null ? "Update resolution" : "Save resolution"}
+          </button>
 
-        <button
-          type="button"
-          onClick={handleResolveAndComplete}
-          disabled={savingKind !== null || !canCompleteWorkflow || !onWorkflowComplete}
-          title={
-            !canCompleteWorkflow
-              ? "Available once this PR is in BAC Resolution (after collection is advanced)."
-              : undefined
-          }
-          className="w-full sm:w-auto sm:max-w-[min(100%,420px)] sm:flex-1 inline-flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-l-3xl rounded-r-xl bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-extrabold tracking-tight transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-800"
-        >
-          {savingKind === "complete" ? (
-            "Completing…"
-          ) : (
-            <>
-              <span>Resolve &amp; Complete BAC Workflow</span>
-              <RiArrowRightLine className="flex-shrink-0 text-lg" aria-hidden />
-            </>
-          )}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={handleResolveAndComplete}
+            disabled={savingKind !== null || !canCompleteWorkflow || !onWorkflowComplete}
+            title={
+              !canCompleteWorkflow
+                ? "Available once this PR is in BAC Resolution (after collection is advanced)."
+                : undefined
+            }
+            className="w-full sm:w-auto sm:max-w-[min(100%,420px)] sm:flex-1 inline-flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-l-3xl rounded-r-xl bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-extrabold tracking-tight transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-800"
+          >
+            {savingKind === "complete" ? (
+              "Completing…"
+            ) : (
+              <>
+                <span>Resolve &amp; Complete BAC Workflow</span>
+                <RiArrowRightLine className="flex-shrink-0 text-lg" aria-hidden />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

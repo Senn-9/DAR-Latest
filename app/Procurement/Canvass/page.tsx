@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import CanvassProcessModal from "@/components/Canvassing/CanvassProcessModal";
+import ResolutionModal from "@/components/Canvassing/ResolutionModal";
 import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
 import {
   RiFileListLine, RiSearchLine,
@@ -65,8 +66,7 @@ export default function CanvassPage() {
   const PAGE_SIZE = 10;
 
   const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
-  /** When set with processTarget, CanvassProcessModal opens on BAC Resolution (e.g. from View). */
-  const [processInitialStep, setProcessInitialStep] = useState<"resolution" | null>(null);
+  const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
   const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
@@ -121,11 +121,11 @@ export default function CanvassPage() {
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
       6:  { name: "Canvassing (Reception)",  color: "canvassing" },
-      7:  { name: "Canvassing (Processing)", color: "canvassing" },
+      7:  { name: "BAC Resolution",          color: "bac"        },
       8:  { name: "Canvassing (Releasing)",  color: "canvassing" },
       9:  { name: "Canvassing (Collection)", color: "canvassing" },
-      10: { name: "BAC Resolution",          color: "bac"        },
-      11: { name: "Abstract of Awards",            color: "aaa"        },
+      10: { name: "Abstract of Awards",    color: "aaa"        },
+      11: { name: "PO (Creation)",          color: "po"         },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
@@ -202,39 +202,94 @@ export default function CanvassPage() {
       return acc;
     }, []);
 
-  /* ── LOADING SCREEN ── */
+  /* ── SKELETON LOADING ── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-6">
+      <div className="min-h-screen bg-gray-100 text-gray-900">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
           * { font-family: 'Sora', sans-serif; }
-          @keyframes spin-slow { to { transform: rotate(360deg); } }
-          .spin-slow { animation: spin-slow 1.4s linear infinite; }
-          @keyframes pulse-dot { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
-          .dot { width: 8px; height: 8px; border-radius: 9999px; background: #059669; animation: pulse-dot 1.2s infinite ease-in-out; }
-          .dot:nth-child(2) { animation-delay: 0.2s; }
-          .dot:nth-child(3) { animation-delay: 0.4s; }
+          .mono { font-family: 'JetBrains Mono', monospace; }
+          @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+          .skeleton-shimmer {
+            background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
         `}</style>
-        <div className="relative">
-          <svg className="spin-slow w-16 h-16" viewBox="0 0 64 64" fill="none">
-            <circle cx="32" cy="32" r="28" stroke="#d1fae5" strokeWidth="6" />
-            <path d="M32 4 a28 28 0 0 1 28 28" stroke="#059669" strokeWidth="6" strokeLinecap="round" />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <RiFileListLine size={22} className="text-emerald-600" />
+
+        <div className="w-full p-6 md:p-10 space-y-6">
+          {/* ── HEADER SKELETON ── */}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2">
+              <div className="skeleton-shimmer h-3 w-32 rounded" />
+              <div className="skeleton-shimmer h-8 w-40 rounded" />
+              <div className="skeleton-shimmer h-4 w-48 rounded" />
+            </div>
           </div>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-600 text-center mb-3">Loading canvass records…</p>
-          <div className="flex items-center justify-center gap-1.5">
-            <div className="dot" /><div className="dot" /><div className="dot" />
+
+          {/* ── TABS SKELETON ── */}
+          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
+            ))}
           </div>
-        </div>
-        <div className="w-full max-w-4xl px-8 space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-11 bg-gray-200 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
-          ))}
+
+          {/* ── STAT CARDS SKELETON ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="skeleton-shimmer h-3 w-20 rounded" />
+                  <div className="skeleton-shimmer h-6 w-12 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── TABLE PANEL SKELETON ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Table header with filter buttons */}
+            <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="skeleton-shimmer h-5 w-40 rounded" />
+              <div className="flex flex-wrap items-center gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="skeleton-shimmer h-6 w-20 rounded-full" />
+                ))}
+                <div className="skeleton-shimmer h-8 w-56 rounded-lg" />
+              </div>
+            </div>
+
+            {/* Table rows */}
+            <div className="divide-y divide-gray-100">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="px-5 py-4 flex items-center gap-4">
+                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-32 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-6 w-28 rounded-full flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0 ml-auto" />
+                  <div className="flex items-center justify-center gap-1.5 flex-shrink-0">
+                    <div className="skeleton-shimmer h-7 w-24 rounded-lg" />
+                    <div className="skeleton-shimmer h-7 w-20 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination footer */}
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="skeleton-shimmer h-4 w-40 rounded" />
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="skeleton-shimmer w-8 h-8 rounded-lg" />
+                ))}
+              </div>
+              <div className="skeleton-shimmer h-4 w-32 rounded" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -438,12 +493,21 @@ export default function CanvassPage() {
                               {!isBudgetAccount && isBACAccount && [6, 7, 8, 9, 10, 11].includes(form.status_id ?? -1) && (
                                 <button
                                   onClick={() => {
-                                    setProcessInitialStep(null);
                                     setProcessTarget(form);
                                   }}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
                                 >
                                   Process
+                                </button>
+                              )}
+
+                              {/* Resolution — BAC account, status_id is BAC Resolution (7) */}
+                              {!isBudgetAccount && isBACAccount && form.status_id === 7 && (
+                                <button
+                                  onClick={() => setResolutionTarget(form)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
+                                >
+                                  Resolution
                                 </button>
                               )}
 
@@ -528,8 +592,7 @@ export default function CanvassPage() {
           onOpenResolutionProcess={() => {
             const pr = viewCanvassTarget;
             setViewCanvassTarget(null);
-            setProcessInitialStep("resolution");
-            setProcessTarget(pr);
+            setResolutionTarget(pr);
           }}
         />
       )}
@@ -537,22 +600,28 @@ export default function CanvassPage() {
       {/* ── PROCESS MODAL ── */}
       {processTarget && (
         <CanvassProcessModal
-          key={`${processTarget.id}-${processInitialStep ?? "default"}`}
           pr={processTarget}
-          initialStep={processInitialStep ?? undefined}
-          onClose={() => {
-            setProcessTarget(null);
-            setProcessInitialStep(null);
-          }}
+          onClose={() => setProcessTarget(null)}
           onViewRfq={() => {
             const id = processTarget.id;
             setProcessTarget(null);
-            setProcessInitialStep(null);
             setViewPrId(id);
           }}
           onUpdated={(prId, patch) => {
             setList((prev) => prev.map((p) => (p.id === prId ? { ...p, ...patch } : p)));
             setProcessTarget((prev) => (prev && prev.id === prId ? { ...prev, ...patch } : prev));
+          }}
+        />
+      )}
+
+      {/* ── RESOLUTION MODAL ── */}
+      {resolutionTarget && (
+        <ResolutionModal
+          prId={resolutionTarget.id}
+          prNo={resolutionTarget.pr_no}
+          onClose={() => setResolutionTarget(null)}
+          onSubmitted={(prId: number) => {
+            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p)));
           }}
         />
       )}
