@@ -1,30 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import CanvassProcessModal from "@/components/Canvassing/CanvassProcessModal";
-import ResolutionModal from "@/components/Canvassing/ResolutionModal";
-import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
 import {
-  RiFileListLine, RiSearchLine,
-  RiArrowUpLine, RiArrowDownLine,
-  RiArrowLeftLine, RiArrowRightLine,
+  RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
+  RiSearchLine, RiArrowUpLine, RiArrowDownLine,
+  RiArrowLeftLine, RiArrowRightLine, RiEyeLine,
 } from "react-icons/ri";
 
-export default function CanvassPage() {
+export default function PurchaseOrderPage() {
   const supabase = createClient();
-  const router = useRouter();
 
-  type PRItem = {
-    description: string;
-    subtotal?: number | null;
-    unit?: string | null;
-    quantity?: number | string | null;
-    unit_price?: number | string | null;
-  };
+  type PRItem = { description: string; subtotal: number };
 
   type PRListRow = {
     id: number;
@@ -52,40 +40,23 @@ export default function CanvassPage() {
     roles?: { role_name: string };
   };
 
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isAdmin, setIsAdmin]         = useState(false);
-  const [signoutModalOpen, setSignoutModalOpen] = useState(false);
-  const [list, setList]               = useState<PRListRow[]>([]);
+  const [list, setList] = useState<PRListRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField]     = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
-  const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewPrId, setViewPrId]       = useState<number | null>(null);
+  const [viewPrId, setViewPrId] = useState<number | null>(null);
+
   const PAGE_SIZE = 10;
-
-  const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
-  const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
-  const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
-
-  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
-  const isBACAccount =
-    currentUser?.username?.toLowerCase() === "bac" ||
-    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
-  const isPARPOAccount =
-    currentUser?.username?.toLowerCase() === "parpo" ||
-    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
-  const isBudgetAccount =
-    currentUser?.username?.toLowerCase() === "budget" ||
-    (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
-      setIsAdmin(user.role_id === 1);
     }
   }, []);
 
@@ -97,62 +68,75 @@ export default function CanvassPage() {
           .from("purchase_requests")
           .select(`
             id, entity_name, pr_no, office_section, resp_code,
-            purpose, total_cost, status, status_id,
+            purpose, total_cost, is_high_value, status, status_id,
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .in("status_id", [6, 7, 8, 9, 10, 11])
           .order("created_at", { ascending: false });
 
         if (!error) {
-          const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
-            return pr.office_section === currentUser?.divisions?.division_name;
-          });
-          setList(filteredData as PRListRow[]);
+          setList(data as PRListRow[]);
         }
       } finally {
         setLoading(false);
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
+  }, [supabase]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
-      6:  { name: "Canvassing (Reception)",  color: "canvassing" },
-      7:  { name: "BAC Resolution",          color: "bac"        },
-      8:  { name: "Canvassing (Releasing)",  color: "canvassing" },
-      9:  { name: "Canvassing (Collection)", color: "canvassing" },
-      10: { name: "Abstract of Awards",    color: "aaa"        },
-      11: { name: "PO (Creation)",          color: "po"         },
+      1:  { name: "Pending",                   color: "pending"    },
+      2:  { name: "Processing (Division Head)", color: "processing" },
+      3:  { name: "Processing (BAC)",           color: "processing" },
+      4:  { name: "Processing (Budget)",        color: "processing" },
+      5:  { name: "Processing (PARPO)",         color: "processing" },
+      6:  { name: "Canvassing (Reception)",     color: "canvassing" },
+      7:  { name: "BAC Resolution",             color: "bac"        },
+      8:  { name: "Canvassing (Releasing)",     color: "canvassing" },
+      9:  { name: "Canvassing (Collection)",    color: "canvassing" },
+      10: { name: "Abstract of Awards",        color: "aaa"        },
+      11: { name: "PO (Creation)",              color: "po"         },
+      12: { name: "PO (Allocation)",            color: "po"         },
+      13: { name: "ORS (Creation)",             color: "approved"   },
+      14: { name: "ORS (Processing)",           color: "approved"   },
+      15: { name: "PO (Accounting)",            color: "po"         },
+      16: { name: "PO (PARPO)",               color: "po"         },
+      17: { name: "PO (Serving)",             color: "po"         },
+      18: { name: "Delivery (Waiting)",       color: "delivery"   },
+      19: { name: "Delivery (Received)",       color: "delivery"   },
+      20: { name: "Delivery (IAR)",           color: "delivery"   },
+      21: { name: "Delivery (IAR Processing)", color: "delivery" },
+      22: { name: "Delivery (LOA)",           color: "delivery"   },
+      23: { name: "Delivery (DV)",            color: "delivery"   },
+      24: { name: "Delivery (Division Chief)", color: "delivery"  },
+      27: { name: "Cancelled",                color: "rejected"   },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
+    pending:    "bg-amber-50 text-amber-800 border border-amber-200",
+    processing: "bg-blue-50 text-blue-800 border border-blue-200",
     canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
     bac:        "bg-purple-50 text-purple-800 border border-purple-200",
     aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
+    po:         "bg-teal-50 text-teal-800 border border-teal-200",
+    approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    delivery:   "bg-cyan-50 text-cyan-800 border border-cyan-200",
+    rejected:   "bg-red-50 text-red-800 border border-red-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
   };
-
-  const STATUS_OPTIONS = [
-    { value: "all",        label: "All" },
-    { value: "canvassing", label: "Canvassing" },
-    { value: "bac",        label: "BAC Resolution" },
-    { value: "aaa",        label: "Abstract of Awards" },
-  ];
 
   const countByColor = (color: string) =>
     list.reduce((n, i) => (getStatusInfo(i.status_id).color === color ? n + 1 : n), 0);
 
-  const STAT_CARDS = [
-    { label: "Total",          value: list.length,               cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
-    { label: "Canvassing",     value: countByColor("canvassing"), cardBg: "bg-violet-50",  border: "border-violet-100",  iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600"  },
-    { label: "BAC Resolution", value: countByColor("bac"),        cardBg: "bg-purple-50",  border: "border-purple-100",  iconBg: "bg-purple-100",  iconColor: "text-purple-600",  numColor: "text-purple-600"  },
-    { label: "AAA Issuance",   value: countByColor("aaa"),        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600"    },
-  ];
+  const pendingCount    = countByColor("pending");
+  const processingCount = countByColor("processing");
+  const canvassingCount = countByColor("canvassing");
+  const poCount         = countByColor("po");
+  const approvedCount   = countByColor("approved");
+  const deliveryCount   = countByColor("delivery");
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -173,12 +157,14 @@ export default function CanvassPage() {
       let aVal: number | string = "";
       let bVal: number | string = "";
       if (sortField === "total_cost") {
-        aVal = a.total_cost || 0; bVal = b.total_cost || 0;
+        aVal = a.total_cost || 0;
+        bVal = b.total_cost || 0;
       } else if (sortField === "created_at") {
         aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
         bVal = b.created_at ? new Date(b.created_at).getTime() : 0;
       } else {
-        aVal = a[sortField] || ""; bVal = b[sortField] || "";
+        aVal = a[sortField] || "";
+        bVal = b[sortField] || "";
       }
       return aVal < bVal ? (sortDir === "asc" ? -1 : 1) : aVal > bVal ? (sortDir === "asc" ? 1 : -1) : 0;
     });
@@ -193,6 +179,26 @@ export default function CanvassPage() {
         : <RiArrowUpLine size={12} />}
     </span>
   );
+
+  const STATUS_OPTIONS = [
+    { value: "all",        label: "All Statuses" },
+    { value: "pending",    label: "Pending" },
+    { value: "processing", label: "Processing" },
+    { value: "canvassing", label: "Canvassing" },
+    { value: "po",         label: "Purchase Order" },
+    { value: "approved",   label: "Approved" },
+    { value: "delivery",   label: "Delivery" },
+    { value: "rejected",   label: "Rejected" },
+  ];
+
+  const STAT_CARDS = [
+    { label: "Total",      value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
+    { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
+    { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
+    { label: "PO",         value: poCount,         icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-teal-100",   iconColor: "text-teal-600",   numColor: "text-teal-600",   cardBg: "bg-teal-50",   border: "border-teal-100"   },
+    { label: "Approved",   value: approvedCount,   icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
+  ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
     .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
@@ -223,26 +229,19 @@ export default function CanvassPage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-2">
               <div className="skeleton-shimmer h-3 w-32 rounded" />
-              <div className="skeleton-shimmer h-8 w-40 rounded" />
+              <div className="skeleton-shimmer h-8 w-56 rounded" />
               <div className="skeleton-shimmer h-4 w-48 rounded" />
             </div>
           </div>
 
-          {/* ── TABS SKELETON ── */}
-          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
-            ))}
-          </div>
-
           {/* ── STAT CARDS SKELETON ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
                 <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
                 <div className="space-y-1.5 flex-1">
-                  <div className="skeleton-shimmer h-3 w-20 rounded" />
-                  <div className="skeleton-shimmer h-6 w-12 rounded" />
+                  <div className="skeleton-shimmer h-3 w-16 rounded" />
+                  <div className="skeleton-shimmer h-6 w-10 rounded" />
                 </div>
               </div>
             ))}
@@ -250,36 +249,32 @@ export default function CanvassPage() {
 
           {/* ── TABLE PANEL SKELETON ── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Table header with filter buttons */}
             <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <div className="skeleton-shimmer h-5 w-40 rounded" />
               <div className="flex flex-wrap items-center gap-2">
-                {[1, 2, 3, 4].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="skeleton-shimmer h-6 w-20 rounded-full" />
                 ))}
                 <div className="skeleton-shimmer h-8 w-56 rounded-lg" />
               </div>
             </div>
 
-            {/* Table rows */}
             <div className="divide-y divide-gray-100">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="px-5 py-4 flex items-center gap-4">
                   <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
                   <div className="skeleton-shimmer h-4 w-32 rounded flex-shrink-0" />
                   <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
                   <div className="skeleton-shimmer h-6 w-28 rounded-full flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-20 rounded flex-shrink-0" />
                   <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0 ml-auto" />
                   <div className="flex items-center justify-center gap-1.5 flex-shrink-0">
-                    <div className="skeleton-shimmer h-7 w-24 rounded-lg" />
-                    <div className="skeleton-shimmer h-7 w-20 rounded-lg" />
+                    <div className="skeleton-shimmer h-7 w-16 rounded-lg" />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Pagination footer */}
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <div className="skeleton-shimmer h-4 w-40 rounded" />
               <div className="flex items-center gap-1">
@@ -301,7 +296,7 @@ export default function CanvassPage() {
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .tr-row:hover td { background-color: #f5f3ff !important; }
+        .tr-row:hover td { background-color: #f0fdf4 !important; }
         .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
       `}</style>
 
@@ -310,8 +305,8 @@ export default function CanvassPage() {
         {/* ── HEADER ── */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
-            <h1 className="text-3xl font-bold text-gray-900">Canvass</h1>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Purchase Order Portal</p>
+            <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
             {currentUser && (
               <p className="text-sm text-gray-400 mt-1">
                 Signed in as{" "}
@@ -326,37 +321,14 @@ export default function CanvassPage() {
           </div>
         </div>
 
-        {/* ── TABS ── */}
-        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-          {([
-            { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
-            { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
-            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
-          ] as const).map(({ key, label, href }) => (
-            <button
-              key={key}
-              onClick={() => router.push(href)}
-              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-                key === "canvass"
-                  ? "bg-emerald-700 text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STAT_CARDS.map(({ label, value, cardBg, border, iconBg, iconColor, numColor }) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
             <div
               key={label}
               className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
             >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
-                <RiFileListLine size={20} />
-              </div>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
@@ -368,7 +340,7 @@ export default function CanvassPage() {
         {/* ── TABLE PANEL ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">Canvass Records</h2>
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Requests</h2>
             <div className="flex flex-wrap items-center gap-2">
               {STATUS_OPTIONS.map(({ value, label }) => (
                 <button
@@ -400,7 +372,7 @@ export default function CanvassPage() {
           {filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
-              <p className="text-sm font-medium">No canvass records found.</p>
+              <p className="text-sm font-medium">No purchase requests found.</p>
               <p className="text-xs mt-1">Try adjusting your search or filter.</p>
             </div>
           ) : (
@@ -440,78 +412,53 @@ export default function CanvassPage() {
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
 
+                          {/* PR Number */}
                           <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
                             {form.pr_no}
                           </td>
 
+                          {/* Office / Section */}
                           <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
 
+                          {/* Description */}
                           <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
                             {desc
                               ? <span className="line-clamp-2 leading-snug">{desc}</span>
                               : <span className="text-gray-300">—</span>}
                           </td>
 
+                          {/* Date */}
                           <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
 
+                          {/* Status */}
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
                             </span>
                           </td>
 
+                          {/* Total Cost */}
                           <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0
                               ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                               : <span className="text-gray-300 font-normal">—</span>}
                           </td>
 
+                          {/* ── ACTIONS ── */}
                           <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* <button
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
-                              >
-                                View
-                              </button> */}
-
-                              <button
-                                type="button"
-                                onClick={() => setViewCanvassTarget(form)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-all whitespace-nowrap"
-                              >
-                                View Canvass
-                              </button>
-
-                              {/* Process — BAC account, status_id in canvass flow */}
-                              {!isBudgetAccount && isBACAccount && [6, 7, 8, 9, 10, 11].includes(form.status_id ?? -1) && (
-                                <button
-                                  onClick={() => {
-                                    setProcessTarget(form);
-                                  }}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
-                                >
-                                  Process
-                                </button>
-                              )}
-
-                              {/* Resolution — BAC account, status_id is BAC Resolution (7) */}
-                              {!isBudgetAccount && isBACAccount && form.status_id === 7 && (
-                                <button
-                                  onClick={() => setResolutionTarget(form)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
-                                >
-                                  Resolution
-                                </button>
-                              )}
-
-                            </div>
+                            <button
+                              onClick={() => setViewPrId(form.id)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-all whitespace-nowrap"
+                            >
+                              <RiEyeLine size={14} />
+                              View
+                            </button>
                           </td>
                         </tr>
                       );
@@ -520,114 +467,64 @@ export default function CanvassPage() {
                 </table>
               </div>
 
-              {/* ── PAGINATION FOOTER ── */}
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-                <span>
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
-                  </span>{" "}
-                  of <span className="font-semibold text-gray-700">{filteredList.length}</span> records
-                  {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
-                </span>
+              {/* ── PAGINATION ── */}
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredList.length)}</span> of <span className="font-semibold text-gray-700">{filteredList.length}</span> PRs
+                </p>
+
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((p) => p - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RiArrowLeftLine size={14} />
                   </button>
-                  {pageNums.map((p, i) =>
+
+                  {pageNums.map((p, idx) =>
                     p === "…" ? (
-                      <span key={`e${i}`} className="px-1 text-gray-400">…</span>
+                      <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
                     ) : (
                       <button
                         key={p}
-                        onClick={() => setCurrentPage(p as number)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all ${
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold border transition-all ${
                           currentPage === p
                             ? "bg-emerald-700 text-white border-emerald-700"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                         }`}
                       >
                         {p}
                       </button>
                     )
                   )}
+
                   <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RiArrowRightLine size={14} />
                   </button>
                 </div>
-                <span className="mono">
-                  Filtered total:{" "}
-                  <span className="font-semibold text-emerald-700">
-                    ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </span>
-                </span>
+
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>Page</span>
+                  <span className="font-semibold text-gray-700">{currentPage}</span>
+                  <span>of</span>
+                  <span className="font-semibold text-gray-700">{totalPages}</span>
+                </div>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* ── VIEW PR MODAL ── */}
-      {viewPrId !== null && (
+      {/* ── VIEW MODAL ── */}
+      {viewPrId && (
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
-
-      {viewCanvassTarget && (
-        <ViewCanvass
-          pr={viewCanvassTarget}
-          onClose={() => setViewCanvassTarget(null)}
-          onViewRfq={() => {
-            const id = viewCanvassTarget.id;
-            setViewCanvassTarget(null);
-            setViewPrId(id);
-          }}
-          onOpenResolutionProcess={() => {
-            const pr = viewCanvassTarget;
-            setViewCanvassTarget(null);
-            setResolutionTarget(pr);
-          }}
-        />
-      )}
-
-      {/* ── PROCESS MODAL ── */}
-      {processTarget && (
-        <CanvassProcessModal
-          pr={processTarget}
-          onClose={() => setProcessTarget(null)}
-          onViewRfq={() => {
-            const id = processTarget.id;
-            setProcessTarget(null);
-            setViewPrId(id);
-          }}
-          onUpdated={(prId, patch) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, ...patch } : p)));
-            setProcessTarget((prev) => (prev && prev.id === prId ? { ...prev, ...patch } : prev));
-          }}
-        />
-      )}
-
-      {/* ── RESOLUTION MODAL ── */}
-      {resolutionTarget && (
-        <ResolutionModal
-          prId={resolutionTarget.id}
-          prNo={resolutionTarget.pr_no}
-          onClose={() => setResolutionTarget(null)}
-          onSubmitted={(prId: number) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p)));
-          }}
-        />
-      )}
-
-      {/* ── SIGNOUT MODAL ── */}
-      <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
     </div>
   );
 }

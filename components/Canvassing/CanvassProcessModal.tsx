@@ -5,25 +5,21 @@ import CanvassingReceptionModal from "@/components/Canvassing/CanvassingReceptio
 import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
 import ReleasedCanvasserEntryButton from "@/components/Canvassing/ReleasedCanvasserEntryButton";
 import CollectCanvassStepPanel from "@/components/Canvassing/CollectCanvassStepPanel";
-import CanvassResolutionDetailsPanel from "@/components/Canvassing/CanvassResolutionDetailsPanel";
 import CanvassAAADetailsPanel from "@/components/Canvassing/CanvassAAADetailsPanel";
 import { RiCloseLine, RiCheckboxCircleLine, RiArrowRightSLine } from "react-icons/ri";
 
-type StepKey = "pr_received" | "release" | "collect" | "resolution" | "aaa";
+type StepKey = "pr_received" | "release" | "collect" | "aaa";
 
 const steps: { key: StepKey; label: string }[] = [
   { key: "pr_received", label: "PR Received" },
-  { key: "resolution", label: "Resolution" },
   { key: "release", label: "Release" },
   { key: "collect", label: "Collect" },
   { key: "aaa", label: "AAA" },
 ];
 
-const RESOLUTION_STEP_INDEX = steps.findIndex((s) => s.key === "resolution");
-
 type Props = {
   /** When opening the modal (e.g. from View), land on this step instead of the status-derived step. */
-  initialStep?: StepKey | null;
+  initialStep?: StepKey;
   pr: {
     id: number;
     pr_no: string;
@@ -47,10 +43,10 @@ type Props = {
 
 const stepIndexForStatusId = (statusId: number | null): number => {
   if (statusId === 6) return 0;
-  if (statusId === 8) return 2; // release
-  if (statusId === 9) return 3; // collect
-  if (statusId === 10) return 1; // resolution
-  if (statusId === 11) return 4; // aaa
+  if (statusId === 8) return 1; // release
+  if (statusId === 9) return 2; // collect
+  if (statusId === 10) return 2; // resolution (mapped to collect for modal)
+  if (statusId === 11) return 3; // aaa
   return 0;
 };
 
@@ -59,8 +55,7 @@ const formatCurrency = (val?: number) =>
 
 export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdated, onViewRfq }: Props) {
   const [activeStep, setActiveStep] = useState<StepKey>(() => {
-    if (initialStep) return initialStep;
-    return steps[stepIndexForStatusId(pr.status_id)]?.key ?? "pr_received";
+    return initialStep ?? steps[stepIndexForStatusId(pr.status_id)]?.key ?? "pr_received";
   });
 
   useEffect(() => {
@@ -81,10 +76,9 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
   }, [pr.status_id]);
 
   /**
-   * Step tab gating. Resolution is always reachable (bypass). Index fallback in case key ever mismatches in builds.
+   * Step tab gating. Index fallback in case key ever mismatches in builds.
    */
   const stepTabUnlocked = (idx: number, key: StepKey) => {
-    if (key === "resolution" || idx === RESOLUTION_STEP_INDEX) return true;
     return idx <= unlockedIdx;
   };
 
@@ -97,6 +91,7 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
       purpose: pr.purpose,
       total_cost: pr.total_cost,
       status: pr.status,
+      status_id: pr.status_id,
       entity_name: pr.entity_name,
       fund_cluster: pr.fund_cluster,
       req_name: pr.req_name,
@@ -143,7 +138,6 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
               const active = activeStep === s.key;
               const unlocked = stepTabUnlocked(idx, s.key);
               const done = idx < unlockedIdx;
-              const isResolution = s.key === "resolution" || idx === RESOLUTION_STEP_INDEX;
               return (
                 <button
                   key={s.key}
@@ -153,9 +147,7 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                     active
                       ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                       : unlocked
-                      ? isResolution
-                        ? "bg-white border-emerald-200/70 text-emerald-900 hover:bg-emerald-50/80 cursor-pointer"
-                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      ? "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                       : "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
                   }`}
                   disabled={!unlocked}
@@ -167,9 +159,7 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                         : active
                           ? "bg-emerald-700 text-white"
                           : unlocked
-                            ? isResolution
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                              : "bg-gray-200 text-gray-700"
+                            ? "bg-gray-200 text-gray-700"
                             : "bg-gray-100 text-gray-300"
                     }`}
                   >
@@ -201,19 +191,6 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
             </div>
           )}
 
-          {activeStep === "resolution" && (
-            <CanvassResolutionDetailsPanel
-              key={pr.id}
-              prId={pr.id}
-              prNo={pr.pr_no}
-              canCompleteWorkflow={pr.status_id === 10}
-              onWorkflowComplete={(prId) => {
-                onUpdated(prId, { status_id: 11, status: "Abstract of Awards" });
-                setActiveStep("aaa");
-              }}
-            />
-          )}
-
           {activeStep === "release" && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <ReleaseCanvassStepModal
@@ -235,7 +212,7 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                 readonly={isPastStep}
                 onViewRfq={onViewRfq}
                 onPreviousStep={() => setActiveStep("release")}
-                onNextStep={() => setActiveStep("resolution")}
+                onNextStep={() => setActiveStep("aaa")}
                 canGoNextStep={unlockedIdx >= 3}
                 onAdvancedToResolution={(prId) => {
                   onUpdated(prId, { status_id: 10, status: "BAC Resolution" });

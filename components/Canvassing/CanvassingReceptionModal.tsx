@@ -25,6 +25,7 @@ interface CanvassingReceptionModalProps {
     purpose?: string;
     total_cost?: number;
     status?: string;
+    status_id?: number | null;
     entity_name?: string;
     fund_cluster?: string;
     req_name?: string;
@@ -137,6 +138,9 @@ export default function CanvassingReceptionModal({
     iconColor: "text-gray-500",
   };
 
+  const isBACResolution = prData?.status_id === 7 || prData?.status === "BAC Resolution";
+  const isReadOnly = Boolean(readonly) || isBACResolution;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setFormData((prev) => ({ ...prev, attachment: file }));
@@ -180,8 +184,8 @@ export default function CanvassingReceptionModal({
       const { error: updateErr } = await supabase
         .from("purchase_requests")
         .update({
-          status_id: 8,
-          status: "Canvassing (Releasing)",
+          status_id: 7,
+          status: "BAC Resolution",
         })
         .eq("id", prId);
 
@@ -338,7 +342,7 @@ export default function CanvassingReceptionModal({
                   className={inputCls}
                   placeholder="Enter BAC Canvass Number"
                   value={formData.bacNo}
-                  disabled={Boolean(readonly)}
+                  disabled={isReadOnly}
                   onChange={(e) => setFormData({ ...formData, bacNo: e.target.value })}
                 />
               </div>
@@ -358,7 +362,7 @@ export default function CanvassingReceptionModal({
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Status Flag</label>
                 <button
                   type="button"
-                  disabled={Boolean(readonly)}
+                  disabled={isReadOnly}
                   onClick={() => setShowFlagPicker(true)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
                 >
@@ -425,7 +429,7 @@ export default function CanvassingReceptionModal({
                   rows={4}
                   placeholder="e.g. Documents received and verified. Moving to releasing phase."
                   value={formData.remarks}
-                  disabled={Boolean(readonly)}
+                  disabled={isReadOnly}
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 />
               </div>
@@ -437,7 +441,7 @@ export default function CanvassingReceptionModal({
                 </label>
                 <label
                   className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl transition-all group ${
-                    readonly ? "opacity-70 cursor-not-allowed bg-gray-50" : "cursor-pointer hover:border-emerald-400 hover:bg-emerald-50"
+                    isReadOnly ? "opacity-70 cursor-not-allowed bg-gray-50" : "cursor-pointer hover:border-emerald-400 hover:bg-emerald-50"
                   }`}
                 >
                   <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-emerald-100 flex items-center justify-center flex-shrink-0 transition-colors">
@@ -460,7 +464,7 @@ export default function CanvassingReceptionModal({
                   {formData.attachment && (
                     <button
                       type="button"
-                      disabled={Boolean(readonly)}
+                      disabled={isReadOnly}
                       onClick={(e) => { e.preventDefault(); setFormData({ ...formData, attachment: null }); }}
                       className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                     >
@@ -469,7 +473,7 @@ export default function CanvassingReceptionModal({
                   )}
                   <input
                     type="file"
-                    disabled={Boolean(readonly)}
+                    disabled={isReadOnly}
                     className="hidden"
                     accept=".pdf,.doc,.docx,.xlsx,.xls"
                     onChange={handleFileChange}
@@ -491,7 +495,7 @@ export default function CanvassingReceptionModal({
             Cancel
           </button>
         )}
-        {!readonly && (
+        {!readonly && !isBACResolution && (
           <button
             onClick={handleSubmit}
             disabled={processing}
@@ -500,13 +504,13 @@ export default function CanvassingReceptionModal({
             {processing ? (
               <>
                 <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
                 Processing…
               </>
             ) : (
-              <>Acknowledged → Release Canvass</>
+              <>{isBACResolution ? "BAC Resolution" : "Acknowledged → Release Canvass"}</>
             )}
           </button>
         )}
