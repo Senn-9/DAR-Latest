@@ -89,103 +89,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f5f5",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "var(--font-sans)",
-        padding: "1rem",
-      }}
-    >
+    <div className="min-h-screen bg-emerald-900 flex flex-col items-center justify-center p-4">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
+        * { font-family: 'Sora', sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+
       {/* Header */}
-      <div
-        style={{
-          textAlign: "center",
-          marginBottom: "3rem",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: "700",
-            color: "#1a4d4d",
-            margin: "0 0 0.5rem",
-            letterSpacing: "-0.5px",
-          }}
-        >
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+            <span className="text-emerald-800 text-3xl font-bold">DAR</span>
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
           DAR Procurement
         </h1>
-        <p
-          style={{
-            fontSize: "14px",
-            color: "#888888",
-            margin: 0,
-            fontWeight: "400",
-          }}
-        >
+        <p className="text-emerald-200 text-sm font-medium">
           Monitoring &amp; Automation System
         </p>
       </div>
 
       {/* Login Card */}
-      <div
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          padding: "3rem 2.5rem",
-          width: "100%",
-          maxWidth: "400px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        }}
-      >
+      <div className="bg-white rounded-2xl p-8 md:p-10 w-full max-w-md shadow-2xl">
         {/* Sign In Title */}
-        <h2
-          style={{
-            fontSize: "28px",
-            fontWeight: "700",
-            color: "#000000",
-            textAlign: "center",
-            margin: "0 0 2rem",
-          }}
-        >
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
           Sign In
         </h2>
 
         {/* Error message */}
         {error && (
-          <div
-            style={{
-              background: "#fee2e2",
-              border: "0.5px solid #fecaca",
-              borderRadius: "8px",
-              padding: "10px 12px",
-              marginBottom: "1.5rem",
-              fontSize: "13px",
-              color: "#dc2626",
-              fontWeight: "500",
-            }}
-          >
-            {error}
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">
+            <p className="text-sm text-red-700 font-semibold">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
           {/* Username field */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <label
-              style={{
-                fontSize: "12px",
-                fontWeight: "600",
-                color: "#333333",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
               Username
             </label>
             <input
@@ -194,39 +138,13 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
-              style={{
-                padding: "12px 16px",
-                fontSize: "14px",
-                border: "0.5px solid #e5e5e5",
-                borderRadius: "8px",
-                background: "#f9f9f9",
-                color: "#333333",
-                transition: "all 0.2s ease",
-                boxSizing: "border-box",
-                fontFamily: "var(--font-sans)",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#d1d5db";
-                e.currentTarget.style.background = "#ffffff";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#e5e5e5";
-                e.currentTarget.style.background = "#f9f9f9";
-              }}
+              className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
             />
           </div>
 
           {/* Password field */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <label
-              style={{
-                fontSize: "12px",
-                fontWeight: "600",
-                color: "#333333",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
               Password
             </label>
             <input
@@ -235,25 +153,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
-              style={{
-                padding: "12px 16px",
-                fontSize: "14px",
-                border: "0.5px solid #e5e5e5",
-                borderRadius: "8px",
-                background: "#f9f9f9",
-                color: "#333333",
-                transition: "all 0.2s ease",
-                boxSizing: "border-box",
-                fontFamily: "var(--font-sans)",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#d1d5db";
-                e.currentTarget.style.background = "#ffffff";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#e5e5e5";
-                e.currentTarget.style.background = "#f9f9f9";
-              }}
+              className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
             />
           </div>
 
@@ -261,52 +161,22 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading || !username.trim() || !password.trim()}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              marginTop: "1rem",
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "white",
-              background: "#0d6b5f",
-              border: "none",
-              borderRadius: "8px",
-              cursor: isLoading || !username.trim() || !password.trim()
-                ? "not-allowed"
-                : "pointer",
-              transition: "all 0.2s ease",
-              opacity: isLoading || !username.trim() || !password.trim() ? 0.7 : 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading && username.trim() && password.trim()) {
-                e.currentTarget.style.background = "#084d45";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#0d6b5f";
-            }}
+            className="w-full mt-2 px-4 py-3.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20"
           >
             {isLoading ? (
               <>
                 <svg
-                  width="16"
-                  height="16"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
                   fill="none"
-                  style={{
-                    animation: "spin 1s linear infinite",
-                  }}
+                  className="animate-spin"
                 >
-                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
                   <path
                     d="M12 2a10 10 0 0 1 10 10"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="3"
                     strokeLinecap="round"
                   />
                 </svg>
@@ -318,6 +188,11 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {/* Footer */}
+      <p className="text-emerald-400/60 text-xs mt-8">
+        Department of Agrarian Reform Procurement System
+      </p>
     </div>
   );
 }

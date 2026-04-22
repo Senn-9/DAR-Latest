@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import CanvassingReceptionModal from "@/components/Canvassing/CanvassingReceptionModal";
+import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
 import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
 import ReleasedCanvasserEntryButton from "@/components/Canvassing/ReleasedCanvasserEntryButton";
 import CollectCanvassStepPanel from "@/components/Canvassing/CollectCanvassStepPanel";
@@ -184,8 +184,8 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                 currentPrNo={pr.pr_no}
                 prData={prData}
                 onClose={() => {}}
-                onProcessed={(prId) => {
-                  onUpdated(prId, { status_id: 8, status: "Canvassing (Releasing)" });
+                onProcessed={(prId, patch) => {
+                  onUpdated(prId, patch ?? { status_id: 7, status: "BAC Resolution" });
                 }}
               />
             </div>
