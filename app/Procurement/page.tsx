@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
-  RiArrowLeftLine, RiArrowRightLine,
+  RiArrowLeftLine, RiArrowRightLine, RiMoneyDollarCircleLine,
 } from "react-icons/ri";
 
 export default function ProcurementPage() {
@@ -85,7 +85,7 @@ export default function ProcurementPage() {
   const [budgetProcessTarget, setBudgetProcessTarget] = useState<BudgetTarget | null>(null); // ← updated type
   const [submitting, setSubmitting]       = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract">("pr"); //added tabs
+  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "delivery" | "payment">("pr"); //added tabs
   const router = useRouter();
 
   const PAGE_SIZE = 10;
@@ -131,7 +131,10 @@ export default function ProcurementPage() {
   const isBudgetAccount =
     currentUser?.username?.toLowerCase() === "budget" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
-  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount;
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -166,13 +169,21 @@ export default function ProcurementPage() {
           `)
           .order("created_at", { ascending: false });
 
-        if (!error) {
-          const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
-            return pr.office_section === currentUser?.divisions?.division_name;
-          });
-          setList(filteredData as PRListRow[]);
+        if (error) {
+          console.error("Error fetching purchase requests:", error);
+          return;
         }
+
+        console.log("Fetched PR data:", data);
+        console.log("Filter conditions:", { isAdmin, isBACAccount, isPARPOAccount, isBudgetAccount, userDivision: currentUser?.divisions?.division_name });
+
+        const filteredData = (data || []).filter((pr) => {
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
+          return pr.office_section === currentUser?.divisions?.division_name;
+        });
+
+        console.log("Filtered PR data:", filteredData);
+        setList(filteredData as PRListRow[]);
       } finally {
         setLoading(false);
       }
@@ -199,6 +210,20 @@ export default function ProcurementPage() {
     };
     fetchLatestFlags();
   }, [supabase, list]);
+
+  // Redirect to Delivery page when delivery tab is selected
+  useEffect(() => {
+    if (activeTab === "delivery") {
+      router.push("/Procurement/Delivery");
+    }
+  }, [activeTab, router]);
+
+  // Redirect to Payment page when payment tab is selected
+  useEffect(() => {
+    if (activeTab === "payment") {
+      router.push("/Procurement/Payment");
+    }
+  }, [activeTab, router]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -363,7 +388,7 @@ export default function ProcurementPage() {
 
           {/* ── TABS SKELETON ── */}
           <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
             ))}
           </div>
@@ -463,15 +488,17 @@ export default function ProcurementPage() {
         {/* ── TABS ── */}
         <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
           {([
-            { key: "pr",       label: "Purchase Request",   href: null                        },
-            { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"      },
-            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract"     },
-          ] as const).map(({ key, label, href }) => (
+            { key: "pr",       label: "Purchase Request"   },
+            { key: "canvass",  label: "Canvass"            },
+            { key: "abstract", label: "Abstract of Awards" },
+            { key: "delivery", label: "Delivery"           },
+            { key: "payment",  label: "Payment"            },
+          ] as const).map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => href && router.push(href)}
+              onClick={() => setActiveTab(key)}
               className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-                key === "pr"
+                activeTab === key
                   ? "bg-emerald-700 text-white shadow-sm"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }`}
@@ -481,21 +508,26 @@ export default function ProcurementPage() {
           ))}
         </div>
 
-        {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
-            <div
-              key={label}
-              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
-            >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">{label}</p>
-                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
-              </div>
+        {/* ── PR TAB CONTENT ── */}
+        {activeTab === "pr" && (
+          <>
+            {/* ── STAT CARDS ── */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
+                <div
+                  key={label}
+                  className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+                >
+                  <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">{label}</p>
+                    <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
         {/* ── TABLE PANEL ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

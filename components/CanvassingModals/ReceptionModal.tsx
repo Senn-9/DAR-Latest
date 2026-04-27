@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
-  RiSaveLine,
   RiAttachmentLine,
   RiFileLine,
   RiCheckboxCircleLine,
@@ -79,15 +78,8 @@ const formatPickedDateTime = (value: string) => {
   });
 };
 
-export default function CanvassingReceptionModal({
-  prId,
-  currentPrNo,
-  prData,
-  onClose,
-  onProcessed,
-  embedded,
-  readonly,
-}: CanvassingReceptionModalProps) {
+export default function CanvassingReceptionModal(props: CanvassingReceptionModalProps) {
+  const { prId, currentPrNo, prData, onClose, onProcessed, embedded, readonly } = props;
   const supabase = createClient();
 
   const [processing, setProcessing] = useState(false);
@@ -108,15 +100,14 @@ export default function CanvassingReceptionModal({
   useEffect(() => {
     if (embedded) return;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [embedded]);
 
   useEffect(() => {
     const fetchFlags = async () => {
-      const { data } = await supabase
-        .from("status_flag")
-        .select("id, flag_name")
-        .order("id", { ascending: true });
+      const { data } = await supabase.from("status_flag").select("id, flag_name").order("id", { ascending: true });
       const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
       const opts: FlagOption[] = (data || []).map((row: { id: number; flag_name: string }) => ({
         id: row.id,
@@ -159,7 +150,9 @@ export default function CanvassingReceptionModal({
 
   const isBACResolution = prData?.status_id === 7;
   const isReadOnly = Boolean(readonly) || isBACResolution;
-  const shouldReturnToPending = !["complete", "urgent"].includes(selectedFlag.slug);
+  const canProceedToBAC = ["complete", "urgent"].includes(selectedFlag.slug);
+  const hasSelectedFlag = selectedFlag.slug !== "no_flag";
+  const shouldReturnToPending = hasSelectedFlag && !canProceedToBAC;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -168,33 +161,37 @@ export default function CanvassingReceptionModal({
 
   const handleSubmit = async () => {
     if (readonly) return;
-    if (!formData.bacNo.trim()) {
-      setErrorModal({ show: true, message: "BAC Canvass No. is required!" });
-      return;
-    }
-    if (!formData.receivedAt.trim()) {
-      setErrorModal({ show: true, message: "Date Received is required!" });
+    if (!hasSelectedFlag) {
+      setErrorModal({ show: true, message: "Please select a status flag first." });
       return;
     }
 
-    const receivedAt = new Date(formData.receivedAt);
-    if (Number.isNaN(receivedAt.getTime())) {
-      setErrorModal({ show: true, message: "Please provide a valid date and time for Date Received." });
-      return;
+    let receivedAt: Date | null = null;
+    if (canProceedToBAC) {
+      if (!formData.bacNo.trim()) {
+        setErrorModal({ show: true, message: "BAC Canvass No. is required!" });
+        return;
+      }
+      if (!formData.receivedAt.trim()) {
+        setErrorModal({ show: true, message: "Date Received is required!" });
+        return;
+      }
+
+      const parsedDate = new Date(formData.receivedAt);
+      if (Number.isNaN(parsedDate.getTime())) {
+        setErrorModal({ show: true, message: "Please provide a valid date and time for Date Received." });
+        return;
+      }
+      receivedAt = parsedDate;
     }
 
     setProcessing(true);
 
     try {
       let remarkText = formData.remarks.trim();
-      const receivedAtLabel = formatPickedDateTime(formData.receivedAt);
-      remarkText = remarkText
-        ? `Date Received: ${receivedAtLabel}\n${remarkText}`
-        : `Date Received: ${receivedAtLabel}`;
       let attachmentPublicUrl: string | null = null;
 
-      // Upload attachment if provided
-      if (formData.attachment) {
+      if (canProceedToBAC && formData.attachment) {
         const ext = formData.attachment.name.split(".").pop() || "bin";
         const path = `pr_attachments/${prId}_${Date.now()}.${ext}`;
         const uploadRes = await supabase.storage.from("attachments").upload(path, formData.attachment);
@@ -211,19 +208,13 @@ export default function CanvassingReceptionModal({
         }
       }
 
-      // Get status flag ID
       const statusFlagId = selectedFlag.id;
-
       const nextStatusId = shouldReturnToPending ? 1 : 7;
       const nextStatusText = shouldReturnToPending ? "Pending" : "BAC Resolution";
 
-      // Update purchase_requests status based on selected flag.
       const { error: updateErr } = await supabase
         .from("purchase_requests")
-        .update({
-          status_id: nextStatusId,
-          status: nextStatusText,
-        })
+        .update({ status_id: nextStatusId, status: nextStatusText })
         .eq("id", prId);
 
       if (updateErr) {
@@ -232,12 +223,11 @@ export default function CanvassingReceptionModal({
         return;
       }
 
-      if (!shouldReturnToPending) {
-        // Create canvass session only when PR proceeds to BAC Resolution.
+      if (canProceedToBAC) {
         const { error: sessionErr } = await supabase
           .from("canvass_sessions")
           .insert({
-            created_at: receivedAt.toISOString(),
+            created_at: (receivedAt as Date).toISOString(),
             pr_id: prId,
             bac_no: formData.bacNo,
             stage: "PR Received",
@@ -252,7 +242,6 @@ export default function CanvassingReceptionModal({
         }
       }
 
-      // Get user ID for remarks
       let userId: number | null = null;
       let storedUser: { id?: number; username?: string; email?: string } | null = null;
       try {
@@ -271,7 +260,6 @@ export default function CanvassingReceptionModal({
         if (data && typeof (data as { id?: number }).id === "number") userId = (data as { id: number }).id;
       }
 
-      // Save remarks if provided
       if (remarkText || statusFlagId || userId) {
         const { error: remarksErr } = await supabase.from("remarks").insert({
           pr_id: prId,
@@ -311,14 +299,11 @@ export default function CanvassingReceptionModal({
 
   const panel = (
     <div className={`bg-white ${embedded ? "" : "rounded-2xl shadow-2xl"} w-full ${embedded ? "" : "max-w-lg"} flex flex-col overflow-hidden`}>
-      {/* ── HEADER ── */}
       {!embedded && (
         <div className="px-6 pt-6 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">
-                Stage 2 · Canvass &amp; Resolution
-              </p>
+              <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">Stage 2 · Canvass &amp; Resolution</p>
               <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Canvassing Reception</h2>
               <p className="text-sm text-gray-500 mt-1 font-mono">{new Date().toLocaleDateString("en-PH")}</p>
             </div>
@@ -335,52 +320,115 @@ export default function CanvassingReceptionModal({
         </div>
       )}
 
-      {/* ── BODY ── */}
       <div className={`px-6 py-6 space-y-6 overflow-y-auto ${embedded ? "" : "max-h-[70vh]"}`}>
+        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-700">
+          <span className="font-semibold">Selected Flag:</span>
+          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full font-semibold">{selectedFlag.label}</span>
+        </div>
 
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-700">
-              <span className="font-semibold">Selected Flag:</span>
-              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full font-semibold">
-                {selectedFlag.label}
-              </span>
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold uppercase text-gray-500 tracking-wider">PR Summary</h3>
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            <div className="flex justify-between items-center w-full">
+              <p className="text-xs text-gray-500 font-medium">PR No.</p>
+              <p className="text-sm font-semibold text-gray-900">{currentPrNo}</p>
             </div>
+            <div className="flex justify-between items-center w-full">
+              <p className="text-xs text-gray-500 font-medium">Section</p>
+              <p className="text-sm font-semibold text-gray-900">{display(prData?.office_section)}</p>
+            </div>
+            <div className="flex justify-between items-center w-full">
+              <p className="text-xs text-gray-500 font-medium">Purpose</p>
+              <p className="text-sm font-semibold text-gray-900">{display(prData?.purpose)}</p>
+            </div>
+            <div className="flex justify-between items-center w-full">
+              <p className="text-xs text-gray-500 font-medium">Amount</p>
+              <p className="text-sm font-semibold text-gray-900">{formatCurrency(prData?.total_cost)}</p>
+            </div>
+            <div className="flex justify-between items-center w-full">
+              <p className="text-xs text-gray-500 font-medium">Status</p>
+              <p className="text-sm font-semibold text-gray-900">{display(prData?.status)}</p>
+            </div>
+          </div>
+        </div>
 
-            {/* PR SUMMARY */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase text-gray-500 tracking-wider">PR Summary</h3>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between items-center w-full">
-                  <p className="text-xs text-gray-500 font-medium">PR No.</p>
-                  <p className="text-sm font-semibold text-gray-900">{currentPrNo}</p>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <p className="text-xs text-gray-500 font-medium">Section</p>
-                  <p className="text-sm font-semibold text-gray-900">{display(prData?.office_section)}</p>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <p className="text-xs text-gray-500 font-medium">Purpose</p>
-                  <p className="text-sm font-semibold text-gray-900">{display(prData?.purpose)}</p>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <p className="text-xs text-gray-500 font-medium">Amount</p>
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(prData?.total_cost)}</p>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <p className="text-xs text-gray-500 font-medium">Status</p>
-                  <p className="text-sm font-semibold text-gray-900">{display(prData?.status)}</p>
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold uppercase text-gray-500 tracking-wider">BAC Acknowledgement</h3>
+          <div>
+            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Status Flag</label>
+            <button
+              type="button"
+              disabled={isReadOnly}
+              onClick={() => setShowFlagPicker(true)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
+            >
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${selectedFlag.iconBg} ${selectedFlag.iconColor}`}>{selectedFlag.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{selectedFlag.label}</p>
+                <p className="text-xs text-gray-400 truncate">{selectedFlag.description}</p>
+              </div>
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showFlagPicker && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowFlagPicker(false)} />
+                <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                  <div className="px-5 py-4 bg-gray-800 text-white flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Processing Flag</p>
+                      <p className="text-base font-bold mt-0.5">Select Status Flag</p>
+                    </div>
+                    <button type="button" onClick={() => setShowFlagPicker(false)} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors">
+                      <RiCloseLine size={20} />
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                    {flagOptions.map((flag) => {
+                      const isSelected = formData.flagId === flag.id;
+                      return (
+                        <button
+                          key={flag.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, flagId: flag.id });
+                            setShowFlagPicker(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${isSelected ? "bg-gray-50" : "hover:bg-gray-50"}`}
+                        >
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${flag.iconBg} ${flag.iconColor}`}>{flag.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-800">{flag.label}</p>
+                            <p className="text-xs text-gray-400">{flag.description}</p>
+                          </div>
+                          {isSelected && <RiCheckboxCircleLine size={18} className="text-emerald-600 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* BAC ACKNOWLEDGEMENT */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase text-gray-500 tracking-wider">BAC Acknowledgement</h3>
+          <div>
+            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Reception Notes</label>
+            <textarea
+              className={`${inputCls} resize-none`}
+              rows={4}
+              placeholder="e.g. Documents received and verified. Moving to releasing phase."
+              value={formData.remarks}
+              disabled={isReadOnly}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+            />
+          </div>
 
-              {/* BAC Canvass No. */}
+          {canProceedToBAC && (
+            <>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                  BAC Canvass No. <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">BAC Canvass No. <span className="text-red-500">*</span></label>
                 <input
                   className={inputCls}
                   placeholder="Enter BAC Canvass Number"
@@ -390,7 +438,6 @@ export default function CanvassingReceptionModal({
                 />
               </div>
 
-              {/* Date Received */}
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date Received</label>
                 <input
@@ -402,84 +449,6 @@ export default function CanvassingReceptionModal({
                 />
               </div>
 
-              {/* Status Flag */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Status Flag</label>
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => setShowFlagPicker(true)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
-                >
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${selectedFlag.iconBg} ${selectedFlag.iconColor}`}>
-                    {selectedFlag.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800">{selectedFlag.label}</p>
-                    <p className="text-xs text-gray-400 truncate">{selectedFlag.description}</p>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showFlagPicker && (
-                  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowFlagPicker(false)} />
-                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                      <div className="px-5 py-4 bg-gray-800 text-white flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Processing Flag</p>
-                          <p className="text-base font-bold mt-0.5">Select Status Flag</p>
-                        </div>
-                        <button type="button" onClick={() => setShowFlagPicker(false)} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors">
-                          <RiCloseLine size={20} />
-                        </button>
-                      </div>
-                      <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
-                        {flagOptions.map((flag) => {
-                          const isSelected = formData.flagId === flag.id;
-                          return (
-                            <button
-                              key={flag.id}
-                              type="button"
-                              onClick={() => {
-                                setFormData({ ...formData, flagId: flag.id });
-                                setShowFlagPicker(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${isSelected ? "bg-gray-50" : "hover:bg-gray-50"}`}
-                            >
-                              <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${flag.iconBg} ${flag.iconColor}`}>
-                                {flag.icon}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-gray-800">{flag.label}</p>
-                                <p className="text-xs text-gray-400">{flag.description}</p>
-                              </div>
-                              {isSelected && <RiCheckboxCircleLine size={18} className="text-emerald-600 flex-shrink-0" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Reception Notes */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Reception Notes</label>
-                <textarea
-                  className={`${inputCls} resize-none`}
-                  rows={4}
-                  placeholder="e.g. Documents received and verified. Moving to releasing phase."
-                  value={formData.remarks}
-                  disabled={isReadOnly}
-                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                />
-              </div>
-
-              {/* File Attachment */}
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
                   Attachment <span className="text-gray-400 font-normal normal-case">(optional)</span>
@@ -510,7 +479,10 @@ export default function CanvassingReceptionModal({
                     <button
                       type="button"
                       disabled={isReadOnly}
-                      onClick={(e) => { e.preventDefault(); setFormData({ ...formData, attachment: null }); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setFormData({ ...formData, attachment: null });
+                      }}
                       className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                     >
                       <RiCloseLine size={16} />
@@ -525,11 +497,11 @@ export default function CanvassingReceptionModal({
                   />
                 </label>
               </div>
-            </div>
+            </>
+          )}
+        </div>
+      </div>
 
-          </div>
-
-      {/* ── FOOTER ── */}
       <div className={`px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3 ${embedded ? "justify-end" : ""}`}>
         {!embedded && (
           <button
@@ -543,7 +515,7 @@ export default function CanvassingReceptionModal({
         {!readonly && !isBACResolution && (
           <button
             onClick={handleSubmit}
-            disabled={processing}
+            disabled={processing || !hasSelectedFlag}
             className={`${embedded ? "w-full" : "flex-[2]"} py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
           >
             {processing ? (
@@ -552,10 +524,10 @@ export default function CanvassingReceptionModal({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                Processing…
+                Processing...
               </>
             ) : (
-              <>{isBACResolution ? "BAC Resolution" : shouldReturnToPending ? "Return to Pending" : "Acknowledged → Release Canvass"}</>
+              <>{isBACResolution ? "BAC Resolution" : !hasSelectedFlag ? "Select Status Flag First" : shouldReturnToPending ? "Return to Pending" : "Acknowledged -> Release Canvass"}</>
             )}
           </button>
         )}
@@ -574,7 +546,6 @@ export default function CanvassingReceptionModal({
         panel
       )}
 
-      {/* Success Modal */}
       {successModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -588,17 +559,13 @@ export default function CanvassingReceptionModal({
                 ? `Canvassing reception for PR ${currentPrNo} has been recorded and returned to Pending.`
                 : `Canvassing reception for PR ${currentPrNo} has been completed successfully. Moving to BAC Resolution.`}
             </p>
-            <button
-              onClick={handleSuccessConfirm}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
-            >
+            <button onClick={handleSuccessConfirm} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors">
               Continue
             </button>
           </div>
         </div>
       )}
 
-      {/* Error Modal */}
       {errorModal.show && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -607,13 +574,8 @@ export default function CanvassingReceptionModal({
               <RiErrorWarningLine size={32} className="text-red-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Error</h3>
-            <p className="text-gray-600 mb-6">
-              {errorModal.message}
-            </p>
-            <button
-              onClick={() => setErrorModal({ show: false, message: "" })}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-            >
+            <p className="text-gray-600 mb-6">{errorModal.message}</p>
+            <button onClick={() => setErrorModal({ show: false, message: "" })} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
               Okay
             </button>
           </div>

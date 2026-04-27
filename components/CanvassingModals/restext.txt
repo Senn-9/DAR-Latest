@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { RiCloseLine, RiArrowRightLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import type { BacResolution } from "@/types/tables";
-import { RiArrowRightLine } from "react-icons/ri";
 
-type UserRow = { id: number; fullname: string | null };
+type Props = {
+  prId: number;
+  prNo: string;
+  onClose: () => void;
+  onSubmitted?: (prId: number) => void;
+};
 
 const inputCls =
   "w-full px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50/90 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition placeholder:text-gray-400";
@@ -15,7 +20,7 @@ const selectChevron =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
 
 const PROCUREMENT_MODES = [
-  "Small Value Procurement (SVP)",
+  // "Small Value Procurement (SVP)",
   "Shopping",
   "Competitive Public Bidding",
   "Limited Source Bidding",
@@ -24,15 +29,23 @@ const PROCUREMENT_MODES = [
   "Others",
 ] as const;
 
-type Props = {
+type UserRow = { id: number; fullname: string | null };
+
+type ResolutionPanelProps = {
   prId: number;
   prNo: string;
-  /** When true, "Resolve & Complete BAC Workflow" saves resolution and advances PR to AAA (status 11). */
   canCompleteWorkflow?: boolean;
   onWorkflowComplete?: (prId: number) => void;
-  /** Callback to expose submit handler to parent for custom submission flow. */
   onSubmit?: (submitFn: () => Promise<boolean | undefined>) => void;
-  /** Hide internal buttons when using external submit (e.g., modal footer). */
+  onDataChange?: (data: {
+    resolutionNo: string;
+    mode: string;
+    whereas1: string;
+    whereas2: string;
+    whereas3: string;
+    resolvedAt: string;
+    resolvedAtPlace: string;
+  }) => void;
   hideActions?: boolean;
 };
 
@@ -51,14 +64,15 @@ function fromDatetimeLocalValue(local: string): string | null {
   return d.toISOString();
 }
 
-export default function CanvassResolutionDetailsPanel({
+function CanvassResolutionDetailsPanel({
   prId,
   prNo,
   canCompleteWorkflow = false,
   onWorkflowComplete,
   onSubmit,
+  onDataChange,
   hideActions = false,
-}: Props) {
+}: ResolutionPanelProps) {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -109,6 +123,21 @@ export default function CanvassResolutionDetailsPanel({
   useEffect(() => { whereas3Ref.current = whereas3; }, [whereas3]);
   useEffect(() => { nowThereforeTextRef.current = nowThereforeText; }, [nowThereforeText]);
   useEffect(() => { resolvedAtPlaceRef.current = resolvedAtPlace; }, [resolvedAtPlace]);
+
+  // Notify parent of data changes for live preview
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange({
+        resolutionNo,
+        mode,
+        whereas1,
+        whereas2,
+        whereas3,
+        resolvedAt,
+        resolvedAtPlace,
+      });
+    }
+  }, [resolutionNo, mode, whereas1, whereas2, whereas3, resolvedAt, resolvedAtPlace, onDataChange]);
 
   /** Placeholder BAC number when no session exists yet. */
   const autoBacNo = `AUTO-${prNo || String(prId)}`;
@@ -238,9 +267,9 @@ export default function CanvassResolutionDetailsPanel({
 
   useEffect(() => {
     load();
-  }, [prId, supabase, getOrCreateSessionId]);
+  }, [load]);
 
-  const validateAndBuildPayload = useCallback((sid: number) => {
+  const validateAndBuildPayload = (sid: number) => {
     // Use refs to get latest values (avoid stale closure from onSubmit callback)
     const currentResolutionNo = resolutionNoRef.current;
     const currentMode = modeRef.current;
@@ -276,9 +305,9 @@ export default function CanvassResolutionDetailsPanel({
       now_therefore_text: currentNowThereforeText.trim() || null,
       resolved_at_place: currentResolvedAtPlace.trim() || null,
     };
-  }, [setError]);
+  };
 
-  const persistResolution = useCallback(async (payload: {
+  const persistResolution = async (payload: {
     session_id: number;
     resolution_no: string;
     prepared_by: number | null;
@@ -308,9 +337,9 @@ export default function CanvassResolutionDetailsPanel({
       inserted && typeof (inserted as { id?: number }).id === "number" ? (inserted as { id: number }).id : null;
     if (newId != null) setResolutionId(newId);
     return newId;
-  }, [supabase, resolutionId]);
+  };
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     setSavingKind("save");
     setError(null);
     setSuccess(null);
@@ -329,7 +358,7 @@ export default function CanvassResolutionDetailsPanel({
     } finally {
       setSavingKind(null);
     }
-  }, [getOrCreateSessionId, validateAndBuildPayload, persistResolution, resolutionId, setSavingKind, setError, setSuccess]);
+  };
 
   // Expose submit handler to parent via callback
   useEffect(() => {
@@ -431,21 +460,13 @@ export default function CanvassResolutionDetailsPanel({
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Mode of Procurement <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                className={selectCls}
-                style={{ backgroundImage: selectChevron }}
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-              >
-                <option value="">Select mode…</option>
-                {PROCUREMENT_MODES.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <input
+              type="text"
+              className={inputCls}
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              placeholder="e.g. Small Value Procurement (SVP)"
+            />
           </div>
 
           {/* Prepared by + Resolved at */}
@@ -609,6 +630,436 @@ export default function CanvassResolutionDetailsPanel({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ResolutionPreview({
+  resolutionNo,
+  mode,
+  preparedBy,
+  resolvedAt,
+  whereas1,
+  whereas2,
+  whereas3,
+  nowThereforeText,
+  resolvedAtPlace,
+  prNo,
+  prOfficeSection,
+  prEstimatedCost,
+  users,
+}: {
+  resolutionNo: string;
+  mode: string;
+  preparedBy: string;
+  resolvedAt: string;
+  whereas1: string;
+  whereas2: string;
+  whereas3: string;
+  nowThereforeText: string;
+  resolvedAtPlace: string;
+  prNo: string;
+  prOfficeSection: string;
+  prEstimatedCost: number | null;
+  users: UserRow[];
+}) {
+  const preparedByUser = users.find((u) => u.id === Number(preparedBy));
+  const preparedByName = preparedByUser?.fullname || "___________________";
+
+  const getOrdinalDay = (day: number): string => {
+    if (day > 3 && day < 21) return day + 'th';
+    switch (day % 10) {
+      case 1: return day + 'st';
+      case 2: return day + 'nd';
+      case 3: return day + 'rd';
+      default: return day + 'th';
+    }
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily: "'Times New Roman', Times, serif",
+        fontSize: "10pt",
+        color: "#000",
+        padding: "0.5in 0.75in",
+        lineHeight: "1.5",
+        margin: "0",
+      }}
+    >
+      {/* Header - Government Seal and Info */}
+      <div style={{ textAlign: "center", marginBottom: "12pt", paddingBottom: "8pt", borderBottom: "1px solid #000" }}>
+        <p style={{ fontSize: "9pt", margin: "0 0 2pt 0", fontWeight: "bold" }}>REPUBLIC OF THE PHILIPPINES</p>
+        <p style={{ fontSize: "10pt", margin: "0 0 2pt 0", fontWeight: "bold" }}>DEPARTMENT OF AGRARIAN REFORM</p>
+        <p style={{ fontSize: "9pt", margin: "0 0 4pt 0" }}>Tunay na Pagbabago sa Repormang Agrario</p>
+        <p style={{ fontSize: "8pt", margin: "0", fontWeight: "bold" }}>PROVINCIAL BIDS AND AWARDS COMMITTEE OF</p>
+        <p style={{ fontSize: "8pt", margin: "0 0 8pt 0", fontWeight: "bold" }}>DARPO-CAMARINES SUR I</p>
+      </div>
+
+      {/* Resolution Number */}
+      <div style={{ textAlign: "center", marginBottom: "12pt" }}>
+        <p style={{ fontSize: "9pt", margin: "0 0 4pt 0", fontWeight: "bold" }}>Resolution No. {resolutionNo || "_________"}</p>
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign: "center", marginBottom: "12pt" }}>
+        <p style={{ fontSize: "10pt", margin: "0", fontWeight: "bold", lineHeight: "1.4" }}>
+          "RESOLUTION RECOMMENDING THE PROCUREMENT BY ALTERNATIVE MODE OF PROCUREMENT (SMALL VALUE PROCUREMENT) OF ONE (1) APPROVED PURCHASE REQUEST/S"
+        </p>
+      </div>
+
+      {/* Whereas Clauses */}
+      <div style={{ marginBottom: "12pt", textAlign: "justify" }}>
+        {whereas1 && (
+          <p style={{ margin: "0 0 6pt 0", lineHeight: "1.5" }}>
+            <span style={{ fontWeight: "bold" }}>WHEREAS,</span> {whereas1}
+          </p>
+        )}
+        {whereas2 && (
+          <p style={{ margin: "0 0 6pt 0", lineHeight: "1.5" }}>
+            <span style={{ fontWeight: "bold" }}>WHEREAS,</span> {whereas2}
+          </p>
+        )}
+        {whereas3 && (
+          <p style={{ margin: "0 0 6pt 0", lineHeight: "1.5" }}>
+            <span style={{ fontWeight: "bold" }}>WHEREAS,</span> {whereas3}
+          </p>
+        )}
+      </div>
+
+      {/* Details Table */}
+      <div style={{ marginBottom: "12pt" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt" }}>
+          <thead>
+            <tr style={{ backgroundColor: "#d3d3d3" }}>
+              <th style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontWeight: "bold", fontSize: "7pt" }}>PR NUMBER</th>
+              <th style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontWeight: "bold", fontSize: "7pt" }}>DATE</th>
+              <th style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontWeight: "bold", fontSize: "7pt" }}>ESTIMATED COST (Php)</th>
+              <th style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontWeight: "bold", fontSize: "7pt" }}>END USER</th>
+              <th style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontWeight: "bold", fontSize: "7pt", maxWidth: "60px" }}>RECOMMENDED<br />PROCUREMENT<br />MODE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontSize: "8pt" }}>{prNo || "2025-08-390"}</td>
+              <td style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontSize: "8pt" }}>{resolvedAt ? new Date(resolvedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "2-digit" }) : "___________"}</td>
+              <td style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontSize: "8pt" }}>{prEstimatedCost ? prEstimatedCost.toLocaleString("en-US") : "_____________"}</td>
+              <td style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontSize: "8pt" }}>{prOfficeSection || "ARBDSP"}</td>
+              <td style={{ border: "1px solid #999", padding: "6px 4px", textAlign: "center", fontSize: "8pt" }}>{mode || "SVP/Canvass"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Please see note */}
+      <p style={{ margin: "8pt 0", fontSize: "8pt" }}>Please see attached purchase request/s.</p>
+
+      {/* Now Therefore Clause */}
+      <div style={{ marginBottom: "12pt", textAlign: "justify" }}>
+        <p style={{ margin: "0 0 6pt 0", lineHeight: "1.5" }}>
+          <span style={{ fontWeight: "bold" }}>NOW, THEREFORE,</span> we, the members of the Bids and Awards Committee, hereby <span style={{ fontWeight: "bold" }}>RESOLVE,</span> as it is hereby <span style={{ fontWeight: "bold" }}>RESOLVED,</span> to recommend to the Head of Procuring Entity the procurement of items through hereby <span style={{ fontWeight: "bold" }}>RESOLVED,</span> to recommend to the Head of Procuring Entity the procurement of items through SVP method.
+        </p>
+      </div>
+
+      {/* Resolved */}
+      <div style={{ marginBottom: "20pt" }}>
+        <p style={{ margin: "0", lineHeight: "1.5" }}>
+          <span style={{ fontWeight: "bold" }}>RESOLVED</span> at the {resolvedAtPlace || "HL Bldg. Carnation St, Triangulo Naga City"}, this {resolvedAt ? getOrdinalDay(new Date(resolvedAt).getDate()) : "_____"} day of {resolvedAt ? new Date(resolvedAt).toLocaleDateString("en-US", { year: "numeric", month: "long" }) : "_______ ___"}.
+        </p>
+      </div>
+
+      {/* Signature Block */}
+      <div style={{ marginTop: "24pt" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16pt", marginBottom: "20pt" }}>
+          {/* Left - Chairperson */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ height: "32pt", marginBottom: "4pt" }}></div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "8pt", fontWeight: "bold" }}>
+              Chairperson
+            </div>
+          </div>
+
+          {/* Center - Vice Chairperson */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ height: "32pt", marginBottom: "4pt" }}></div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "8pt", fontWeight: "bold" }}>
+              BAC Vice-Chairperson
+            </div>
+          </div>
+
+          {/* Right - Member */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ height: "32pt", marginBottom: "4pt" }}></div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "8pt", fontWeight: "bold" }}>
+              BAC Member
+            </div>
+          </div>
+        </div>
+
+        {/* Second Row of Members */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16pt", marginBottom: "24pt" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ height: "32pt", marginBottom: "4pt" }}></div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "8pt", fontWeight: "bold" }}>
+              BAC Member
+            </div>
+          </div>
+          <div></div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ height: "32pt", marginBottom: "4pt" }}></div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "8pt", fontWeight: "bold" }}>
+              BAC Member
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Approved By */}
+      <div style={{ textAlign: "center", marginTop: "20pt", paddingTop: "12pt", borderTop: "1px solid #000" }}>
+        <p style={{ margin: "0 0 4pt 0", fontSize: "9pt", fontWeight: "bold" }}>Approved by:</p>
+        <div style={{ height: "32pt", margin: "4pt 0" }}></div>
+        <div style={{ borderTop: "1px solid #000", paddingTop: "2pt", fontSize: "9pt", fontWeight: "bold" }}>
+          RICARDO C. GARCIA
+        </div>
+        <p style={{ margin: "2pt 0 0 0", fontSize: "8pt" }}>HOPE</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ResolutionModal({
+  prId,
+  prNo,
+  onClose,
+  onSubmitted,
+}: Props) {
+  const supabase = createClient();
+  const [submitFn, setSubmitFn] = useState<(() => Promise<boolean | undefined>) | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [tab, setTab] = useState<"form" | "preview">("form");
+  const hasReceivedSubmitFn = useRef(false);
+
+  // Track resolution data for preview
+  const [resolutionData, setResolutionData] = useState({
+    resolutionNo: "",
+    mode: "",
+    preparedBy: "",
+    resolvedAt: "",
+    whereas1: "",
+    whereas2: "",
+    whereas3: "",
+    nowThereforeText: "",
+    resolvedAtPlace: "",
+  });
+
+  const [prData, setPrData] = useState<{ office_section: string; total_cost: number | null } | null>(null);
+  const [users, setUsers] = useState<UserRow[]>([]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  // Load users and PR data for preview
+  useEffect(() => {
+    const loadData = async () => {
+      const [usersResult, prResult] = await Promise.all([
+        supabase
+          .from("users")
+          .select("id, fullname")
+          .order("fullname", { ascending: true }),
+        supabase
+          .from("purchase_requests")
+          .select("office_section, total_cost")
+          .eq("id", prId)
+          .maybeSingle(),
+      ]);
+      
+      setUsers((usersResult.data as UserRow[]) || []);
+      if (prResult.data) {
+        setPrData({
+          office_section: prResult.data.office_section || "ARBDSP",
+          total_cost: prResult.data.total_cost,
+        });
+      }
+    };
+    loadData();
+  }, [prId]);
+
+  const handleSetSubmitFn = (fn: () => Promise<boolean | undefined>) => {
+    if (!hasReceivedSubmitFn.current) {
+      hasReceivedSubmitFn.current = true;
+      setSubmitFn(() => fn);
+    }
+  };
+
+  const handleUpdateResolutionData = (data: Partial<typeof resolutionData>) => {
+    setResolutionData((prev) => ({ ...prev, ...data }));
+  };
+
+  const handleSubmit = async () => {
+    if (!submitFn) return;
+    setSubmitting(true);
+    try {
+      // Get current user from localStorage
+      let currentUserId: number | null = null;
+      try {
+        const s = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
+        if (s) {
+          const u = JSON.parse(s) as { id?: number };
+          if (typeof u.id === "number") currentUserId = u.id;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      const saved = await submitFn();
+      if (saved) {
+        // Insert remark with auto-generated text and status flag 2
+        const { error: remarkError } = await supabase.from("remarks").insert({
+          remark: "Bac Resolution Submitted",
+          pr_id: prId,
+          status_flag_id: 2,
+          user_id: currentUserId,
+        });
+        if (remarkError) console.error("Failed to insert remark:", remarkError);
+
+        // Update status to 8 (Canvassing Releasing)
+        const { error } = await supabase
+          .from("purchase_requests")
+          .update({ status_id: 8, status: "Canvassing (Releasing)" })
+          .eq("id", prId);
+        if (error) throw error;
+        onSubmitted?.(prId);
+        onClose();
+      }
+    } catch (e) {
+      console.error("Failed to submit resolution:", e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const downloadPDF = () => {
+    const element = document.createElement("div");
+    element.innerHTML = `
+      <div style="font-family:'Times New Roman',serif;font-size:11pt;padding:40px">
+        <div style="text-align:center;margin-bottom:20px">
+          <p style="font-size:9pt;margin-bottom:4px">REPUBLIC OF THE PHILIPPINES</p>
+          <p style="font-size:10pt;font-weight:bold;margin-bottom:2px">DEPARTMENT OF AGRARIAN REFORM</p>
+          <p style="font-size:9pt;margin-bottom:20px">Canvassing and Awards Committee</p>
+          <p style="font-size:11pt;font-weight:bold">RESOLUTION NO. ${resolutionData.resolutionNo}</p>
+        </div>
+      </div>
+    `;
+    const printWindow = window.open("", "", "height=800,width=1200");
+    if (printWindow) {
+      printWindow.document.write(element.innerHTML);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 250);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-10 py-6 flex items-center justify-between text-white">
+          <div>
+            <h2 className="text-xl font-bold">BAC Resolution</h2>
+            <p className="text-purple-100 text-sm mt-1">PR {prNo} · Official Resolution Form</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
+              <button
+                onClick={() => setTab("form")}
+                className={`px-5 py-2 text-sm font-semibold transition-all ${
+                  tab === "form" ? "bg-white text-purple-700" : "text-white hover:bg-white/10"
+                }`}
+              >
+                Form
+              </button>
+              <button
+                onClick={() => setTab("preview")}
+                className={`px-5 py-2 text-sm font-semibold transition-all ${
+                  tab === "preview" ? "bg-white text-purple-700" : "text-white hover:bg-white/10"
+                }`}
+              >
+                Preview
+              </button>
+            </div>
+            <button onClick={onClose} className="hover:bg-purple-500/50 p-2 rounded-lg transition-colors">
+              <RiCloseLine size={24} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Form Side */}
+          <div
+            className={`${tab === "form" ? "flex" : "hidden"} md:flex flex-[2] flex-col overflow-hidden border-r border-gray-200`}
+          >
+            <div className="overflow-y-auto flex-1 px-8 py-6">
+              <CanvassResolutionDetailsPanel
+                prId={prId}
+                prNo={prNo}
+                hideActions
+                onSubmit={(fn) => {
+                  handleSetSubmitFn(fn);
+                }}
+                onDataChange={(data) => {
+                  handleUpdateResolutionData(data);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Preview Side */}
+          <div className={`${tab === "preview" ? "flex" : "hidden"} md:flex flex-[3] overflow-y-auto bg-gray-50 flex-col`}>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div style={{ backgroundColor: "#fff", padding: "16px" }} className="rounded-lg">
+                <ResolutionPreview
+                  resolutionNo={resolutionData.resolutionNo}
+                  mode={resolutionData.mode}
+                  preparedBy={resolutionData.preparedBy}
+                  resolvedAt={resolutionData.resolvedAt}
+                  whereas1={resolutionData.whereas1}
+                  whereas2={resolutionData.whereas2}
+                  whereas3={resolutionData.whereas3}
+                  nowThereforeText={resolutionData.nowThereforeText}
+                  resolvedAtPlace={resolutionData.resolvedAtPlace}
+                  prNo={prNo}
+                  prOfficeSection={prData?.office_section || "ARBDSP"}
+                  prEstimatedCost={prData?.total_cost || null}
+                  users={users}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-10 py-5 bg-gray-50 border-t border-gray-200 flex gap-3 justify-end">
+          <button
+            onClick={downloadPDF}
+            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors"
+          >
+            <RiArrowRightLine size={18} /> Download PDF
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !submitFn}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-sm font-extrabold transition-all disabled:opacity-60"
+          >
+            {submitting ? "Submitting…" : "Submit Resolution"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

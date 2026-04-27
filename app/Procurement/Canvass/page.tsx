@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import CanvassProcessModal from "@/components/Canvassing/CanvassProcessModal";
-import ResolutionModal from "@/components/Canvassing/ResolutionModal";
-import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
+import ResolutionModal from "@/components/CanvassingModals/ResolutionModal";
+import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -65,9 +64,8 @@ export default function CanvassPage() {
   const [viewPrId, setViewPrId]       = useState<number | null>(null);
   const PAGE_SIZE = 10;
 
-  const [processTarget, setProcessTarget] = useState<PRListRow | null>(null);
   const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
-  const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
+  const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -79,6 +77,9 @@ export default function CanvassPage() {
   const isBudgetAccount =
     currentUser?.username?.toLowerCase() === "budget" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -106,7 +107,7 @@ export default function CanvassPage() {
 
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -116,7 +117,7 @@ export default function CanvassPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -230,7 +231,7 @@ export default function CanvassPage() {
 
           {/* ── TABS SKELETON ── */}
           <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
             ))}
           </div>
@@ -332,6 +333,7 @@ export default function CanvassPage() {
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
+            { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
           ] as const).map(({ key, label, href }) => (
             <button
               key={key}
@@ -483,21 +485,19 @@ export default function CanvassPage() {
 
                               <button
                                 type="button"
-                                onClick={() => setViewCanvassTarget(form)}
+                                onClick={() => setViewPrId(form.id)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-all whitespace-nowrap"
                               >
-                                View Canvass
+                                View PR
                               </button>
 
-                              {/* Process — BAC account, status_id in canvass flow */}
-                              {!isBudgetAccount && isBACAccount && [6, 7, 8, 9, 10, 11].includes(form.status_id ?? -1) && (
+                              {/* Reception — BAC account, status_id is Canvassing (Reception) */}
+                              {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
                                 <button
-                                  onClick={() => {
-                                    setProcessTarget(form);
-                                  }}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                  onClick={() => setReceptionTarget(form)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-all whitespace-nowrap"
                                 >
-                                  Process
+                                  Reception
                                 </button>
                               )}
 
@@ -580,36 +580,30 @@ export default function CanvassPage() {
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
-      {viewCanvassTarget && (
-        <ViewCanvass
-          pr={viewCanvassTarget}
-          onClose={() => setViewCanvassTarget(null)}
-          onViewRfq={() => {
-            const id = viewCanvassTarget.id;
-            setViewCanvassTarget(null);
-            setViewPrId(id);
+      {receptionTarget && (
+        <CanvassingReceptionModal
+          prId={receptionTarget.id}
+          currentPrNo={receptionTarget.pr_no}
+          prData={{
+            office_section: receptionTarget.office_section,
+            purpose: receptionTarget.purpose,
+            total_cost: receptionTarget.total_cost,
+            status: receptionTarget.status,
+            status_id: receptionTarget.status_id,
+            entity_name: receptionTarget.entity_name,
+            fund_cluster: receptionTarget.fund_cluster,
+            req_name: receptionTarget.req_name,
+            app_name: receptionTarget.app_name,
+            app_no: receptionTarget.app_no,
+            resp_code: receptionTarget.resp_code,
           }}
-          onOpenResolutionProcess={() => {
-            const pr = viewCanvassTarget;
-            setViewCanvassTarget(null);
-            setResolutionTarget(pr);
-          }}
-        />
-      )}
-
-      {/* ── PROCESS MODAL ── */}
-      {processTarget && (
-        <CanvassProcessModal
-          pr={processTarget}
-          onClose={() => setProcessTarget(null)}
-          onViewRfq={() => {
-            const id = processTarget.id;
-            setProcessTarget(null);
-            setViewPrId(id);
-          }}
-          onUpdated={(prId, patch) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, ...patch } : p)));
-            setProcessTarget((prev) => (prev && prev.id === prId ? { ...prev, ...patch } : prev));
+          onClose={() => setReceptionTarget(null)}
+          onProcessed={(prId, patch) => {
+            setList((prev) =>
+              prev.map((p) =>
+                p.id === prId ? { ...p, ...(patch ?? { status_id: 7, status: "BAC Resolution" }) } : p
+              )
+            );
           }}
         />
       )}

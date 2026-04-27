@@ -9,12 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@handsontable/react": "^16.2.0",
+    "@handsontable/react-wrapper": "^17.0.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
+    "handsontable": "^17.0.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "sheetjs": "^2.0.0",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

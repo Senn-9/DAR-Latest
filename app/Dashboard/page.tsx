@@ -43,6 +43,10 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage]   = useState(1);
   const PAGE_SIZE = 10;
 
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
     if (stored) {
@@ -62,14 +66,14 @@ export default function DashboardPage() {
       if (!error) {
         setList(
           (data || []).filter((pr) =>
-            isAdmin ? true : pr.office_section === currentUser?.divisions?.division_name
+            isAdmin || isSupplyAccount ? true : pr.office_section === currentUser?.divisions?.division_name
           ) as PRListRow[]
         );
       }
       setLoading(false);
     };
     fetchData();
-  }, [supabase, isAdmin, currentUser]);
+  }, [supabase, isAdmin, currentUser, isSupplyAccount]);
 
   const getStatusInfo = (status: string | null) => {
     const k = (status || "unknown").toLowerCase();

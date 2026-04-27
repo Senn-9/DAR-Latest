@@ -130,19 +130,22 @@ export type CanvasserAssignment = {
 
 // ───────────────── BAC ─────────────────
 export type BacResolution = {
-  id: ID
-  session_id: ID | null
+  id: number
+  session_id: number | null
   resolution_no: string | null
-  prepared_by: ID | null
-  resolved_at: Timestamp | null
+  prepared_by: number | null
+  resolved_at: string | null
   notes: string | null
   mode: string | null
-  division_id: ID | null
+  division_id: number | null
+
   whereas_1: string | null
   whereas_2: string | null
   whereas_3: string | null
   now_therefore_text: string | null
   resolved_at_place: string | null
+
+  mode_top: string | null // ✅ NEW FIELD
 }
 
 export type BacResolutionPR = {
