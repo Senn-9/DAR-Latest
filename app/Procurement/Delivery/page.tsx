@@ -231,6 +231,14 @@ export default function DeliveryPage() {
       alert("Please select a PO.");
       return;
     }
+    if (!deliveryNo.trim()) {
+      alert("Please enter a Delivery No.");
+      return;
+    }
+    if (!expectedDeliveryDate) {
+      alert("Please select an Expected Delivery Date.");
+      return;
+    }
     try {
       // Client-side pre-check to avoid UX round-trip when possible
       try {
@@ -449,6 +457,27 @@ export default function DeliveryPage() {
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  const getTimeUntilDelivery = (expectedDate: string | null) => {
+    if (!expectedDate) return null;
+    const now = new Date();
+    const expected = new Date(expectedDate);
+    const diffMs = expected.getTime() - now.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays > 0 && diffDays <= 7) return `in ${diffDays} days`;
+    if (diffDays > 7 && diffDays <= 30) return `in ${Math.floor(diffDays / 7)} weeks`;
+    if (diffDays > 30) return `in ${Math.floor(diffDays / 30)} months`;
+    
+    // Handle past dates
+    const pastDays = Math.abs(diffDays);
+    if (pastDays === 1) return "1 day ago";
+    if (pastDays <= 7) return `${pastDays} days ago`;
+    if (pastDays <= 30) return `${Math.floor(pastDays / 7)} weeks ago`;
+    return `${Math.floor(pastDays / 30)} months ago`;
   };
 
   const handleSort = (field: typeof sortField) => {
@@ -806,7 +835,7 @@ export default function DeliveryPage() {
                           <td className={`px-5 py-3.5 whitespace-nowrap ${rowBg}`}>
                             {(() => {
                               const dueStatus = getDueDateStatus(delivery.expected_delivery_date);
-                              const elapsedTime = getElapsedTime(delivery.expected_delivery_date);
+                              const timeUntilDelivery = getTimeUntilDelivery(delivery.expected_delivery_date);
                               if (!delivery.expected_delivery_date) {
                                 return <span className="text-gray-300">—</span>;
                               }
@@ -817,7 +846,7 @@ export default function DeliveryPage() {
                                   </span>
                                   {dueStatus && (
                                     <span className={`text-xs font-semibold ${dueStatus.color}`}>
-                                      {dueStatus.label} ({elapsedTime})
+                                      {dueStatus.label} ({timeUntilDelivery})
                                     </span>
                                   )}
                                 </div>

@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
-  RiArrowLeftLine, RiArrowRightLine,
+  RiArrowLeftLine, RiArrowRightLine, RiMoneyDollarCircleLine,
 } from "react-icons/ri";
 
 export default function ProcurementPage() {
@@ -85,7 +85,7 @@ export default function ProcurementPage() {
   const [budgetProcessTarget, setBudgetProcessTarget] = useState<BudgetTarget | null>(null); // ← updated type
   const [submitting, setSubmitting]       = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "delivery">("pr"); //added tabs
+  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "delivery" | "payment">("pr"); //added tabs
   const router = useRouter();
 
   const PAGE_SIZE = 10;
@@ -215,6 +215,13 @@ export default function ProcurementPage() {
   useEffect(() => {
     if (activeTab === "delivery") {
       router.push("/Procurement/Delivery");
+    }
+  }, [activeTab, router]);
+
+  // Redirect to Payment page when payment tab is selected
+  useEffect(() => {
+    if (activeTab === "payment") {
+      router.push("/Procurement/Payment");
     }
   }, [activeTab, router]);
 
@@ -485,6 +492,7 @@ export default function ProcurementPage() {
             { key: "canvass",  label: "Canvass"            },
             { key: "abstract", label: "Abstract of Awards" },
             { key: "delivery", label: "Delivery"           },
+            { key: "payment",  label: "Payment"            },
           ] as const).map(({ key, label }) => (
             <button
               key={key}

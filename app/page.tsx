@@ -89,110 +89,93 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-emerald-900 flex flex-col items-center justify-center p-4">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
-        * { font-family: 'Sora', sans-serif; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
-
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center mb-4">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-            <span className="text-emerald-800 text-3xl font-bold">DAR</span>
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+   
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/logo.png" 
+              alt="DAR Logo" 
+              className="w-24 h-24 object-contain"
+            />
           </div>
+          <h1 className="text-xl font-bold mb-8 text-center text-gray-800">
+            Department of Agrarian Reform
+          </h1>
+        
+          {/* System Title */}
+            <h3 className="text-sm mb-8 text-center text-gray-800">
+            Procurement Monitoring and Document System
+          </h3>
+
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">
+              <p className="text-sm text-red-700 font-semibold">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="flex flex-col gap-5">
+            {/* Username field */}
+            <div className="flex flex-col gap-1.5">
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
+                className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-500 transition-all disabled:opacity-50"
+              />
+            </div>
+
+            {/* Password field */}
+            <div className="flex flex-col gap-1.5">
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-500 transition-all disabled:opacity-50"
+              />
+            </div>
+
+            {/* Sign In button */}
+            <button
+              type="submit"
+              disabled={isLoading || !username.trim() || !password.trim()}
+              className="w-full mt-2 px-4 py-3.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="animate-spin"
+                  >
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
+                    <path
+                      d="M12 2a10 10 0 0 1 10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Signing in…
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-          DAR Procurement
-        </h1>
-        <p className="text-emerald-200 text-sm font-medium">
-          Monitoring &amp; Automation System
-        </p>
       </div>
-
-      {/* Login Card */}
-      <div className="bg-white rounded-2xl p-8 md:p-10 w-full max-w-md shadow-2xl">
-        {/* Sign In Title */}
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
-          Sign In
-        </h2>
-
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">
-            <p className="text-sm text-red-700 font-semibold">{error}</p>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleLogin} className="flex flex-col gap-5">
-          {/* Username field */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Username
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
-              className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
-            />
-          </div>
-
-          {/* Password field */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
-            />
-          </div>
-
-          {/* Sign In button */}
-          <button
-            type="submit"
-            disabled={isLoading || !username.trim() || !password.trim()}
-            className="w-full mt-2 px-4 py-3.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20"
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="animate-spin"
-                >
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
-                  <path
-                    d="M12 2a10 10 0 0 1 10 10"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Signing in…
-              </>
-            ) : (
-              "Sign In"
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Footer */}
-      <p className="text-emerald-400/60 text-xs mt-8">
-        Department of Agrarian Reform Procurement System
-      </p>
     </div>
   );
 }

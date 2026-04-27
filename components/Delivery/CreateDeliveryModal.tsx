@@ -33,6 +33,39 @@ export default function CreateDeliveryModal({
   const [poSearch, setPoSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState("All");
 
+  const validateFields = () => {
+    const errors = [];
+    
+    if (!deliveryNo.trim()) {
+      errors.push("Delivery No. is required");
+    }
+    
+    if (!expectedDeliveryDate) {
+      errors.push("Expected Delivery Date is required");
+    }
+    
+    if (!selectedPoId) {
+      errors.push("Please select a PO");
+    }
+    
+    if (selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) {
+      errors.push("Selected PO already has an active delivery process");
+    }
+    
+    return errors;
+  };
+
+  const handleSubmit = () => {
+    const errors = validateFields();
+    
+    if (errors.length > 0) {
+      alert("Please fix the following errors:\n\n" + errors.join("\n"));
+      return;
+    }
+    
+    onSubmit();
+  };
+
   const selectedPo = useMemo(
     () => poOptions.find((p) => Number(p.id) === Number(selectedPoId)),
     [poOptions, selectedPoId],
@@ -265,10 +298,18 @@ export default function CreateDeliveryModal({
             Cancel
           </button>
           <button
-            onClick={onSubmit}
-            disabled={Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))}
+            onClick={handleSubmit}
+            disabled={
+              !deliveryNo.trim() || 
+              !expectedDeliveryDate || 
+              !selectedPoId ||
+              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
+            }
             className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold transition-colors ${
-              selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))
+              !deliveryNo.trim() || 
+              !expectedDeliveryDate || 
+              !selectedPoId ||
+              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-emerald-700 hover:bg-emerald-800"
             }`}
