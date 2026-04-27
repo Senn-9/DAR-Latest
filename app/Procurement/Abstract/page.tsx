@@ -73,6 +73,9 @@ export default function AbstractPage() {
   const isBudgetAccount =
     currentUser?.username?.toLowerCase() === "budget" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -100,7 +103,7 @@ export default function AbstractPage() {
 
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -110,7 +113,7 @@ export default function AbstractPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -204,14 +207,14 @@ export default function AbstractPage() {
 
           {/* ── TABS SKELETON ── */}
           <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
             ))}
           </div>
 
           {/* ── STAT CARDS SKELETON ── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
                 <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
                 <div className="space-y-1.5 flex-1">
@@ -298,6 +301,7 @@ export default function AbstractPage() {
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
+            { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
           ] as const).map(({ key, label, href }) => (
             <button
               key={key}

@@ -1,0 +1,981 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import {
+  RiFileListLine, RiSearchLine, RiAddLine, RiTimeLine, RiCheckboxCircleLine,
+  RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine,
+  RiEyeLine, RiEditLine, RiCheckLine, RiCloseCircleLine, RiTruckLine, RiDeleteBinLine, RiMore2Line, RiChat3Line,
+} from "react-icons/ri";
+import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
+import CreateDeliveryModal from "@/components/Delivery/CreateDeliveryModal";
+import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
+import DeleteDeliveryModal from "@/components/Delivery/DeleteDeliveryModal";
+import RemarksModal from "@/components/Delivery/RemarksModal";
+import { fetchPoCandidatesForDelivery, insertDelivery, updateDelivery, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery, fetchDeliveryStatuses, insertDeliveryProcessRemark, fetchPoIdsWithActiveDeliveries, hasActiveDeliveryForPo } from "@/utils/supabase/delivery";
+import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
+
+export default function DeliveryPage() {
+  const supabase = createClient();
+  const router = useRouter();
+
+  type DeliveryRow = {
+    id: number;
+    po_id: number | null;
+    po_no: string;
+    supplier: string | null;
+    office_section: string | null;
+    division_id: string | null;
+    delivery_no: string;
+    expected_delivery_date: string | null;
+    dr_no: string | null;
+    soa_no: string | null;
+    status_id: number;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+    entity_name?: string;
+    po_date?: string;
+    created_by: number | null;
+  };
+
+  type CurrentUser = {
+    fullname: string;
+    username: string;
+    role_id: number;
+    divisions?: { division_name: string };
+    roles?: { role_name: string };
+  };
+
+  type SubTab = "all" | "deliveries" | "inspection" | "acceptance";
+
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [subTab, setSubTab] = useState<SubTab>("all");
+  const [sortField, setSortField] = useState<"delivery_no" | "po_no" | "created_at">("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryRow | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [processModalOpen, setProcessModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [remarksModalOpen, setRemarksModalOpen] = useState(false);
+  const [iarData, setIarData] = useState<any>(null);
+  const [loaData, setLoaData] = useState<any>(null);
+  const [dvData, setDvData] = useState<any>(null);
+  const [poCandidates, setPoCandidates] = useState<any[]>([]);
+  const [poIdsWithActiveDelivery, setPoIdsWithActiveDelivery] = useState<number[]>([]);
+  const [statuses, setStatuses] = useState<{ id: number; status_name: string }[]>([]);
+  const [deliveryNo, setDeliveryNo] = useState("");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+  const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
+  const [drNo, setDrNo] = useState("");
+  const [soaNo, setSoaNo] = useState("");
+  const [notes, setNotes] = useState("");
+  const [iar, setIar] = useState<any>(null);
+  const [loa, setLoa] = useState<any>(null);
+  const [dv, setDv] = useState<any>(null);
+  const [statusFlag, setStatusFlag] = useState<StatusFlag | null>(null);
+  const [flagPickerOpen, setFlagPickerOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<number | null>(null);
+  const [sectionFilter, setSectionFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"created_at" | "updated_at">("created_at");
+  const [defaultViewTab, setDefaultViewTab] = useState<"iar" | "loa" | "dv">("iar");
+  const [poData, setPoData] = useState<any>(null);
+
+  const PAGE_SIZE = 10;
+
+  const SUB_TAB_STATUS_MAP: Record<SubTab, number[]> = {
+    all: [],
+    deliveries: [18, 19],
+    inspection: [20, 21],
+    acceptance: [22, 23, 24, 25, 35],
+  };
+
+  const STATUS_CFG: Record<number, { bg: string; text: string; label: string }> = {
+    18: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Delivery (Waiting)" },
+    19: { bg: "bg-orange-50", text: "text-orange-800", label: "Delivery (Received)" },
+    20: { bg: "bg-teal-50", text: "text-teal-800", label: "Delivery (IAR)" },
+    21: { bg: "bg-purple-50", text: "text-purple-800", label: "Delivery (IAR Processing)" },
+    22: { bg: "bg-blue-50", text: "text-blue-800", label: "Delivery (LOA)" },
+    23: { bg: "bg-green-50", text: "text-green-800", label: "Delivery (DV)" },
+    24: { bg: "bg-indigo-50", text: "text-indigo-800", label: "Delivery (End-User Forward)" },
+    25: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Delivery (Division Chief)" },
+    35: { bg: "bg-emerald-100", text: "text-emerald-900", label: "Completed" },
+    27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
+  };
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      setIsAdmin(user.role_id === 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchDeliveries = async () => {
+      try {
+        setLoading(true);
+        let query = supabase
+          .from("deliveries")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!isAdmin && currentUser?.divisions?.division_name) {
+          query = query.eq("division_id", currentUser.divisions?.division_name);
+        }
+
+        const { data, error } = await query;
+        if (!error && data) {
+          setDeliveries(data as DeliveryRow[]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDeliveries();
+  }, [supabase, isAdmin, currentUser]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [candidates, statusData, activePoIds] = await Promise.all([
+        fetchPoCandidatesForDelivery(),
+        fetchDeliveryStatuses(),
+        fetchPoIdsWithActiveDeliveries(),
+      ]);
+      setPoCandidates(candidates);
+      setStatuses(statusData);
+      setPoIdsWithActiveDelivery(activePoIds ?? []);
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchDeliveryDocuments = async () => {
+      if (!selectedDelivery) {
+        setIarData(null);
+        setLoaData(null);
+        setDvData(null);
+        setPoData(null);
+        return;
+      }
+
+      console.log("Fetching documents for delivery:", selectedDelivery.id);
+
+      try {
+        const [iar, loa, dv, po] = await Promise.all([
+          supabase
+            .from("iar_documents")
+            .select("*")
+            .eq("delivery_id", selectedDelivery.id)
+            .maybeSingle(),
+          supabase
+            .from("loa_documents")
+            .select("*")
+            .eq("delivery_id", selectedDelivery.id)
+            .maybeSingle(),
+          supabase
+            .from("dv_documents")
+            .select("*")
+            .eq("delivery_id", selectedDelivery.id)
+            .maybeSingle(),
+          selectedDelivery.po_id
+            ? supabase
+                .from("purchase_orders")
+                .select("*")
+                .eq("id", selectedDelivery.po_id)
+                .single()
+            : Promise.resolve(null),
+        ]);
+        console.log("IAR data:", iar, "Error:", iar.error);
+        console.log("LOA data:", loa, "Error:", loa.error);
+        console.log("DV data:", dv, "Error:", dv.error);
+        console.log("PO data:", po, "Error:", po?.error);
+
+        setIarData(iar.data);
+        setLoaData(loa.data);
+        setDvData(dv.data);
+        setPoData(po?.data ?? null);
+      } catch (error) {
+        console.error("Error fetching delivery documents:", error);
+      }
+    };
+
+    fetchDeliveryDocuments();
+  }, [selectedDelivery?.id, supabase]);
+
+  const isSupplyRole = currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false;
+  const isAccountingRole = currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+
+  const canRoleProcess = (roleId: number, statusId: number) => {
+    if (roleId === 1) return true;
+    if (roleId === 8 && [18, 19, 20, 21, 22, 23].includes(statusId)) return true;
+    if (roleId === 3 && statusId === 24) return true; // END-USER forwards to Division Chief
+    if (roleId === 2 && statusId === 25) return true; // Division Chief approval
+    return false;
+  };
+
+  const BLOCKING_FLAGS: StatusFlag[] = ["needs_revision", "wrong_information", "on_hold"];
+
+  const handleCreateDelivery = async () => {
+    if (!selectedPoId) {
+      alert("Please select a PO.");
+      return;
+    }
+    try {
+      // Client-side pre-check to avoid UX round-trip when possible
+      try {
+        const already = await hasActiveDeliveryForPo(selectedPoId);
+        if (already) {
+          alert("Selected PO already has an active delivery process. Cannot create another Log Delivery.");
+          return;
+        }
+      } catch (e) {
+        console.error("Active PO pre-check failed:", e);
+      }
+      const selectedPo = poCandidates.find((p) => p.id === selectedPoId);
+      await insertDelivery({
+        po_id: selectedPoId,
+        po_no: selectedPo?.po_no || "",
+        supplier: selectedPo?.supplier || null,
+        office_section: selectedPo?.office_section || null,
+        division_id: selectedPo?.division_id || null,
+        delivery_no: deliveryNo,
+        expected_delivery_date: expectedDeliveryDate || null,
+        created_by: currentUser?.role_id || null,
+      });
+      setCreateModalOpen(false);
+      setDeliveryNo("");
+      setExpectedDeliveryDate("");
+      setSelectedPoId(null);
+      const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
+      if (data) setDeliveries(data as DeliveryRow[]);
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to create delivery.");
+    }
+  };
+
+  const handleProcessDelivery = async () => {
+    if (!selectedDelivery) return;
+    try {
+      const nextStatus = selectedDelivery.status_id + 1;
+      const payload: any = {
+        dr_no: drNo || null,
+        soa_no: soaNo || null,
+        notes: notes || null,
+      };
+      // If the user set a blocking flag, do not progress the delivery status.
+      // Check this BEFORE any database operations.
+      if (statusFlag && BLOCKING_FLAGS.includes(statusFlag)) {
+        // Insert remark if notes are provided
+        if (notes) {
+          await insertDeliveryProcessRemark(
+            selectedDelivery.id,
+            currentUser?.role_id || null,
+            notes,
+            getFlagId(statusFlag),
+            "delivery",
+          );
+        }
+        alert("Status flag set. Delivery will not progress until the flag is cleared.");
+        setProcessModalOpen(false);
+        setDrNo("");
+        setSoaNo("");
+        setNotes("");
+        setIar(null);
+        setLoa(null);
+        setDv(null);
+        setStatusFlag(null);
+        const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
+        if (data) setDeliveries(data as DeliveryRow[]);
+        return;
+      }
+
+      // Insert remark for non-blocking flags
+      if (statusFlag && notes) {
+        await insertDeliveryProcessRemark(
+          selectedDelivery.id,
+          currentUser?.role_id || null,
+          notes,
+          getFlagId(statusFlag),
+          "delivery",
+        );
+      }
+
+      await updateDelivery(selectedDelivery.id, payload);
+
+      if (selectedDelivery.status_id === 20 && iar) {
+        await upsertIARByDelivery(selectedDelivery.id, iar);
+      }
+      if (selectedDelivery.status_id === 22 && loa) {
+        await upsertLOAByDelivery(selectedDelivery.id, loa);
+      }
+      if (selectedDelivery.status_id === 23 && dv) {
+        await upsertDVByDelivery(selectedDelivery.id, dv);
+      }
+
+      await updateDelivery(selectedDelivery.id, { status_id: nextStatus });
+      setProcessModalOpen(false);
+      setDrNo("");
+      setSoaNo("");
+      setNotes("");
+      setIar(null);
+      setLoa(null);
+      setDv(null);
+      setStatusFlag(null);
+      const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
+      if (data) setDeliveries(data as DeliveryRow[]);
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to process delivery.");
+    }
+  };
+
+  const handleDeleteDelivery = async (deliveryId: string) => {
+    const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
+    if (data) setDeliveries(data as DeliveryRow[]);
+  };
+
+  const handleOpenProcessModal = async (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setDrNo(delivery.dr_no ?? "");
+    setSoaNo(delivery.soa_no ?? "");
+    setNotes(delivery.notes ?? "");
+    setIar(null);
+    setLoa(null);
+    setDv(null);
+    setStatusFlag(null);
+
+    if (delivery.status_id === 20) {
+      const iarDoc = await fetchIARByDelivery(delivery.id);
+      setIar(iarDoc);
+    }
+    if (delivery.status_id === 22) {
+      const loaDoc = await fetchLOAByDelivery(delivery.id);
+      setLoa(loaDoc);
+    }
+    if (delivery.status_id === 23) {
+      const dvDoc = await fetchDVByDelivery(delivery.id);
+      setDv(dvDoc);
+    }
+
+    setProcessModalOpen(true);
+  };
+
+  const handleOpenDeleteModal = (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setDeleteModalOpen(true);
+  };
+
+  const handlePreviewDocument = async (type: "iar" | "loa" | "dv") => {
+    if (!selectedDelivery) return;
+    try {
+      setDefaultViewTab(type);
+
+      // Fetch PO data if not already loaded
+      if (!poData && selectedDelivery.po_id) {
+        const { data: po } = await supabase
+          .from("purchase_orders")
+          .select("*")
+          .eq("id", selectedDelivery.po_id)
+          .single();
+        if (po) {
+          setPoData(po);
+        }
+      }
+
+      // Use current form data if available, otherwise fetch from database
+      if (type === "iar") {
+        if (iar && Object.keys(iar).length > 0) {
+          setIarData(iar);
+        } else {
+          const iarDoc = await fetchIARByDelivery(selectedDelivery.id);
+          setIarData(iarDoc);
+        }
+      } else if (type === "loa") {
+        if (loa && Object.keys(loa).length > 0) {
+          setLoaData(loa);
+        } else {
+          const loaDoc = await fetchLOAByDelivery(selectedDelivery.id);
+          setLoaData(loaDoc);
+        }
+      } else if (type === "dv") {
+        if (dv && Object.keys(dv).length > 0) {
+          setDvData(dv);
+        } else {
+          const dvDoc = await fetchDVByDelivery(selectedDelivery.id);
+          setDvData(dvDoc);
+        }
+      }
+      setViewModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch document:", error);
+      alert("Failed to load document preview.");
+    }
+  };
+
+  const getDueDateStatus = (expectedDate: string | null) => {
+    if (!expectedDate) return null;
+    const now = new Date();
+    const expected = new Date(expectedDate);
+    const diffDays = Math.floor((expected.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { status: "past-due", label: "Past Due", color: "text-red-600", bg: "bg-red-50", border: "border-red-200" };
+    } else if (diffDays <= 3) {
+      return { status: "near-due", label: "Near Due", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" };
+    } else {
+      return { status: "on-track", label: "On Track", color: "text-green-600", bg: "bg-green-50", border: "border-green-200" };
+    }
+  };
+
+  const getElapsedTime = (date: string | null) => {
+    if (!date) return null;
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now.getTime() - past.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  const handleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir(field === "created_at" ? "desc" : "asc"); }
+    setCurrentPage(1);
+  };
+
+  const filteredDeliveries = deliveries
+    .filter((delivery) => {
+      const matchSearch =
+        delivery.delivery_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        delivery.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (delivery.supplier || "").toLowerCase().includes(searchQuery.toLowerCase());
+
+      const tabStatuses = SUB_TAB_STATUS_MAP[subTab];
+      const matchTab = subTab === "all" || tabStatuses.includes(delivery.status_id);
+
+      const matchStatus = statusFilter === null || delivery.status_id === statusFilter;
+      const matchSection = sectionFilter === null || delivery.office_section === sectionFilter;
+
+      return matchSearch && matchTab && matchStatus && matchSection;
+    })
+    .sort((a, b) => {
+      const dateField = sortBy === "created_at" ? "created_at" : "updated_at";
+      const aVal = a[dateField] ? new Date(a[dateField]).getTime() : 0;
+      const bVal = b[dateField] ? new Date(b[dateField]).getTime() : 0;
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredDeliveries.length / PAGE_SIZE));
+  const pagedDeliveries = filteredDeliveries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const countByStatus = (statuses: number[]) =>
+    deliveries.reduce((n, d) => (statuses.includes(d.status_id) ? n + 1 : n), 0);
+
+  const STAT_CARDS = [
+    { label: "Total", value: deliveries.length, icon: <RiFileListLine size={20} />, iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Waiting", value: countByStatus([18]), icon: <RiTimeLine size={20} />, iconBg: "bg-yellow-100", iconColor: "text-yellow-600", numColor: "text-yellow-600", cardBg: "bg-yellow-50", border: "border-yellow-100" },
+    { label: "Received", value: countByStatus([19]), icon: <RiTruckLine size={20} />, iconBg: "bg-orange-100", iconColor: "text-orange-600", numColor: "text-orange-600", cardBg: "bg-orange-50", border: "border-orange-100" },
+    { label: "Inspection", value: countByStatus([20, 21]), icon: <RiEyeLine size={20} />, iconBg: "bg-teal-100", iconColor: "text-teal-600", numColor: "text-teal-600", cardBg: "bg-teal-50", border: "border-teal-100" },
+    { label: "Acceptance", value: countByStatus([22, 23, 24]), icon: <RiCheckLine size={20} />, iconBg: "bg-blue-100", iconColor: "text-blue-600", numColor: "text-blue-600", cardBg: "bg-blue-50", border: "border-blue-100" },
+    { label: "Completed", value: countByStatus([35]), icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100", iconColor: "text-green-600", numColor: "text-green-600", cardBg: "bg-green-50", border: "border-green-100" },
+  ];
+
+  const SortIcon = ({ field }: { field: typeof sortField }) => (
+    <span className={`inline-flex ml-1 ${sortField === field ? "opacity-100" : "opacity-30"}`}>
+      {sortField === field && sortDir === "desc"
+        ? <RiArrowDownLine size={12} />
+        : <RiArrowUpLine size={12} />}
+    </span>
+  );
+
+  const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+      acc.push(p);
+      return acc;
+    }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          * { font-family: 'Sora', sans-serif; }
+          .mono { font-family: 'JetBrains Mono', monospace; }
+          @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+          .skeleton-shimmer {
+            background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
+        `}</style>
+
+        <div className="w-full p-6 md:p-10 space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2">
+              <div className="skeleton-shimmer h-3 w-32 rounded" />
+              <div className="skeleton-shimmer h-8 w-48 rounded" />
+              <div className="skeleton-shimmer h-4 w-40 rounded" />
+            </div>
+            <div className="skeleton-shimmer h-10 w-32 rounded-xl" />
+          </div>
+
+          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton-shimmer h-9 w-28 rounded-xl" />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                <div className="skeleton-shimmer w-10 h-10 rounded-xl shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="skeleton-shimmer h-3 w-16 rounded" />
+                  <div className="skeleton-shimmer h-6 w-10 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="skeleton-shimmer h-5 w-40 rounded" />
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="skeleton-shimmer h-8 w-56 rounded-lg" />
+              </div>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="px-5 py-4 flex items-center gap-4">
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-28 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
+                  <div className="skeleton-shimmer h-6 w-32 rounded-full shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-20 rounded shrink-0 ml-auto" />
+                  <div className="flex items-center justify-center gap-1.5 shrink-0">
+                    <div className="skeleton-shimmer h-7 w-16 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { font-family: 'Sora', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tr-row:hover td { background-color: #f0fdf4 !important; }
+        .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
+      `}</style>
+
+      <div className="w-full p-6 md:p-10 space-y-6">
+
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
+            <h1 className="text-3xl font-bold text-gray-900">Delivery Management</h1>
+            {currentUser && (
+              <p className="text-sm text-gray-400 mt-1">
+                Signed in as{" "}
+                <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+                {currentUser.divisions?.division_name && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                    {currentUser.divisions.division_name}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          {(isAdmin || isSupplyRole) && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className="px-4 py-2 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2"
+            >
+              <RiAddLine size={20} />
+              New Delivery
+            </button>
+          )}
+        </div>
+
+        {/* Back to Procurement */}
+        <button
+          onClick={() => router.push("/Procurement")}
+          className="text-sm text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
+        >
+          ← Back to Procurement
+        </button>
+
+        {/* Sub-tabs */}
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+          {(["all", "deliveries", "inspection", "acceptance"] as SubTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setSubTab(tab); setCurrentPage(1); }}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                subTab === tab
+                  ? "bg-emerald-700 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {tab === "all" ? "All" : tab === "deliveries" ? "Deliveries" : tab === "inspection" ? "Inspection" : "Acceptance"}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter Panel */}
+        {filterOpen && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-bold text-gray-500 mb-2">STATUS</label>
+                <select
+                  value={statusFilter ?? ""}
+                  onChange={(e) => setStatusFilter(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <option value="">All Statuses</option>
+                  {statuses.map((s) => (
+                    <option key={s.id} value={s.id}>{s.status_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-bold text-gray-500 mb-2">SECTION</label>
+                <select
+                  value={sectionFilter ?? ""}
+                  onChange={(e) => setSectionFilter(e.target.value || null)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <option value="">All Sections</option>
+                  {Array.from(new Set(deliveries.map((d) => d.office_section).filter(Boolean))).map((section) => (
+                    <option key={section} value={section ?? ""}>{section}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-bold text-gray-500 mb-2">SORT BY</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as "created_at" | "updated_at")}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <option value="created_at">Date Created</option>
+                  <option value="updated_at">Last Updated</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => { setStatusFilter(null); setSectionFilter(null); setSortBy("created_at"); }}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
+            <div
+              key={label}
+              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+            >
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">{label}</p>
+                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Table Panel */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">All Deliveries</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex items-center">
+                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search delivery, PO or supplier…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
+                />
+              </div>
+              <button
+                onClick={() => setFilterOpen(!filterOpen)}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg border transition-colors ${
+                  filterOpen
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                    : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Filters
+              </button>
+            </div>
+          </div>
+
+          {filteredDeliveries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <RiFileListLine size={38} className="opacity-30 mb-3" />
+              <p className="text-sm font-medium">No deliveries found.</p>
+              <p className="text-xs mt-1">Try adjusting your search or filter.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                      {[
+                        { label: "Delivery No", field: "delivery_no" as const, align: "text-left" },
+                        { label: "PO Number", field: "po_no" as const, align: "text-left" },
+                        { label: "Supplier", field: null, align: "text-left" },
+                        { label: "Date", field: "created_at" as const, align: "text-left" },
+                        { label: "Status", field: null, align: "text-center" },
+                        { label: "Expected Delivery", field: null, align: "text-left" },
+                        { label: "Actions", field: null, align: "text-center" },
+                      ].map(({ label, field, align }) => (
+                        <th
+                          key={label}
+                          onClick={field ? () => handleSort(field) : undefined}
+                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
+                        >
+                          <span className="inline-flex items-center gap-0.5">
+                            {label}{field && <SortIcon field={field} />}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedDeliveries.map((delivery, index) => {
+                      const statusInfo = STATUS_CFG[delivery.status_id] || { bg: "bg-gray-100", text: "text-gray-700", label: "Unknown" };
+                      const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                      const canProcess = canRoleProcess(currentUser?.role_id || 0, delivery.status_id);
+
+                      return (
+                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors">
+                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                            {delivery.delivery_no}
+                          </td>
+                          <td className={`mono px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                            {delivery.po_no}
+                          </td>
+                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                            {delivery.supplier || <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                            {delivery.created_at
+                              ? new Date(delivery.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
+                          <td className={`px-5 py-3.5 whitespace-nowrap ${rowBg}`}>
+                            {(() => {
+                              const dueStatus = getDueDateStatus(delivery.expected_delivery_date);
+                              const elapsedTime = getElapsedTime(delivery.expected_delivery_date);
+                              if (!delivery.expected_delivery_date) {
+                                return <span className="text-gray-300">—</span>;
+                              }
+                              return (
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-600">
+                                    {new Date(delivery.expected_delivery_date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                                  </span>
+                                  {dueStatus && (
+                                    <span className={`text-xs font-semibold ${dueStatus.color}`}>
+                                      {dueStatus.label} ({elapsedTime})
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => { setSelectedDelivery(delivery); setDefaultViewTab("iar"); setViewModalOpen(true); }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => { setSelectedDelivery(delivery); setRemarksModalOpen(true); }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
+                              >
+                                Remarks
+                              </button>
+                              {canProcess && (
+                                <button
+                                  onClick={() => handleOpenProcessModal(delivery)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                >
+                                  Process
+                                </button>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleOpenDeleteModal(delivery)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:border-red-300 transition-all whitespace-nowrap"
+                                >
+                                  <RiDeleteBinLine size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-gray-500">
+                  Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, filteredDeliveries.length)} of {filteredDeliveries.length} entries
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    <RiArrowLeftLine size={14} />
+                  </button>
+                  {pageNums.map((p, i) => (
+                    <button
+                      key={i}
+                      onClick={() => typeof p === "number" && setCurrentPage(p)}
+                      disabled={typeof p !== "number"}
+                      className={`w-8 h-8 rounded-lg text-xs font-semibold ${
+                        currentPage === p
+                          ? "bg-emerald-700 text-white"
+                          : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      } ${typeof p !== "number" ? "cursor-default" : ""}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    <RiArrowRightLine size={14} />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">Page {currentPage} of {totalPages}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* View Modal */}
+      <ViewDeliveryModal
+        visible={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        delivery={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
+        iar={iarData}
+        loa={loaData}
+        dv={dvData}
+        defaultTab={defaultViewTab}
+      />
+
+      {/* Create Modal */}
+      <CreateDeliveryModal
+        visible={createModalOpen}
+        deliveryNo={deliveryNo}
+        setDeliveryNo={setDeliveryNo}
+        expectedDeliveryDate={expectedDeliveryDate}
+        setExpectedDeliveryDate={setExpectedDeliveryDate}
+        poOptions={poCandidates}
+        selectedPoId={selectedPoId}
+        setSelectedPoId={setSelectedPoId}
+        poActiveIds={poIdsWithActiveDelivery}
+        onClose={() => setCreateModalOpen(false)}
+        onSubmit={handleCreateDelivery}
+      />
+
+      {/* Process Modal */}
+      <ProcessDeliveryModal
+        visible={processModalOpen}
+        onClose={() => setProcessModalOpen(false)}
+        onSubmit={handleProcessDelivery}
+        active={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
+        statusLabel={selectedDelivery ? statuses.find((s) => s.id === selectedDelivery.status_id)?.status_name ?? "" : ""}
+        drNo={drNo}
+        setDrNo={setDrNo}
+        soaNo={soaNo}
+        setSoaNo={setSoaNo}
+        notes={notes}
+        setNotes={setNotes}
+        iar={iar}
+        setIar={setIar}
+        loa={loa}
+        setLoa={setLoa}
+        dv={dv}
+        setDv={setDv}
+        statusFlag={statusFlag}
+        onPressStatusFlag={() => setFlagPickerOpen(true)}
+        flagPickerOpen={flagPickerOpen}
+        onCloseFlagPicker={() => setFlagPickerOpen(false)}
+        onSelectStatusFlag={setStatusFlag}
+        onPreviewIAR={() => handlePreviewDocument("iar")}
+        onPreviewLOA={() => handlePreviewDocument("loa")}
+        onPreviewDV={() => handlePreviewDocument("dv")}
+      />
+
+      {/* Delete Modal */}
+      <DeleteDeliveryModal
+        visible={deleteModalOpen}
+        deliveryId={selectedDelivery?.id ?? null}
+        deliveryNo={selectedDelivery?.delivery_no ?? null}
+        onClose={() => setDeleteModalOpen(false)}
+        onDeleted={handleDeleteDelivery}
+        roleId={currentUser?.role_id}
+      />
+
+      {/* Remarks Modal */}
+      <RemarksModal
+        visible={remarksModalOpen}
+        deliveryId={selectedDelivery?.id ?? null}
+        onClose={() => setRemarksModalOpen(false)}
+      />
+    </div>
+  );
+}

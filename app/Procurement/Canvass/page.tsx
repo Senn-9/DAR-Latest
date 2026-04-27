@@ -77,6 +77,9 @@ export default function CanvassPage() {
   const isBudgetAccount =
     currentUser?.username?.toLowerCase() === "budget" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -104,7 +107,7 @@ export default function CanvassPage() {
 
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -114,7 +117,7 @@ export default function CanvassPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -228,7 +231,7 @@ export default function CanvassPage() {
 
           {/* ── TABS SKELETON ── */}
           <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton-shimmer h-9 w-32 rounded-xl" />
             ))}
           </div>
@@ -330,6 +333,7 @@ export default function CanvassPage() {
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
+            { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
           ] as const).map(({ key, label, href }) => (
             <button
               key={key}
