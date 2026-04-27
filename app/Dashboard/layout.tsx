@@ -40,9 +40,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="text-lg bg-emerald-900 p-4 text-white w-80 flex flex-col">
+      <div className="text-lg bg-emerald-900 p-4 text-white w-80 flex flex-col h-screen overflow-hidden">
         
-        <div className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="flex items-center justify-center">
             <img src="/logo.png" alt="logo" className="w-25 h-25 mb-4 rounded-full" />
           </div>
@@ -75,40 +75,41 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          {currentUser && (
+            <div className="border-t-1 border-emerald-700 bg-white/10 rounded-xl p-4 mb-2 mt-6">
+              <div className="flex flex-row items-center gap-3">
+                <div className="text-white w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-2xl font-bold">
+                  {currentUser.fullname.charAt(0)}
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-white ">{currentUser.fullname}</p>
+                </div>
+              </div>
+
+              <div className="border-t-1 border-emerald-700 mt-3 mb-3"></div>
+
+              <div className="flex flex-row justify-between">
+                <p className="text-sm font-semibold text-emerald-500">ROLE:</p>
+                <p className="text-sm text-white">{currentUser.roles?.role_name || "N/A"}</p>
+              </div>
+
+              <div className="flex flex-row justify-between">
+                <p className="text-sm font-semibold text-emerald-500">DIVISION:</p>
+                <p className="text-sm text-white">{currentUser.divisions?.division_name || "N/A"}</p>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setSignoutModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-red-400/20 bg-red-500/20 text-red-400 rounded-xl hover:text-white hover:bg-red-500 transition-colors mb-4"
+          >
+            <MdLogout />
+            Sign Out
+          </button>
         </div>
 
-        {currentUser && (
-          <div className="border-t-1 border-emerald-700 bg-white/10 rounded-xl p-4 mb-2">
-            <div className="flex flex-row items-center gap-3">
-              <div className="text-white w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-2xl font-bold">
-                {currentUser.fullname.charAt(0)}
-              </div>
-              <div className="flex flex-col">
-                <p className="text-white ">{currentUser.fullname}</p>
-              </div>
-            </div>
-
-            <div className="border-t-1 border-emerald-700 mt-3 mb-3"></div>
-
-            <div className="flex flex-row justify-between">
-              <p className="text-sm font-semibold text-emerald-500">ROLE:</p>
-              <p className="text-sm text-white">{currentUser.roles?.role_name || "N/A"}</p>
-            </div>
-
-            <div className="flex flex-row justify-between">
-              <p className="text-sm font-semibold text-emerald-500">DIVISION:</p>
-              <p className="text-sm text-white">{currentUser.divisions?.division_name || "N/A"}</p>
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={() => setSignoutModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 border border-red-400/20 bg-red-500/20 text-red-400 rounded-xl hover:text-white hover:bg-red-500 transition-colors"
-        >
-          <MdLogout />
-          Sign Out
-        </button>
 
         <SignoutModal 
           open={signoutModalOpen}

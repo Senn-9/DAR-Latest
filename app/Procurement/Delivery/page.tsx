@@ -120,29 +120,60 @@ export default function DeliveryPage() {
     }
   }, []);
 
+  // Role definitions - moved before useEffect that uses them
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount =
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isBudgetAccount =
+    currentUser?.username?.toLowerCase() === "budget" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isAccountingRole = currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount && !isAccountingRole;
+
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
         setLoading(true);
-        let query = supabase
+        const { data, error } = await supabase
           .from("deliveries")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (!isAdmin && currentUser?.divisions?.division_name) {
-          query = query.eq("division_id", currentUser.divisions?.division_name);
-        }
+        console.log("Fetched delivery data:", data);
+        console.log("Filter conditions:", { 
+          isAdmin, 
+          isBACAccount, 
+          isPARPOAccount, 
+          isBudgetAccount, 
+          isSupplyAccount,
+          isAccountingRole,
+          userDivision: currentUser?.divisions?.division_name 
+        });
 
-        const { data, error } = await query;
-        if (!error && data) {
-          setDeliveries(data as DeliveryRow[]);
-        }
+        const filteredData = (data || []).filter((delivery) => {
+          // STOD roles (BAC, Supply, Budget, PARPO, Accounting) and Admin can view all deliveries
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingRole) {
+            return true;
+          }
+          // End users and Division Heads can only view deliveries from their division
+          return delivery.office_section === currentUser?.divisions?.division_name;
+        });
+
+        console.log("Filtered delivery data:", filteredData);
+        setDeliveries(filteredData as DeliveryRow[]);
       } finally {
         setLoading(false);
       }
     };
     fetchDeliveries();
-  }, [supabase, isAdmin, currentUser]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount, isAccountingRole]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,10 +242,6 @@ export default function DeliveryPage() {
 
     fetchDeliveryDocuments();
   }, [selectedDelivery?.id, supabase]);
-
-  const isSupplyRole = currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false;
-  const isAccountingRole = currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
-  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
 
   const canRoleProcess = (roleId: number, statusId: number) => {
     if (roleId === 1) return true;
@@ -639,7 +666,7 @@ export default function DeliveryPage() {
               </p>
             )}
           </div>
-          {(isAdmin || isSupplyRole) && (
+          {(isAdmin || isSupplyAccount) && (
             <button
               onClick={() => setCreateModalOpen(true)}
               className="px-4 py-2 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2"
