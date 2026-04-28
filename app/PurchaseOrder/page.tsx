@@ -238,7 +238,7 @@ export default function PurchaseOrderPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-                <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
+                <div className="skeleton-shimmer w-10 h-10 rounded-xl shrink-0" />
                 <div className="space-y-1.5 flex-1">
                   <div className="skeleton-shimmer h-3 w-16 rounded" />
                   <div className="skeleton-shimmer h-6 w-10 rounded" />
@@ -262,13 +262,13 @@ export default function PurchaseOrderPage() {
             <div className="divide-y divide-gray-100">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="px-5 py-4 flex items-center gap-4">
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-32 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-32 rounded shrink-0" />
                   <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
-                  <div className="skeleton-shimmer h-6 w-28 rounded-full flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-20 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0 ml-auto" />
-                  <div className="flex items-center justify-center gap-1.5 flex-shrink-0">
+                  <div className="skeleton-shimmer h-6 w-28 rounded-full shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-20 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0 ml-auto" />
+                  <div className="flex items-center justify-center gap-1.5 shrink-0">
                     <div className="skeleton-shimmer h-7 w-16 rounded-lg" />
                   </div>
                 </div>
@@ -328,7 +328,7 @@ export default function PurchaseOrderPage() {
               key={label}
               className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
             >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>

@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           })}
 
           {currentUser && (
-            <div className="border-t-1 border-emerald-700 bg-white/10 rounded-xl p-4 mb-2 mt-6">
+            <div className="border-t border-emerald-700 bg-white/10 rounded-xl p-4 mb-2 mt-6">
               <div className="flex flex-row items-center gap-3">
                 <div className="text-white w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-2xl font-bold">
                   {currentUser.fullname.charAt(0)}
@@ -95,7 +95,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </div>
               </div>
 
-              <div className="border-t-1 border-emerald-700 mt-3 mb-3"></div>
+              <div className="border-t border-emerald-700 mt-3 mb-3"></div>
 
               <div className="flex flex-row justify-between">
                 <p className="text-sm font-semibold text-emerald-500">ROLE:</p>
