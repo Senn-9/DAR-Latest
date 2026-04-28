@@ -20,11 +20,52 @@ async function loadTemplate(templateName: string): Promise<string> {
 // Placeholder replacement function
 function replacePlaceholders(template: string, data: any): string {
   let result = template;
+  
+  // Handle Handlebars-style loops for PO items
+  result = result.replace(/{{#each po_items}}([\s\S]*?){{\/each}}/g, (match, templateBlock) => {
+    if (!data.po_items || !Array.isArray(data.po_items)) return '';
+    
+    return data.po_items.map((item: any, index: number) => {
+      let itemBlock = templateBlock;
+      Object.keys(item).forEach(key => {
+        const value = item[key] ?? "";
+        const placeholder = new RegExp(`{{${key}}}`, 'g');
+        itemBlock = itemBlock.replace(placeholder, value);
+      });
+      
+      // Handle {{add @index value}} for positioning
+      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (match, value) => {
+        return (index + parseFloat(value)).toString();
+      });
+      
+      return itemBlock;
+    }).join('');
+  });
+  
+  // Handle nested property access like {{po_items.length}}
+  result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match, fullExpression, property) => {
+    const parts = fullExpression.split('.');
+    let value = data;
+    
+    for (const part of parts) {
+      if (value && typeof value === 'object' && part in value) {
+        value = value[part];
+      } else {
+        return match; // Return original if not found
+      }
+    }
+    
+    return value !== undefined && value !== null ? String(value) : '';
+  });
+  
+  // Handle simple placeholders
   Object.keys(data).forEach(key => {
+    if (key === 'po_items') return; // Skip arrays, handled above
     const value = data[key] ?? "";
     const placeholder = new RegExp(`{{${key}}}`, 'g');
     result = result.replace(placeholder, value);
   });
+  
   return result;
 }
 
@@ -35,6 +76,7 @@ interface ViewDeliveryModalProps {
   iar: any;
   loa: any;
   dv: any;
+  poData: any;
   defaultTab?: "iar" | "loa" | "dv";
 }
 
@@ -43,7 +85,7 @@ const readonlyCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
 
 // JSX Preview Components - based on templates
-function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
+function IARPreview({ delivery, iar, poData }: { delivery: any; iar: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -51,7 +93,17 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("IAR");
-        const mergedData = { ...delivery, ...iar };
+        
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        
+        const mergedData = { ...delivery, ...transformedPoData, ...iar };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -59,7 +111,7 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
       }
     };
     loadPreview();
-  }, [delivery, iar]);
+  }, [delivery, iar, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -84,7 +136,7 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
   );
 }
 
-function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
+function LOAPreview({ delivery, loa, poData }: { delivery: any; loa: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -92,7 +144,17 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("LOA");
-        const mergedData = { ...delivery, ...loa };
+        
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        
+        const mergedData = { ...delivery, ...transformedPoData, ...loa };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -100,7 +162,7 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
       }
     };
     loadPreview();
-  }, [delivery, loa]);
+  }, [delivery, loa, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -125,7 +187,7 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
   );
 }
 
-function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
+function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -133,7 +195,17 @@ function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("DV");
-        const mergedData = { ...delivery, ...dv };
+        
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        
+        const mergedData = { ...delivery, ...transformedPoData, ...dv };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -141,7 +213,7 @@ function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
       }
     };
     loadPreview();
-  }, [delivery, dv]);
+  }, [delivery, dv, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -191,6 +263,42 @@ function downloadPDF(html: string) {
   }
 }
 
+async function handlePrintPDF(tab: "iar" | "loa" | "dv", delivery: any, iar: any, loa: any, dv: any, poData: any) {
+  try {
+    let html: string | null = null;
+    
+    // Transform poData to have the correct structure for templates
+    const transformedPoData = poData ? {
+      ...poData,
+      po_items: poData.purchase_order_items || []
+    } : {};
+    const mergedData = { ...delivery, ...transformedPoData };
+    
+    if (tab === "iar") {
+      const iarData = { ...mergedData, ...iar };
+      iarData.po_items = mergedData.po_items;
+      html = await buildIARHtml(iarData);
+    } else if (tab === "loa") {
+      const loaData = { ...mergedData, ...loa };
+      loaData.po_items = mergedData.po_items;
+      html = await buildLOAHtml(loaData);
+    } else if (tab === "dv") {
+      const dvData = { ...mergedData, ...dv };
+      dvData.po_items = mergedData.po_items;
+      html = await buildDVHtml(dvData);
+    }
+    
+    if (html) {
+      downloadPDF(html);
+    } else {
+      alert("Unable to generate PDF. No document data available.");
+    }
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    alert("Failed to generate PDF. Please try again.");
+  }
+}
+
 export default function ViewDeliveryModal({
   visible,
   onClose,
@@ -198,6 +306,7 @@ export default function ViewDeliveryModal({
   iar,
   loa,
   dv,
+  poData,
   defaultTab = "iar",
 }: ViewDeliveryModalProps) {
   const [tab, setTab] = useState<"iar" | "loa" | "dv">(defaultTab);
@@ -225,14 +334,30 @@ export default function ViewDeliveryModal({
     const loadHtml = async () => {
       try {
         let html: string | null = null;
-        const mergedData = { ...delivery };
+        
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        
+        const mergedData = { ...delivery, ...transformedPoData };
         
         if (tab === "iar" && iar) {
-          html = await buildIARHtml({ ...mergedData, ...iar });
+          const iarData = { ...mergedData, ...iar };
+          // Explicitly preserve po_items from mergedData
+          iarData.po_items = mergedData.po_items;
+          html = await buildIARHtml(iarData);
         } else if (tab === "loa" && loa) {
-          html = await buildLOAHtml({ ...mergedData, ...loa });
+          const loaData = { ...mergedData, ...loa };
+          // Explicitly preserve po_items from mergedData
+          loaData.po_items = mergedData.po_items;
+          html = await buildLOAHtml(loaData);
         } else if (tab === "dv" && dv) {
-          html = await buildDVHtml({ ...mergedData, ...dv });
+          const dvData = { ...mergedData, ...dv };
+          // Explicitly preserve po_items from mergedData
+          dvData.po_items = mergedData.po_items;
+          html = await buildDVHtml(dvData);
         }
         
         setCurrentHtml(html);
@@ -243,7 +368,7 @@ export default function ViewDeliveryModal({
     };
     
     loadHtml();
-  }, [visible, tab, delivery, iar, loa, dv]);
+  }, [visible, tab, delivery, iar, loa, dv, poData]);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -257,11 +382,11 @@ export default function ViewDeliveryModal({
   const getCurrentDoc = () => {
     switch (tab) {
       case "iar":
-        return { data: iar, html: currentHtml, label: "Inspection & Acceptance Report", component: <IARPreview delivery={delivery} iar={iar || {}} /> };
+        return { data: iar, html: currentHtml, label: "Inspection & Acceptance Report", component: <IARPreview delivery={delivery} iar={iar || {}} poData={poData || {}} /> };
       case "loa":
-        return { data: loa, html: currentHtml, label: "Letter of Acceptance", component: <LOAPreview delivery={delivery} loa={loa || {}} /> };
+        return { data: loa, html: currentHtml, label: "Letter of Acceptance", component: <LOAPreview delivery={delivery} loa={loa || {}} poData={poData || {}} /> };
       case "dv":
-        return { data: dv, html: currentHtml, label: "Disbursement Voucher", component: <DVPreview delivery={delivery} dv={dv || {}} /> };
+        return { data: dv, html: currentHtml, label: "Disbursement Voucher", component: <DVPreview delivery={delivery} dv={dv || {}} poData={poData || {}} /> };
     }
   };
 
@@ -280,14 +405,7 @@ export default function ViewDeliveryModal({
           </div>
           <div className="flex items-center gap-4">
             
-            {currentDoc.html && (
-              <button
-                onClick={() => downloadPDF(currentDoc.html!)}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
-              >
-                <RiFilePdf2Line size={16} /> Print PDF
-              </button>
-            )}
+          
             {/* Document Tabs */}
             <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
               <button
@@ -340,7 +458,7 @@ export default function ViewDeliveryModal({
         <div className="flex flex-1 overflow-hidden">
 
           {/* Form Side — read-only */}
-          <div className="flex-[2] flex-col overflow-hidden border-r border-gray-200">
+          <div className="flex-[2] flex flex-col overflow-hidden border-r border-gray-200">
             <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
 
               {/* View-only notice */}
@@ -548,14 +666,12 @@ export default function ViewDeliveryModal({
 
             {/* Footer */}
             <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-              {currentDoc.html && (
-                <button
-                  onClick={() => downloadPDF(currentDoc.html!)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-                >
-                  <RiFilePdf2Line size={18} /> Download PDF
-                </button>
-              )}
+              <button
+                onClick={() => handlePrintPDF(tab, delivery, iar, loa, dv, poData)}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
+              >
+                <RiFilePdf2Line size={18} /> Download PDF
+              </button>
               <button
                 onClick={onClose}
                 className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg transition-colors"
@@ -566,20 +682,13 @@ export default function ViewDeliveryModal({
           </div>
 
           {/* Preview Side */}
-          <div className="flex-3 overflow-y-auto bg-gray-100 flex-col">
+          <div className="flex-[3] flex flex-col overflow-hidden bg-gray-100">
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">
                   {currentDoc.label} · LIVE PREVIEW
                 </h3>
-                {currentDoc.html && (
-                  <button
-                    onClick={() => downloadPDF(currentDoc.html!)}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
-                  >
-                    <RiFilePdf2Line size={16} /> PDF
-                  </button>
-                )}
+               
               </div>
               <div className="bg-white rounded-lg shadow-lg p-8 text-black overflow-x-auto" style={{ minHeight: '800px' }}>
                 {currentDoc.component}

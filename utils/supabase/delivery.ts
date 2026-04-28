@@ -16,6 +16,18 @@ export interface DeliveryRow {
   created_by: number | null;
   created_at: string;
   updated_at: string | null;
+  // Additional PO fields
+  po_date?: string | null;
+  fund_cluster?: string | null;
+  responsibility_center_code?: string | null;
+  po_items?: Array<{
+    stock_no: string | null;
+    unit: string | null;
+    description: string | null;
+    quantity: number | null;
+    unit_price: number | null;
+    subtotal: number | null;
+  }>;
 }
 
 export type DeliveryRemarkPhase = "delivery" | "payment";
@@ -67,7 +79,7 @@ export async function fetchDeliveryPOContext(
   if (poId != null) {
     const { data: po, error: poErr } = await supabase
       .from("purchase_orders")
-      .select("id, pr_id, pr_no")
+      .select("id, pr_id, pr_no, date, fund_cluster, office_section")
       .eq("id", poId)
       .maybeSingle();
     if (poErr) throw poErr;
@@ -97,11 +109,62 @@ export async function fetchDeliveriesByDivision(divisionId: number) {
   return (data ?? []) as DeliveryRow[];
 }
 
+export async function fetchPODataForDelivery(poId: number) {
+  const supabase = createClient();
+  console.log('fetchPODataForDelivery called with poId:', poId);
+  
+  // First, try a simple query to see if the PO exists
+  const { data: simplePO, error: simpleError } = await supabase
+    .from("purchase_orders")
+    .select("id, po_no, supplier")
+    .eq("id", poId)
+    .maybeSingle();
+    
+  console.log('Simple PO query result:', { simplePO, simpleError });
+  
+  if (simpleError) {
+    console.error('Error in simple PO query:', simpleError);
+    throw simpleError;
+  }
+  
+  if (!simplePO) {
+    console.log('No PO found with id:', poId);
+    return null;
+  }
+  
+  // Now do the full query with items
+  const { data, error } = await supabase
+    .from("purchase_orders")
+    .select(`
+      id, po_no, pr_no, pr_id, supplier, address, tin,
+      date, fund_cluster, office_section,
+      purchase_order_items (
+        stock_no, unit, description, quantity, unit_price, subtotal
+      )
+    `)
+    .eq("id", poId)
+    .maybeSingle();
+    
+  console.log('Full PO query result:', { data, error });
+  
+  if (error) {
+    console.error('Error in full PO query:', error);
+    throw error;
+  }
+  return data;
+}
+
 export async function fetchPoCandidatesForDelivery() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("purchase_orders")
-    .select("id, po_no, pr_no, supplier, office_section, division_id")
+    .select(`
+      id, po_no, pr_no, supplier, office_section, division_id,
+      date, fund_cluster,
+      purchase_order_items (
+        stock_no, unit, description, quantity, unit_price, subtotal
+      )
+    `)
     /** PO phase complete — served POs are eligible for delivery logging */
     .eq("status_id", 34)
     .order("updated_at", { ascending: false });
