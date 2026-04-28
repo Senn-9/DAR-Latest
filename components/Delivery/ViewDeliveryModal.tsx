@@ -1,9 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RiCloseLine, RiFilePdf2Line, RiDeleteBinLine } from "react-icons/ri";
 import { useRouter } from "next/navigation";
 import DeleteDeliveryModal from "@/components/Delivery/DeleteDeliveryModal";
+
+// Template loading function
+async function loadTemplate(templateName: string): Promise<string> {
+  try {
+    const response = await fetch(`/documents/${templateName}-template.html`);
+    if (!response.ok) throw new Error(`Failed to load ${templateName} template`);
+    return await response.text();
+  } catch (error) {
+    console.error(`Error loading ${templateName} template:`, error);
+    throw error;
+  }
+}
+
+// Placeholder replacement function
+function replacePlaceholders(template: string, data: any): string {
+  let result = template;
+  Object.keys(data).forEach(key => {
+    const value = data[key] ?? "";
+    const placeholder = new RegExp(`{{${key}}}`, 'g');
+    result = result.replace(placeholder, value);
+  });
+  return result;
+}
 
 interface ViewDeliveryModalProps {
   visible: boolean;
@@ -19,503 +42,144 @@ interface ViewDeliveryModalProps {
 const readonlyCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
 
-// JSX Preview Components - based on PR modal pattern
+// JSX Preview Components - based on templates
 function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
+  const [html, setHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("IAR");
+        const mergedData = { ...delivery, ...iar };
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading IAR preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, iar]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 62</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>INSPECTION AND ACCEPTANCE REPORT</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster :</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Supplier : {delivery?.supplier ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>IAR No. : {iar?.iar_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>PO No./Date : {delivery?.po_no ?? ""} {delivery?.po_date ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {iar?.invoice_date ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Requisitioning Office/Dept. : {iar?.requisitioning_office ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice No. : {iar?.invoice_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Responsibility Center Code : {iar?.responsibility_center ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {iar?.invoice_date ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Stock/Property No.</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "38%" }}>Description</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Quantity</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit Cost</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Amount</th>
-          </tr>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm", tableLayout: "fixed" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", height: "48mm", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 700, marginBottom: "2mm" }}>INSPECTION</div>
-              <div style={{ fontSize: "9.5pt" }}>Inspected, verified and found in order as to quantity and specifications</div>
-              <div style={{ height: "8mm" }}></div>
-              <div>Date Inspected : {iar?.inspected_at ?? ""}</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>Inspection Officer/Inspection Committee</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", height: "48mm", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 700, marginBottom: "2mm" }}>ACCEPTANCE</div>
-              <div style={{ fontSize: "9.5pt" }}>Complete</div>
-              <div style={{ fontSize: "9.5pt" }}>Partial (pls. specify quantity)</div>
-              <div style={{ height: "8mm" }}></div>
-              <div>Date Received : {iar?.received_at ?? ""}</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{iar?.inspector_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Inspector</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>A. Supply Officer:</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{iar?.supply_officer_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Supply Officer</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>B. Budget Officer:</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Budget Officer</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
+      <iframe
+        ref={iframeRef}
+        title="IAR Preview"
+        className="w-full border-0"
+        style={{ height: '1000px', minHeight: '1000px' }}
+      />
     </div>
   );
 }
 
 function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
+  const [html, setHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("LOA");
+        const mergedData = { ...delivery, ...loa };
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading LOA preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, loa]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 63</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>LETTER OF ACCEPTANCE</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster :</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Supplier : {delivery?.supplier ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>LOA No. : {loa?.loa_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>PO No./Date : {delivery?.po_no ?? ""} {delivery?.po_date ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {loa?.accepted_at ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice No. : {loa?.invoice_no ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice Date : {loa?.invoice_date ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style={{ marginTop: "4mm", marginBottom: "2mm", fontWeight: 700 }}>I hereby accept the following:</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Stock/Property No.</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "38%" }}>Description</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Quantity</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit Cost</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Amount</th>
-          </tr>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{loa?.accepted_by_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>{loa?.accepted_by_title ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt", marginTop: "2mm" }}>Accepted By</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt", marginTop: "2mm" }}>Supply Officer</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
+      <iframe
+        ref={iframeRef}
+        title="LOA Preview"
+        className="w-full border-0"
+        style={{ height: '1000px', minHeight: '1000px' }}
+      />
     </div>
   );
 }
 
 function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
+  const [html, setHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("DV");
+        const mergedData = { ...delivery, ...dv };
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading DV preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, dv]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 64</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>DISBURSEMENT VOUCHER</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster : {dv?.fund_cluster ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Payee : {dv?.payee ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>TIN/Employee No. : {dv?.payee_tin ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Address : {dv?.address ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>ORS/BURS No. : {dv?.ors_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Mode of Payment : {dv?.mode_of_payment ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Amount Due : {dv?.amount_due ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "42%" }}>Particulars</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "20%" }}>Responsibility Center</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>MFO/PAP</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Amount</th>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.particulars ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.responsibility_center ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.mfo_pap ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "right" }}>{dv?.amount_due ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "34%" }}>Account Title</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>UACS Code</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Debit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Credit</th>
-          </tr>
-          {[...Array(2)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>C. Certified:</div>
-              <div style={{ fontSize: "9.5pt" }}>Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{dv?.certified_by ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Head, Accounting Unit/Authorized Representative</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>D. Approved for Payment</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{dv?.approved_by ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Agency Head/Authorized Representative</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ padding: "4px 6px", width: "50%" }}>Check/ADA No. : </td>
-            <td style={{ padding: "4px 6px", width: "50%" }}>Date : Bank Name &amp; Account Number:</td>
-          </tr>
-          <tr>
-            <td style={{ padding: "4px 6px" }}>Signature : Date :</td>
-            <td style={{ padding: "4px 6px" }}>Official Receipt No. &amp; Date/Other Documents</td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
+      <iframe
+        ref={iframeRef}
+        title="DV Preview"
+        className="w-full border-0"
+        style={{ height: '1000px', minHeight: '1000px' }}
+      />
     </div>
   );
 }
 
 // Keep HTML functions for PDF download
-function buildIARHtml(d: any) {
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4 portrait; margin: 14mm; }
-    body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.25; margin: 0; color: #111; }
-    .topnote { text-align: right; font-size: 9pt; margin-bottom: 2mm; }
-    .title { text-align: center; font-size: 14pt; font-weight: 700; letter-spacing: 0.3px; margin: 0 0 2mm; }
-    table { width: 100%; border-collapse: collapse; }
-    .meta td, .meta th, .items td, .items th, .foot td { border: 1px solid #111; padding: 4px 6px; vertical-align: top; }
-    .meta { margin-bottom: 2mm; }
-    .meta td { height: 8mm; }
-    .items th { text-align: center; font-size: 9.5pt; }
-    .items td { height: 9mm; font-size: 10pt; }
-    .desc-col { width: 38%; }
-    .num { text-align: right; }
-    .center { text-align: center; }
-    .section-head { font-weight: 700; margin-bottom: 2mm; }
-    .foot { margin-top: 2mm; table-layout: fixed; }
-    .foot .panel { height: 48mm; }
-    .spacer { height: 8mm; }
-    .sig { margin-top: 10mm; text-align: center; font-weight: 700; }
-    .small { font-size: 9.5pt; }
-  </style>
-</head>
-<body>
-  <div class="topnote">Appendix 62</div>
-  <div class="title">INSPECTION AND ACCEPTANCE REPORT</div>
-  <table class="meta">
-    <tr>
-      <td>Entity Name : ${d?.entity_name ?? ""}</td>
-      <td>Fund Cluster :</td>
-    </tr>
-    <tr>
-      <td>Supplier : ${d?.supplier ?? ""}</td>
-      <td>IAR No. : ${d?.iar_no ?? ""}</td>
-    </tr>
-    <tr>
-      <td>PO No./Date : ${d?.po_no ?? ""} ${d?.po_date ?? ""}</td>
-      <td>Date : ${d?.invoice_date ?? ""}</td>
-    </tr>
-    <tr>
-      <td>Requisitioning Office/Dept. : ${d?.requisitioning_office ?? ""}</td>
-      <td>Invoice No. : ${d?.invoice_no ?? ""}</td>
-    </tr>
-    <tr>
-      <td>Responsibility Center Code : ${d?.responsibility_center ?? ""}</td>
-      <td>Date : ${d?.invoice_date ?? ""}</td>
-    </tr>
-  </table>
-  <table class="items">
-    <tr>
-      <th>Stock/Property No.</th>
-      <th>Unit</th>
-      <th class="desc-col">Description</th>
-      <th>Quantity</th>
-      <th>Unit Cost</th>
-      <th>Amount</th>
-    </tr>
-    <tr><td>&nbsp;</td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
-    <tr><td>&nbsp;</td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
-    <tr><td>&nbsp;</td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
-    <tr><td>&nbsp;</td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
-  </table>
-  <table class="foot">
-    <tr>
-      <td class="panel">
-        <div class="section-head">INSPECTION</div>
-        <div class="small">Inspected, verified and found in order as to quantity and specifications</div>
-        <div class="spacer"></div>
-        <div>Date Inspected : ${d?.inspected_at ?? ""}</div>
-        <div class="sig">Inspection Officer/Inspection Committee</div>
-      </td>
-      <td class="panel">
-        <div class="section-head">ACCEPTANCE</div>
-        <div class="small">Complete</div>
-        <div class="small">Partial (pls. specify quantity)</div>
-        <div class="spacer"></div>
-        <div>Date Received : ${d?.received_at ?? ""}</div>
-        <div class="sig">ARPT/SUPPLY OFFICER</div>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+async function buildIARHtml(d: any): Promise<string> {
+  const template = await loadTemplate("IAR");
+  return replacePlaceholders(template, d);
 }
 
-function buildLOAHtml(d: any) {
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4 portrait; margin: 22mm 20mm 20mm; }
-    body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.4; margin: 0; color: #111; }
-    .head { text-align: center; line-height: 1.35; margin-top: 4mm; }
-    .head .rp { font-size: 11pt; }
-    .head .agency { font-size: 14pt; font-weight: 700; letter-spacing: 0.2px; }
-    .head .office { font-size: 11pt; }
-    .title { text-align: center; margin: 18mm 0 12mm; font-size: 17pt; font-weight: 700; letter-spacing: 0.6px; }
-    .para { text-align: justify; text-indent: 14mm; }
-    .line { border-bottom: 1px solid #111; display: inline-block; min-width: 42mm; padding: 0 1mm; font-weight: 700; text-indent: 0; }
-    .date-row { margin-top: 16mm; }
-    .sig-wrap { margin-top: 24mm; text-align: center; }
-    .sig-line { width: 78mm; margin: 0 auto; border-top: 1px solid #111; }
-    .sig-name { margin-top: 2mm; font-weight: 700; min-height: 6mm; }
-    .muted { font-size: 10pt; }
-    .footer-code { margin-top: 28mm; font-size: 9pt; }
-  </style>
-</head>
-<body>
-  <div class="head">
-    <div class="rp">Republic of the Philippines</div>
-    <div class="agency">DEPARTMENT OF AGRARIAN REFORM</div>
-    <div class="office">Camarines Sur Provincial Office</div>
-    <div class="office">2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY</div>
-  </div>
-  <div class="title">LETTER OF ACCEPTANCE</div>
-  <div class="para">
-    I/WE hereby certify to have accepted each and every articles/services delivered rendered by
-    <span class="line">${d?.supplier ?? ""}</span> listed in the attached Invoice No.
-    <span class="line">${d?.invoice_no ?? ""}</span> dated
-    <span class="line">${d?.invoice_date ?? ""}</span> was/were found to be in accordance with
-    the specifications stipulated under Order No. /Purchase Order No.
-    <span class="line">${d?.po_no ?? ""}</span> dated <span class="line">${d?.po_date ?? ""}</span>.
-  </div>
-  <div class="date-row">Date: <span class="line">${d?.accepted_at ?? ""}</span></div>
-  <div class="sig-wrap">
-    <div class="sig-line"></div>
-    <div class="sig-name">${d?.accepted_by_name ?? ""}</div>
-    <div class="muted">(Printed Name &amp; Signature)</div>
-    <div class="sig-name">${d?.accepted_by_title ?? ""}</div>
-    <div class="muted">(Head of Agency/Authorized Representative)</div>
-  </div>
-  <div class="footer-code">DAR CS1-QF-STO-016 REV 00</div>
-</body>
-</html>`;
+async function buildLOAHtml(d: any): Promise<string> {
+  const template = await loadTemplate("LOA");
+  return replacePlaceholders(template, d);
 }
 
-function buildDVHtml(d: any) {
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4 portrait; margin: 12mm; }
-    body { font-family: "Times New Roman", serif; font-size: 10.5pt; margin: 0; line-height: 1.2; color: #111; }
-    .appendix { text-align: right; font-size: 9pt; margin-bottom: 1mm; }
-    .title { text-align: center; font-size: 14pt; font-weight: 700; margin: 0 0 2mm; letter-spacing: 0.3px; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    td, th { border: 1px solid #111; padding: 3px 5px; vertical-align: top; }
-    .top td { height: 8mm; }
-    .label { font-size: 9pt; color: #222; display: block; }
-    .value { font-weight: 700; }
-    .mt { margin-top: 1.6mm; }
-    .particulars th { text-align: center; font-size: 9pt; }
-    .particulars .row td { height: 20mm; }
-    .acct th { text-align: center; font-size: 9pt; }
-    .acct td { height: 6mm; }
-    .cert td { height: 42mm; }
-    .sig { margin-top: 8mm; border-top: 1px solid #111; text-align: center; padding-top: 1.5mm; font-weight: 700; }
-    .small { font-size: 9pt; }
-    .pay td { height: 8mm; }
-  </style>
-</head>
-<body>
-  <div class="appendix">Appendix 32</div>
-  <div class="title">DISBURSEMENT VOUCHER</div>
-  <table class="top">
-    <tr>
-      <td><span class="label">Entity Name</span><span class="value">${d?.entity_name ?? ""}</span></td>
-      <td><span class="label">Fund Cluster</span><span class="value">${d?.fund_cluster ?? ""}</span></td>
-    </tr>
-    <tr>
-      <td><span class="label">Date</span><span class="value">${d?.date ?? ""}</span></td>
-      <td><span class="label">DV No.</span><span class="value">${d?.dv_no ?? ""}</span></td>
-    </tr>
-    <tr>
-      <td><span class="label">Payee</span><span class="value">${d?.payee ?? ""}</span></td>
-      <td><span class="label">TIN/Employee No.</span><span class="value">${d?.tin ?? ""}</span></td>
-    </tr>
-    <tr>
-      <td><span class="label">Address</span><span class="value">${d?.address ?? ""}</span></td>
-      <td><span class="label">ORS/BURS No.</span><span class="value">${d?.ors_no ?? ""}</span></td>
-    </tr>
-    <tr>
-      <td><span class="label">Mode of Payment</span><span class="value">${d?.mode_of_payment ?? ""}</span></td>
-      <td><span class="label">Amount Due</span><span class="value">${d?.amount_due ?? ""}</span></td>
-    </tr>
-  </table>
-  <table class="particulars mt">
-    <tr>
-      <th style="width:42%">Particulars</th>
-      <th style="width:20%">Responsibility Center</th>
-      <th style="width:18%">MFO/PAP</th>
-      <th style="width:20%">Amount</th>
-    </tr>
-    <tr class="row">
-      <td>${d?.particulars ?? ""}</td>
-      <td>${d?.responsibility_center ?? ""}</td>
-      <td>${d?.mfo_pap ?? ""}</td>
-      <td style="text-align:right">${d?.amount_due ?? ""}</td>
-    </tr>
-  </table>
-  <table class="acct mt">
-    <tr>
-      <th style="width:34%">Account Title</th>
-      <th style="width:22%">UACS Code</th>
-      <th style="width:22%">Debit</th>
-      <th style="width:22%">Credit</th>
-    </tr>
-    <tr><td></td><td></td><td></td><td></td></tr>
-    <tr><td></td><td></td><td></td><td></td></tr>
-  </table>
-  <table class="cert mt">
-    <tr>
-      <td style="width:50%">
-        <b>C. Certified:</b> Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.
-        <div class="sig">${d?.certified_by ?? ""}</div>
-        <div class="small" style="text-align:center">Head, Accounting Unit/Authorized Representative</div>
-      </td>
-      <td style="width:50%">
-        <b>D. Approved for Payment</b>
-        <div class="sig">${d?.approved_by ?? ""}</div>
-        <div class="small" style="text-align:center">Agency Head/Authorized Representative</div>
-      </td>
-    </tr>
-  </table>
-  <table class="pay mt">
-    <tr>
-      <td style="width:50%">Check/ADA No. : </td>
-      <td style="width:50%">Date : Bank Name &amp; Account Number:</td>
-    </tr>
-    <tr>
-      <td>Signature : Date :</td>
-      <td>Official Receipt No. &amp; Date/Other Documents</td>
-    </tr>
-  </table>
-</body>
-</html>`;
+async function buildDVHtml(d: any): Promise<string> {
+  const template = await loadTemplate("DV");
+  return replacePlaceholders(template, d);
 }
 
 function downloadPDF(html: string) {
@@ -539,6 +203,7 @@ export default function ViewDeliveryModal({
   const [tab, setTab] = useState<"iar" | "loa" | "dv">(defaultTab);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentHtml, setCurrentHtml] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -553,6 +218,33 @@ export default function ViewDeliveryModal({
     }
   }, [visible, defaultTab]);
 
+  // Load HTML template when tab or data changes
+  useEffect(() => {
+    if (!visible) return;
+    
+    const loadHtml = async () => {
+      try {
+        let html: string | null = null;
+        const mergedData = { ...delivery };
+        
+        if (tab === "iar" && iar) {
+          html = await buildIARHtml({ ...mergedData, ...iar });
+        } else if (tab === "loa" && loa) {
+          html = await buildLOAHtml({ ...mergedData, ...loa });
+        } else if (tab === "dv" && dv) {
+          html = await buildDVHtml({ ...mergedData, ...dv });
+        }
+        
+        setCurrentHtml(html);
+      } catch (error) {
+        console.error("Error loading document HTML:", error);
+        setCurrentHtml(null);
+      }
+    };
+    
+    loadHtml();
+  }, [visible, tab, delivery, iar, loa, dv]);
+
   // Lock body scroll while open
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -565,11 +257,11 @@ export default function ViewDeliveryModal({
   const getCurrentDoc = () => {
     switch (tab) {
       case "iar":
-        return { data: iar, html: iar ? buildIARHtml({ ...delivery, ...iar }) : null, label: "Inspection & Acceptance Report", component: <IARPreview delivery={delivery} iar={iar || {}} /> };
+        return { data: iar, html: currentHtml, label: "Inspection & Acceptance Report", component: <IARPreview delivery={delivery} iar={iar || {}} /> };
       case "loa":
-        return { data: loa, html: loa ? buildLOAHtml({ ...delivery, ...loa }) : null, label: "Letter of Acceptance", component: <LOAPreview delivery={delivery} loa={loa || {}} /> };
+        return { data: loa, html: currentHtml, label: "Letter of Acceptance", component: <LOAPreview delivery={delivery} loa={loa || {}} /> };
       case "dv":
-        return { data: dv, html: dv ? buildDVHtml({ ...delivery, ...dv }) : null, label: "Disbursement Voucher", component: <DVPreview delivery={delivery} dv={dv || {}} /> };
+        return { data: dv, html: currentHtml, label: "Disbursement Voucher", component: <DVPreview delivery={delivery} dv={dv || {}} /> };
     }
   };
 
@@ -587,6 +279,15 @@ export default function ViewDeliveryModal({
             <p className="text-emerald-100 text-sm mt-1">{delivery?.delivery_no ?? "—"} · PO {delivery?.po_no ?? "—"}</p>
           </div>
           <div className="flex items-center gap-4">
+            
+            {currentDoc.html && (
+              <button
+                onClick={() => downloadPDF(currentDoc.html!)}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+              >
+                <RiFilePdf2Line size={16} /> Print PDF
+              </button>
+            )}
             {/* Document Tabs */}
             <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
               <button
@@ -708,7 +409,7 @@ export default function ViewDeliveryModal({
               {/* Document-specific fields */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">
-                  {currentDoc.label} Details
+                  {tab === "iar" ? "Inspection & Acceptance Report" : tab === "loa" ? "Letter of Acceptance" : "Disbursement Voucher"} Details
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                     {tab === "iar" && (
@@ -865,7 +566,7 @@ export default function ViewDeliveryModal({
           </div>
 
           {/* Preview Side */}
-          <div className="flex-[3] overflow-y-auto bg-gray-100 flex-col">
+          <div className="flex-3 overflow-y-auto bg-gray-100 flex-col">
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">
@@ -880,7 +581,7 @@ export default function ViewDeliveryModal({
                   </button>
                 )}
               </div>
-              <div className="bg-white rounded-lg shadow-lg p-8 text-black overflow-x-auto">
+              <div className="bg-white rounded-lg shadow-lg p-8 text-black overflow-x-auto" style={{ minHeight: '800px' }}>
                 {currentDoc.component}
               </div>
             </div>
