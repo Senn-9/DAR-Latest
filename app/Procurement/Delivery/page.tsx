@@ -713,7 +713,7 @@ export default function DeliveryPage() {
         {filterOpen && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">STATUS</label>
                 <select
                   value={statusFilter ?? ""}
@@ -726,7 +726,7 @@ export default function DeliveryPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">SECTION</label>
                 <select
                   value={sectionFilter ?? ""}
@@ -739,7 +739,7 @@ export default function DeliveryPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">SORT BY</label>
                 <select
                   value={sortBy}
