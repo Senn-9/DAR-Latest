@@ -21,24 +21,9 @@ type CurrentUser = {
 };
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const baseButtons = [
-    { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
-    { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
-    { id: "purchase-order", icon: RiFileList3Line, label: "Purchase Order", href: "/PurchaseOrder" },
-    { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
-    { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
-  ];
-
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
-  const buttons =
-    currentUser?.role_id === 1
-      ? [
-          ...baseButtons,
-          { id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" },
-        ]
-      : baseButtons;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -47,6 +32,17 @@ export default function Layout({ children }: { children: ReactNode }) {
       setCurrentUser(user);
     }
   }, []);
+
+  const buttons = [
+    { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
+    { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
+    { id: "purchase-order", icon: RiFileList3Line, label: "Purchase Order", href: "/PurchaseOrder" },
+    { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
+    { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
+    ...(currentUser?.role_id === 1
+      ? [{ id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" }]
+      : []),
+  ];
 
   return (
     <div className="flex h-screen">
@@ -65,18 +61,13 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           {buttons.map((btn) => {
             const isActive = pathname.toLowerCase().startsWith(btn.href.toLowerCase());
-
             return (
               <Link key={btn.id} href={btn.href}>
                 <button
                   className={`
                     mb-2 h-15 pl-4 w-full text-left flex items-center gap-2
                     transition-all duration-200
-                    ${
-                      isActive
-                        ? "rounded-full bg-white/10"
-                        : "rounded-full hover:bg-white/10"
-                    }
+                    ${isActive ? "rounded-full bg-white/10" : "rounded-full hover:bg-white/10"}
                   `}
                 >
                   <btn.icon /> {btn.label}

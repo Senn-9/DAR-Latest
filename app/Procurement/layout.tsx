@@ -16,7 +16,7 @@ type CurrentUser = {
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const buttons = [
+  const baseButtons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
     { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
     { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
@@ -26,6 +26,13 @@ export default function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
+  const buttons =
+    currentUser?.role_id === 1
+      ? [
+          ...baseButtons,
+          { id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" },
+        ]
+      : baseButtons;
 
   useEffect(() => {
     // Load stored user
