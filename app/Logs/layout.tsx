@@ -24,7 +24,6 @@ export default function Layout({ children }: { children: ReactNode }) {
   const baseButtons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
     { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
-    { id: "purchase-order", icon: RiFileList3Line, label: "Purchase Order", href: "/PurchaseOrder" },
     { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
     { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
   ];

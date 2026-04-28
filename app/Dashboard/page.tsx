@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
@@ -10,6 +11,7 @@ import {
 import AnalyticsDashboard from "../analytics/analytics";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const supabase = createClient();
 
   type PRItem = { description: string; subtotal: number };
@@ -265,7 +267,7 @@ export default function DashboardPage() {
               key={label}
               className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
             >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>
                 {icon}
               </div>
               <div>
@@ -277,10 +279,10 @@ export default function DashboardPage() {
         </div>
 
         {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
 
           {/* Controls row */}
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Purchase Requests</h2>
             <div className="flex flex-wrap items-center gap-2">
               {STATUS_OPTIONS.map(({ value, label }) => (
@@ -319,62 +321,83 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
-                      {([
-                        { label: "PR Number",        field: "pr_no" as const,         align: "text-left"   },
-                        { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
-                        { label: "Description",      field: null,                       align: "text-left"   },
-                        { label: "Date",             field: "created_at" as const,     align: "text-left"   },
-                        { label: "Status",           field: null,                       align: "text-center" },
-                        { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
-                      ] as const).map(({ label, field, align }) => (
-                        <th
-                          key={label}
-                          onClick={field ? () => handleSort(field) : undefined}
-                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
-                        >
-                          <span className="inline-flex items-center gap-0.5">
-                            {label}
-                            {field && <SortIcon field={field} />}
-                          </span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedList.map((form, index) => {
-                      const { name: statusName, color: statusColor } = getStatusInfo(form.status);
-                      const cost = form.total_cost || 0;
-                      const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-emerald-700 text-white uppercase tracking-widest">
+                    {([
+                      { label: "PR #",             field: "pr_no" as const,         align: "text-left",   width: "w-28" },
+                      { label: "Section",          field: "office_section" as const, align: "text-left",   width: "w-24" },
+                      { label: "Description",      field: null,                       align: "text-left",   width: "flex-1 min-w-40" },
+                      { label: "Date",             field: "created_at" as const,     align: "text-left",   width: "w-24" },
+                      { label: "Status",           field: null,                       align: "text-center", width: "w-32" },
+                      { label: "Cost",             field: "total_cost" as const,     align: "text-right",  width: "w-24" },
+                      { label: "Actions",          field: null,                       align: "text-center", width: "w-56" },
+                    ] as const).map(({ label, field, align, width }) => (
+                      <th
+                        key={label}
+                        onClick={field ? () => handleSort(field) : undefined}
+                        className={`px-2 py-2 font-semibold ${align} ${field ? "th-sort select-none cursor-pointer" : ""} ${width}`}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {field && <SortIcon field={field} />}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedList.map((form, index) => {
+                    const { name: statusName, color: statusColor } = getStatusInfo(form.status);
+                    const cost = form.total_cost || 0;
+                    const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                    const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
                       return (
-                        <tr key={form.id} className="tr-row border-b border-gray-100 transition-colors">
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>{form.pr_no}</td>
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                        <tr key={form.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>{form.pr_no}</td>
+                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
-                            {desc
-                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
-                              : <span className="text-gray-300">—</span>}
+                          <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>
+                            {desc || <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
                             </span>
                           </td>
-                          <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0
                               ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                               : <span className="text-gray-300 font-normal">—</span>}
+                          </td>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <div className="flex items-center justify-center gap-1">
+                              <button 
+                                onClick={() => router.push(`/Dashboard?view=edit&id=${form.id}`)}
+                                className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => router.push(`/Dashboard?view=detail&id=${form.id}`)}
+                                className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                              >
+                                View
+                              </button>
+                              <button 
+                                onClick={() => router.push(`/Procurement?tab=request-approval&id=${form.id}`)}
+                                className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+                              >
+                                Process
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -384,7 +407,7 @@ export default function DashboardPage() {
               </div>
 
               {/* ── PAGINATION FOOTER ── */}
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+              <div className="mt-4 -mx-6 px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
                 <span>
                   Showing{" "}
                   <span className="font-semibold text-gray-700">

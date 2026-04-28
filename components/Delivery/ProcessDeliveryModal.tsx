@@ -19,11 +19,52 @@ async function loadTemplate(templateName: string): Promise<string> {
 // Placeholder replacement function
 function replacePlaceholders(template: string, data: any): string {
   let result = template;
+  
+  // Handle Handlebars-style loops for PO items
+  result = result.replace(/{{#each po_items}}([\s\S]*?){{\/each}}/g, (match, templateBlock) => {
+    if (!data.po_items || !Array.isArray(data.po_items)) return '';
+    
+    return data.po_items.map((item: any, index: number) => {
+      let itemBlock = templateBlock;
+      Object.keys(item).forEach(key => {
+        const value = item[key] ?? "";
+        const placeholder = new RegExp(`{{${key}}}`, 'g');
+        itemBlock = itemBlock.replace(placeholder, value);
+      });
+      
+      // Handle {{add @index value}} for positioning
+      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (match, value) => {
+        return (index + parseFloat(value)).toString();
+      });
+      
+      return itemBlock;
+    }).join('');
+  });
+  
+  // Handle nested property access like {{po_items.length}}
+  result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match, fullExpression, property) => {
+    const parts = fullExpression.split('.');
+    let value = data;
+    
+    for (const part of parts) {
+      if (value && typeof value === 'object' && part in value) {
+        value = value[part];
+      } else {
+        return match; // Return original if not found
+      }
+    }
+    
+    return value !== undefined && value !== null ? String(value) : '';
+  });
+  
+  // Handle simple placeholders
   Object.keys(data).forEach(key => {
+    if (key === 'po_items') return; // Skip arrays, handled above
     const value = data[key] ?? "";
     const placeholder = new RegExp(`{{${key}}}`, 'g');
     result = result.replace(placeholder, value);
   });
+  
   return result;
 }
 
@@ -78,7 +119,7 @@ function downloadPDF(html: string) {
 }
 
 // JSX Preview Components - based on templates
-function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
+function IARPreview({ delivery, iar, poData }: { delivery: any; iar: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -86,7 +127,15 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("IAR");
-        const mergedData = { ...delivery, ...iar };
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...iar };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -94,7 +143,7 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
       }
     };
     loadPreview();
-  }, [delivery, iar]);
+  }, [delivery, iar, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -119,7 +168,7 @@ function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
   );
 }
 
-function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
+function LOAPreview({ delivery, loa, poData }: { delivery: any; loa: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -127,7 +176,14 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("LOA");
-        const mergedData = { ...delivery, ...loa };
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...loa };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -135,7 +191,7 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
       }
     };
     loadPreview();
-  }, [delivery, loa]);
+  }, [delivery, loa, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -160,15 +216,23 @@ function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
   );
 }
 
-function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
+function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(0.7);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const loadPreview = async () => {
       try {
         const template = await loadTemplate("DV");
-        const mergedData = { ...delivery, ...dv };
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...dv };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
         const filled = replacePlaceholders(template, mergedData);
         setHtml(filled);
       } catch (error) {
@@ -176,7 +240,7 @@ function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
       }
     };
     loadPreview();
-  }, [delivery, dv]);
+  }, [delivery, dv, poData]);
 
   useEffect(() => {
     if (iframeRef.current && html) {
@@ -189,14 +253,44 @@ function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
     }
   }, [html]);
 
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(0.7);
+  };
+
+  const scalePercentage = Math.round(zoomLevel * 100);
+  const containerWidth = 100 / zoomLevel;
+  const containerHeight = 100 / zoomLevel;
+
   return (
-    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
-      <iframe
-        ref={iframeRef}
-        title="DV Preview"
-        className="w-full border-0"
-        style={{ height: '1000px', minHeight: '1000px' }}
-      />
+    <div className="space-y-2">
+    
+      
+      {/* Preview Container */}
+      <div className=" overflow-auto" style={{ maxHeight: '600px' }}>
+        <div 
+          style={{ 
+            transform: `scale(${zoomLevel})`, 
+            transformOrigin: 'top left', 
+            width: `${containerWidth}%`, 
+            height: `${containerHeight}%`
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            title="DV Preview"
+            className="w-full border-0"
+            style={{ height: '1000px', minHeight: '1000px' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -227,6 +321,7 @@ interface ProcessDeliveryModalProps {
   onPreviewIAR?: () => void;
   onPreviewLOA?: () => void;
   onPreviewDV?: () => void;
+  poData?: any;
 }
 
 export default function ProcessDeliveryModal({
@@ -255,6 +350,7 @@ export default function ProcessDeliveryModal({
   onPreviewIAR,
   onPreviewLOA,
   onPreviewDV,
+  poData,
 }: ProcessDeliveryModalProps) {
   const deliveryNo = active?.delivery_no ?? "—";
   
@@ -488,7 +584,12 @@ export default function ProcessDeliveryModal({
     const loadHtml = async () => {
       try {
         let html: string | null = null;
-        const mergedData = { ...active };
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...active, ...transformedPoData };
         
         if (selectedDocument === "iar" && iar) {
           html = await buildIARHtml({ ...mergedData, ...iar });
@@ -506,7 +607,7 @@ export default function ProcessDeliveryModal({
     };
     
     loadHtml();
-  }, [visible, selectedDocument, active, iar, loa, dv]);
+  }, [visible, selectedDocument, active, iar, loa, dv, poData]);
 
   // Update selected document when status changes
   useEffect(() => {
@@ -1010,15 +1111,15 @@ export default function ProcessDeliveryModal({
     
     // Show selected document preview
     if (selectedDocument === "iar") {
-      return <IARPreview delivery={active} iar={iar || {}} />;
+      return <IARPreview delivery={active} iar={iar || {}} poData={poData} />;
     }
     
     if (selectedDocument === "loa") {
-      return <LOAPreview delivery={active} loa={loa || {}} />;
+      return <LOAPreview delivery={active} loa={loa || {}} poData={poData} />;
     }
     
     if (selectedDocument === "dv") {
-      return <DVPreview delivery={active} dv={dv || {}} />;
+      return <DVPreview delivery={active} dv={dv || {}} poData={poData} />;
     }
     
     return (
@@ -1058,6 +1159,42 @@ export default function ProcessDeliveryModal({
     if (active?.status_id === 25) return "Submit & Complete Delivery Phase";
     if (steps.length > 1 && currentStep === steps.length) return "Save & Complete";
     return "Save & Update";
+  };
+
+  const handlePrintPDF = async () => {
+    try {
+      let html: string | null = null;
+      
+      // Transform poData to have the correct structure for templates
+      const transformedPoData = poData ? {
+        ...poData,
+        po_items: poData.purchase_order_items || []
+      } : {};
+      const mergedData = { ...active, ...transformedPoData };
+      
+      if (selectedDocument === "iar") {
+        const iarData = { ...mergedData, ...iar };
+        iarData.po_items = mergedData.po_items;
+        html = await buildIARHtml(iarData);
+      } else if (selectedDocument === "loa") {
+        const loaData = { ...mergedData, ...loa };
+        loaData.po_items = mergedData.po_items;
+        html = await buildLOAHtml(loaData);
+      } else if (selectedDocument === "dv") {
+        const dvData = { ...mergedData, ...dv };
+        dvData.po_items = mergedData.po_items;
+        html = await buildDVHtml(dvData);
+      }
+      
+      if (html) {
+        downloadPDF(html);
+      } else {
+        alert("Unable to generate PDF. Please ensure all required fields are filled.");
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
   };
 
   return (
@@ -1222,9 +1359,9 @@ export default function ProcessDeliveryModal({
                       {selectedDocument === "delivery" ? "Delivery" : selectedDocument.toUpperCase()}
                     </div>
                   </div>
-                  {currentHtml && selectedDocument !== "delivery" && (
+                  {selectedDocument !== "delivery" && (
                     <button
-                      onClick={() => downloadPDF(currentHtml)}
+                      onClick={() => handlePrintPDF()}
                       className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
                     >
                       <RiFilePdf2Line size={16} /> PDF

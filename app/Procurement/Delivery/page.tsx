@@ -13,7 +13,7 @@ import CreateDeliveryModal from "@/components/Delivery/CreateDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
 import DeleteDeliveryModal from "@/components/Delivery/DeleteDeliveryModal";
 import RemarksModal from "@/components/Delivery/RemarksModal";
-import { fetchPoCandidatesForDelivery, insertDelivery, updateDelivery, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery, fetchDeliveryStatuses, insertDeliveryProcessRemark, fetchPoIdsWithActiveDeliveries, hasActiveDeliveryForPo } from "@/utils/supabase/delivery";
+import { fetchPoCandidatesForDelivery, insertDelivery, updateDelivery, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery, fetchDeliveryStatuses, insertDeliveryProcessRemark, fetchPoIdsWithActiveDeliveries, hasActiveDeliveryForPo, fetchPODataForDelivery } from "@/utils/supabase/delivery";
 import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 
 export default function DeliveryPage() {
@@ -26,18 +26,28 @@ export default function DeliveryPage() {
     po_no: string;
     supplier: string | null;
     office_section: string | null;
-    division_id: string | null;
+    division_id: number | null;
+    status_id: number;
     delivery_no: string;
-    expected_delivery_date: string | null;
     dr_no: string | null;
     soa_no: string | null;
-    status_id: number;
     notes: string | null;
-    created_at: string;
-    updated_at: string;
-    entity_name?: string;
-    po_date?: string;
+    expected_delivery_date: string | null;
     created_by: number | null;
+    created_at: string;
+    updated_at: string | null;
+    po_date?: string | null;
+    fund_cluster?: string | null;
+    responsibility_center_code?: string | null;
+    po_items?: Array<{
+      stock_no: string | null;
+      unit: string | null;
+      description: string | null;
+      quantity: number | null;
+      unit_price: number | null;
+      subtotal: number | null;
+    }>;
+    entity_name?: string;
   };
 
   type CurrentUser = {
@@ -199,42 +209,43 @@ export default function DeliveryPage() {
         return;
       }
 
-      console.log("Fetching documents for delivery:", selectedDelivery.id);
+      console.log("=== FETCHING DOCUMENTS FOR DELIVERY ===");
+      console.log("Delivery ID:", selectedDelivery.id);
+      console.log("Delivery PO ID:", selectedDelivery.po_id);
+      console.log("Delivery PO No:", selectedDelivery.po_no);
+      console.log("Full delivery object:", selectedDelivery);
 
       try {
-        const [iar, loa, dv, po] = await Promise.all([
-          supabase
-            .from("iar_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          supabase
-            .from("loa_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          supabase
-            .from("dv_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          selectedDelivery.po_id
-            ? supabase
-                .from("purchase_orders")
-                .select("*")
-                .eq("id", selectedDelivery.po_id)
-                .single()
-            : Promise.resolve(null),
+        const [iarRes, loaRes, dvRes] = await Promise.all([
+          fetchIARByDelivery(selectedDelivery.id),
+          fetchLOAByDelivery(selectedDelivery.id),
+          fetchDVByDelivery(selectedDelivery.id)
         ]);
-        console.log("IAR data:", iar, "Error:", iar.error);
-        console.log("LOA data:", loa, "Error:", loa.error);
-        console.log("DV data:", dv, "Error:", dv.error);
-        console.log("PO data:", po, "Error:", po?.error);
 
-        setIarData(iar.data);
-        setLoaData(loa.data);
-        setDvData(dv.data);
-        setPoData(po?.data ?? null);
+        // Fetch PO data if po_id exists
+        let poDataResult = null;
+        if (selectedDelivery.po_id) {
+          console.log('✓ Delivery has po_id, fetching PO data...');
+          try {
+            poDataResult = await fetchPODataForDelivery(selectedDelivery.po_id);
+            console.log('✓ PO data fetched successfully:', poDataResult);
+          } catch (poError) {
+            console.error('✗ Error fetching PO data:', poError);
+          }
+        } else {
+          console.log('✗ Delivery has no po_id, skipping PO data fetch');
+        }
+
+        console.log("IAR data:", iarRes?.data);
+        console.log("LOA data:", loaRes?.data);
+        console.log("DV data:", dvRes?.data);
+
+        setIarData(iarRes?.data || null);
+        setLoaData(loaRes?.data || null);
+        setDvData(dvRes?.data || null);
+        setPoData(poDataResult);
+        
+        console.log("=== DOCUMENT FETCHING COMPLETE ===");
       } catch (error) {
         console.error("Error fetching delivery documents:", error);
       }
@@ -417,11 +428,7 @@ export default function DeliveryPage() {
 
       // Fetch PO data if not already loaded
       if (!poData && selectedDelivery.po_id) {
-        const { data: po } = await supabase
-          .from("purchase_orders")
-          .select("*")
-          .eq("id", selectedDelivery.po_id)
-          .single();
+        const po = await fetchPODataForDelivery(selectedDelivery.po_id);
         if (po) {
           setPoData(po);
         }
@@ -706,7 +713,7 @@ export default function DeliveryPage() {
         {filterOpen && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">STATUS</label>
                 <select
                   value={statusFilter ?? ""}
@@ -719,7 +726,7 @@ export default function DeliveryPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">SECTION</label>
                 <select
                   value={sectionFilter ?? ""}
@@ -732,7 +739,7 @@ export default function DeliveryPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-50">
                 <label className="block text-xs font-bold text-gray-500 mb-2">SORT BY</label>
                 <select
                   value={sortBy}
@@ -963,14 +970,15 @@ export default function DeliveryPage() {
 
       {/* View Modal */}
       <ViewDeliveryModal
-        visible={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        delivery={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
-        iar={iarData}
-        loa={loaData}
-        dv={dvData}
-        defaultTab={defaultViewTab}
-      />
+          visible={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          delivery={selectedDelivery}
+          iar={iarData}
+          loa={loaData}
+          dv={dvData}
+          poData={poData}
+          defaultTab={defaultViewTab}
+        />
 
       {/* Create Modal */}
       <CreateDeliveryModal
@@ -992,8 +1000,8 @@ export default function DeliveryPage() {
         visible={processModalOpen}
         onClose={() => setProcessModalOpen(false)}
         onSubmit={handleProcessDelivery}
-        active={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
-        statusLabel={selectedDelivery ? statuses.find((s) => s.id === selectedDelivery.status_id)?.status_name ?? "" : ""}
+        active={selectedDelivery}
+        statusLabel={STATUS_CFG[selectedDelivery?.status_id ?? 18]?.label ?? ""}
         drNo={drNo}
         setDrNo={setDrNo}
         soaNo={soaNo}
@@ -1006,6 +1014,7 @@ export default function DeliveryPage() {
         setLoa={setLoa}
         dv={dv}
         setDv={setDv}
+        poData={poData}
         statusFlag={statusFlag}
         onPressStatusFlag={() => setFlagPickerOpen(true)}
         flagPickerOpen={flagPickerOpen}
