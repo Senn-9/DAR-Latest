@@ -1,0 +1,9 @@
+# Prevent Prettier from corrupting this file
+app/Procurement/layout.tsx
+
+# Standard ignores
+node_modules
+.next
+.git
+build
+dist
