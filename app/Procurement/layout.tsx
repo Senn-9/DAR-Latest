@@ -171,25 +171,3 @@ export default function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header with Menu Toggle */}
-        <div className="md:hidden bg-emerald-900 text-white p-4 flex items-center justify-between">
-          <h1 className="font-bold text-lg">DAR Procurement</h1>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-emerald-800 rounded-lg transition-colors"
-          >
-            {sidebarOpen ? <RiCloseLine size={24} /> : <RiMenuLine size={24} />}
-          </button>
-        </div>
-
-        {/* Content Area - scrollable */}
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
