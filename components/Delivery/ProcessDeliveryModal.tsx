@@ -270,8 +270,13 @@ export default function ProcessDeliveryModal({
       return true;
     }
     
-    // Delivery Receipt required fields (only for statuses 18 & 19)
-    if ((active?.status_id === 18 || active?.status_id === 19)) {
+    // Delivery (Waiting) - require status flag to be set
+    if (active?.status_id === 18) {
+      return statusFlag !== null;
+    }
+    
+    // Delivery Receipt required fields (only for status 19)
+    if (active?.status_id === 19) {
       if (selectedDocument === "delivery") {
         return drNo.trim() !== "";
       }
@@ -329,8 +334,15 @@ export default function ProcessDeliveryModal({
       return errors;
     }
     
-    // Delivery Receipt required fields (only for statuses 18 & 19)
-    if ((active?.status_id === 18 || active?.status_id === 19)) {
+    // Delivery (Waiting) - require status flag
+    if (active?.status_id === 18) {
+      if (!statusFlag) {
+        errors.push("Status flag is required to proceed with Delivery (Waiting) status");
+      }
+    }
+    
+    // Delivery Receipt required fields (only for status 19)
+    if ( active?.status_id === 19) {
       if (selectedDocument === "delivery") {
         if (!drNo.trim()) {
           errors.push("Delivery Receipt No. (DR No.) is required");
@@ -462,8 +474,12 @@ export default function ProcessDeliveryModal({
       if (availableDocuments.length > 0 && !availableDocuments.includes(selectedDocument)) {
         setSelectedDocument(availableDocuments[0]);
       }
+      // For Delivery (Received), force selection to delivery receipt only
+      if (active?.status_id === 19) {
+        setSelectedDocument("delivery");
+      }
     }
-  }, [visible]);
+  }, [visible, active?.status_id]);
 
   // Load HTML template when document changes
   useEffect(() => {
@@ -503,8 +519,20 @@ export default function ProcessDeliveryModal({
   if (!visible) return null;
 
   const renderFormContent = () => {
-    // Delivery Receipt
+    // Delivery Receipt - Hide for Delivery (Waiting) status
     if (selectedDocument === "delivery") {
+      // Don't show delivery receipt form for status 18 (Delivery Waiting)
+      if (active?.status_id === 18) {
+        return (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
+              <span>ℹ</span> Delivery receipt information will be captured when the delivery is received.
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
@@ -1013,8 +1041,13 @@ export default function ProcessDeliveryModal({
   };
   
   const canGoNext = () => {
-    // Validation for required fields
-    if (active?.status_id === 18 || active?.status_id === 19) {
+    // Delivery (Waiting) - require status flag to be set
+    if (active?.status_id === 18) {
+      return statusFlag !== null;
+    }
+    
+    // Delivery (Received) - require DR number
+    if (active?.status_id === 19) {
       return drNo.trim() !== "";
     }
     return true;
@@ -1044,60 +1077,62 @@ export default function ProcessDeliveryModal({
           {/* Form Side */}
           <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
             <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
-              {/* Document Type Tabs */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Document Type</h3>
-                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 w-fit">
-                  {getAvailableDocuments().includes("delivery") && (
-                    <button
-                      onClick={() => setSelectedDocument("delivery")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "delivery" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      Delivery
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("iar") && (
-                    <button
-                      onClick={() => setSelectedDocument("iar")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "iar" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      IAR
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("loa") && (
-                    <button
-                      onClick={() => setSelectedDocument("loa")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "loa" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      LOA
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("dv") && (
-                    <button
-                      onClick={() => setSelectedDocument("dv")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "dv" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      DV
-                    </button>
-                  )}
+              {/* Document Type Tabs - Hide for Delivery (Received) since only delivery receipt is shown */}
+              {active?.status_id !== 19 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Document Type</h3>
+                  <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 w-fit">
+                    {getAvailableDocuments().includes("delivery") && (
+                      <button
+                        onClick={() => setSelectedDocument("delivery")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "delivery" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        Delivery
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("iar") && (
+                      <button
+                        onClick={() => setSelectedDocument("iar")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "iar" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        IAR
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("loa") && (
+                      <button
+                        onClick={() => setSelectedDocument("loa")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "loa" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        LOA
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("dv") && (
+                      <button
+                        onClick={() => setSelectedDocument("dv")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "dv" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        DV
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Step Indicator */}
               {steps.length > 1 && (
@@ -1136,19 +1171,29 @@ export default function ProcessDeliveryModal({
                 </div>
               )}
 
+              {/* Status Flag - Only for Delivery (Waiting) */}
+              {active?.status_id === 18 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Status Flag</h3>
+                  <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
+                </div>
+              )}
+
               {/* Form Content */}
               {renderFormContent()}
 
-              {/* Notes */}
+              {/* Notes - Remove Status Flag from here for Delivery (Waiting) */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Notes</h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Status Flag
-                    </label>
-                    <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
-                  </div>
+                  {active?.status_id !== 18 && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Status Flag
+                      </label>
+                      <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Notes / Remarks
