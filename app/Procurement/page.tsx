@@ -397,7 +397,7 @@ export default function ProcurementPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-                <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
+                <div className="skeleton-shimmer w-10 h-10 rounded-xl shrink-0" />
                 <div className="space-y-1.5 flex-1">
                   <div className="skeleton-shimmer h-3 w-16 rounded" />
                   <div className="skeleton-shimmer h-6 w-10 rounded" />
@@ -423,13 +423,13 @@ export default function ProcurementPage() {
             <div className="divide-y divide-gray-100">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="px-5 py-4 flex items-center gap-4">
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-32 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-32 rounded shrink-0" />
                   <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
-                  <div className="skeleton-shimmer h-6 w-28 rounded-full flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-20 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0 ml-auto" />
-                  <div className="flex items-center justify-center gap-1.5 flex-shrink-0">
+                  <div className="skeleton-shimmer h-6 w-28 rounded-full shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-20 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0 ml-auto" />
+                  <div className="flex items-center justify-center gap-1.5 shrink-0">
                     <div className="skeleton-shimmer h-7 w-16 rounded-lg" />
                     <div className="skeleton-shimmer h-7 w-16 rounded-lg" />
                   </div>
@@ -518,7 +518,7 @@ export default function ProcurementPage() {
                   key={label}
                   className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
                 >
-                  <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
+                  <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">{label}</p>
                     <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
@@ -530,8 +530,8 @@ export default function ProcurementPage() {
         )}
 
         {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Requests</h2>
             <div className="flex flex-wrap items-center gap-2">
               {STATUS_OPTIONS.map(({ value, label }) => (
@@ -569,31 +569,34 @@ export default function ProcurementPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
-                      {([
-                        { label: "PR Number",        field: null,                      align: "text-left"   },
-                        { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
-                        { label: "Description",      field: null,                      align: "text-left"   },
-                        { label: "Date",             field: "created_at" as const,     align: "text-left"   },
-                        { label: "Status",           field: null,                      align: "text-center" },
-                        { label: "Status Flag",      field: null,                      align: "text-center" },
-                        { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
-                        { label: "Actions",          field: null,                      align: "text-center" },
-                      ] as const).map(({ label, field, align }) => (
-                        <th
-                          key={label}
-                          style={{ display: label === "Status Flag" && !isEndUser ? "none" : undefined }}
-                          onClick={field ? () => handleSort(field) : undefined}
-                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
-                        >
-                          <span className="inline-flex items-center gap-0.5">
-                            {label}{field && <SortIcon field={field} />}
-                          </span>
-                        </th>
-                      ))}
+                    <tr className="bg-emerald-700 text-white uppercase tracking-widest">
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-28" onClick={() => handleSort("pr_no")}>
+                        <span className="inline-flex items-center gap-1">
+                          PR # <SortIcon field="pr_no" />
+                        </span>
+                      </th>
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("office_section")}>
+                        <span className="inline-flex items-center gap-1">
+                          Section <SortIcon field="office_section" />
+                        </span>
+                      </th>
+                      <th className="px-2 py-2 text-left font-semibold flex-1 min-w-40">Description</th>
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("created_at")}>
+                        <span className="inline-flex items-center gap-1">
+                          Date <SortIcon field="created_at" />
+                        </span>
+                      </th>
+                      <th className="px-2 py-2 text-center font-semibold w-32">Status</th>
+                      {isEndUser && <th className="px-2 py-2 text-center font-semibold w-28">Status Flag</th>}
+                      <th className="px-2 py-2 text-right font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("total_cost")}>
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          Cost <SortIcon field="total_cost" />
+                        </span>
+                      </th>
+                      <th className="px-2 py-2 text-center font-semibold w-56">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -604,48 +607,48 @@ export default function ProcurementPage() {
                       const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
 
                       return (
-                        <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
+                        <tr key={index} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
 
                           {/* PR Number */}
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
                             {form.pr_no}
                           </td>
 
                           {/* Office / Section */}
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
 
                           {/* Description */}
-                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>
                             {desc
-                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
+                              ? desc
                               : <span className="text-gray-300">—</span>}
                           </td>
 
                           {/* Date */}
-                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
 
                           {/* Status */}
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
                             </span>
                           </td>
 
                           {/* Status Flag — end users only */}
                           {isEndUser && (
-                            <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                            <td className={`px-2 py-2 text-center ${rowBg}`}>
                               {(() => {
                                 const fid   = latestFlagByPr[form.id] ?? null;
                                 const fname = fid ? flagNameById[fid] : "No Flag";
                                 const key   = (fname || "No Flag").toLowerCase();
                                 return (
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${FLAG_BADGE[key] ?? FLAG_BADGE.default}`}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${FLAG_BADGE[key] ?? FLAG_BADGE.default}`}>
                                     {fname}
                                   </span>
                                 );
@@ -654,22 +657,22 @@ export default function ProcurementPage() {
                           )}
 
                           {/* Total Cost */}
-                          <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0
                               ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                               : <span className="text-gray-300 font-normal">—</span>}
                           </td>
 
                           {/* ── ACTIONS ── */}
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1.5">
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <div className="flex items-center justify-center gap-1">
 
                               {/* Budget account — View + Budget Process */}
                               {isBudgetAccount && (
                                 <>
                                   <button
                                     onClick={() => setViewPrId(form.id)}
-                                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
                                   >
                                     View
                                   </button>
@@ -679,7 +682,6 @@ export default function ProcurementPage() {
                                         setBudgetProcessTarget({
                                           prId: form.id,
                                           prNo:  form.pr_no,
-                                          // ← pass all prData fields from the row
                                           prData: {
                                             office_section: form.office_section,
                                             purpose:        form.purpose,
@@ -694,7 +696,7 @@ export default function ProcurementPage() {
                                           },
                                         })
                                       }
-                                      className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all whitespace-nowrap"
+                                      className="px-2 py-1 text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded transition-colors"
                                     >
                                       Budget Process
                                     </button>
@@ -706,7 +708,7 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_no)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
                                 >
                                   Edit
                                 </button>
@@ -716,7 +718,7 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && (
                                 <button
                                   onClick={() => setViewPrId(form.id)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
                                 >
                                   View
                                 </button>
@@ -726,7 +728,7 @@ export default function ProcurementPage() {
                               {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && form.status_id === 1 && (
                                 <button
                                   onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
                                 >
                                   Submit
                                 </button>
@@ -736,7 +738,7 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button
                                   onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
                                 >
                                   Process
                                 </button>
@@ -746,7 +748,7 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && isBACAccount && form.status_id === 3 && (
                                 <button
                                   onClick={() => setBACProcessTarget({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded transition-colors"
                                 >
                                   BAC Process
                                 </button>
@@ -756,7 +758,7 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && isPARPOAccount && form.status_id === 5 && (
                                 <button
                                   onClick={() => setPARPOProcessTarget({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded transition-colors"
                                 >
                                   PARPO Process
                                 </button>
@@ -772,7 +774,7 @@ export default function ProcurementPage() {
               </div>
 
               {/* ── PAGINATION FOOTER ── */}
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+              <div className="mt-4 -mx-6 px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
                 <span>
                   Showing{" "}
                   <span className="font-semibold text-gray-700">

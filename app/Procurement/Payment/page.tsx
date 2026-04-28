@@ -306,7 +306,7 @@ export default function PaymentPage() {
             { label: "Cancelled", value: deliveries.filter(d => [26, 27].includes(d.status_id)).length, icon: <RiCloseCircleLine />, bg: "bg-red-50", border: "border-red-200", iconBg: "bg-red-100", iconColor: "text-red-700", numColor: "text-red-700" },
           ].map(({ label, value, icon, bg, border, iconBg, iconColor, numColor }) => (
             <div key={label} className={`${bg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}>
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>

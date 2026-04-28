@@ -36,11 +36,11 @@ const AnalyticsDashboard = () => {
   const summaryData = {
     netAmount: analyticsData.totalValue || 0,
     totalMOOE: analyticsData.totalValue * 1.2 || 0, // Estimated total budget
-    utilizationRate: analyticsData.totalValue > 0 ? ((analyticsData.totalValue / (analyticsData.totalValue * 1.2)) * 100) : 0,
+    utilizationRate: analyticsData.totalValue > 0 ? Math.min(((analyticsData.totalValue / (analyticsData.totalValue * 1.2)) * 100), 100) : 0,
     totalUnpaid: analyticsData.pendingPRs * 50000 || 0, // Estimated unpaid amount
-    disbursementRate: analyticsData.totalPRs > 0 ? ((analyticsData.approvedPRs / analyticsData.totalPRs) * 100) : 0,
+    disbursementRate: analyticsData.totalPRs > 0 ? Math.min(((analyticsData.approvedPRs / analyticsData.totalPRs) * 100), 100) : 0,
     balance: analyticsData.totalValue * 0.3 || 0,
-    balanceUtilizationRate: 0 ,
+    balanceUtilizationRate: analyticsData.totalValue > 0 ? Math.min((((analyticsData.totalValue * 1.2) - analyticsData.totalValue) / (analyticsData.totalValue * 1.2)) * 100, 100) : 0,
     cna: analyticsData.highValuePRs * 100000 || 0,
     cnaBalance: analyticsData.highValuePRs * 110000 || 0,
     netcna: analyticsData.highValuePRs * 10000 || 0
@@ -302,20 +302,48 @@ const AnalyticsDashboard = () => {
   };
 
   const GaugeChart = ({ percentage, color }) => {
-    const rotation = (percentage / 100) * 180 - 90;
+    const clampedPercentage = Math.max(0, Math.min(percentage, 100));
+    
+    // Determine color based on percentage if not provided
+    let gaugeColor = color;
+    if (!color) {
+      if (clampedPercentage >= 80) gaugeColor = '#10B981'; // Green - Excellent
+      else if (clampedPercentage >= 60) gaugeColor = '#3B82F6'; // Blue - Good
+      else if (clampedPercentage >= 40) gaugeColor = '#F59E0B'; // Amber - Fair
+      else if (clampedPercentage >= 20) gaugeColor = '#EF4444'; // Red - Poor
+      else gaugeColor = '#6B7280'; // Gray - Critical
+    }
+    
+    const rotation = (clampedPercentage / 100) * 180 - 90;
+    
     return (
-      <div className="relative w-24 h-12 overflow-hidden">
-        <div className="absolute w-24 h-24 border-8 border-gray-200 rounded-full bottom-0"></div>
-        <div 
-          className="absolute w-24 h-24 border-8 border-t-0 border-l-0 border-r-0 border-b-0 rounded-full bottom-0 origin-center"
-          style={{
-            borderColor: color,
-            transform: `rotate(${rotation}deg)`,
-            clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'
-          }}
-        ></div>
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2">
-          <span className="text-sm font-bold">{percentage}%</span>
+      <div className="relative w-28 h-16 overflow-hidden">
+        {/* Background arc */}
+        <svg className="absolute w-28 h-14 -bottom-1" viewBox="0 0 100 50">
+          <path
+            d="M 5 50 A 45 45 0 0 1 95 50"
+            fill="none"
+            stroke="#E5E7EB"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          {/* Color gradient arc */}
+          <path
+            d="M 5 50 A 45 45 0 0 1 95 50"
+            fill="none"
+            stroke={gaugeColor}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={`${(clampedPercentage / 100) * 141.3} 141.3`}
+            opacity="0.9"
+          />
+        </svg>
+        
+        {/* Percentage display */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+          <span className="text-lg font-bold" style={{ color: gaugeColor }}>
+            {clampedPercentage.toFixed(1)}%
+          </span>
         </div>
       </div>
     );
@@ -556,20 +584,35 @@ const AnalyticsDashboard = () => {
 
       {/* Enhanced Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex items-center mb-4">
-          <FiFilter className="text-gray-500 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FiFilter className="text-emerald-600 mr-2 text-lg" />
+            <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedDivision('all');
+              setSelectedQuarter('1ST');
+              setSelectedMonth('FEBRUARY');
+              setSelectedSemester('1ST');
+              setDateRange({ start: '', end: '' });
+            }}
+            className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Reset All
+          </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Main Filters Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Division Filter - Admin Only */}
           {isAdmin && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">DIVISION</label>
+              <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">DIVISION</label>
               <select 
                 value={selectedDivision}
                 onChange={(e) => setSelectedDivision(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:border-emerald-300 transition-colors"
               >
                 <option value="all">All Divisions</option>
                 {analyticsData.divisions.map((division) => (
@@ -584,8 +627,8 @@ const AnalyticsDashboard = () => {
           {/* User Division Display  */}
           {!isAdmin && currentUser?.divisions?.division_name && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">DIVISION</label>
-              <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+              <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">DIVISION</label>
+              <div className="px-3 py-2 text-sm border border-emerald-200 rounded-lg bg-emerald-50 text-emerald-700 font-medium">
                 {currentUser.divisions.division_name}
               </div>
             </div>
@@ -593,16 +636,16 @@ const AnalyticsDashboard = () => {
 
           {/* Quarter Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">QUARTER</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">QUARTER</label>
+            <div className="flex gap-1.5">
               {quarters.map((quarter) => (
                 <button
                   key={quarter}
                   onClick={() => setSelectedQuarter(quarter)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold transition-all ${
                     selectedQuarter === quarter
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-emerald-100'
                   }`}
                 >
                   {quarter}
@@ -611,38 +654,18 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
 
-          {/* Monthly Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">MONTHLY</label>
-            <div className="flex flex-wrap gap-2">
-              {months.map((month) => (
-                <button
-                  key={month}
-                  onClick={() => setSelectedMonth(month)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    selectedMonth === month
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {month}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Semester Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">SEMESTER</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">SEMESTER</label>
+            <div className="flex gap-1.5">
               {semesters.map((semester) => (
                 <button
                   key={semester}
                   onClick={() => setSelectedSemester(semester)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold transition-all ${
                     selectedSemester === semester
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-emerald-100'
                   }`}
                 >
                   {semester}
@@ -652,22 +675,47 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
 
+        {/* Monthly Filter - Full Width */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">MONTHLY</label>
+          <div className="flex flex-wrap gap-2">
+            {months.map((month) => (
+              <button
+                key={month}
+                onClick={() => setSelectedMonth(month)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedMonth === month
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-400 hover:bg-emerald-50'
+                }`}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Date Range Filter */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <div className="flex gap-2">
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <label className="block text-xs font-bold text-gray-600 mb-3 tracking-wider">DATE RANGE</label>
+          <div className="flex gap-3">
+            <div className="flex-1">
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:border-emerald-300 transition-colors"
+                placeholder="Start Date"
               />
+            </div>
+            <span className="flex items-center text-gray-400">→</span>
+            <div className="flex-1">
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:border-emerald-300 transition-colors"
+                placeholder="End Date"
               />
             </div>
           </div>
@@ -758,62 +806,69 @@ const AnalyticsDashboard = () => {
           <SkeletonTable />
         ) : (
           <>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Detailed Breakdown</h3>
-            <div className="overflow-x-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800">Detailed Breakdown</h3>
+              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                {tableData.length} Records
+              </span>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-emerald-50 border-b-2 border-emerald-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">
                       MFO/PROGRAMS/ACTIVITIES/PROJECTS
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">
                       AMOUNT
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">
                       ORS AMOUNT
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">
                       VARIANCE
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">
                       REMARKS
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {tableData.map((row, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <tr key={index} className={`hover:bg-emerald-50 transition-colors ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    }`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {row.mfo}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
                         ₱{formatCurrency(row.amount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-700">
                         ₱{formatCurrency(row.orsAmount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-amber-700">
                         ₱{formatCurrency(row.variance)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {row.remarks || '-'}
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-100 font-semibold">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr className="bg-emerald-100 font-bold border-t-2 border-emerald-300">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-900">
                       Total
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-900">
                       ₱{formatCurrency(totals.amount)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-900">
                       ₱{formatCurrency(totals.orsAmount)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-900">
                       ₱{formatCurrency(totals.variance)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-900">
                       -
                     </td>
                   </tr>
@@ -826,16 +881,17 @@ const AnalyticsDashboard = () => {
 
       {/* Bottom Navigation Tabs - Admin Only */}
       {isAdmin && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex space-x-1">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <p className="text-xs font-bold text-gray-600 mb-4 tracking-wider uppercase">Budget Categories</p>
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   activeTab === tab
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-300'
+                    : 'bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 hover:ring-1 hover:ring-emerald-200'
                 }`}
               >
                 {tab}
