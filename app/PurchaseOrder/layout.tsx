@@ -15,6 +15,7 @@ type CurrentUser = {
   roles?: { role_name: string };
 }
 
+// This layout is shared across all pages in the Purchase Order section
 export default function Layout({ children }: { children: ReactNode }) {
   const buttons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
