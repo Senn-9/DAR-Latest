@@ -514,7 +514,7 @@ export default function ProcurementPage() {
               key={label}
               className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
             >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>{icon}</div>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>

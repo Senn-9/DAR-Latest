@@ -1,5 +1,6 @@
-# Prevent Prettier from corrupting this file
+# Prevent Prettier from corrupting these critical files
 app/Procurement/layout.tsx
+app/Procurement/page.tsx
 
 # Standard ignores
 node_modules
@@ -7,3 +8,5 @@ node_modules
 .git
 build
 dist
+.turbo
+
