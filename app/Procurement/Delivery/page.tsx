@@ -13,7 +13,7 @@ import CreateDeliveryModal from "@/components/Delivery/CreateDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
 import DeleteDeliveryModal from "@/components/Delivery/DeleteDeliveryModal";
 import RemarksModal from "@/components/Delivery/RemarksModal";
-import { fetchPoCandidatesForDelivery, insertDelivery, updateDelivery, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery, fetchDeliveryStatuses, insertDeliveryProcessRemark, fetchPoIdsWithActiveDeliveries, hasActiveDeliveryForPo } from "@/utils/supabase/delivery";
+import { fetchPoCandidatesForDelivery, insertDelivery, updateDelivery, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery, fetchDeliveryStatuses, insertDeliveryProcessRemark, fetchPoIdsWithActiveDeliveries, hasActiveDeliveryForPo, fetchPODataForDelivery } from "@/utils/supabase/delivery";
 import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 
 export default function DeliveryPage() {
@@ -26,18 +26,28 @@ export default function DeliveryPage() {
     po_no: string;
     supplier: string | null;
     office_section: string | null;
-    division_id: string | null;
+    division_id: number | null;
+    status_id: number;
     delivery_no: string;
-    expected_delivery_date: string | null;
     dr_no: string | null;
     soa_no: string | null;
-    status_id: number;
     notes: string | null;
-    created_at: string;
-    updated_at: string;
-    entity_name?: string;
-    po_date?: string;
+    expected_delivery_date: string | null;
     created_by: number | null;
+    created_at: string;
+    updated_at: string | null;
+    po_date?: string | null;
+    fund_cluster?: string | null;
+    responsibility_center_code?: string | null;
+    po_items?: Array<{
+      stock_no: string | null;
+      unit: string | null;
+      description: string | null;
+      quantity: number | null;
+      unit_price: number | null;
+      subtotal: number | null;
+    }>;
+    entity_name?: string;
   };
 
   type CurrentUser = {
@@ -120,29 +130,60 @@ export default function DeliveryPage() {
     }
   }, []);
 
+  // Role definitions - moved before useEffect that uses them
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount =
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isBudgetAccount =
+    currentUser?.username?.toLowerCase() === "budget" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+  const isSupplyAccount =
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isAccountingRole = currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount && !isAccountingRole;
+
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
         setLoading(true);
-        let query = supabase
+        const { data, error } = await supabase
           .from("deliveries")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (!isAdmin && currentUser?.divisions?.division_name) {
-          query = query.eq("division_id", currentUser.divisions?.division_name);
-        }
+        console.log("Fetched delivery data:", data);
+        console.log("Filter conditions:", { 
+          isAdmin, 
+          isBACAccount, 
+          isPARPOAccount, 
+          isBudgetAccount, 
+          isSupplyAccount,
+          isAccountingRole,
+          userDivision: currentUser?.divisions?.division_name 
+        });
 
-        const { data, error } = await query;
-        if (!error && data) {
-          setDeliveries(data as DeliveryRow[]);
-        }
+        const filteredData = (data || []).filter((delivery) => {
+          // STOD roles (BAC, Supply, Budget, PARPO, Accounting) and Admin can view all deliveries
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingRole) {
+            return true;
+          }
+          // End users and Division Heads can only view deliveries from their division
+          return delivery.office_section === currentUser?.divisions?.division_name;
+        });
+
+        console.log("Filtered delivery data:", filteredData);
+        setDeliveries(filteredData as DeliveryRow[]);
       } finally {
         setLoading(false);
       }
     };
     fetchDeliveries();
-  }, [supabase, isAdmin, currentUser]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount, isAccountingRole]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -168,42 +209,43 @@ export default function DeliveryPage() {
         return;
       }
 
-      console.log("Fetching documents for delivery:", selectedDelivery.id);
+      console.log("=== FETCHING DOCUMENTS FOR DELIVERY ===");
+      console.log("Delivery ID:", selectedDelivery.id);
+      console.log("Delivery PO ID:", selectedDelivery.po_id);
+      console.log("Delivery PO No:", selectedDelivery.po_no);
+      console.log("Full delivery object:", selectedDelivery);
 
       try {
-        const [iar, loa, dv, po] = await Promise.all([
-          supabase
-            .from("iar_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          supabase
-            .from("loa_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          supabase
-            .from("dv_documents")
-            .select("*")
-            .eq("delivery_id", selectedDelivery.id)
-            .maybeSingle(),
-          selectedDelivery.po_id
-            ? supabase
-                .from("purchase_orders")
-                .select("*")
-                .eq("id", selectedDelivery.po_id)
-                .single()
-            : Promise.resolve(null),
+        const [iarRes, loaRes, dvRes] = await Promise.all([
+          fetchIARByDelivery(selectedDelivery.id),
+          fetchLOAByDelivery(selectedDelivery.id),
+          fetchDVByDelivery(selectedDelivery.id)
         ]);
-        console.log("IAR data:", iar, "Error:", iar.error);
-        console.log("LOA data:", loa, "Error:", loa.error);
-        console.log("DV data:", dv, "Error:", dv.error);
-        console.log("PO data:", po, "Error:", po?.error);
 
-        setIarData(iar.data);
-        setLoaData(loa.data);
-        setDvData(dv.data);
-        setPoData(po?.data ?? null);
+        // Fetch PO data if po_id exists
+        let poDataResult = null;
+        if (selectedDelivery.po_id) {
+          console.log('✓ Delivery has po_id, fetching PO data...');
+          try {
+            poDataResult = await fetchPODataForDelivery(selectedDelivery.po_id);
+            console.log('✓ PO data fetched successfully:', poDataResult);
+          } catch (poError) {
+            console.error('✗ Error fetching PO data:', poError);
+          }
+        } else {
+          console.log('✗ Delivery has no po_id, skipping PO data fetch');
+        }
+
+        console.log("IAR data:", iarRes?.data);
+        console.log("LOA data:", loaRes?.data);
+        console.log("DV data:", dvRes?.data);
+
+        setIarData(iarRes?.data || null);
+        setLoaData(loaRes?.data || null);
+        setDvData(dvRes?.data || null);
+        setPoData(poDataResult);
+        
+        console.log("=== DOCUMENT FETCHING COMPLETE ===");
       } catch (error) {
         console.error("Error fetching delivery documents:", error);
       }
@@ -211,10 +253,6 @@ export default function DeliveryPage() {
 
     fetchDeliveryDocuments();
   }, [selectedDelivery?.id, supabase]);
-
-  const isSupplyRole = currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false;
-  const isAccountingRole = currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
-  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
 
   const canRoleProcess = (roleId: number, statusId: number) => {
     if (roleId === 1) return true;
@@ -390,11 +428,7 @@ export default function DeliveryPage() {
 
       // Fetch PO data if not already loaded
       if (!poData && selectedDelivery.po_id) {
-        const { data: po } = await supabase
-          .from("purchase_orders")
-          .select("*")
-          .eq("id", selectedDelivery.po_id)
-          .single();
+        const po = await fetchPODataForDelivery(selectedDelivery.po_id);
         if (po) {
           setPoData(po);
         }
@@ -639,7 +673,7 @@ export default function DeliveryPage() {
               </p>
             )}
           </div>
-          {(isAdmin || isSupplyRole) && (
+          {(isAdmin || isSupplyAccount) && (
             <button
               onClick={() => setCreateModalOpen(true)}
               className="px-4 py-2 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2"
@@ -936,14 +970,15 @@ export default function DeliveryPage() {
 
       {/* View Modal */}
       <ViewDeliveryModal
-        visible={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        delivery={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
-        iar={iarData}
-        loa={loaData}
-        dv={dvData}
-        defaultTab={defaultViewTab}
-      />
+          visible={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          delivery={selectedDelivery}
+          iar={iarData}
+          loa={loaData}
+          dv={dvData}
+          poData={poData}
+          defaultTab={defaultViewTab}
+        />
 
       {/* Create Modal */}
       <CreateDeliveryModal
@@ -965,8 +1000,8 @@ export default function DeliveryPage() {
         visible={processModalOpen}
         onClose={() => setProcessModalOpen(false)}
         onSubmit={handleProcessDelivery}
-        active={selectedDelivery && poData ? { ...selectedDelivery, entity_name: poData.entity_name, supplier: poData.supplier, po_date: poData.po_date } : selectedDelivery}
-        statusLabel={selectedDelivery ? statuses.find((s) => s.id === selectedDelivery.status_id)?.status_name ?? "" : ""}
+        active={selectedDelivery}
+        statusLabel={STATUS_CFG[selectedDelivery?.status_id ?? 18]?.label ?? ""}
         drNo={drNo}
         setDrNo={setDrNo}
         soaNo={soaNo}
@@ -979,6 +1014,7 @@ export default function DeliveryPage() {
         setLoa={setLoa}
         dv={dv}
         setDv={setDv}
+        poData={poData}
         statusFlag={statusFlag}
         onPressStatusFlag={() => setFlagPickerOpen(true)}
         flagPickerOpen={flagPickerOpen}

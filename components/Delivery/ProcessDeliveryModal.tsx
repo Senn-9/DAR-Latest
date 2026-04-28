@@ -1,263 +1,296 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { RiCloseLine, RiEyeLine, RiArrowLeftLine, RiArrowRightLine, RiCheckLine } from "react-icons/ri";
+import { useState, useEffect, useRef } from "react";
+import { RiCloseLine, RiEyeLine, RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiFilePdf2Line } from "react-icons/ri";
 import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "../StatusFlagPicker";
+
+// Template loading function
+async function loadTemplate(templateName: string): Promise<string> {
+  try {
+    const response = await fetch(`/documents/${templateName}-template.html`);
+    if (!response.ok) throw new Error(`Failed to load ${templateName} template`);
+    return await response.text();
+  } catch (error) {
+    console.error(`Error loading ${templateName} template:`, error);
+    throw error;
+  }
+}
+
+// Placeholder replacement function
+function replacePlaceholders(template: string, data: any): string {
+  let result = template;
+  
+  // Handle Handlebars-style loops for PO items
+  result = result.replace(/{{#each po_items}}([\s\S]*?){{\/each}}/g, (match, templateBlock) => {
+    if (!data.po_items || !Array.isArray(data.po_items)) return '';
+    
+    return data.po_items.map((item: any, index: number) => {
+      let itemBlock = templateBlock;
+      Object.keys(item).forEach(key => {
+        const value = item[key] ?? "";
+        const placeholder = new RegExp(`{{${key}}}`, 'g');
+        itemBlock = itemBlock.replace(placeholder, value);
+      });
+      
+      // Handle {{add @index value}} for positioning
+      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (match, value) => {
+        return (index + parseFloat(value)).toString();
+      });
+      
+      return itemBlock;
+    }).join('');
+  });
+  
+  // Handle nested property access like {{po_items.length}}
+  result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match, fullExpression, property) => {
+    const parts = fullExpression.split('.');
+    let value = data;
+    
+    for (const part of parts) {
+      if (value && typeof value === 'object' && part in value) {
+        value = value[part];
+      } else {
+        return match; // Return original if not found
+      }
+    }
+    
+    return value !== undefined && value !== null ? String(value) : '';
+  });
+  
+  // Handle simple placeholders
+  Object.keys(data).forEach(key => {
+    if (key === 'po_items') return; // Skip arrays, handled above
+    const value = data[key] ?? "";
+    const placeholder = new RegExp(`{{${key}}}`, 'g');
+    result = result.replace(placeholder, value);
+  });
+  
+  return result;
+}
 
 // Read-only input style for preview
 const readonlyCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
 
-// JSX Preview Components
-function IARPreview({ delivery, iar }: { delivery: any; iar: any }) {
+// Keep HTML functions for PDF download
+async function buildIARHtml(d: any): Promise<string> {
+  const template = await loadTemplate("IAR");
+  return replacePlaceholders(template, d);
+}
+
+async function buildLOAHtml(d: any): Promise<string> {
+  const template = await loadTemplate("LOA");
+  return replacePlaceholders(template, d);
+}
+
+async function buildDVHtml(d: any): Promise<string> {
+  const template = await loadTemplate("DV");
+  return replacePlaceholders(template, d);
+}
+
+function downloadPDF(html: string) {
+  try {
+    const printWindow = window.open("", "_blank", "height=800,width=1200");
+    if (!printWindow) {
+      alert("Please allow popups for this site to print the document.");
+      return;
+    }
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    // Wait for the document to fully load before printing
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+    
+    // Fallback: try printing after a delay if onload doesn't fire
+    setTimeout(() => {
+      try {
+        printWindow.print();
+      } catch (e) {
+        console.error("Print failed:", e);
+      }
+    }, 500);
+  } catch (error) {
+    console.error("Error opening print window:", error);
+    alert("Failed to open print window. Please check your popup settings.");
+  }
+}
+
+// JSX Preview Components - based on templates
+function IARPreview({ delivery, iar, poData }: { delivery: any; iar: any; poData: any }) {
+  const [html, setHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("IAR");
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...iar };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading IAR preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, iar, poData]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 62</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>INSPECTION AND ACCEPTANCE REPORT</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster :</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Supplier : {delivery?.supplier ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>IAR No. : {iar?.iar_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>PO No./Date : {delivery?.po_no ?? ""} {delivery?.po_date ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {iar?.invoice_date ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Requisitioning Office/Dept. : {iar?.requisitioning_office ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice No. : {iar?.invoice_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Responsibility Center Code : {iar?.responsibility_center ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {iar?.invoice_date ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Stock/Property No.</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "38%" }}>Description</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Quantity</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit Cost</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Amount</th>
-          </tr>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm", tableLayout: "fixed" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", height: "48mm", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 700, marginBottom: "2mm" }}>INSPECTION</div>
-              <div style={{ fontSize: "9.5pt" }}>Inspected, verified and found in order as to quantity and specifications</div>
-              <div style={{ height: "8mm" }}></div>
-              <div>Date Inspected : {iar?.inspected_at ?? ""}</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>Inspection Officer/Inspection Committee</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", height: "48mm", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 700, marginBottom: "2mm" }}>ACCEPTANCE</div>
-              <div style={{ fontSize: "9.5pt" }}>Complete</div>
-              <div style={{ fontSize: "9.5pt" }}>Partial (pls. specify quantity)</div>
-              <div style={{ height: "8mm" }}></div>
-              <div>Date Received : {iar?.received_at ?? ""}</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{iar?.inspector_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Inspector</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>A. Supply Officer:</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{iar?.supply_officer_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Supply Officer</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>B. Budget Officer:</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Budget Officer</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
+      <iframe
+        ref={iframeRef}
+        title="IAR Preview"
+        className="w-full border-0"
+        style={{ height: '1000px', minHeight: '1000px' }}
+      />
     </div>
   );
 }
 
-function LOAPreview({ delivery, loa }: { delivery: any; loa: any }) {
+function LOAPreview({ delivery, loa, poData }: { delivery: any; loa: any; poData: any }) {
+  const [html, setHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("LOA");
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...loa };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading LOA preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, loa, poData]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 63</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>LETTER OF ACCEPTANCE</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster :</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Supplier : {delivery?.supplier ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>LOA No. : {loa?.loa_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>PO No./Date : {delivery?.po_no ?? ""} {delivery?.po_date ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Date : {loa?.accepted_at ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice No. : {loa?.invoice_no ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Invoice Date : {loa?.invoice_date ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style={{ marginTop: "4mm", marginBottom: "2mm", fontWeight: 700 }}>I hereby accept the following:</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Stock/Property No.</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "38%" }}>Description</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Quantity</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Unit Cost</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt" }}>Amount</th>
-          </tr>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px", height: "9mm", fontSize: "10pt", textAlign: "right" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{loa?.accepted_by_name ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>{loa?.accepted_by_title ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt", marginTop: "2mm" }}>Accepted By</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}></div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt", marginTop: "2mm" }}>Supply Officer</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
+      <iframe
+        ref={iframeRef}
+        title="LOA Preview"
+        className="w-full border-0"
+        style={{ height: '1000px', minHeight: '1000px' }}
+      />
     </div>
   );
 }
 
-function DVPreview({ delivery, dv }: { delivery: any; dv: any }) {
+function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: any }) {
+  const [html, setHtml] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(0.7);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      try {
+        const template = await loadTemplate("DV");
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...delivery, ...transformedPoData, ...dv };
+        // Explicitly preserve po_items from transformedPoData
+        mergedData.po_items = transformedPoData.po_items;
+        const filled = replacePlaceholders(template, mergedData);
+        setHtml(filled);
+      } catch (error) {
+        console.error("Error loading DV preview:", error);
+      }
+    };
+    loadPreview();
+  }, [delivery, dv, poData]);
+
+  useEffect(() => {
+    if (iframeRef.current && html) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(0.7);
+  };
+
+  const scalePercentage = Math.round(zoomLevel * 100);
+  const containerWidth = 100 / zoomLevel;
+  const containerHeight = 100 / zoomLevel;
+
   return (
-    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", lineHeight: "1.25", color: "#111" }}>
-      <div style={{ textAlign: "right", fontSize: "9pt", marginBottom: "2mm" }}>Appendix 64</div>
-      <div style={{ textAlign: "center", fontSize: "14pt", fontWeight: 700, letterSpacing: "0.3px", marginBottom: "2mm" }}>DISBURSEMENT VOUCHER</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Entity Name : {delivery?.entity_name ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Fund Cluster : {dv?.fund_cluster ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Payee : {dv?.payee ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>TIN/Employee No. : {dv?.payee_tin ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Address : {dv?.address ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>ORS/BURS No. : {dv?.ors_no ?? ""}</td>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Mode of Payment : {dv?.mode_of_payment ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", height: "8mm" }}>Amount Due : {dv?.amount_due ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "42%" }}>Particulars</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "20%" }}>Responsibility Center</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>MFO/PAP</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Amount</th>
-          </tr>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.particulars ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.responsibility_center ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px" }}>{dv?.mfo_pap ?? ""}</td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "right" }}>{dv?.amount_due ?? ""}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "34%" }}>Account Title</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>UACS Code</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Debit</th>
-            <th style={{ border: "1px solid #111", padding: "4px 6px", textAlign: "center", fontSize: "9.5pt", width: "22%" }}>Credit</th>
-          </tr>
-          {[...Array(2)].map((_, i) => (
-            <tr key={i}>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-              <td style={{ border: "1px solid #111", padding: "4px 6px" }}></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>C. Certified:</div>
-              <div style={{ fontSize: "9.5pt" }}>Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{dv?.certified_by ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Head, Accounting Unit/Authorized Representative</div>
-            </td>
-            <td style={{ border: "1px solid #111", padding: "4px 6px", verticalAlign: "top", width: "50%" }}>
-              <div style={{ fontWeight: 700 }}>D. Approved for Payment</div>
-              <div style={{ marginTop: "10mm", textAlign: "center", fontWeight: 700 }}>{dv?.approved_by ?? ""}</div>
-              <div style={{ textAlign: "center", fontSize: "9.5pt" }}>Agency Head/Authorized Representative</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "2mm" }}>
-        <tbody>
-          <tr>
-            <td style={{ padding: "4px 6px", width: "50%" }}>Check/ADA No. : </td>
-            <td style={{ padding: "4px 6px", width: "50%" }}>Date : Bank Name &amp; Account Number:</td>
-          </tr>
-          <tr>
-            <td style={{ padding: "4px 6px" }}>Signature : Date :</td>
-            <td style={{ padding: "4px 6px" }}>Official Receipt No. &amp; Date/Other Documents</td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="space-y-2">
+    
+      
+      {/* Preview Container */}
+      <div className=" overflow-auto" style={{ maxHeight: '600px' }}>
+        <div 
+          style={{ 
+            transform: `scale(${zoomLevel})`, 
+            transformOrigin: 'top left', 
+            width: `${containerWidth}%`, 
+            height: `${containerHeight}%`
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            title="DV Preview"
+            className="w-full border-0"
+            style={{ height: '1000px', minHeight: '1000px' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -288,6 +321,7 @@ interface ProcessDeliveryModalProps {
   onPreviewIAR?: () => void;
   onPreviewLOA?: () => void;
   onPreviewDV?: () => void;
+  poData?: any;
 }
 
 export default function ProcessDeliveryModal({
@@ -316,12 +350,14 @@ export default function ProcessDeliveryModal({
   onPreviewIAR,
   onPreviewLOA,
   onPreviewDV,
+  poData,
 }: ProcessDeliveryModalProps) {
   const deliveryNo = active?.delivery_no ?? "—";
   
   // Wizard state
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDocument, setSelectedDocument] = useState<"delivery" | "iar" | "loa" | "dv">("delivery");
+  const [currentHtml, setCurrentHtml] = useState<string | null>(null);
 
   // Validation function to check if all required fields are filled
   const isFormValid = () => {
@@ -330,8 +366,13 @@ export default function ProcessDeliveryModal({
       return true;
     }
     
-    // Delivery Receipt required fields (only for statuses 18 & 19)
-    if ((active?.status_id === 18 || active?.status_id === 19)) {
+    // Delivery (Waiting) - require status flag to be set
+    if (active?.status_id === 18) {
+      return statusFlag !== null;
+    }
+    
+    // Delivery Receipt required fields (only for status 19)
+    if (active?.status_id === 19) {
       if (selectedDocument === "delivery") {
         return drNo.trim() !== "";
       }
@@ -389,8 +430,15 @@ export default function ProcessDeliveryModal({
       return errors;
     }
     
-    // Delivery Receipt required fields (only for statuses 18 & 19)
-    if ((active?.status_id === 18 || active?.status_id === 19)) {
+    // Delivery (Waiting) - require status flag
+    if (active?.status_id === 18) {
+      if (!statusFlag) {
+        errors.push("Status flag is required to proceed with Delivery (Waiting) status");
+      }
+    }
+    
+    // Delivery Receipt required fields (only for status 19)
+    if ( active?.status_id === 19) {
       if (selectedDocument === "delivery") {
         if (!drNo.trim()) {
           errors.push("Delivery Receipt No. (DR No.) is required");
@@ -522,8 +570,44 @@ export default function ProcessDeliveryModal({
       if (availableDocuments.length > 0 && !availableDocuments.includes(selectedDocument)) {
         setSelectedDocument(availableDocuments[0]);
       }
+      // For Delivery (Received), force selection to delivery receipt only
+      if (active?.status_id === 19) {
+        setSelectedDocument("delivery");
+      }
     }
-  }, [visible]);
+  }, [visible, active?.status_id]);
+
+  // Load HTML template when document changes
+  useEffect(() => {
+    if (!visible) return;
+    
+    const loadHtml = async () => {
+      try {
+        let html: string | null = null;
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        const mergedData = { ...active, ...transformedPoData };
+        
+        if (selectedDocument === "iar" && iar) {
+          html = await buildIARHtml({ ...mergedData, ...iar });
+        } else if (selectedDocument === "loa" && loa) {
+          html = await buildLOAHtml({ ...mergedData, ...loa });
+        } else if (selectedDocument === "dv" && dv) {
+          html = await buildDVHtml({ ...mergedData, ...dv });
+        }
+        
+        setCurrentHtml(html);
+      } catch (error) {
+        console.error("Error loading document HTML:", error);
+        setCurrentHtml(null);
+      }
+    };
+    
+    loadHtml();
+  }, [visible, selectedDocument, active, iar, loa, dv, poData]);
 
   // Update selected document when status changes
   useEffect(() => {
@@ -536,8 +620,20 @@ export default function ProcessDeliveryModal({
   if (!visible) return null;
 
   const renderFormContent = () => {
-    // Delivery Receipt
+    // Delivery Receipt - Hide for Delivery (Waiting) status
     if (selectedDocument === "delivery") {
+      // Don't show delivery receipt form for status 18 (Delivery Waiting)
+      if (active?.status_id === 18) {
+        return (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
+              <span>ℹ</span> Delivery receipt information will be captured when the delivery is received.
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
@@ -1015,15 +1111,15 @@ export default function ProcessDeliveryModal({
     
     // Show selected document preview
     if (selectedDocument === "iar") {
-      return <IARPreview delivery={active} iar={iar || {}} />;
+      return <IARPreview delivery={active} iar={iar || {}} poData={poData} />;
     }
     
     if (selectedDocument === "loa") {
-      return <LOAPreview delivery={active} loa={loa || {}} />;
+      return <LOAPreview delivery={active} loa={loa || {}} poData={poData} />;
     }
     
     if (selectedDocument === "dv") {
-      return <DVPreview delivery={active} dv={dv || {}} />;
+      return <DVPreview delivery={active} dv={dv || {}} poData={poData} />;
     }
     
     return (
@@ -1046,8 +1142,13 @@ export default function ProcessDeliveryModal({
   };
   
   const canGoNext = () => {
-    // Validation for required fields
-    if (active?.status_id === 18 || active?.status_id === 19) {
+    // Delivery (Waiting) - require status flag to be set
+    if (active?.status_id === 18) {
+      return statusFlag !== null;
+    }
+    
+    // Delivery (Received) - require DR number
+    if (active?.status_id === 19) {
       return drNo.trim() !== "";
     }
     return true;
@@ -1060,6 +1161,42 @@ export default function ProcessDeliveryModal({
     return "Save & Update";
   };
 
+  const handlePrintPDF = async () => {
+    try {
+      let html: string | null = null;
+      
+      // Transform poData to have the correct structure for templates
+      const transformedPoData = poData ? {
+        ...poData,
+        po_items: poData.purchase_order_items || []
+      } : {};
+      const mergedData = { ...active, ...transformedPoData };
+      
+      if (selectedDocument === "iar") {
+        const iarData = { ...mergedData, ...iar };
+        iarData.po_items = mergedData.po_items;
+        html = await buildIARHtml(iarData);
+      } else if (selectedDocument === "loa") {
+        const loaData = { ...mergedData, ...loa };
+        loaData.po_items = mergedData.po_items;
+        html = await buildLOAHtml(loaData);
+      } else if (selectedDocument === "dv") {
+        const dvData = { ...mergedData, ...dv };
+        dvData.po_items = mergedData.po_items;
+        html = await buildDVHtml(dvData);
+      }
+      
+      if (html) {
+        downloadPDF(html);
+      } else {
+        alert("Unable to generate PDF. Please ensure all required fields are filled.");
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -1069,9 +1206,7 @@ export default function ProcessDeliveryModal({
             <h2 className="text-xl font-bold">{deliveryNo}</h2>
             <p className="text-emerald-100 text-sm mt-1">{statusLabel}</p>
           </div>
-          <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
-            <RiCloseLine size={24} />
-          </button>
+       
         </div>
 
         {/* Body */}
@@ -1079,60 +1214,62 @@ export default function ProcessDeliveryModal({
           {/* Form Side */}
           <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
             <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
-              {/* Document Type Tabs */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Document Type</h3>
-                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 w-fit">
-                  {getAvailableDocuments().includes("delivery") && (
-                    <button
-                      onClick={() => setSelectedDocument("delivery")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "delivery" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      Delivery
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("iar") && (
-                    <button
-                      onClick={() => setSelectedDocument("iar")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "iar" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      IAR
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("loa") && (
-                    <button
-                      onClick={() => setSelectedDocument("loa")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "loa" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      LOA
-                    </button>
-                  )}
-                  {getAvailableDocuments().includes("dv") && (
-                    <button
-                      onClick={() => setSelectedDocument("dv")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        selectedDocument === "dv" 
-                          ? "bg-emerald-700 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      DV
-                    </button>
-                  )}
+              {/* Document Type Tabs - Hide for Delivery (Received) since only delivery receipt is shown */}
+              {active?.status_id !== 19 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Document Type</h3>
+                  <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 w-fit">
+                    {getAvailableDocuments().includes("delivery") && (
+                      <button
+                        onClick={() => setSelectedDocument("delivery")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "delivery" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        Delivery
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("iar") && (
+                      <button
+                        onClick={() => setSelectedDocument("iar")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "iar" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        IAR
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("loa") && (
+                      <button
+                        onClick={() => setSelectedDocument("loa")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "loa" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        LOA
+                      </button>
+                    )}
+                    {getAvailableDocuments().includes("dv") && (
+                      <button
+                        onClick={() => setSelectedDocument("dv")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                          selectedDocument === "dv" 
+                            ? "bg-emerald-700 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        DV
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Step Indicator */}
               {steps.length > 1 && (
@@ -1171,19 +1308,29 @@ export default function ProcessDeliveryModal({
                 </div>
               )}
 
+              {/* Status Flag - Only for Delivery (Waiting) */}
+              {active?.status_id === 18 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Status Flag</h3>
+                  <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
+                </div>
+              )}
+
               {/* Form Content */}
               {renderFormContent()}
 
-              {/* Notes */}
+              {/* Notes - Remove Status Flag from here for Delivery (Waiting) */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Notes</h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Status Flag
-                    </label>
-                    <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
-                  </div>
+                  {active?.status_id !== 18 && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Status Flag
+                      </label>
+                      <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Notes / Remarks
@@ -1206,10 +1353,20 @@ export default function ProcessDeliveryModal({
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
-                  <div className="px-3 py-1.5 text-xs font-semibold rounded bg-emerald-700 text-white">
-                    {selectedDocument === "delivery" ? "Delivery" : selectedDocument.toUpperCase()}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
+                    <div className="px-3 py-1.5 text-xs font-semibold rounded bg-emerald-700 text-white">
+                      {selectedDocument === "delivery" ? "Delivery" : selectedDocument.toUpperCase()}
+                    </div>
                   </div>
+                  {selectedDocument !== "delivery" && (
+                    <button
+                      onClick={() => handlePrintPDF()}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <RiFilePdf2Line size={16} /> PDF
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-8 text-black">
