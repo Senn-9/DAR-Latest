@@ -245,7 +245,7 @@ export default function LogsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
-        <div className="w-full p-6 md:p-10 space-y-6">
+        <div className="mx-auto w-full max-w-6xl p-6 md:p-10 space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <p className="text-gray-500">Loading procurement logs...</p>
           </div>
@@ -256,19 +256,13 @@ export default function LogsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        * { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-      `}</style>
-
-      <div className="w-full p-6 md:p-10 space-y-6">
+      <div className="mx-auto w-full max-w-6xl p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">
               Procurement Portal
             </p>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
               <RiFileTextLine className="text-emerald-700" />
               Procurement Logs
             </h1>
@@ -286,7 +280,7 @@ export default function LogsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit flex-wrap">
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1 w-fit flex-wrap">
           {([
             { key: "all", label: "All" },
             { key: "pr", label: "PR" },
@@ -300,7 +294,7 @@ export default function LogsPage() {
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                   on ? "bg-emerald-700 text-white" : "text-gray-600 hover:bg-emerald-50"
                 }`}
               >
@@ -314,7 +308,7 @@ export default function LogsPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <p className="font-bold text-gray-800">Log Entries</p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
@@ -323,12 +317,12 @@ export default function LogsPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search reference, user, remark..."
-                  className="pl-10 pr-3 py-2 border border-gray-200 rounded-xl text-sm w-72 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  className="pl-10 pr-3 py-1.5 border border-gray-200 rounded-xl text-xs w-56 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
                 />
               </div>
               <button
                 onClick={() => setFiltersOpen((v) => !v)}
-                className={`px-3 py-2 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-colors ${
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors ${
                   filtersOpen
                     ? "bg-emerald-700 text-white border-emerald-700"
                     : "bg-white text-gray-700 border-gray-200 hover:bg-emerald-50"
@@ -341,7 +335,7 @@ export default function LogsPage() {
           </div>
 
           {filtersOpen && (
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
               <div className="flex flex-wrap items-end gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
@@ -352,7 +346,7 @@ export default function LogsPage() {
                     onChange={(e) =>
                       setFlagFilter(e.target.value === "all" ? "all" : Number(e.target.value))
                     }
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
+                    className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white"
                   >
                     <option value="all">All</option>
                     {FLAG_OPTIONS.map((f) => (
@@ -369,7 +363,7 @@ export default function LogsPage() {
                   </label>
                   <button
                     onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white font-semibold flex items-center gap-1.5 hover:bg-gray-50"
+                    className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white font-semibold flex items-center gap-1.5 hover:bg-gray-50"
                   >
                     Date <SortIcon />
                   </button>
@@ -381,7 +375,7 @@ export default function LogsPage() {
                     setSortDir("desc");
                     setSearch("");
                   }}
-                  className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                  className="ml-auto px-4 py-1.5 bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-300 transition-colors"
                 >
                   Clear
                 </button>
@@ -390,29 +384,29 @@ export default function LogsPage() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead className="bg-emerald-900 text-white">
                 <tr>
-                  <th className="text-left px-5 py-3 font-semibold">Date</th>
-                  <th className="text-left px-5 py-3 font-semibold">Phase</th>
-                  <th className="text-left px-5 py-3 font-semibold">Reference</th>
-                  <th className="text-left px-5 py-3 font-semibold">User</th>
-                  <th className="text-left px-5 py-3 font-semibold">Flag</th>
-                  <th className="text-left px-5 py-3 font-semibold">Remark</th>
-                  <th className="text-center px-5 py-3 font-semibold">Action</th>
+                  <th className="text-left px-2 py-2 font-semibold">Date</th>
+                  <th className="text-left px-2 py-2 font-semibold">Phase</th>
+                  <th className="text-left px-2 py-2 font-semibold">Reference</th>
+                  <th className="text-left px-2 py-2 font-semibold">User</th>
+                  <th className="text-left px-2 py-2 font-semibold">Flag</th>
+                  <th className="text-left px-2 py-2 font-semibold">Remark</th>
+                  <th className="text-center px-2 py-2 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-2 py-8 text-center text-gray-400">
                       No log entries found.
                     </td>
                   </tr>
                 ) : (
                   pageRows.map((r) => (
                     <tr key={r.id} className="hover:bg-emerald-50/40 transition-colors">
-                      <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                      <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
                         {new Date(r.created_at).toLocaleDateString("en-PH", {
                           year: "numeric",
                           month: "short",
@@ -421,18 +415,18 @@ export default function LogsPage() {
                           minute: "2-digit",
                         })}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-2 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${phaseChip(r.phase)}`}>
                           {r.phase.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-5 py-4 font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-2 py-2 font-semibold text-gray-800 whitespace-nowrap">
                         {r.ref}
                       </td>
-                      <td className="px-5 py-4 text-gray-700 whitespace-nowrap">
+                      <td className="px-2 py-2 text-gray-700 whitespace-nowrap">
                         {r.actor}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
+                      <td className="px-2 py-2 whitespace-nowrap">
                         {r.status_flag_id ? (
                           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                             {FLAG_OPTIONS.find((f) => f.id === r.status_flag_id)?.label ?? `Flag ${r.status_flag_id}`}
@@ -441,12 +435,12 @@ export default function LogsPage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-gray-700 max-w-md">
+                      <td className="px-2 py-2 text-gray-700 max-w-md">
                         <p className="line-clamp-2">
                           {(r.remark ?? "").replace(/\[(PR|PO|DELIVERY|PAYMENT|SYSTEM)\]\s*/i, "") || "—"}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-center">
+                      <td className="px-2 py-2 text-center">
                         <button
                           onClick={() => openThread(r)}
                           className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors inline-flex items-center gap-2"
@@ -462,7 +456,7 @@ export default function LogsPage() {
             </table>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-gray-500">
               Showing{" "}
               <span className="font-semibold text-gray-700">
