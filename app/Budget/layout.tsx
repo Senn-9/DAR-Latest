@@ -16,10 +16,9 @@ type CurrentUser = {
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const buttons = [
+  const baseButtons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
     { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
-    { id: "purchase-order", icon: RiFileList3Line, label: "Purchase Order", href: "/PurchaseOrder" },
     { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
     { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
   ];
@@ -29,6 +28,13 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const buttons =
+    currentUser?.role_id === 1
+      ? [
+          ...baseButtons,
+          { id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" },
+        ]
+      : baseButtons;
 
   useEffect(() => {
     setMounted(true);
@@ -55,21 +61,21 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-50
-        w-64 md:w-80 bg-emerald-900 p-4 text-white
+        w-64 md:w-80 bg-emerald-900 p-4 text-white font-[family-name:var(--font-sora)] antialiased
         flex flex-col transition-all duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         overflow-y-auto
       `}>
         
-        <div className="shrink-0">
+        <div className="shrink-0 mb-6">
           <div className="flex items-center justify-center">
-            <img src="/logo.png" alt="logo" className="w-24 h-24 mb-3 rounded-full" />
+            <img src="/logo.png" alt="logo" className="w-24 h-24 rounded-full" />
           </div>
 
-          <p className="text-center text-white font-bold text-lg">DAR Procurement</p>
-          <p className="text-center text-emerald-300/90 text-sm mb-6">Monitoring and Automation System</p>
+          <p className="text-center text-white font-bold text-lg mt-3">DAR Procurement</p>
+          <p className="text-center text-emerald-300/90 text-sm">Monitoring and Automation System</p>
 
-          <div className="border border-emerald-800 mb-6 rounded-full" />
+          <div className="border border-emerald-800 mt-6 rounded-full" />
         </div>
 
         {/* Navigation - scrollable if needed */}

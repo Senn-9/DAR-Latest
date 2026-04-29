@@ -231,7 +231,7 @@ export default function UserManagementPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
-        <div className="w-full p-6 md:p-10">
+        <div className="mx-auto w-full max-w-6xl p-6 md:p-10">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <p className="text-sm text-gray-600 font-semibold">Access denied.</p>
             <p className="text-xs text-gray-400 mt-1">User Management is available for Admin only.</p>
@@ -244,7 +244,7 @@ export default function UserManagementPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
-        <div className="w-full p-6 md:p-10">
+        <div className="mx-auto w-full max-w-6xl p-6 md:p-10">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <p className="text-gray-500">Loading users...</p>
           </div>
@@ -255,18 +255,13 @@ export default function UserManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        * { font-family: 'Sora', sans-serif; }
-      `}</style>
-
-      <div className="w-full p-6 md:p-10 space-y-6">
+      <div className="mx-auto w-full max-w-6xl p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">
               Admin Panel
             </p>
-            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">User Management</h1>
             {currentUser && (
               <p className="text-sm text-gray-400 mt-1">
                 Signed in as{" "}
@@ -284,7 +279,7 @@ export default function UserManagementPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <p className="font-bold text-gray-800">Users</p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
@@ -293,7 +288,7 @@ export default function UserManagementPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search username, name, role, division..."
-                  className="pl-10 pr-3 py-2 border border-gray-200 rounded-xl text-sm w-72 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  className="pl-10 pr-3 py-2 border border-gray-200 rounded-xl text-sm w-64 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
                 />
               </div>
 
@@ -338,48 +333,48 @@ export default function UserManagementPage() {
             <table className="w-full text-sm">
               <thead className="bg-emerald-900 text-white">
                 <tr>
-                  <th className="text-left px-5 py-3 font-semibold">Full Name</th>
-                  <th className="text-left px-5 py-3 font-semibold">Username</th>
-                  <th className="text-left px-5 py-3 font-semibold">Role</th>
-                  <th className="text-left px-5 py-3 font-semibold">Division</th>
-                  <th className="text-left px-5 py-3 font-semibold">Created</th>
-                  <th className="text-left px-5 py-3 font-semibold">Last Login</th>
-                  <th className="text-center px-5 py-3 font-semibold">Action</th>
+                  <th className="text-left px-4 py-3 font-semibold">Full Name</th>
+                  <th className="text-left px-4 py-3 font-semibold">Username</th>
+                  <th className="text-left px-4 py-3 font-semibold">Role</th>
+                  <th className="text-left px-4 py-3 font-semibold">Division</th>
+                  <th className="text-left px-4 py-3 font-semibold">Created</th>
+                  <th className="text-left px-4 py-3 font-semibold">Last Login</th>
+                  <th className="text-center px-4 py-3 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                       No users found.
                     </td>
                   </tr>
                 ) : (
                   pageRows.map((u) => (
                     <tr key={u.id} className="hover:bg-emerald-50/40 transition-colors">
-                      <td className="px-5 py-4 font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">
                         {u.fullname ?? "—"}
                       </td>
-                      <td className="px-5 py-4 text-gray-700 whitespace-nowrap">
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {u.username ?? "—"}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                           {u.role_name ?? (typeof u.role_id === "number" ? `Role ${u.role_id}` : "—")}
                         </span>
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                           {u.division_name ?? (typeof u.division_id === "number" ? `Division ${u.division_id}` : "—")}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {fmtDateTime(u.created_at)}
                       </td>
-                      <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {fmtDateTime(u.last_login)}
                       </td>
-                      <td className="px-5 py-4 text-center whitespace-nowrap">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
                           <button
                             onClick={() => openEdit(u)}
@@ -404,7 +399,7 @@ export default function UserManagementPage() {
             </table>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-gray-500">
               Showing{" "}
               <span className="font-semibold text-gray-700">

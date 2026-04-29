@@ -316,7 +316,7 @@ export default function PaymentPage() {
         </div>
 
         {/* Payment Table */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Payment Processing Queue</h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -341,10 +341,10 @@ export default function PaymentPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                    <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                       {[
                         { label: "Delivery No", field: "delivery_no" as const, align: "text-left" },
                         { label: "PO Number", field: "po_no" as const, align: "text-left" },
@@ -356,7 +356,7 @@ export default function PaymentPage() {
                         <th
                           key={label}
                           onClick={field ? () => handleSort(field) : undefined}
-                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
+                          className={`px-2 py-2 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none cursor-pointer" : ""}`}
                         >
                           <span className="inline-flex items-center gap-0.5">
                             {label}{field && <SortIcon field={field} />}
@@ -372,50 +372,47 @@ export default function PaymentPage() {
                       const canProcess = canRoleProcess(currentUser?.role_id || 0, delivery.status_id);
 
                       return (
-                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors">
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
                             {delivery.delivery_no}
                           </td>
-                          <td className={`mono px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 text-gray-600 whitespace-nowrap ${rowBg}`}>
                             {delivery.po_no}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {delivery.supplier || <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {delivery.created_at
                               ? new Date(delivery.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
                               {statusInfo.label}
                             </span>
                           </td>
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleViewDelivery(delivery)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="View Details"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                               >
-                                <RiEyeLine size={16} />
+                                View
                               </button>
                               {canProcess && (
                                 <button
                                   onClick={() => handleProcessDelivery(delivery)}
-                                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                  title="Process Payment"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                                 >
-                                  <RiCheckLine size={16} />
+                                  Process
                                 </button>
                               )}
                               <button
                                 onClick={() => handleOpenRemarks(delivery)}
-                                className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                title="View Remarks"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                               >
-                                <RiChat3Line size={16} />
+                                Remarks
                               </button>
                             </div>
                           </td>
