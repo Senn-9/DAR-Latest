@@ -245,7 +245,18 @@ export default function ProcurementPage() {
         const allData = [...processedPRs, ...processedDeliveries];
         
         const filteredData = allData.filter((item) => {
-          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) return true;
+          // Admin and specialized roles see all procurement data
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+            return true;
+          }
+          
+          // Division heads see ALL procurement stages (PR to Payment) from their division
+          if (isDivisionHead) {
+            return item.office_section === currentUser?.divisions?.division_name;
+          }
+          
+          // End users see ALL procurement stages (PR to Payment) from their division
+          // This includes PRs they created plus all subsequent stages (PO, Delivery, Payment) for their division
           return item.office_section === currentUser?.divisions?.division_name;
         });
         

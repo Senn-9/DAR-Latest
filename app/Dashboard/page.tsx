@@ -69,8 +69,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
+    console.log('Stored user data from localStorage:', stored);
     if (stored) {
       const user = JSON.parse(stored);
+      console.log('Parsed user data:', user);
+      console.log('User fullname:', user.fullname);
+      console.log('User roles:', user.roles);
       setCurrentUser(user);
       setIsAdmin(user.role_id === 1);
     }
@@ -202,25 +206,19 @@ export default function DashboardPage() {
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
-          // For PR records, apply filtering only to End Users and Division Heads
-          if (item.source === 'pr') {
-            // End users can only see their own PRs (where req_name matches their fullname)
-            const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
-            if (isEndUser) {
-              return item.req_name === currentUser?.fullname;
-            }
-            
-            // Division heads can only see PRs from their division
-            if (isDivisionHead) {
-              return item.office_section === currentUser?.divisions?.division_name;
-            }
-            
-            // All other roles (Admin, BAC, PARPO, Supply, Budget, Accounting) see all PRs
+          // Admin and specialized roles see all procurement data
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
             return true;
           }
           
-          // For non-PR records (PO, Delivery, Payment), show only to relevant roles
-          return isSupplyAccount || isBudgetAccount || isAccountingAccount || isBACAccount || isPARPOAccount || isAdmin;
+          // Division heads see ALL procurement stages (PR to Payment) from their division
+          if (isDivisionHead) {
+            return item.office_section === currentUser?.divisions?.division_name;
+          }
+          
+          // End users see ALL procurement stages (PR to Payment) from their division
+          // This includes PRs they created plus all subsequent stages (PO, Delivery, Payment) for their division
+          return item.office_section === currentUser?.divisions?.division_name;
         });
         
         console.log('Final filtered data:', filteredData.length);
