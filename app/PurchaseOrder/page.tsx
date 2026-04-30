@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import CreatePOModal from "@/components/CreatePOModal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
   fetchPurchaseOrdersByDivision,
   updatePOStatus,
+  createPurchaseOrder,
   type PurchaseOrderItemRow,
   type PurchaseOrderRow,
 } from "@/utils/supabase/po";
@@ -387,6 +389,7 @@ export default function PurchaseOrderPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [remarksOpen, setRemarksOpen] = useState(false);
   const [processOpen, setProcessOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isAdmin = currentUser?.role_id === 1;
@@ -525,6 +528,29 @@ export default function PurchaseOrderPage() {
     }
   };
 
+  const handleCreate = async (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => {
+    setSaving(true);
+    try {
+      const poId = await createPurchaseOrder(header, items);
+      const rows = canViewAll
+        ? await fetchPurchaseOrders()
+        : currentUser?.division_id != null
+          ? await fetchPurchaseOrdersByDivision(currentUser.division_id)
+          : [];
+      setList(rows);
+      try {
+        const { header: newHeader, items: newItems } = await fetchPOWithItemsById(Number(poId));
+        setSelectedPo(newHeader);
+        setSelectedItems(newItems);
+        setDetailsOpen(true);
+      } catch (err) {
+        // ignore
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const statusCounts = counts;
 
   if (loading) {
@@ -590,6 +616,14 @@ export default function PurchaseOrderPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800">All Purchase Orders</h2>
             <div className="flex flex-wrap items-center gap-2">
+              {isSupply && (
+                <button
+                  onClick={() => setCreateOpen(true)}
+                  className="px-3 py-1 rounded-xl bg-emerald-700 text-white text-sm"
+                >
+                  Create PO
+                </button>
+              )}
               {STATUS_FILTERS.map(({ value, label }) => (
                 <button
                   key={value}
@@ -762,6 +796,15 @@ export default function PurchaseOrderPage() {
         onSubmit={async (statusId, remarks) => {
           await processPO(statusId, remarks);
           setProcessOpen(false);
+        }}
+      />
+
+      <CreatePOModal
+        visible={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (header, items) => {
+          await handleCreate(header, items);
+          setCreateOpen(false);
         }}
       />
 

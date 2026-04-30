@@ -97,3 +97,37 @@ export async function updatePOStatus(poId: number, statusId: number): Promise<vo
     .eq("id", poId);
   if (error) throw error;
 }
+
+export async function createPurchaseOrder(
+  header: Partial<PurchaseOrderRow>,
+  items: PurchaseOrderItemRow[],
+): Promise<number> {
+  const supabase = createClient();
+  // Insert header
+  const { data: created, error: headerError } = await supabase
+    .from("purchase_orders")
+    .insert([{ ...header, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
+    .select("id")
+    .single();
+
+  if (headerError || !created) throw headerError ?? new Error("Failed to create PO header");
+
+  const poId = (created as any).id as number;
+
+  if (items && items.length > 0) {
+    const payload = items.map((it) => ({
+      po_id: poId,
+      stock_no: it.stock_no,
+      unit: it.unit,
+      description: it.description,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      subtotal: it.subtotal,
+    }));
+
+    const { error: itemsError } = await supabase.from("purchase_order_items").insert(payload);
+    if (itemsError) throw itemsError;
+  }
+
+  return poId;
+}
