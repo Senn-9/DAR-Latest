@@ -7,10 +7,12 @@ import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import ResolutionModal from "@/components/CanvassingModals/ResolutionModal";
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
+import PrepareBACResolutionModal from "@/components/CanvassingModals/PrepareBACResolutionModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
+  RiFileAddLine,
 } from "react-icons/ri";
 
 export default function CanvassPage() {
@@ -66,6 +68,7 @@ export default function CanvassPage() {
 
   const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
+  const [prepareBACModalOpen, setPrepareBACModalOpen] = useState(false);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -325,6 +328,15 @@ export default function CanvassPage() {
               </p>
             )}
           </div>
+          {isBACAccount && (
+            <button
+              onClick={() => setPrepareBACModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-all shadow-sm hover:shadow-md"
+            >
+              <RiFileAddLine size={18} />
+              Prepare BAC Resolution
+            </button>
+          )}
         </div>
 
         {/* ── TABS ── */}
@@ -504,16 +516,6 @@ export default function CanvassPage() {
                                 </button>
                               )}
 
-                              {/* Resolution — BAC account, status_id is BAC Resolution (7) */}
-                              {!isBudgetAccount && isBACAccount && form.status_id === 7 && (
-                                <button
-                                  onClick={() => setResolutionTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors whitespace-nowrap"
-                                >
-                                  Resolution
-                                </button>
-                              )}
-
                             </div>
                           </td>
                         </tr>
@@ -619,6 +621,20 @@ export default function CanvassPage() {
           onClose={() => setResolutionTarget(null)}
           onSubmitted={(prId: number) => {
             setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p)));
+          }}
+        />
+      )}
+
+      {/* ── PREPARE BAC RESOLUTION MODAL ── */}
+      {prepareBACModalOpen && (
+        <PrepareBACResolutionModal
+          onClose={() => setPrepareBACModalOpen(false)}
+          onProcessed={(prIds) => {
+            setList((prev) =>
+              prev.map((p) =>
+                prIds.includes(p.id) ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p
+              )
+            );
           }}
         />
       )}

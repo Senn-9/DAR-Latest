@@ -90,7 +90,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
   const [showFlagPicker, setShowFlagPicker] = useState(false);
 
   const [formData, setFormData] = useState({
-    bacNo: "",
     receivedAt: toDateTimeLocalValue(new Date()),
     remarks: "",
     flagId: 1,
@@ -168,10 +167,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
 
     let receivedAt: Date | null = null;
     if (canProceedToBAC) {
-      if (!formData.bacNo.trim()) {
-        setErrorModal({ show: true, message: "BAC Canvass No. is required!" });
-        return;
-      }
       if (!formData.receivedAt.trim()) {
         setErrorModal({ show: true, message: "Date Received is required!" });
         return;
@@ -229,7 +224,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
           .insert({
             created_at: (receivedAt as Date).toISOString(),
             pr_id: prId,
-            bac_no: formData.bacNo,
             stage: "PR Received",
             status: "active",
           });
@@ -427,17 +421,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
 
           {canProceedToBAC && (
             <>
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">BAC Canvass No. <span className="text-red-500">*</span></label>
-                <input
-                  className={inputCls}
-                  placeholder="Enter BAC Canvass Number"
-                  value={formData.bacNo}
-                  disabled={isReadOnly}
-                  onChange={(e) => setFormData({ ...formData, bacNo: e.target.value })}
-                />
-              </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date Received</label>
                 <input
