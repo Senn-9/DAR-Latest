@@ -248,6 +248,27 @@ function downloadPDF(formData: any, items: ItemDataType[]) {
   }
 }
 
+// Helper to check if user is an end user (no special roles)
+function checkIsEndUser(user: CurrentUser | null): boolean {
+  if (!user) return false;
+  const roleName = user.roles?.role_name?.toLowerCase() || "";
+  const username = user.username?.toLowerCase() || "";
+  // End user has no special role
+  const isSpecialRole =
+    roleName.includes("admin") ||
+    roleName.includes("division head") ||
+    roleName.includes("bac") ||
+    roleName.includes("parpo") ||
+    roleName.includes("budget") ||
+    roleName.includes("supply") ||
+    username === "admin" ||
+    username === "bac" ||
+    username === "parpo" ||
+    username === "budget" ||
+    username === "supply";
+  return !isSpecialRole;
+}
+
 interface PRModalComponentProps {
   onSave?: () => void;
 }
@@ -260,7 +281,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     entity_name: "DAR CAMSUR 1",  // ← default value
     fund_cluster: "",
     office_section: "",
-    pr_no: "",
     resp_code: "",
     purpose: "",
     req_name: "",
@@ -274,6 +294,9 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  // Check if current user is an end user
+  const isEndUser = checkIsEndUser(currentUser);
 
   useEffect(() => {
     if (modalOpen) document.body.style.overflow = "hidden";
@@ -322,19 +345,17 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const grandTotal = getGrandTotal(items);
 
   const handleSubmit = async () => {
-    if (!formData.pr_no) {
-      alert("❌ Error: PR Number is required!");
-      return;
-    }
-
     setLoading(true);
 
     try {
+      // Auto-generate PR number like CreatePRModal does
+      const prNo = `PR-DRAFT-${Date.now().toString(36).toUpperCase()}`;
+
       const formDataWithStatus = {
         entity_name: formData.entity_name,
         fund_cluster: formData.fund_cluster,
         office_section: formData.office_section,
-        pr_no: formData.pr_no,
+        pr_no: prNo,
         resp_code: formData.resp_code,
         purpose: formData.purpose,
         req_name: formData.req_name,
@@ -416,7 +437,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       entity_name: "DAR CAMSUR 1",  // ← reset also restores the default
       fund_cluster: "",
       office_section: currentUser?.divisions?.division_name || "",
-      pr_no: "",
       resp_code: "",
       purpose: "",
       req_name: "",
@@ -495,8 +515,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                           <input className={inputCls} placeholder="e.g. 01" value={formData.fund_cluster} onChange={(e) => setFormData({ ...formData, fund_cluster: e.target.value })} />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number *</label>
-                          <input className={inputCls} placeholder="PR-2024-001" value={formData.pr_no} onChange={(e) => setFormData({ ...formData, pr_no: e.target.value })} />
+                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number</label>
+                          <input className={`${inputCls} bg-gray-100 text-gray-500 cursor-not-allowed`} value="Pending BAC assignment" readOnly disabled title="PR number will be assigned by BAC" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -628,13 +648,15 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         </div>
       )}
 
-      {/* Create Button */}
-      <button
-        onClick={() => setModalOpen(true)}
-        className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
-      >
-        <RiAddLine size={20} /> Create PR
-      </button>
+      {/* Create Button - Only visible to End Users */}
+      {isEndUser && (
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
+        >
+          <RiAddLine size={20} /> Create PR
+        </button>
+      )}
     </>
   );
 }
