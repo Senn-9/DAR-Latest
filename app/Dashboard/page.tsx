@@ -17,6 +17,7 @@ export default function DashboardPage() {
   type PRItem = { description: string; subtotal: number };
   type PRListRow = {
     id: number;
+    row_key?: string;
     entity_name: string;
     pr_no: string;
     office_section: string;
@@ -25,7 +26,7 @@ export default function DashboardPage() {
     created_at?: string;
     total_cost: number;
     purchase_request_items?: PRItem[];
-    source?: 'pr' | 'delivery' | 'payment';
+    source?: 'pr' | 'po' | 'delivery' | 'payment';
     delivery_no?: string;
     supplier?: string;
   };
@@ -46,6 +47,8 @@ export default function DashboardPage() {
   const [sortField, setSortField]       = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage]   = useState(1);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const PAGE_SIZE = 10;
 
   const isSupplyAccount =
@@ -86,6 +89,24 @@ export default function DashboardPage() {
           throw prError;
         }
         
+        // Fetch purchase orders (separate table)
+        let poData: any[] = [];
+        try {
+          const { data: pos, error: poError } = await supabase
+            .from("purchase_orders")
+            .select("id, po_no, pr_no, supplier, office_section, status_id, created_at, total_amount")
+            .order("created_at", { ascending: false });
+
+          if (poError) {
+            console.warn('PO fetch failed:', poError);
+          } else {
+            poData = pos || [];
+            console.log('PO fetch result:', poData.length);
+          }
+        } catch (err) {
+          console.warn('PO fetch exception:', err);
+        }
+
         // Fetch deliveries (separate table)
         let deliveryData: any[] = [];
         try {
@@ -107,7 +128,24 @@ export default function DashboardPage() {
         // Process purchase requests
         const processedPRs = (prData || []).map(pr => ({
           ...pr,
+          row_key: `pr-${pr.id}`,
           source: 'pr' as const
+        }));
+
+        // Process purchase orders - convert to dashboard format
+        const processedPOs = poData.map((po) => ({
+          id: po.id,
+          row_key: `po-${po.id}`,
+          entity_name: po.supplier || 'Unknown Supplier',
+          pr_no: po.po_no || po.pr_no || 'Unknown',
+          office_section: po.office_section || 'Unassigned',
+          status: 'PO',
+          status_id: po.status_id,
+          created_at: po.created_at,
+          total_cost: Number(po.total_amount ?? 0),
+          purchase_request_items: [],
+          source: 'po' as const,
+          supplier: po.supplier,
         }));
         
         // Process deliveries - convert to dashboard format
@@ -130,6 +168,7 @@ export default function DashboardPage() {
           
           return {
             id: delivery.id,
+            row_key: `${source}-${delivery.id}`,
             entity_name: delivery.supplier || 'Unknown Supplier',
             pr_no: delivery.po_no || delivery.delivery_no || 'Unknown',
             office_section: delivery.office_section || 'Unassigned',
@@ -144,10 +183,10 @@ export default function DashboardPage() {
           };
         });
         
-        console.log(`Status breakdown: PR=${processedPRs.length}, Delivery=${processedDeliveries.filter(d => d.source === 'delivery').length}, Payment=${processedDeliveries.filter(d => d.source === 'payment').length}`);
+        console.log(`Status breakdown: PR=${processedPRs.length}, PO=${processedPOs.length}, Delivery=${processedDeliveries.filter(d => d.source === 'delivery').length}, Payment=${processedDeliveries.filter(d => d.source === 'payment').length}`);
         
         // Combine and filter data
-        const allData = [...processedPRs, ...processedDeliveries];
+        const allData = [...processedPRs, ...processedPOs, ...processedDeliveries];
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
@@ -201,8 +240,50 @@ export default function DashboardPage() {
     fetchData();
   }, [supabase, isAdmin, currentUser, isSupplyAccount]);
 
-  const getStatusInfo = (status: string | null, source?: string) => {
-    // For delivery and payment sources, use source-based detection
+  const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
+    const statusById: Record<number, { name: string; color: string }> = {
+      1:  { name: "Pending", color: "pending" },
+      2:  { name: "Processing (Division Head)", color: "processing" },
+      3:  { name: "Processing (BAC)", color: "processing" },
+      4:  { name: "Processing (Budget)", color: "processing" },
+      5:  { name: "Processing (PARPO)", color: "processing" },
+      6:  { name: "Canvassing (Reception)", color: "canvassing" },
+      7:  { name: "BAC Resolution", color: "bac" },
+      8:  { name: "Canvassing (Releasing)", color: "canvassing" },
+      9:  { name: "Canvassing (Collection)", color: "canvassing" },
+      10: { name: "Abstract of Awards", color: "aaa" },
+      11: { name: "PO (Creation)", color: "po" },
+      12: { name: "PO (Allocation)", color: "po" },
+      13: { name: "ORS (Creation)", color: "po" },
+      14: { name: "ORS (Processing)", color: "po" },
+      15: { name: "PO (Accounting)", color: "po" },
+      16: { name: "PO (PARPO)", color: "po" },
+      17: { name: "PO (Serving)", color: "po" },
+      18: { name: "Delivery (Waiting)", color: "delivery" },
+      19: { name: "Delivery (Received)", color: "delivery" },
+      20: { name: "Delivery (IAR)", color: "delivery" },
+      21: { name: "Delivery (IAR Processing)", color: "delivery" },
+      22: { name: "Delivery (LOA)", color: "delivery" },
+      23: { name: "Delivery (DV)", color: "delivery" },
+      24: { name: "Delivery (Division Chief)", color: "delivery" },
+      25: { name: "Delivery (Completed)", color: "delivery" },
+      26: { name: "Payment", color: "payment" },
+      27: { name: "Cancelled", color: "rejected" },
+      28: { name: "Payment", color: "payment" },
+      29: { name: "Payment", color: "payment" },
+      30: { name: "Payment", color: "payment" },
+      31: { name: "Payment", color: "payment" },
+      32: { name: "Payment", color: "payment" },
+      35: { name: "Payment", color: "payment" },
+      36: { name: "Payment", color: "payment" },
+    };
+
+    if (statusId != null && statusById[statusId]) {
+      return statusById[statusId];
+    }
+
+    // For delivery, payment, and PO sources, use source-based detection fallback
+    if (source === 'po') return { name: status || "PO", color: "po" };
     if (source === 'delivery') return { name: "Delivery", color: "delivery" };
     if (source === 'payment') return { name: "Payment", color: "payment" };
     
@@ -238,7 +319,7 @@ export default function DashboardPage() {
   const totalBudget = list.reduce((s, pr) => s + (pr.total_cost || 0), 0);
 
   const countByColor = (color: string) =>
-    list.reduce((n, i) => (getStatusInfo(i.status).color === color ? n + 1 : n), 0);
+    list.reduce((n, i) => (getStatusInfo(i.status, i.status_id, i.source).color === color ? n + 1 : n), 0);
 
   const pendingCount    = countByColor("pending");
   const processingCount = countByColor("processing");
@@ -256,8 +337,9 @@ export default function DashboardPage() {
     .filter((pr) => {
       const matchSearch =
         pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const { color } = getStatusInfo(pr.status, pr.source);
+        (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const { color } = getStatusInfo(pr.status, pr.status_id, pr.source);
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
@@ -418,7 +500,7 @@ export default function DashboardPage() {
 
           {/* Controls row */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Purchase Requests</h2>
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Procurement Records</h2>
             <div className="flex flex-wrap items-center gap-2">
               {STATUS_OPTIONS.map(({ value, label }) => (
                 <button
@@ -438,7 +520,7 @@ export default function DashboardPage() {
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search PR or section…"
+                  placeholder="Search PR/PO, supplier, or section…"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                   className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
@@ -451,7 +533,7 @@ export default function DashboardPage() {
           {filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
-              <p className="text-sm font-medium">No purchase requests found.</p>
+              <p className="text-sm font-medium">No procurement records found.</p>
               <p className="text-xs mt-1">Try adjusting your search or filter.</p>
             </div>
           ) : (
@@ -484,13 +566,13 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {pagedList.map((form, index) => {
-                    const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.source);
+                    const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.status_id, form.source);
                     const cost = form.total_cost || 0;
                     const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                     const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || 
-                                (form.source === 'delivery' || form.source === 'payment' ? `Supplier: ${form.supplier || 'N/A'}` : '');
+                                (form.source === 'delivery' || form.source === 'payment' || form.source === 'po' ? `Supplier: ${form.supplier || form.entity_name || 'N/A'}` : '');
                       return (
-                        <tr key={form.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
+                        <tr key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
                           <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
                             {form.source === 'delivery' || form.source === 'payment' 
                               ? form.delivery_no || form.pr_no 
@@ -520,19 +602,25 @@ export default function DashboardPage() {
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
                               <button 
-                                onClick={() => router.push(`/Dashboard?view=edit&id=${form.id}`)}
-                                className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button 
-                                onClick={() => router.push(`/Dashboard?view=detail&id=${form.id}`)}
+                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
                                 className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
                               >
                                 View
                               </button>
+                              {form.source === 'pr' && (
+                                <button 
+                                  onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
+                                  className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                                >
+                                  Edit
+                                </button>
+                              )}
                               <button 
-                                onClick={() => router.push(`/Procurement?tab=request-approval&id=${form.id}`)}
+                                onClick={() => {
+                                  if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
+                                  else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
+                                  else router.push(`/Procurement?id=${form.id}`);
+                                }}
                                 className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
                               >
                                 Process
@@ -604,6 +692,82 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <AnalyticsDashboard />
         </div>
+
+        {/* ── DETAILS MODAL ── */}
+        {viewModalOpen && selectedRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {selectedRecord.source === 'pr' ? 'Purchase Request' : 
+                   selectedRecord.source === 'po' ? 'Purchase Order' :
+                   selectedRecord.source === 'delivery' ? 'Delivery' : 'Payment'} Details
+                </h3>
+                <button 
+                  onClick={() => setViewModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">Document Number</p>
+                    <p className="text-sm font-semibold text-gray-800">{selectedRecord.pr_no || selectedRecord.delivery_no || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">Status</p>
+                    <p className="text-sm font-semibold text-gray-800">{getStatusInfo(selectedRecord.status, selectedRecord.status_id, selectedRecord.source).name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">Office Section</p>
+                    <p className="text-sm font-semibold text-gray-800">{selectedRecord.office_section || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">Date Created</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {selectedRecord.created_at ? new Date(selectedRecord.created_at).toLocaleDateString("en-PH") : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">Total Cost</p>
+                    <p className="text-sm font-semibold text-emerald-700">
+                      ₱{(selectedRecord.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  {selectedRecord.source !== 'pr' && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Supplier</p>
+                      <p className="text-sm font-semibold text-gray-800">{selectedRecord.supplier || selectedRecord.entity_name || 'N/A'}</p>
+                    </div>
+                  )}
+                </div>
+                {selectedRecord.purchase_request_items && selectedRecord.purchase_request_items.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold mb-2">Items</p>
+                    <div className="space-y-2">
+                      {selectedRecord.purchase_request_items.map((item: any, idx: number) => (
+                        <div key={idx} className="text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                          <p className="font-semibold text-gray-700">{item.description || 'N/A'}</p>
+                          <p className="text-gray-600">Qty: {item.quantity} | ₱{(item.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}/unit</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-gray-50 border-t border-gray-100 px-6 py-3 flex items-center justify-end gap-2">
+                <button 
+                  onClick={() => setViewModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
