@@ -202,13 +202,10 @@ export default function DashboardPage() {
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
-          // Admin sees all
-          if (isAdmin) return true;
-          
-          // For PR records, apply strict filtering
+          // For PR records, apply filtering only to End Users and Division Heads
           if (item.source === 'pr') {
             // End users can only see their own PRs (where req_name matches their fullname)
-            const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount;
+            const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
             if (isEndUser) {
               return item.req_name === currentUser?.fullname;
             }
@@ -218,12 +215,12 @@ export default function DashboardPage() {
               return item.office_section === currentUser?.divisions?.division_name;
             }
             
-            // Other roles (BAC, PARPO, Supply, Budget, Accounting) see PRs from their division
-            return item.office_section === currentUser?.divisions?.division_name;
+            // All other roles (Admin, BAC, PARPO, Supply, Budget, Accounting) see all PRs
+            return true;
           }
           
           // For non-PR records (PO, Delivery, Payment), show only to relevant roles
-          return isSupplyAccount || isBudgetAccount || isAccountingAccount || isBACAccount || isPARPOAccount;
+          return isSupplyAccount || isBudgetAccount || isAccountingAccount || isBACAccount || isPARPOAccount || isAdmin;
         });
         
         console.log('Final filtered data:', filteredData.length);
@@ -640,7 +637,11 @@ export default function DashboardPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
-                              {form.source === 'pr' && (
+                              {/* Edit button - only for End Users */}
+                              {form.source === 'pr' && (() => {
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                return isEndUser && form.status_id === 1;
+                              })() && (
                                 <button 
                                   onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
@@ -648,27 +649,47 @@ export default function DashboardPage() {
                                   Edit
                                 </button>
                               )}
-                              {/* Process button - admin always, Division Head when status_id=2, other roles for their specific stages */}
-                              {form.source === 'pr' && (isAdmin || (isDivisionHead && form.status_id === 2) || isBACAccount || isPARPOAccount || isSupplyAccount || isBudgetAccount || isAccountingAccount) && (
-                                <button 
-                                  onClick={() => router.push(`/Procurement?id=${form.id}`)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  <RiPlayCircleLine size={14} />
-                                  Process
-                                </button>
-                              )}
-                              {/* Process button for PO, Delivery, Payment - specific roles */}
-                              {(form.source === 'po' || form.source === 'delivery' || form.source === 'payment') && (isAdmin || isSupplyAccount || isAccountingAccount) && (
+                              {/* Open button - for all roles except End Users */}
+                              {(() => {
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                return !isEndUser;
+                              })() && (
                                 <button 
                                   onClick={() => {
-                                    if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
-                                    else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
+                                    if (form.source === 'pr') {
+                                      // Navigate to specific tab based on PR status
+                                      if (form.status_id === 1) {
+                                        // Pending - go to Purchase Request tab
+                                        router.push(`/Procurement?id=${form.id}`);
+                                      } else if ([6, 7, 8, 9].includes(form.status_id!)) {
+                                        // Canvassing stages - go to Canvass tab
+                                        router.push(`/Procurement/Canvass?id=${form.id}`);
+                                      } else if (form.status_id === 10) {
+                                        // Abstract of Awards - go to Abstract tab
+                                        router.push(`/Procurement/Abstract?id=${form.id}`);
+                                      } else if ([11, 12, 13, 14, 15, 16, 17].includes(form.status_id!)) {
+                                        // PO stages - go to Purchase Order tab
+                                        router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                      } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
+                                        // Delivery stages - go to Delivery tab
+                                        router.push(`/Procurement/Delivery?id=${form.id}`);
+                                      } else if ([26, 28, 29, 30, 31, 32, 35, 36].includes(form.status_id!)) {
+                                        // Payment stages - go to Payment tab
+                                        router.push(`/Procurement/Payment?id=${form.id}`);
+                                      } else {
+                                        // Default to Purchase Request tab for other statuses
+                                        router.push(`/Procurement?id=${form.id}`);
+                                      }
+                                    } else if (form.source === 'po') {
+                                      router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                    } else if (form.source === 'delivery' || form.source === 'payment') {
+                                      router.push(`/Procurement/Delivery?id=${form.id}`);
+                                    }
                                   }}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1"
                                 >
-                                  <RiPlayCircleLine size={14} />
-                                  Process
+                                  <RiEyeLine size={14} />
+                                  Open
                                 </button>
                               )}
                             </div>
