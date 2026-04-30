@@ -292,13 +292,57 @@ export async function updateDelivery(
   >,
 ) {
   const supabase = createClient();
+  
+  // Create a clean update object without any undefined values
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  };
+  
+  // Only include fields that are explicitly provided, but exclude 'id' field
+  Object.keys(patch).forEach(key => {
+    const value = patch[key as keyof typeof patch];
+    if (value !== undefined && key !== 'id') {
+      updateData[key] = value;
+    }
+  });
+  
   const { data, error } = await supabase
     .from("deliveries")
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq("id", id)
     .select("*")
     .single();
   if (error) throw error;
+  return data as DeliveryRow;
+}
+
+export async function updateDeliveryStatusOnly(id: number, statusId: number) {
+  const supabase = createClient();
+  
+  console.log(`Attempting to update delivery ${id} to status ${statusId}`);
+  
+  // Try the most minimal update possible
+  const { data, error } = await supabase
+    .from("deliveries")
+    .update({ 
+      status_id: statusId
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+    
+  if (error) {
+    console.error("Status update error details:", {
+      error,
+      deliveryId: id,
+      statusId,
+      errorMessage: error.message,
+      errorDetails: error.details
+    });
+    throw error;
+  }
+  
+  console.log("Status update successful:", data);
   return data as DeliveryRow;
 }
 
@@ -322,6 +366,7 @@ export async function insertDeliveryProcessRemark(
   const { error } = await supabase.from("remarks").insert({
     po_id: ctx.poId,
     pr_id: ctx.prId ? Number(ctx.prId) : null,
+    delivery_id: deliveryId,
     user_id: userId,
     remark: finalRemark,
     status_flag_id: statusFlagId ?? null,
@@ -346,10 +391,20 @@ export async function upsertIARByDelivery(
 ) {
   const supabase = createClient();
   const existing = await fetchIARByDelivery(deliveryId);
+  
+  // Filter out fields that don't exist in the database
+  const filteredPayload = { ...payload };
+  delete filteredPayload.inspection_verified;
+  delete filteredPayload.items_complete;
+  delete filteredPayload.fund_cluster; // This comes from PO data
+  delete filteredPayload.iar_date; // This column doesn't exist
+  delete filteredPayload.responsibility_center_code; // This comes from PO data
+  delete filteredPayload.id; // Never update the id field
+  
   if (existing?.id) {
     const { data, error } = await supabase
       .from("iar_documents")
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update({ ...filteredPayload, updated_at: new Date().toISOString() })
       .eq("id", existing.id)
       .select("*")
       .single();
@@ -360,7 +415,7 @@ export async function upsertIARByDelivery(
     .from("iar_documents")
     .insert({
       delivery_id: deliveryId,
-      ...payload,
+      ...filteredPayload,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -385,29 +440,49 @@ export async function upsertLOAByDelivery(
   deliveryId: number,
   payload: Record<string, any>,
 ) {
+  console.log("=== UPSERT LOA BY DELIVERY ===");
+  console.log("Delivery ID:", deliveryId);
+  console.log("LOA Payload:", payload);
+  
   const supabase = createClient();
   const existing = await fetchLOAByDelivery(deliveryId);
+  console.log("Existing LOA:", existing);
+  
+  // Filter out the id field to prevent constraint violations
+  const filteredPayload = { ...payload };
+  delete filteredPayload.id; // Never update the id field
+  
   if (existing?.id) {
+    console.log("Updating existing LOA...");
     const { data, error } = await supabase
       .from("loa_documents")
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update({ ...filteredPayload, updated_at: new Date().toISOString() })
       .eq("id", existing.id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error("LOA update error:", error);
+      throw error;
+    }
+    console.log("LOA updated successfully:", data);
     return data;
   }
+  console.log("Inserting new LOA...");
   const { data, error } = await supabase
     .from("loa_documents")
     .insert({
       delivery_id: deliveryId,
-      ...payload,
+      ...filteredPayload,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .select("*")
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error("LOA insert error:", error);
+    throw error;
+  }
+  console.log("LOA inserted successfully:", data);
   return data;
 }
 
@@ -426,29 +501,49 @@ export async function upsertDVByDelivery(
   deliveryId: number,
   payload: Record<string, any>,
 ) {
+  console.log("=== UPSERT DV BY DELIVERY ===");
+  console.log("Delivery ID:", deliveryId);
+  console.log("DV Payload:", payload);
+  
   const supabase = createClient();
   const existing = await fetchDVByDelivery(deliveryId);
+  console.log("Existing DV:", existing);
+  
+  // Filter out the id field to prevent constraint violations
+  const filteredPayload = { ...payload };
+  delete filteredPayload.id; // Never update the id field
+  
   if (existing?.id) {
+    console.log("Updating existing DV...");
     const { data, error } = await supabase
       .from("dv_documents")
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update({ ...filteredPayload, updated_at: new Date().toISOString() })
       .eq("id", existing.id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error("DV update error:", error);
+      throw error;
+    }
+    console.log("DV updated successfully:", data);
     return data;
   }
+  console.log("Inserting new DV...");
   const { data, error } = await supabase
     .from("dv_documents")
     .insert({
       delivery_id: deliveryId,
-      ...payload,
+      ...filteredPayload,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .select("*")
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error("DV insert error:", error);
+    throw error;
+  }
+  console.log("DV inserted successfully:", data);
   return data;
 }
 

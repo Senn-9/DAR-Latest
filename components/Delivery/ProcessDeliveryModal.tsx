@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { RiCloseLine, RiEyeLine, RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiFilePdf2Line } from "react-icons/ri";
+import { RiCloseLine, RiEyeLine, RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiFilePdf2Line, RiZoomInLine, RiZoomOutLine, RiRefreshLine } from "react-icons/ri";
 import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "../StatusFlagPicker";
 
 // Template loading function
@@ -40,7 +40,19 @@ function replacePlaceholders(template: string, data: any): string {
       return itemBlock;
     }).join('');
   });
-  
+
+  // Handle Handlebars conditionals
+  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, condition, content) => {
+    const value = data[condition];
+    return value ? content : '';
+  });
+
+  result = result.replace(/{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g, (match, condition, content) => {
+    const value = data[condition];
+    return !value ? content : '';
+  });
+
+    
   // Handle nested property access like {{po_items.length}}
   result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match, fullExpression, property) => {
     const parts = fullExpression.split('.');
@@ -121,6 +133,7 @@ function downloadPDF(html: string) {
 // JSX Preview Components - based on templates
 function IARPreview({ delivery, iar, poData }: { delivery: any; iar: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(0.7);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -156,20 +169,77 @@ function IARPreview({ delivery, iar, poData }: { delivery: any; iar: any; poData
     }
   }, [html]);
 
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(0.7);
+  };
+
+  const scalePercentage = Math.round(zoomLevel * 100);
+  const containerWidth = 100 / zoomLevel;
+  const containerHeight = 100 / zoomLevel;
+
   return (
-    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
-      <iframe
-        ref={iframeRef}
-        title="IAR Preview"
-        className="w-full border-0"
-        style={{ height: '1000px', minHeight: '1000px' }}
-      />
+    <div className="space-y-2">
+      {/* Zoom Controls */}
+      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom Out"
+          >
+            <RiZoomOutLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleReset}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Reset Zoom"
+          >
+            <RiRefreshLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom In"
+          >
+            <RiZoomInLine className="w-4 h-4" />
+          </button>
+        </div>
+        <span className="text-sm text-gray-600 font-medium">{scalePercentage}%</span>
+      </div>
+      
+      {/* Preview Container */}
+      <div className="overflow-auto" style={{ maxHeight: '600px' }}>
+        <div 
+          style={{ 
+            transform: `scale(${zoomLevel})`, 
+            transformOrigin: 'top left', 
+            width: `${containerWidth}%`, 
+            height: `${containerHeight}%`
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            title="IAR Preview"
+            className="w-full border-0"
+            style={{ height: '1000px', minHeight: '1000px' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
 function LOAPreview({ delivery, loa, poData }: { delivery: any; loa: any; poData: any }) {
   const [html, setHtml] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(0.7);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -204,14 +274,70 @@ function LOAPreview({ delivery, loa, poData }: { delivery: any; loa: any; poData
     }
   }, [html]);
 
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(0.7);
+  };
+
+  const scalePercentage = Math.round(zoomLevel * 100);
+  const containerWidth = 100 / zoomLevel;
+  const containerHeight = 100 / zoomLevel;
+
   return (
-    <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: '142.85%', height: '142.85%' }}>
-      <iframe
-        ref={iframeRef}
-        title="LOA Preview"
-        className="w-full border-0"
-        style={{ height: '1000px', minHeight: '1000px' }}
-      />
+    <div className="space-y-2">
+      {/* Zoom Controls */}
+      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom Out"
+          >
+            <RiZoomOutLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleReset}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Reset Zoom"
+          >
+            <RiRefreshLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom In"
+          >
+            <RiZoomInLine className="w-4 h-4" />
+          </button>
+        </div>
+        <span className="text-sm text-gray-600 font-medium">{scalePercentage}%</span>
+      </div>
+      
+      {/* Preview Container */}
+      <div className="overflow-auto" style={{ maxHeight: '600px' }}>
+        <div 
+          style={{ 
+            transform: `scale(${zoomLevel})`, 
+            transformOrigin: 'top left', 
+            width: `${containerWidth}%`, 
+            height: `${containerHeight}%`
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            title="LOA Preview"
+            className="w-full border-0"
+            style={{ height: '1000px', minHeight: '1000px' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -271,10 +397,36 @@ function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: a
 
   return (
     <div className="space-y-2">
-    
+      {/* Zoom Controls */}
+      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom Out"
+          >
+            <RiZoomOutLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleReset}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Reset Zoom"
+          >
+            <RiRefreshLine className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Zoom In"
+          >
+            <RiZoomInLine className="w-4 h-4" />
+          </button>
+        </div>
+        <span className="text-sm text-gray-600 font-medium">{scalePercentage}%</span>
+      </div>
       
       {/* Preview Container */}
-      <div className=" overflow-auto" style={{ maxHeight: '600px' }}>
+      <div className="overflow-auto" style={{ maxHeight: '600px' }}>
         <div 
           style={{ 
             transform: `scale(${zoomLevel})`, 
@@ -366,6 +518,11 @@ export default function ProcessDeliveryModal({
       return true;
     }
     
+    // Status 21 (IAR Processing) - External work, only require status flag
+    if (active?.status_id === 21) {
+      return statusFlag !== null;
+    }
+    
     // Delivery (Waiting) - require status flag to be set
     if (active?.status_id === 18) {
       return statusFlag !== null;
@@ -373,49 +530,70 @@ export default function ProcessDeliveryModal({
     
     // Delivery Receipt required fields (only for status 19)
     if (active?.status_id === 19) {
-      if (selectedDocument === "delivery") {
-        return drNo.trim() !== "";
-      }
+      return drNo.trim() !== "";
     }
     
-    // IAR required fields (for status 20 or when IAR is selected)
-    if (active?.status_id === 20 || selectedDocument === "iar") {
+    // Status 20 (Delivery IAR) - ALL documents should be completed
+    if (active?.status_id === 20) {
+      const iarValid = iar?.iar_no?.trim() !== "" && 
+                      iar?.invoice_no?.trim() !== "" &&
+                      iar?.requisitioning_office?.trim() !== "" &&
+                      iar?.invoice_date?.trim() !== "" &&
+                      iar?.inspected_at?.trim() !== "" &&
+                      iar?.received_at?.trim() !== "";
+      
+      const loaValid = loa?.invoice_no?.trim() !== "" &&
+                      loa?.invoice_date?.trim() !== "" &&
+                      loa?.accepted_at?.trim() !== "" &&
+                      loa?.accepted_by_name?.trim() !== "" &&
+                      loa?.accepted_by_title?.trim() !== "";
+      
+      const dvValid = dv?.dv_no?.trim() !== "" && 
+                     dv?.amount_due?.trim() !== "" &&
+                     dv?.fund_cluster?.trim() !== "" &&
+                     dv?.ors_no?.trim() !== "" &&
+                     dv?.payee?.trim() !== "" &&
+                     dv?.payee_tin?.trim() !== "" &&
+                     dv?.address?.trim() !== "" &&
+                     dv?.responsibility_center?.trim() !== "" &&
+                     dv?.mfo_pap?.trim() !== "" &&
+                     dv?.particulars?.trim() !== "";
+      
+      console.log("Status 20 validation check:");
+      console.log("IAR valid:", iarValid, iar);
+      console.log("LOA valid:", loaValid, loa);
+      console.log("DV valid:", dvValid, dv);
+      
+      return iarValid && loaValid && dvValid;
+    }
+    
+    // IAR required fields (when IAR is selected for other statuses)
+    if (selectedDocument === "iar") {
       return iar?.iar_no?.trim() !== "" && 
              iar?.invoice_no?.trim() !== "" &&
              iar?.requisitioning_office?.trim() !== "" &&
-             iar?.responsibility_center?.trim() !== "" &&
              iar?.invoice_date?.trim() !== "" &&
              iar?.inspected_at?.trim() !== "" &&
-             iar?.received_at?.trim() !== "" &&
-             iar?.inspector_name?.trim() !== "" &&
-             iar?.supply_officer_name?.trim() !== "";
+             iar?.received_at?.trim() !== "";
     }
     
-    // LOA required fields (for status 22 or when LOA is selected)
-    if (active?.status_id === 22 || selectedDocument === "loa") {
-      return loa?.loa_no?.trim() !== "" && 
-             loa?.invoice_no?.trim() !== "" &&
+    // Status 22 (Delivery LOA) - Preview only, require status flag
+    if (active?.status_id === 22) {
+      return statusFlag !== null;
+    }
+    
+    // LOA required fields (when LOA is selected for other statuses)
+    if (selectedDocument === "loa" && active?.status_id !== 22) {
+      return loa?.invoice_no?.trim() !== "" &&
              loa?.invoice_date?.trim() !== "" &&
              loa?.accepted_at?.trim() !== "" &&
              loa?.accepted_by_name?.trim() !== "" &&
              loa?.accepted_by_title?.trim() !== "";
     }
     
-    // DV required fields (for status 23 or when DV is selected)
-    if (active?.status_id === 23 || selectedDocument === "dv") {
-      return dv?.dv_no?.trim() !== "" && 
-             dv?.amount_due?.trim() !== "" &&
-             dv?.fund_cluster?.trim() !== "" &&
-             dv?.ors_no?.trim() !== "" &&
-             dv?.payee?.trim() !== "" &&
-             dv?.payee_tin?.trim() !== "" &&
-             dv?.address?.trim() !== "" &&
-             dv?.mode_of_payment?.trim() !== "" &&
-             dv?.responsibility_center?.trim() !== "" &&
-             dv?.mfo_pap?.trim() !== "" &&
-             dv?.particulars?.trim() !== "" &&
-             dv?.certified_by?.trim() !== "" &&
-             dv?.approved_by?.trim() !== "";
+    // Status 23 (Delivery DV) - Preview only, require status flag
+    if (active?.status_id === 23) {
+      return statusFlag !== null;
     }
     
     return false;
@@ -430,6 +608,13 @@ export default function ProcessDeliveryModal({
       return errors;
     }
     
+    // Status 21 (IAR Processing) - External work, require status flag
+    if (active?.status_id === 21) {
+      if (!statusFlag) {
+        errors.push("Status flag is required to proceed with IAR Processing status");
+      }
+    }
+    
     // Delivery (Waiting) - require status flag
     if (active?.status_id === 18) {
       if (!statusFlag) {
@@ -439,29 +624,60 @@ export default function ProcessDeliveryModal({
     
     // Delivery Receipt required fields (only for status 19)
     if ( active?.status_id === 19) {
-      if (selectedDocument === "delivery") {
-        if (!drNo.trim()) {
-          errors.push("Delivery Receipt No. (DR No.) is required");
-        }
+      if (!drNo.trim()) {
+        errors.push("Delivery Receipt No. (DR No.) is required");
       }
     }
     
-    // IAR required fields (for status 20 or when IAR is selected)
-    if (active?.status_id === 20 || selectedDocument === "iar") {
+    // Status 20 (Delivery IAR) - ALL documents are required
+    if (active?.status_id === 20) {
+      // Check IAR fields
+      if (!iar?.iar_no?.trim()) errors.push("IAR No. is required");
+      if (!iar?.invoice_no?.trim()) errors.push("IAR Invoice No. is required");
+      if (!iar?.requisitioning_office?.trim()) errors.push("IAR Requisitioning Office is required");
+      if (!iar?.invoice_date?.trim()) errors.push("IAR Invoice Date is required");
+      if (!iar?.inspected_at?.trim()) errors.push("IAR Date Inspected is required");
+      if (!iar?.received_at?.trim()) errors.push("IAR Date Received is required");
+      
+      // Check LOA fields
+      if (!loa?.invoice_no?.trim()) errors.push("LOA Invoice No. is required");
+      if (!loa?.invoice_date?.trim()) errors.push("LOA Invoice Date is required");
+      if (!loa?.accepted_at?.trim()) errors.push("LOA Date Accepted is required");
+      if (!loa?.accepted_by_name?.trim()) errors.push("LOA Accepted By Name is required");
+      if (!loa?.accepted_by_title?.trim()) errors.push("LOA Accepted By Title is required");
+      
+      // Check DV fields
+      if (!dv?.dv_no?.trim()) errors.push("DV No. is required");
+      if (!dv?.amount_due?.trim()) errors.push("DV Amount Due is required");
+      if (!dv?.fund_cluster?.trim()) errors.push("DV Fund Cluster is required");
+      if (!dv?.ors_no?.trim()) errors.push("DV ORS/BURS No. is required");
+      if (!dv?.payee?.trim()) errors.push("DV Payee is required");
+      if (!dv?.payee_tin?.trim()) errors.push("DV Payee TIN/Employee No. is required");
+      if (!dv?.address?.trim()) errors.push("DV Address is required");
+      if (!dv?.responsibility_center?.trim()) errors.push("DV Responsibility Center is required");
+      if (!dv?.mfo_pap?.trim()) errors.push("DV MFO/PAP is required");
+      if (!dv?.particulars?.trim()) errors.push("DV Particulars is required");
+    }
+    
+    // IAR required fields (when IAR is selected for other statuses)
+    if (selectedDocument === "iar" && active?.status_id !== 20) {
       if (!iar?.iar_no?.trim()) errors.push("IAR No. is required");
       if (!iar?.invoice_no?.trim()) errors.push("Invoice No. is required");
       if (!iar?.requisitioning_office?.trim()) errors.push("Requisitioning Office is required");
-      if (!iar?.responsibility_center?.trim()) errors.push("Responsibility Center is required");
       if (!iar?.invoice_date?.trim()) errors.push("Invoice Date is required");
       if (!iar?.inspected_at?.trim()) errors.push("Date Inspected is required");
       if (!iar?.received_at?.trim()) errors.push("Date Received is required");
-      if (!iar?.inspector_name?.trim()) errors.push("Inspector Name is required");
-      if (!iar?.supply_officer_name?.trim()) errors.push("Supply Officer Name is required");
     }
     
-    // LOA required fields (for status 22 or when LOA is selected)
-    if (active?.status_id === 22 || selectedDocument === "loa") {
-      if (!loa?.loa_no?.trim()) errors.push("LOA No. is required");
+    // Status 22 (Delivery LOA) - Preview only, require status flag
+    if (active?.status_id === 22) {
+      if (!statusFlag) {
+        errors.push("Status flag is required to proceed with Delivery (LOA) preview status");
+      }
+    }
+    
+    // LOA required fields (when LOA is selected for other statuses)
+    if (selectedDocument === "loa" && active?.status_id !== 22) {
       if (!loa?.invoice_no?.trim()) errors.push("Invoice No. is required");
       if (!loa?.invoice_date?.trim()) errors.push("Invoice Date is required");
       if (!loa?.accepted_at?.trim()) errors.push("Date Accepted is required");
@@ -469,21 +685,11 @@ export default function ProcessDeliveryModal({
       if (!loa?.accepted_by_title?.trim()) errors.push("Accepted By Title is required");
     }
     
-    // DV required fields (for status 23 or when DV is selected)
-    if (active?.status_id === 23 || selectedDocument === "dv") {
-      if (!dv?.dv_no?.trim()) errors.push("DV No. is required");
-      if (!dv?.amount_due?.trim()) errors.push("Amount Due is required");
-      if (!dv?.fund_cluster?.trim()) errors.push("Fund Cluster is required");
-      if (!dv?.ors_no?.trim()) errors.push("ORS/BURS No. is required");
-      if (!dv?.payee?.trim()) errors.push("Payee is required");
-      if (!dv?.payee_tin?.trim()) errors.push("Payee TIN/Employee No. is required");
-      if (!dv?.address?.trim()) errors.push("Address is required");
-      if (!dv?.mode_of_payment?.trim()) errors.push("Mode of Payment is required");
-      if (!dv?.responsibility_center?.trim()) errors.push("Responsibility Center is required");
-      if (!dv?.mfo_pap?.trim()) errors.push("MFO/PAP is required");
-      if (!dv?.particulars?.trim()) errors.push("Particulars is required");
-      if (!dv?.certified_by?.trim()) errors.push("Certified By is required");
-      if (!dv?.approved_by?.trim()) errors.push("Approved By is required");
+    // Status 23 (Delivery DV) - Preview only, require status flag
+    if (active?.status_id === 23) {
+      if (!statusFlag) {
+        errors.push("Status flag is required to proceed with Delivery (DV) preview status");
+      }
     }
     
     return errors;
@@ -504,6 +710,11 @@ export default function ProcessDeliveryModal({
   const getAvailableSteps = () => {
     const steps = [];
     
+    // Status 21 (IAR Processing) - External work, no steps needed
+    if (active?.status_id === 21) {
+      return steps; // No steps for external work
+    }
+    
     // Always include delivery receipt info for statuses 18 & 19
     if (active?.status_id === 18 || active?.status_id === 19) {
       steps.push({ id: 1, label: "Delivery Receipt", icon: "" });
@@ -516,12 +727,12 @@ export default function ProcessDeliveryModal({
     
     // LOA step (Status 22)
     if (active?.status_id === 22 || active?.status_id >= 24) {
-      steps.push({ id: 2, label: "Acceptance", icon: "" });
+      steps.push({ id: 2, label: "Document Preview", icon: "" });
     }
     
     // DV step (Status 23)
     if (active?.status_id === 23 || active?.status_id >= 24) {
-      steps.push({ id: 3, label: "Disbursement Voucher", icon: "" });
+      steps.push({ id: 3, label: "Document Preview", icon: "" });
     }
     
     return steps;
@@ -533,6 +744,11 @@ export default function ProcessDeliveryModal({
   const getAvailableDocuments = (): ("delivery" | "iar" | "loa" | "dv")[] => {
     const documents: ("delivery" | "iar" | "loa" | "dv")[] = [];
     
+    // Status 21 (IAR Processing) - External work, no documents needed
+    if (active?.status_id === 21) {
+      return documents; // No documents for external work
+    }
+    
     // Delivery Receipt available only for statuses 18 & 19
     if (active?.status_id === 18 || active?.status_id === 19) {
       documents.push("delivery");
@@ -543,14 +759,14 @@ export default function ProcessDeliveryModal({
       documents.push("iar", "loa", "dv");
     }
     
-    // Status 22 (Delivery LOA) - Only show LOA
+    // Status 22 (Delivery LOA) - Show all documents for preview forwarding to Division Chief
     if (active?.status_id === 22) {
-      documents.push("loa");
+      documents.push("iar", "loa", "dv");
     }
     
-    // Status 23 (Delivery DV) - Only show DV
+    // Status 23 (Delivery DV) - Show all documents for preview forwarding to Division Chief
     if (active?.status_id === 23) {
-      documents.push("dv");
+      documents.push("iar", "loa", "dv");
     }
     
     // For status 24/25 (End-User Forward/Division Chief), show all documents
@@ -574,12 +790,22 @@ export default function ProcessDeliveryModal({
       if (active?.status_id === 19) {
         setSelectedDocument("delivery");
       }
+      // For Status 21 (IAR Processing), clear selected document since no documents are available
+      if (active?.status_id === 21) {
+        setSelectedDocument("delivery"); // Reset to default, but won't be used since no documents available
+      }
     }
   }, [visible, active?.status_id]);
 
   // Load HTML template when document changes
   useEffect(() => {
     if (!visible) return;
+    
+    console.log("=== DOCUMENT CHANGE IN PROCESS MODAL ===");
+    console.log("Selected document:", selectedDocument);
+    console.log("IAR data:", iar);
+    console.log("LOA data:", loa);
+    console.log("DV data:", dv);
     
     const loadHtml = async () => {
       try {
@@ -620,6 +846,18 @@ export default function ProcessDeliveryModal({
   if (!visible) return null;
 
   const renderFormContent = () => {
+    // Status 21 (IAR Processing) - External work, no document forms
+    if (active?.status_id === 21) {
+      return (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-purple-900 leading-5">
+            IAR Processing is handled externally. Please set a status flag to track
+            the progress of this external work and proceed when completed.
+          </p>
+        </div>
+      );
+    }
+    
     // Delivery Receipt - Hide for Delivery (Waiting) status
     if (selectedDocument === "delivery") {
       // Don't show delivery receipt form for status 18 (Delivery Waiting)
@@ -675,19 +913,19 @@ export default function ProcessDeliveryModal({
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Inspection & Acceptance Report (IAR)</h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  IAR No. <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={iar?.iar_no ?? ""}
-                  onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), iar_no: e.target.value }))}
-                  placeholder="e.g. IAR-2026-0015"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                IAR No. <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={iar?.iar_no ?? ""}
+                onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), iar_no: e.target.value }))}
+                placeholder="e.g. IAR-2026-0015"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+              />
+            </div>
+                        <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Invoice No. <span className="text-red-500">*</span>
@@ -697,6 +935,17 @@ export default function ProcessDeliveryModal({
                   value={iar?.invoice_no ?? ""}
                   onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), invoice_no: e.target.value }))}
                   placeholder="e.g. INV-2026-0042"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Invoice Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={iar?.invoice_date ?? ""}
+                  onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), invoice_date: e.target.value }))}
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
                 />
               </div>
@@ -714,19 +963,7 @@ export default function ProcessDeliveryModal({
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Responsibility Center <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={iar?.responsibility_center ?? ""}
-                  onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), responsibility_center: e.target.value }))}
-                  placeholder="RC-XXXX"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-            </div>
+                          </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -751,79 +988,98 @@ export default function ProcessDeliveryModal({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Date Received <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={iar?.received_at ?? ""}
-                  onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), received_at: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Inspector (Name) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={iar?.inspector_name ?? ""}
-                  onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), inspector_name: e.target.value }))}
-                  placeholder="Printed name"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
-              </div>
-            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Supply Officer (Name) <span className="text-red-500">*</span>
+                Date Received <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                value={iar?.supply_officer_name ?? ""}
-                onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), supply_officer_name: e.target.value }))}
-                placeholder="Printed name"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                type="date"
+                value={iar?.received_at ?? ""}
+                onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), received_at: e.target.value }))}
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
               />
             </div>
-          </div>
+
+            {/* Inspection Verification */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Inspection Verification <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-white rounded-lg p-2 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={iar?.inspection_verified ?? false}
+                    onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), inspection_verified: e.target.checked }))}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">Inspected, verified and found in order as to quantity and specifications</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Inspection Confirmation */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Inspection Confirmation <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-white rounded-lg p-2 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={iar?.items_complete ?? false}
+                    onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), items_complete: e.target.checked }))}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">Complete Delivery</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-white rounded-lg p-2 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={!iar?.items_complete ?? false}
+                    onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), items_complete: !e.target.checked }))}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">Partial (please specify quantity)</span>
+                </label>
+              </div>
+            </div>
+
+                      </div>
         </div>
       );
     }
     
-    // LOA Form
-    if (selectedDocument === "loa") {
+    // Status 22 (Delivery LOA) - Preview only for forwarding to Division Chief
+    if (active?.status_id === 22) {
+      return (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-blue-900 leading-5">
+            Preview documents for forwarding to Division Chief for signature. 
+            This step allows you to review the IAR, LOA, and DV documents before 
+            sending them to the Division Chief for final approval.
+          </p>
+        </div>
+      );
+    }
+    
+    // LOA Form (for other statuses when LOA is selected)
+    if (selectedDocument === "loa" && active?.status_id !== 22) {
       return (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Acceptance (LOA)</h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  LOA No. <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={loa?.loa_no ?? ""}
-                  onChange={(e) => setLoa((p: any) => ({ ...(p ?? {}), loa_no: e.target.value }))}
-                  placeholder="e.g. LOA-2026-0003"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Invoice No. <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={loa?.invoice_no ?? ""}
-                  onChange={(e) => setLoa((p: any) => ({ ...(p ?? {}), invoice_no: e.target.value }))}
-                  placeholder="e.g. INV-2026-0042"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Invoice No. <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={loa?.invoice_no ?? ""}
+                onChange={(e) => setLoa((p: any) => ({ ...(p ?? {}), invoice_no: e.target.value }))}
+                placeholder="e.g. INV-2026-0042"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -880,8 +1136,21 @@ export default function ProcessDeliveryModal({
       );
     }
     
-    // DV Form
-    if (selectedDocument === "dv") {
+    // Status 23 (Delivery DV) - Preview only for forwarding to Division Chief
+    if (active?.status_id === 23) {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-green-900 leading-5">
+            Preview documents for forwarding to Division Chief for signature. 
+            This step allows you to review the IAR, LOA, and DV documents before 
+            sending them to the Division Chief for final approval.
+          </p>
+        </div>
+      );
+    }
+    
+    // DV Form (for other statuses when DV is selected)
+    if (selectedDocument === "dv" && active?.status_id !== 23) {
       return (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Disbursement Voucher (DV)</h3>
@@ -976,18 +1245,6 @@ export default function ProcessDeliveryModal({
                 className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Mode of Payment <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={dv?.mode_of_payment ?? ""}
-                onChange={(e) => setDv((p: any) => ({ ...(p ?? {}), mode_of_payment: e.target.value }))}
-                placeholder="e.g. MDS Check / ADA / Cash"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -1025,32 +1282,6 @@ export default function ProcessDeliveryModal({
                 rows={3}
                 className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Certified By <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={dv?.certified_by ?? ""}
-                  onChange={(e) => setDv((p: any) => ({ ...(p ?? {}), certified_by: e.target.value }))}
-                  placeholder="Printed name"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Approved By <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={dv?.approved_by ?? ""}
-                  onChange={(e) => setDv((p: any) => ({ ...(p ?? {}), approved_by: e.target.value }))}
-                  placeholder="Printed name"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -1142,6 +1373,11 @@ export default function ProcessDeliveryModal({
   };
   
   const canGoNext = () => {
+    // Status 21 (IAR Processing) - External work, require status flag
+    if (active?.status_id === 21) {
+      return statusFlag !== null;
+    }
+    
     // Delivery (Waiting) - require status flag to be set
     if (active?.status_id === 18) {
       return statusFlag !== null;
@@ -1155,6 +1391,8 @@ export default function ProcessDeliveryModal({
   };
   
   const getSubmitButtonText = () => {
+    if (active?.status_id === 21) return "Update Status Flag";
+    if (active?.status_id === 22) return "Forward to Division Chief for Signature";
     if (active?.status_id === 24) return "Forward to Division Chief";
     if (active?.status_id === 25) return "Submit & Complete Delivery Phase";
     if (steps.length > 1 && currentStep === steps.length) return "Save & Complete";
@@ -1308,8 +1546,8 @@ export default function ProcessDeliveryModal({
                 </div>
               )}
 
-              {/* Status Flag - Only for Delivery (Waiting) */}
-              {active?.status_id === 18 && (
+              {/* Status Flag - For Delivery (Waiting) and IAR Processing */}
+              {(active?.status_id === 18 || active?.status_id === 21) && (
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Status Flag</h3>
                   <FlagButton selected={statusFlag} onPress={onPressStatusFlag} />
@@ -1319,11 +1557,11 @@ export default function ProcessDeliveryModal({
               {/* Form Content */}
               {renderFormContent()}
 
-              {/* Notes - Remove Status Flag from here for Delivery (Waiting) */}
+              {/* Notes - Remove Status Flag from here for Delivery (Waiting) and IAR Processing */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Notes</h3>
                 <div className="space-y-4">
-                  {active?.status_id !== 18 && (
+                  {active?.status_id !== 18 && active?.status_id !== 21 && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                         Status Flag
@@ -1348,32 +1586,34 @@ export default function ProcessDeliveryModal({
             </div>
           </div>
 
-          {/* Preview Side */}
-          <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
-                    <div className="px-3 py-1.5 text-xs font-semibold rounded bg-emerald-700 text-white">
-                      {selectedDocument === "delivery" ? "Delivery" : selectedDocument.toUpperCase()}
+          {/* Preview Side - Hide for Status 21 (IAR Processing) */}
+          {active?.status_id !== 21 && (
+            <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
+              <div className="flex-1 overflow-y-auto p-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
+                      <div className="px-3 py-1.5 text-xs font-semibold rounded bg-emerald-700 text-white">
+                        {selectedDocument === "delivery" ? "Delivery" : selectedDocument.toUpperCase()}
+                      </div>
                     </div>
+                    {selectedDocument !== "delivery" && (
+                      <button
+                        onClick={() => handlePrintPDF()}
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <RiFilePdf2Line size={16} /> PDF
+                      </button>
+                    )}
                   </div>
-                  {selectedDocument !== "delivery" && (
-                    <button
-                      onClick={() => handlePrintPDF()}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <RiFilePdf2Line size={16} /> PDF
-                    </button>
-                  )}
+                </div>
+                <div className="bg-white rounded-lg shadow-lg p-8 text-black">
+                  {renderPreviewContent()}
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow-lg p-8 text-black">
-                {renderPreviewContent()}
-              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
