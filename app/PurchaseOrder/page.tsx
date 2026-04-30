@@ -20,6 +20,7 @@ import {
   RiArrowRightLine,
   RiArrowUpLine,
   RiChat3Line,
+  RiAddLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
   RiEyeLine,
@@ -594,6 +595,17 @@ export default function PurchaseOrderPage() {
               </p>
             )}
           </div>
+          {/* Create PO button in header (like Create PR) */}
+          <div className="ml-auto">
+            {isSupply && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
+              >
+                <RiAddLine size={20} /> Create PO
+              </button>
+            )}
+          </div>
         </div>
 
         {pathname?.startsWith("/Procurement") && (
@@ -647,14 +659,6 @@ export default function PurchaseOrderPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800">All Purchase Orders</h2>
             <div className="flex flex-wrap items-center gap-2">
-              {isSupply && (
-                <button
-                  onClick={() => setCreateOpen(true)}
-                  className="px-3 py-1 rounded-xl bg-emerald-700 text-white text-sm"
-                >
-                  Create PO
-                </button>
-              )}
               {STATUS_FILTERS.map(({ value, label }) => (
                 <button
                   key={value}

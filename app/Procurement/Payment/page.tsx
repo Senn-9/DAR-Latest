@@ -7,7 +7,7 @@ import {
   RiFileListLine, RiSearchLine, RiTimeLine, RiCheckboxCircleLine,
   RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine,
   RiEyeLine, RiMoneyDollarCircleLine, RiCheckLine, RiCloseCircleLine,
-  RiTruckLine, RiMore2Line, RiChat3Line,
+  RiTruckLine, RiMore2Line, RiChat3Line, RiPlayCircleLine,
 } from "react-icons/ri";
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
@@ -420,22 +420,25 @@ export default function PaymentPage() {
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleViewDelivery(delivery)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiEyeLine size={14} />
                                 View
                               </button>
                               {canProcess && (
                                 <button
                                   onClick={() => handleProcessDelivery(delivery)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   Process
                                 </button>
                               )}
                               <button
                                 onClick={() => handleOpenRemarks(delivery)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiChat3Line size={14} />
                                 Remarks
                               </button>
                             </div>

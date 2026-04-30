@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
-  RiArrowLeftLine, RiArrowRightLine, RiTruckLine,
+  RiArrowLeftLine, RiArrowRightLine, RiTruckLine, RiEyeLine, RiPlayCircleLine, RiChat3Line,
 } from "react-icons/ri";
 
 export default function ProcurementPage() {
@@ -739,8 +739,9 @@ export default function ProcurementPage() {
                                 <>
                                   <button
                                     onClick={() => setViewPrId(form.id)}
-                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                                    className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                                   >
+                                    <RiEyeLine size={14} />
                                     View
                                   </button>
                                   {form.status_id === 4 && (
@@ -763,41 +764,33 @@ export default function ProcurementPage() {
                                           },
                                         })
                                       }
-                                      className="px-2 py-1 text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded transition-colors"
+                                      className="px-2 py-1 text-xs font-semibold rounded border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors inline-flex items-center gap-1"
                                     >
+                                      <RiPlayCircleLine size={14} />
                                       Budget Process
                                     </button>
                                   )}
                                 </>
                               )}
 
-                              {/* Edit — not for Division Head / BAC / Budget (unless admin) */}
-                              {!isBudgetAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
-                                <button
-                                  onClick={() => console.log("Edit", form.pr_no)}
-                                  className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
-                                >
-                                  Edit
-                                </button>
-                              )}
-
                               {/* View — everyone except budget (already has View above) */}
                               {!isBudgetAccount && (
                                 <button
                                   onClick={() => setViewPrId(form.id)}
-                                  className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiEyeLine size={14} />
                                   View
                                 </button>
                               )}
 
-                              {/* Submit — regular end users, Pending only */}
-                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && form.status_id === 1 && (
+                              {/* Edit — not for Division Head / BAC / Budget (unless admin) */}
+                              {!isBudgetAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
-                                  onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+                                  onClick={() => console.log("Edit", form.pr_no)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
                                 >
-                                  Submit
+                                  Edit
                                 </button>
                               )}
 
@@ -805,9 +798,21 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button
                                   onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
-                                  className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   Process
+                                </button>
+                              )}
+
+                              {/* Submit — regular end users, Pending only */}
+                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && form.status_id === 1 && (
+                                <button
+                                  onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Submit
                                 </button>
                               )}
 
@@ -815,8 +820,9 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && isBACAccount && form.status_id === 3 && (
                                 <button
                                   onClick={() => setBACProcessTarget({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2 py-1 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   BAC Process
                                 </button>
                               )}
@@ -825,8 +831,9 @@ export default function ProcurementPage() {
                               {!isBudgetAccount && isPARPOAccount && form.status_id === 5 && (
                                 <button
                                   onClick={() => setPARPOProcessTarget({ prId: form.id, prNo: form.pr_no })}
-                                  className="px-2 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   PARPO Process
                                 </button>
                               )}

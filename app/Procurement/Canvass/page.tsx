@@ -12,7 +12,7 @@ import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
-  RiFileAddLine,
+  RiFileAddLine, RiEyeLine, RiPlayCircleLine,
 } from "react-icons/ri";
 
 export default function CanvassPage() {
@@ -491,27 +491,22 @@ export default function CanvassPage() {
 
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
-                              {/* <button
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
-                              >
-                                View
-                              </button> */}
-
                               <button
                                 type="button"
                                 onClick={() => setViewPrId(form.id)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-colors whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
-                                View PR
+                                <RiEyeLine size={14} />
+                                View
                               </button>
 
                               {/* Reception — BAC account, status_id is Canvassing (Reception) */}
                               {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
                                 <button
                                   onClick={() => setReceptionTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-colors whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   Reception
                                 </button>
                               )}
