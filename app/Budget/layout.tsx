@@ -144,10 +144,6 @@ export default function Layout({ children }: { children: ReactNode }) {
             Sign Out
           </button>
 
-          <SignoutModal 
-            open={signoutModalOpen}
-            onClose={() => setSignoutModalOpen(false)}
-          />
         </div>
       </div>
 
@@ -168,6 +164,11 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="flex-1 overflow-auto">
           {children}
         </div>
+
+        <SignoutModal 
+          open={signoutModalOpen}
+          onClose={() => setSignoutModalOpen(false)}
+        />
       </div>
     </div>
   );
