@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
-  RiArrowLeftLine, RiArrowRightLine,
+  RiArrowLeftLine, RiArrowRightLine, RiEyeLine, RiPlayCircleLine,
 } from "react-icons/ri";
 import AnalyticsDashboard from "../analytics/analytics";
 
@@ -609,14 +609,15 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-center gap-1">
                               <button 
                                 onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
-                                className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiEyeLine size={14} />
                                 View
                               </button>
                               {form.source === 'pr' && (
                                 <button 
                                   onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
-                                  className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
                                 >
                                   Edit
                                 </button>
@@ -627,8 +628,9 @@ export default function DashboardPage() {
                                   else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
                                   else router.push(`/Procurement?id=${form.id}`);
                                 }}
-                                className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiPlayCircleLine size={14} />
                                 Process
                               </button>
                             </div>

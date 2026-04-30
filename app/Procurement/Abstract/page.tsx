@@ -10,6 +10,7 @@ import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
+  RiEyeLine, RiPlayCircleLine,
 } from "react-icons/ri";
 
 export default function AbstractPage() {
@@ -438,9 +439,10 @@ export default function AbstractPage() {
                               <button
                                 type="button"
                                 onClick={() => setViewCanvassTarget(form)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-colors whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
-                                View Canvass
+                                <RiEyeLine size={14} />
+                                View
                               </button>
                             </div>
                           </td>

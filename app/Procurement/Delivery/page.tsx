@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   RiFileListLine, RiSearchLine, RiAddLine, RiTimeLine, RiCheckboxCircleLine,
   RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine,
-  RiEyeLine, RiEditLine, RiCheckLine, RiCloseCircleLine, RiTruckLine, RiDeleteBinLine, RiMore2Line, RiChat3Line,
+  RiEyeLine, RiEditLine, RiCheckLine, RiCloseCircleLine, RiTruckLine, RiDeleteBinLine, RiMore2Line, RiChat3Line, RiPlayCircleLine,
 } from "react-icons/ri";
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import CreateDeliveryModal from "@/components/Delivery/CreateDeliveryModal";
@@ -946,14 +946,16 @@ export default function DeliveryPage() {
                                   setDefaultViewTab("iar"); 
                                   handlePreviewDocument("iar");
                                 }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiEyeLine size={14} />
                                 View
                               </button>
                               <button
                                 onClick={() => { setSelectedDelivery(delivery); setRemarksModalOpen(true); }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
                               >
+                                <RiChat3Line size={14} />
                                 Remarks
                               </button>
                               {canProcess && (
@@ -961,8 +963,9 @@ export default function DeliveryPage() {
                                   onClick={() => {
                                     handleOpenProcessModal(delivery);
                                   }}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
+                                  <RiPlayCircleLine size={14} />
                                   Process
                                 </button>
                               )}
