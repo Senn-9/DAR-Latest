@@ -785,8 +785,8 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Edit — not for Division Head / BAC / Budget / Accounting (unless admin) */}
-                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
+                              {/* Edit — not for Division Head / BAC / Budget / Accounting (unless admin), Pending only */}
+                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && form.status_id === 1 && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_no)}
                                   className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
@@ -806,16 +806,7 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Submit — regular end users, Pending only */}
-                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && !isAccountingAccount && form.status_id === 1 && (
-                                <button
-                                  onClick={() => console.log("Edit", form.pr_no)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  Edit
-                                </button>
-                              )}
-
+                              
                               {/* Process — admin always, Division Head when status_id=2 */}
                               {!isBudgetAccount && !isAccountingAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button

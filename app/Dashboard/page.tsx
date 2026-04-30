@@ -25,6 +25,7 @@ export default function DashboardPage() {
     status_id: number | null;
     created_at?: string;
     total_cost: number;
+    req_name?: string;
     purchase_request_items?: PRItem[];
     source?: 'pr' | 'po' | 'delivery' | 'payment';
     delivery_no?: string;
@@ -51,13 +52,18 @@ export default function DashboardPage() {
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const PAGE_SIZE = 10;
 
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount =
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
-  
   const isBudgetAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
-  
   const isAccountingAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
@@ -80,7 +86,7 @@ export default function DashboardPage() {
         // Fetch purchase requests (PR data)
         const { data: prData, error: prError } = await supabase
           .from("purchase_requests")
-          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)")
+          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, req_name, purchase_request_items (*)")
           .order("created_at", { ascending: false });
         
         console.log('PR fetch result:', { prData: prData?.length, prError });
@@ -196,12 +202,32 @@ export default function DashboardPage() {
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
-          const matchesAccess = isAdmin || isSupplyAccount || isBudgetAccount || isAccountingAccount ? true : item.office_section === currentUser?.divisions?.division_name;
-          return matchesAccess;
+          // Admin sees all
+          if (isAdmin) return true;
+          
+          // For PR records, apply strict filtering
+          if (item.source === 'pr') {
+            // End users can only see their own PRs (where req_name matches their fullname)
+            const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount;
+            if (isEndUser) {
+              return item.req_name === currentUser?.fullname;
+            }
+            
+            // Division heads can only see PRs from their division
+            if (isDivisionHead) {
+              return item.office_section === currentUser?.divisions?.division_name;
+            }
+            
+            // Other roles (BAC, PARPO, Supply, Budget, Accounting) see PRs from their division
+            return item.office_section === currentUser?.divisions?.division_name;
+          }
+          
+          // For non-PR records (PO, Delivery, Payment), show only to relevant roles
+          return isSupplyAccount || isBudgetAccount || isAccountingAccount || isBACAccount || isPARPOAccount;
         });
         
         console.log('Final filtered data:', filteredData.length);
-        console.log('User role:', { isAdmin, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
+        console.log('User role:', { isAdmin, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
         
         setList(filteredData as PRListRow[]);
       } catch (error) {
@@ -244,7 +270,7 @@ export default function DashboardPage() {
       setLoading(false);
     };
     fetchData();
-  }, [supabase, isAdmin, currentUser, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
+  }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
     const statusById: Record<number, { name: string; color: string }> = {
@@ -622,17 +648,29 @@ export default function DashboardPage() {
                                   Edit
                                 </button>
                               )}
-                              <button 
-                                onClick={() => {
-                                  if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
-                                  else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
-                                  else router.push(`/Procurement?id=${form.id}`);
-                                }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiPlayCircleLine size={14} />
-                                Process
-                              </button>
+                              {/* Process button - admin always, Division Head when status_id=2, other roles for their specific stages */}
+                              {form.source === 'pr' && (isAdmin || (isDivisionHead && form.status_id === 2) || isBACAccount || isPARPOAccount || isSupplyAccount || isBudgetAccount || isAccountingAccount) && (
+                                <button 
+                                  onClick={() => router.push(`/Procurement?id=${form.id}`)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Process
+                                </button>
+                              )}
+                              {/* Process button for PO, Delivery, Payment - specific roles */}
+                              {(form.source === 'po' || form.source === 'delivery' || form.source === 'payment') && (isAdmin || isSupplyAccount || isAccountingAccount) && (
+                                <button 
+                                  onClick={() => {
+                                    if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
+                                    else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
+                                  }}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Process
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
