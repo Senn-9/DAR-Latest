@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import CreatePOModal from "@/components/CreatePOModal";
@@ -374,6 +375,8 @@ function DetailItem({ label, value }: { label: string; value: string | number | 
 
 export default function PurchaseOrderPage() {
   const supabase = createClient();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -592,6 +595,34 @@ export default function PurchaseOrderPage() {
             )}
           </div>
         </div>
+
+        {pathname?.startsWith("/Procurement") && (
+          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+            {([
+              { key: "pr", label: "Purchase Request", href: "/Procurement" },
+              { key: "canvass", label: "Canvass", href: "/Procurement/Canvass" },
+              { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
+              { key: "purchase-order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
+              { key: "delivery", label: "Delivery", href: "/Procurement/Delivery" },
+              { key: "payment", label: "Payment", href: "/Procurement/Payment" },
+            ] as const).map(({ key, label, href }) => {
+              const isActive = pathname === href;
+              return (
+                <button
+                  key={key}
+                  onClick={() => router.push(href)}
+                  className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                    isActive
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
