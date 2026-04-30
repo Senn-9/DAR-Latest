@@ -112,6 +112,8 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
 
   // Track existing resolution IDs per PR for updates
   const [existingResolutions, setExistingResolutions] = useState<Map<number, number>>(new Map());
+  // Store full resolution data per PR (resolution_no, prepared_by, etc.)
+  const [prResolutionData, setPrResolutionData] = useState<Map<number, { resolution_no: string; prepared_by: number | null; division_id: number | null }>>(new Map());
 
   const [flagOptions, setFlagOptions] = useState<FlagOption[]>([]);
   const [showFlagPicker, setShowFlagPicker] = useState(false);
@@ -177,33 +179,45 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
         if (existingResolutionsData && existingResolutionsData.length > 0) {
           // Build map of pr_request_id -> resolution id
           const resolutionMap = new Map<number, number>();
-          const prsWithResolutions: number[] = [];
+          // Build map of pr_request_id -> full resolution data
+          const resolutionDataMap = new Map<number, { resolution_no: string; prepared_by: number | null; division_id: number | null }>();
+
           existingResolutionsData.forEach((res) => {
             const prId = (res as { pr_request_id: number }).pr_request_id;
             const resId = (res as { id: number }).id;
+            const resNo = (res as { resolution_no: string | null }).resolution_no;
+            const prepBy = (res as { prepared_by: number | null }).prepared_by;
+            const divId = (res as { division_id: number | null }).division_id;
+
             if (!resolutionMap.has(prId)) {
               resolutionMap.set(prId, resId);
-              prsWithResolutions.push(prId);
+              resolutionDataMap.set(prId, {
+                resolution_no: resNo ?? "",
+                prepared_by: prepBy ?? null,
+                division_id: divId ?? null,
+              });
             }
           });
           setExistingResolutions(resolutionMap);
+          setPrResolutionData(resolutionDataMap);
 
-          // Auto-select PRs that have existing resolutions
-          setSelectedPrIds(prsWithResolutions);
+          // Don't auto-select - let user choose which to edit
+          setSelectedPrIds([]);
 
-          // Use the most recent resolution data to pre-populate
-          const mostRecent = existingResolutionsData[0] as { resolution_no: string | null; prepared_by: number | null; division_id: number | null };
-          setResolutionNo(mostRecent.resolution_no ?? "");
-          setPreparedBy(mostRecent.prepared_by != null ? String(mostRecent.prepared_by) : String(currentUser?.id ?? ""));
-          setDivisionId(mostRecent.division_id ?? currentUser?.division_id ?? null);
+          // Clear form fields initially - will populate when user selects a PR
+          setResolutionNo("");
+          setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
+          setDivisionId(currentUser?.division_id ?? null);
         } else {
           setExistingResolutions(new Map());
+          setPrResolutionData(new Map());
           setResolutionNo("");
           setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
           setDivisionId(currentUser?.division_id ?? null);
         }
       } else {
         setExistingResolutions(new Map());
+        setPrResolutionData(new Map());
         setResolutionNo("");
         setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
         setDivisionId(currentUser?.division_id ?? null);
@@ -248,9 +262,29 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
   }, [load]);
 
   const togglePrSelection = (prId: number) => {
-    setSelectedPrIds((prev) =>
-      prev.includes(prId) ? prev.filter((id) => id !== prId) : [...prev, prId]
-    );
+    setSelectedPrIds((prev) => {
+      const isSelected = prev.includes(prId);
+      if (isSelected) {
+        // Deselecting - just remove from selection
+        return prev.filter((id) => id !== prId);
+      } else {
+        // Selecting - load this PR's resolution data into the form
+        const prData = prResolutionData.get(prId);
+        if (prData) {
+          setResolutionNo(prData.resolution_no);
+          setPreparedBy(prData.prepared_by != null ? String(prData.prepared_by) : "");
+          setDivisionId(prData.division_id);
+        } else {
+          // No existing data - clear form
+          setResolutionNo("");
+          const currentUser = readCurrentUser();
+          setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
+          setDivisionId(currentUser?.division_id ?? null);
+        }
+        // Single selection mode - only select this PR
+        return [prId];
+      }
+    });
   };
 
   const selectAll = () => {
@@ -309,6 +343,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
     }
 
     // Insert new records
+    let insertedIds: { id: number; pr_request_id: number }[] = [];
     if (toInsert.length > 0) {
       const { data: inserted, error: insertErr } = await supabase
         .from("bac_resolution")
@@ -317,19 +352,31 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
 
       if (insertErr) throw insertErr;
 
-      // Update the existingResolutions map with newly inserted IDs
       if (inserted && inserted.length > 0) {
+        insertedIds = inserted as { id: number; pr_request_id: number }[];
+        // Update the existingResolutions map with newly inserted IDs
         setExistingResolutions((prev) => {
           const next = new Map(prev);
-          inserted.forEach((res) => {
-            const prId = (res as { pr_request_id: number }).pr_request_id;
-            const resId = (res as { id: number }).id;
-            next.set(prId, resId);
+          insertedIds.forEach((res) => {
+            next.set(res.pr_request_id, res.id);
           });
           return next;
         });
       }
     }
+
+    // Update prResolutionData to reflect the new resolution numbers in the table
+    setPrResolutionData((prev) => {
+      const next = new Map(prev);
+      selectedPrIds.forEach((prId) => {
+        next.set(prId, {
+          resolution_no: payload.resolution_no,
+          prepared_by: payload.prepared_by,
+          division_id: payload.division_id,
+        });
+      });
+      return next;
+    });
 
     return true;
   };
@@ -415,16 +462,9 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
     setSuccess(null);
 
     try {
-      const payload = buildPayload();
-      if (!payload) return;
-
-      const resolutions = selectedPrIds.map((prId) => ({
-        ...payload,
-        pr_request_id: prId,
-      }));
-
-      const { error: insertErr } = await supabase.from("bac_resolution").insert(resolutions);
-      if (insertErr) throw insertErr;
+      // Use persistResolution to handle updates/inserts properly
+      const saved = await persistResolution();
+      if (!saved) return;
 
       const { error: updateErr } = await supabase
         .from("purchase_requests")
@@ -649,6 +689,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                         <tr>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700 w-12">Select</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">PR Number</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700">Resolution No.</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Office/Section</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Purpose</th>
                           <th className="px-4 py-2 text-right font-semibold text-gray-700">Total Cost</th>
@@ -658,6 +699,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                         {prList.map((pr) => {
                           const isSelected = selectedPrIds.includes(pr.id);
                           const hasExistingResolution = existingResolutions.has(pr.id);
+                          const prResData = prResolutionData.get(pr.id);
                           return (
                             <tr
                               key={pr.id}
@@ -682,6 +724,15 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                                     </span>
                                   )}
                                 </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {prResData?.resolution_no ? (
+                                  <span className="font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                                    {prResData.resolution_no}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 italic">-</span>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-gray-600">{pr.office_section}</td>
                               <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{pr.purpose}</td>
