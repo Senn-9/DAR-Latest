@@ -54,6 +54,12 @@ export default function DashboardPage() {
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  
+  const isBudgetAccount = 
+    currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
+  
+  const isAccountingAccount = 
+    currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
@@ -190,12 +196,12 @@ export default function DashboardPage() {
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
-          const matchesAccess = isAdmin || isSupplyAccount ? true : item.office_section === currentUser?.divisions?.division_name;
+          const matchesAccess = isAdmin || isSupplyAccount || isBudgetAccount || isAccountingAccount ? true : item.office_section === currentUser?.divisions?.division_name;
           return matchesAccess;
         });
         
         console.log('Final filtered data:', filteredData.length);
-        console.log('User role:', { isAdmin, isSupplyAccount, userDivision: currentUser?.divisions?.division_name });
+        console.log('User role:', { isAdmin, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
         
         setList(filteredData as PRListRow[]);
       } catch (error) {
@@ -238,7 +244,7 @@ export default function DashboardPage() {
       setLoading(false);
     };
     fetchData();
-  }, [supabase, isAdmin, currentUser, isSupplyAccount]);
+  }, [supabase, isAdmin, currentUser, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
     const statusById: Record<number, { name: string; color: string }> = {

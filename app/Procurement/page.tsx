@@ -134,8 +134,10 @@ export default function ProcurementPage() {
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isAccountingAccount =
+    currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
-  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount;
+  const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount && !isAccountingAccount;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -243,7 +245,7 @@ export default function ProcurementPage() {
         const allData = [...processedPRs, ...processedDeliveries];
         
         const filteredData = allData.filter((item) => {
-          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) return true;
           return item.office_section === currentUser?.divisions?.division_name;
         });
         
@@ -253,7 +255,7 @@ export default function ProcurementPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount, isAccountingAccount]);
 
   useEffect(() => {
     const fetchLatestFlags = async () => {
@@ -771,8 +773,18 @@ export default function ProcurementPage() {
                                 </>
                               )}
 
-                              {/* Edit — not for Division Head / BAC / Budget (unless admin) */}
-                              {!isBudgetAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
+                              {/* Accounting account — View */}
+                              {isAccountingAccount && (
+                                <button
+                                  onClick={() => setViewPrId(form.id)}
+                                  className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                                >
+                                  View
+                                </button>
+                              )}
+
+                              {/* Edit — not for Division Head / BAC / Budget / Accounting (unless admin) */}
+                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (!isDivisionHead && !isBACAccount)) && (
                                 <button
                                   onClick={() => console.log("Edit", form.pr_no)}
                                   className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
@@ -781,8 +793,8 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* View — everyone except budget (already has View above) */}
-                              {!isBudgetAccount && (
+                              {/* View — everyone except budget and accounting (they already have View above) */}
+                              {!isBudgetAccount && !isAccountingAccount && (
                                 <button
                                   onClick={() => setViewPrId(form.id)}
                                   className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
@@ -792,7 +804,7 @@ export default function ProcurementPage() {
                               )}
 
                               {/* Submit — regular end users, Pending only */}
-                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && form.status_id === 1 && (
+                              {!isAdmin && !isDivisionHead && !isBACAccount && !isBudgetAccount && !isAccountingAccount && form.status_id === 1 && (
                                 <button
                                   onClick={() => setSubmitConfirm({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
@@ -802,7 +814,7 @@ export default function ProcurementPage() {
                               )}
 
                               {/* Process — admin always, Division Head when status_id=2 */}
-                              {!isBudgetAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
                                 <button
                                   onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
                                   className="px-2 py-1 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
@@ -812,7 +824,7 @@ export default function ProcurementPage() {
                               )}
 
                               {/* BAC Process — BAC account, status_id=3 */}
-                              {!isBudgetAccount && isBACAccount && form.status_id === 3 && (
+                              {!isBudgetAccount && !isAccountingAccount && isBACAccount && form.status_id === 3 && (
                                 <button
                                   onClick={() => setBACProcessTarget({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2 py-1 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded transition-colors"
@@ -822,7 +834,7 @@ export default function ProcurementPage() {
                               )}
 
                               {/* PARPO Process — PARPO account, status_id=5 */}
-                              {!isBudgetAccount && isPARPOAccount && form.status_id === 5 && (
+                              {!isBudgetAccount && !isAccountingAccount && isPARPOAccount && form.status_id === 5 && (
                                 <button
                                   onClick={() => setPARPOProcessTarget({ prId: form.id, prNo: form.pr_no })}
                                   className="px-2 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded transition-colors"

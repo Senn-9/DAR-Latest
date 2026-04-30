@@ -76,6 +76,8 @@ export default function AbstractPage() {
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isAccountingAccount =
+    currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -103,7 +105,7 @@ export default function AbstractPage() {
 
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
-            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount) return true;
+            if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
           setList(filteredData as PRListRow[]);
@@ -113,7 +115,7 @@ export default function AbstractPage() {
       }
     };
     fetchPRData();
-  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount]);
+  }, [supabase, isAdmin, currentUser, isBACAccount, isPARPOAccount, isBudgetAccount, isSupplyAccount, isAccountingAccount]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {

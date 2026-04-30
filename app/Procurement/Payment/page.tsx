@@ -12,6 +12,9 @@ import {
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
 import RemarksModal from "@/components/Delivery/RemarksModal";
+import ProcessPaymentModal from "@/components/Payment/ProcessPaymentModal";
+import ViewPaymentModal from "@/components/Payment/ViewPaymentModal";
+import NORSAModal from "@/components/Payment/NORSAModal";
 import { fetchDeliveriesForPaymentPhase, fetchPaymentPhaseStatuses, insertDeliveryProcessRemark, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery } from "@/utils/supabase/delivery";
 import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 
@@ -61,6 +64,9 @@ export default function PaymentPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [processModalOpen, setProcessModalOpen] = useState(false);
   const [remarksModalOpen, setRemarksModalOpen] = useState(false);
+  const [paymentViewModalOpen, setPaymentViewModalOpen] = useState(false);
+  const [paymentProcessModalOpen, setPaymentProcessModalOpen] = useState(false);
+  const [norsaModalOpen, setNorsaModalOpen] = useState(false);
   const [iarData, setIarData] = useState<any>(null);
   const [loaData, setLoaData] = useState<any>(null);
   const [dvData, setDvData] = useState<any>(null);
@@ -167,9 +173,28 @@ export default function PaymentPage() {
   const pagedDeliveries = sortedDeliveries.slice(startIndex, startIndex + PAGE_SIZE);
 
   const canRoleProcess = (roleId: number, statusId: number) => {
-    // Define role permissions for payment processing
-    const paymentRoles = [1, 4, 5]; // Admin, Budget, PARPO
-    return paymentRoles.includes(roleId);
+    // Define role permissions for payment processing by status
+    switch (statusId) {
+      case 28: // Payment Pending
+        return [1, 9].includes(roleId); // Admin, Accounting
+      case 29: // Payment Processing
+        return [1, 9].includes(roleId); // Admin, Accounting
+      case 30: // Accounting Review
+        return [1, 9].includes(roleId); // Admin, Accounting
+      case 31: // Budget Review
+        return [1, 4].includes(roleId); // Admin, Budget
+      case 32: // Final Approval
+        return [1, 5].includes(roleId); // Admin, PARPO
+      case 35: // Payment Completed
+        return false; // No processing needed
+      default:
+        return false;
+    }
+  };
+
+  const canIssueNORSA = (roleId: number, statusId: number) => {
+    // Only Accounting can issue NORSA during Accounting Review
+    return statusId === 30 && [1, 9].includes(roleId);
   };
 
   const handleViewDelivery = async (delivery: DeliveryRow) => {
@@ -203,8 +228,28 @@ export default function PaymentPage() {
     setRemarksModalOpen(true);
   };
 
+  const handleViewPayment = (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setPaymentViewModalOpen(true);
+  };
+
+  const handleProcessPayment = (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setPaymentProcessModalOpen(true);
+  };
+
+  const handleIssueNORSA = (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setNorsaModalOpen(true);
+  };
+
   const handlePreviewDocument = (type: 'iar' | 'loa' | 'dv') => {
     // Implementation for document preview
+    console.log(`Preview ${type} document`);
+  };
+
+  const handlePreviewPaymentDocument = (type: 'voucher' | 'ors' | 'dv') => {
+    // Implementation for payment document preview
     console.log(`Preview ${type} document`);
   };
 
@@ -419,17 +464,25 @@ export default function PaymentPage() {
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
                               <button
-                                onClick={() => handleViewDelivery(delivery)}
+                                onClick={() => handleViewPayment(delivery)}
                                 className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                               >
-                                View
+                                Payment
                               </button>
-                              {canProcess && (
+                              {canRoleProcess(currentUser?.role_id || 0, delivery.status_id) && (
                                 <button
-                                  onClick={() => handleProcessDelivery(delivery)}
+                                  onClick={() => handleProcessPayment(delivery)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                                 >
                                   Process
+                                </button>
+                              )}
+                              {canIssueNORSA(currentUser?.role_id || 0, delivery.status_id) && (
+                                <button
+                                  onClick={() => handleIssueNORSA(delivery)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
+                                >
+                                  NORSA
                                 </button>
                               )}
                               <button
@@ -555,6 +608,55 @@ export default function PaymentPage() {
           visible={remarksModalOpen}
           deliveryId={selectedDelivery.id}
           onClose={() => setRemarksModalOpen(false)}
+        />
+      )}
+
+      {selectedDelivery && paymentViewModalOpen && (
+        <ViewPaymentModal
+          visible={paymentViewModalOpen}
+          delivery={selectedDelivery}
+          voucher={iarData}
+          ors={loaData}
+          dv={dvData}
+          poData={poData}
+          onClose={() => setPaymentViewModalOpen(false)}
+        />
+      )}
+
+      {selectedDelivery && paymentProcessModalOpen && (
+        <ProcessPaymentModal
+          visible={paymentProcessModalOpen}
+          active={selectedDelivery}
+          onClose={() => setPaymentProcessModalOpen(false)}
+          onSubmit={async () => {
+            // Handle payment processing
+            console.log("Payment processing");
+            setPaymentProcessModalOpen(false);
+          }}
+          statusLabel="Payment Processing"
+          statusFlag={statusFlag}
+          onPressStatusFlag={() => setFlagPickerOpen(true)}
+          flagPickerOpen={flagPickerOpen}
+          onCloseFlagPicker={() => setFlagPickerOpen(false)}
+          onSelectStatusFlag={(flag) => setStatusFlag(flag)}
+          onPreviewDocument={handlePreviewPaymentDocument}
+          voucher={iarData}
+          ors={loaData}
+          dv={dvData}
+          poData={poData}
+        />
+      )}
+
+      {selectedDelivery && norsaModalOpen && (
+        <NORSAModal
+          visible={norsaModalOpen}
+          delivery={selectedDelivery}
+          onClose={() => setNorsaModalOpen(false)}
+          onSubmit={async (norsaData) => {
+            // Handle NORSA issuance
+            console.log("NORSA issued:", norsaData);
+            setNorsaModalOpen(false);
+          }}
         />
       )}
     </div>

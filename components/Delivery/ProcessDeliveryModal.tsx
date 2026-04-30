@@ -577,9 +577,10 @@ export default function ProcessDeliveryModal({
              iar?.received_at?.trim() !== "";
     }
     
-    // Status 22 (Delivery LOA) - Preview only, require status flag
+    // Status 22 (Delivery LOA) - Preview only, require status flag and ensure IAR data is preserved
     if (active?.status_id === 22) {
-      return statusFlag !== null;
+      const hasIarData = iar && Object.keys(iar).length > 0 && iar?.iar_no?.trim() !== "";
+      return statusFlag !== null && hasIarData;
     }
     
     // LOA required fields (when LOA is selected for other statuses)
@@ -669,10 +670,14 @@ export default function ProcessDeliveryModal({
       if (!iar?.received_at?.trim()) errors.push("Date Received is required");
     }
     
-    // Status 22 (Delivery LOA) - Preview only, require status flag
+    // Status 22 (Delivery LOA) - Preview only, require status flag and ensure IAR data is preserved
     if (active?.status_id === 22) {
       if (!statusFlag) {
         errors.push("Status flag is required to proceed with Delivery (LOA) preview status");
+      }
+      const hasIarData = iar && Object.keys(iar).length > 0 && iar?.iar_no?.trim() !== "";
+      if (!hasIarData) {
+        errors.push("IAR data must be present before forwarding to Division Chief");
       }
     }
     
@@ -846,32 +851,500 @@ export default function ProcessDeliveryModal({
   if (!visible) return null;
 
   const renderFormContent = () => {
-    // Status 21 (IAR Processing) - External work, no document forms
+    // Status 21 (IAR Processing) - External work, comprehensive information
     if (active?.status_id === 21) {
       return (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3">
-          <p className="text-sm text-purple-900 leading-5">
-            IAR Processing is handled externally. Please set a status flag to track
-            the progress of this external work and proceed when completed.
-          </p>
+        <div className="max-h-[600px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100 sticky top-0 bg-white z-10">Delivery Status: IAR Processing - External Work Phase</h3>
+          
+          {/* Status Overview */}
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-xs font-bold">21</span>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-purple-900 mb-2">IAR Processing Status</h4>
+                <p className="text-xs text-purple-800 leading-5">
+                  The Inspection & Acceptance Report (IAR) is being processed by external departments 
+                  or offices. This phase involves verification, approval, and documentation processes 
+                  that occur outside the immediate delivery workflow.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* What This Status Means */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold">i</span>
+              </span>
+              What This Status Means
+            </h4>
+            <ul className="space-y-2 text-xs text-blue-800">
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 mt-0.5">•</span>
+                <span>IAR document is under review by external authorities</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 mt-0.5">•</span>
+                <span>Administrative approval processes are in progress</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 mt-0.5">•</span>
+                <span>Quality assurance and compliance verification ongoing</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 mt-0.5">•</span>
+                <span>Financial and budgetary reviews may be underway</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Required Actions */}
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold">✓</span>
+              </span>
+              Required Actions
+            </h4>
+            <ul className="space-y-2 text-xs text-green-800">
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">•</span>
+                <span>Set status flag to track external processing progress</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">•</span>
+                <span>Monitor IAR processing status with external departments</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">•</span>
+                <span>Follow up on pending approvals if delays occur</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">•</span>
+                <span>Prepare for next phase once IAR processing completes</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Next Steps in Process */}
+          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <h4 className="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 bg-indigo-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold">→</span>
+              </span>
+              Next Steps in Process
+            </h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-xs font-semibold">20</div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-indigo-800">IAR Processing (Current)</p>
+                  <p className="text-xs text-indigo-600">External review and approval phase</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-indigo-500 text-white rounded-full flex items-center justify-center text-xs font-semibold">22</div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-indigo-800">Delivery (LOA)</p>
+                  <p className="text-xs text-indigo-600">Letter of Authority generation and forwarding</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-xs font-semibold">23</div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-indigo-800">Delivery (DV)</p>
+                  <p className="text-xs text-indigo-600">Disbursement Voucher preparation</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Important Notes */}
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="text-sm font-semibold text-red-900 mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold">!</span>
+              </span>
+              Important Notes
+            </h4>
+            <ul className="space-y-2 text-xs text-red-800">
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-0.5">•</span>
+                <span>IAR processing timeline varies by department and workload</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-0.5">•</span>
+                <span>Document any delays or issues in the status flag comments</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-0.5">•</span>
+                <span>Maintain communication with external processing offices</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-0.5">•</span>
+                <span>Ensure all IAR requirements are met before this phase</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-0.5">•</span>
+                <span>Prepare LOA documents in advance for faster processing</span>
+              </li>
+            </ul>
+          </div>
         </div>
       );
     }
     
-    // Delivery Receipt - Hide for Delivery (Waiting) status
+    // Delivery Receipt - Comprehensive content for Delivery (Waiting) status
     if (selectedDocument === "delivery") {
-      // Don't show delivery receipt form for status 18 (Delivery Waiting)
+      // Show comprehensive information for status 18 (Delivery Waiting)
       if (active?.status_id === 18) {
         return (
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
-              <span>ℹ</span> Delivery receipt information will be captured when the delivery is received.
+          <div className="max-h-[600px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100 sticky top-0 bg-white z-10">Delivery Status: Waiting for Receipt</h3>
+            
+            {/* Status Overview */}
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold">18</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-900 mb-2">Delivery (Waiting) Status</h4>
+                  <p className="text-xs text-amber-800 leading-5">
+                    The Purchase Order has been served to the supplier and delivery is expected. 
+                    This status indicates that we are waiting for the supplier to deliver the goods/services 
+                    and for the delivery to be physically received by our office.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* What This Status Means */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">ℹ</span>
+                </span>
+                What This Status Means
+              </h4>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <ul className="space-y-2 text-xs text-blue-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Purchase Order has been officially served to the supplier</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Supplier is expected to deliver the ordered goods/services</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Physical delivery has not yet been received by our office</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Delivery receipt information will be captured upon actual receipt</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Required Actions */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">✓</span>
+                </span>
+                Required Actions
+              </h4>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">1.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Monitor Delivery Progress</p>
+                      <p className="text-xs text-green-700">Track the supplier's delivery timeline and coordinate with relevant departments</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">2.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Prepare for Receipt</p>
+                      <p className="text-xs text-green-700">Ensure receiving area and personnel are ready for incoming delivery</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">3.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Update Status When Received</p>
+                      <p className="text-xs text-green-700">Change status to "Delivery (Received)" once goods are physically received</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Next Steps */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">→</span>
+                </span>
+                Next Steps in Process
+              </h4>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="space-y-2 text-xs text-purple-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">19</div>
+                    <span className="font-medium">Delivery (Received)</span>
+                    <span className="text-purple-600">- Capture delivery receipt details</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">20</div>
+                    <span className="font-medium">Delivery (IAR)</span>
+                    <span className="text-purple-600">- Complete Inspection and Acceptance Report</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">21</div>
+                    <span className="font-medium">Delivery (IAR Processing)</span>
+                    <span className="text-purple-600">- Process IAR for approval</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Important Notes */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">!</span>
+                </span>
+                Important Notes
+              </h4>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <ul className="space-y-2 text-xs text-red-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Do not proceed to IAR processing until physical delivery is received</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Ensure all delivered items match the Purchase Order specifications</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Document any discrepancies or damages upon receipt</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Contact supplier immediately if delivery is delayed beyond agreed timeline</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         );
       }
       
+      // Show comprehensive information for status 19 (Delivery Received) before the form
+      if (active?.status_id === 19) {
+        return (
+          <div className="max-h-[600px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100 sticky top-0 bg-white z-10">Delivery Status: Received - Capture Receipt Details</h3>
+            
+            {/* Delivery Receipt Form - Moved to Top */}
+            <div className="mb-6">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt Information</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <p className="text-xs text-amber-800 font-medium mb-2">📋 Complete the delivery receipt details below:</p>
+                <p className="text-xs text-amber-700">All required fields must be filled out before proceeding to the IAR phase.</p>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Delivery Receipt No. (DR No.) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={drNo}
+                      onChange={(e) => setDrNo(e.target.value)}
+                      placeholder="e.g. DR-2026-0012"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Statement of Account (SOA No.)
+                    </label>
+                    <input
+                      type="text"
+                      value={soaNo}
+                      onChange={(e) => setSoaNo(e.target.value)}
+                      placeholder="e.g. SOA-2026-0008"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Overview */}
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold">19</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-green-900 mb-2">Delivery (Received) Status</h4>
+                  <p className="text-xs text-green-800 leading-5">
+                    The goods/services have been physically received from the supplier. 
+                    This status requires capturing the delivery receipt details and verifying 
+                    that all items match the Purchase Order specifications before proceeding 
+                    to the Inspection and Acceptance Report (IAR) phase.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* What This Status Means */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">ℹ</span>
+                </span>
+                What This Status Means
+              </h4>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <ul className="space-y-2 text-xs text-blue-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Physical delivery has been received and verified</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Delivery receipt information must be captured and documented</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Items need to be inspected for quantity and quality compliance</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Ready to proceed to IAR (Inspection & Acceptance Report) phase</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Required Actions */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">✓</span>
+                </span>
+                Required Actions
+              </h4>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">1.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Capture Delivery Receipt Details</p>
+                      <p className="text-xs text-green-700">Enter DR No. and SOA No. in the form below</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">2.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Verify Delivery Contents</p>
+                      <p className="text-xs text-green-700">Ensure all items match Purchase Order specifications</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">3.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Document Discrepancies</p>
+                      <p className="text-xs text-green-700">Note any damages, shortages, or non-conforming items</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-0.5">4.</span>
+                    <div>
+                      <p className="text-xs font-medium text-green-900">Prepare for IAR</p>
+                      <p className="text-xs text-green-700">Gather documentation for Inspection & Acceptance Report</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Next Steps */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">→</span>
+                </span>
+                Next Steps in Process
+              </h4>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="space-y-2 text-xs text-purple-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">20</div>
+                    <span className="font-medium">Delivery (IAR)</span>
+                    <span className="text-purple-600">- Complete Inspection and Acceptance Report</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">21</div>
+                    <span className="font-medium">Delivery (IAR Processing)</span>
+                    <span className="text-purple-600">- Process IAR for approval</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">22</div>
+                    <span className="font-medium">Delivery (LOA)</span>
+                    <span className="text-purple-600">- Generate Letter of Authority</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Important Notes */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="w-5 h-5 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold">!</span>
+                </span>
+                Important Notes
+              </h4>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <ul className="space-y-2 text-xs text-red-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Delivery Receipt No. (DR No.) is required and must be accurate</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Verify all delivered items against the Purchase Order before signing</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Document any discrepancies immediately with photos and written notes</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>Ensure proper storage and security of received items</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Receipt</h3>
@@ -1052,12 +1525,23 @@ export default function ProcessDeliveryModal({
     
     // Status 22 (Delivery LOA) - Preview only for forwarding to Division Chief
     if (active?.status_id === 22) {
+      const hasIarData = iar && Object.keys(iar).length > 0 && iar?.iar_no?.trim() !== "";
       return (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-          <p className="text-sm text-blue-900 leading-5">
-            Preview documents for forwarding to Division Chief for signature. 
-            This step allows you to review the IAR, LOA, and DV documents before 
-            sending them to the Division Chief for final approval.
+        <div className={`rounded-xl px-4 py-3 ${hasIarData ? "bg-blue-50 border border-blue-200" : "bg-yellow-50 border border-yellow-200"}`}>
+          <p className={`text-sm leading-5 ${hasIarData ? "text-blue-900" : "text-yellow-900"}`}>
+            {hasIarData ? (
+              <>
+                Preview documents for forwarding to Division Chief for signature. 
+                This step allows you to review the IAR, LOA, and DV documents before 
+                sending them to the Division Chief for final approval.
+              </>
+            ) : (
+              <>
+                <strong>⚠️ IAR data required:</strong> You must complete the IAR form before 
+                forwarding to Division Chief. Please go back and ensure all IAR fields 
+                are filled out and saved.
+              </>
+            )}
           </p>
         </div>
       );
@@ -1450,10 +1934,10 @@ export default function ProcessDeliveryModal({
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
           {/* Form Side */}
-          <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
-            <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
-              {/* Document Type Tabs - Hide for Delivery (Received) since only delivery receipt is shown */}
-              {active?.status_id !== 19 && (
+          <div className={`${active?.status_id === 18 || active?.status_id === 19 || active?.status_id === 21 ? 'flex-[1]' : 'flex-[2]'} flex-col overflow-hidden ${active?.status_id === 18 || active?.status_id === 19 || active?.status_id === 21 ? '' : 'border-r border-gray-200'}`}>
+            <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6 scroll-smooth" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+              {/* Document Type Tabs - Hide for Delivery (Received), Delivery (Waiting), and IAR Processing since comprehensive content is shown */}
+              {active?.status_id !== 19 && active?.status_id !== 18 && active?.status_id !== 21 && (
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Document Type</h3>
                   <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 w-fit">
@@ -1586,8 +2070,8 @@ export default function ProcessDeliveryModal({
             </div>
           </div>
 
-          {/* Preview Side - Hide for Status 21 (IAR Processing) */}
-          {active?.status_id !== 21 && (
+          {/* Preview Side - Hide for Status 18 (Delivery Waiting), Status 19 (Delivery Received), and Status 21 (IAR Processing) */}
+          {active?.status_id !== 18 && active?.status_id !== 19 && active?.status_id !== 21 && (
             <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
               <div className="flex-1 overflow-y-auto p-8">
                 <div className="flex items-center justify-between mb-4">

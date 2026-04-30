@@ -95,7 +95,7 @@ export default function DeleteDeliveryModal({
                 Permanent deletion
               </p>
               <p className="text-xs text-red-700 mt-1 leading-5">
-                This will delete the delivery record and its linked IAR / LOA / DV documents. This action cannot be undone.
+                This will delete the delivery record and its linked IAR / LOA / DV documents and remarks. This action cannot be undone.
               </p>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function DeleteDeliveryModal({
                 Includes
               </p>
               <p className="text-xs text-gray-500 mt-1 leading-5">
-                This delivery log and its IAR/LOA/DV document rows.
+                This delivery log and its IAR/LOA/DV document rows and remarks.
               </p>
             </div>
             <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2.5 border border-amber-200">
@@ -130,21 +130,26 @@ export default function DeleteDeliveryModal({
               <p className="text-sm text-gray-600 font-semibold">Loading deletion impact…</p>
             </div>
           ) : (
-            <div className="flex gap-2">
-              <div className="flex-1 bg-teal-50 border border-teal-200 rounded-xl py-2.5 px-2 text-center">
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-teal-50 border border-teal-200 rounded-xl py-2.5 px-2 text-center">
                 <RiFileListLine size={16} className="text-teal-700 mx-auto" />
                 <p className="text-sm font-bold mt-1 text-teal-700">{preview?.iarCount ?? 0}</p>
                 <p className="text-xs font-bold text-teal-600 mt-0.5">IAR</p>
               </div>
-              <div className="flex-1 bg-purple-50 border border-purple-200 rounded-xl py-2.5 px-2 text-center">
+              <div className="bg-purple-50 border border-purple-200 rounded-xl py-2.5 px-2 text-center">
                 <RiCheckboxCircleLine size={16} className="text-purple-700 mx-auto" />
                 <p className="text-sm font-bold mt-1 text-purple-700">{preview?.loaCount ?? 0}</p>
                 <p className="text-xs font-bold text-purple-600 mt-0.5">LOA</p>
               </div>
-              <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl py-2.5 px-2 text-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl py-2.5 px-2 text-center">
                 <RiReceiptLine size={16} className="text-blue-700 mx-auto" />
                 <p className="text-sm font-bold mt-1 text-blue-700">{preview?.dvCount ?? 0}</p>
                 <p className="text-xs font-bold text-blue-600 mt-0.5">DV</p>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl py-2.5 px-2 text-center">
+                <RiFileListLine size={16} className="text-orange-700 mx-auto" />
+                <p className="text-sm font-bold mt-1 text-orange-700">{preview?.remarksCount ?? 0}</p>
+                <p className="text-xs font-bold text-orange-600 mt-0.5">Remarks</p>
               </div>
             </div>
           )}

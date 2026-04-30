@@ -248,7 +248,7 @@ export async function insertDelivery(payload: {
 
 export async function fetchPoIdsWithActiveDeliveries(): Promise<number[]> {
   const supabase = createClient();
-  const ACTIVE_DELIVERY_STATUS_IDS = [18, 19, 20, 21, 22, 23, 24];
+  const ACTIVE_DELIVERY_STATUS_IDS = [18, 19, 20, 21, 22, 23, 24, 25];
   const { data, error } = await supabase
     .from("deliveries")
     .select("po_id");
@@ -264,7 +264,7 @@ export async function fetchPoIdsWithActiveDeliveries(): Promise<number[]> {
 
 export async function hasActiveDeliveryForPo(poId: number): Promise<boolean> {
   const supabase = createClient();
-  const ACTIVE_DELIVERY_STATUS_IDS = [18, 19, 20, 21, 22, 23, 24];
+  const ACTIVE_DELIVERY_STATUS_IDS = [18, 19, 20, 21, 22, 23, 24, 25];
   const { data, error } = await supabase
     .from("deliveries")
     .select("id")
@@ -578,6 +578,7 @@ export interface DeleteDeliveryPreview {
   iarCount: number;
   loaCount: number;
   dvCount: number;
+  remarksCount: number;
 }
 
 export async function fetchDeliveryDeletePreview(
@@ -591,7 +592,7 @@ export async function fetchDeliveryDeletePreview(
     .single();
   if (dErr || !d) throw dErr ?? new Error("Delivery not found.");
 
-  const [iar, loa, dv] = await Promise.all([
+  const [iar, loa, dv, remarks] = await Promise.all([
     supabase
       .from("iar_documents")
       .select("id", { count: "exact", head: true })
@@ -604,6 +605,10 @@ export async function fetchDeliveryDeletePreview(
       .from("dv_documents")
       .select("id", { count: "exact", head: true })
       .eq("delivery_id", deliveryId),
+    supabase
+      .from("remarks")
+      .select("id", { count: "exact", head: true })
+      .eq("delivery_id", deliveryId),
   ]);
 
   return {
@@ -614,6 +619,7 @@ export async function fetchDeliveryDeletePreview(
     iarCount: iar.count ?? 0,
     loaCount: loa.count ?? 0,
     dvCount: dv.count ?? 0,
+    remarksCount: remarks.count ?? 0,
   };
 }
 
@@ -627,6 +633,13 @@ export async function deleteDeliveryDeep(
     .eq("id", deliveryId)
     .single();
   if (dErr || !d) throw dErr ?? new Error("Delivery not found.");
+
+  // Delete related records first to avoid foreign key constraints
+  const { error: remarksErr } = await supabase
+    .from("remarks")
+    .delete()
+    .eq("delivery_id", deliveryId);
+  if (remarksErr) throw remarksErr;
 
   const { error: iarErr } = await supabase
     .from("iar_documents")
@@ -646,6 +659,7 @@ export async function deleteDeliveryDeep(
     .eq("delivery_id", deliveryId);
   if (dvErr) throw dvErr;
 
+  // Finally delete the delivery record
   const { error: delErr } = await supabase
     .from("deliveries")
     .delete()

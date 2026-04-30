@@ -101,11 +101,29 @@ export default function DeliveryPage() {
 
   const PAGE_SIZE = 10;
 
+  // Helper function to filter out Phase 4 payment statuses
+  const filterDeliveryData = (data: any[]) => {
+    const paymentStatuses = [28, 29, 30, 31, 32, 35];
+    return data.filter((delivery) => {
+      // Exclude Phase 4 payment statuses - they belong to Payment page
+      if (paymentStatuses.includes(delivery.status_id)) {
+        return false;
+      }
+      
+      // STOD roles (BAC, Supply, Budget, PARPO, Accounting) and Admin can view all deliveries
+      if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingRole) {
+        return true;
+      }
+      // End users and Division Heads can only view deliveries from their division
+      return delivery.office_section === currentUser?.divisions?.division_name;
+    });
+  };
+
   const SUB_TAB_STATUS_MAP: Record<SubTab, number[]> = {
     all: [],
     deliveries: [18, 19],
     inspection: [20, 21],
-    acceptance: [22, 23, 24, 25, 35],
+    acceptance: [22, 23, 24, 25],
   };
 
   const STATUS_CFG: Record<number, { bg: string; text: string; label: string }> = {
@@ -117,12 +135,6 @@ export default function DeliveryPage() {
     23: { bg: "bg-green-50", text: "text-green-800", label: "Delivery (DV)" },
     24: { bg: "bg-indigo-50", text: "text-indigo-800", label: "Delivery (End-User Forward)" },
     25: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Delivery (Division Chief)" },
-    28: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Payment Pending" },
-    29: { bg: "bg-orange-50", text: "text-orange-800", label: "Payment Processing" },
-    30: { bg: "bg-purple-50", text: "text-purple-800", label: "Accounting Review" },
-    31: { bg: "bg-teal-50", text: "text-teal-800", label: "Budget Review" },
-    32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "Final Approval" },
-    35: { bg: "bg-emerald-100", text: "text-emerald-900", label: "Completed" },
     36: { bg: "bg-gray-50", text: "text-gray-800", label: "On Hold" },
     27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
   };
@@ -173,14 +185,7 @@ export default function DeliveryPage() {
           userDivision: currentUser?.divisions?.division_name 
         });
 
-        const filteredData = (data || []).filter((delivery) => {
-          // STOD roles (BAC, Supply, Budget, PARPO, Accounting) and Admin can view all deliveries
-          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingRole) {
-            return true;
-          }
-          // End users and Division Heads can only view deliveries from their division
-          return delivery.office_section === currentUser?.divisions?.division_name;
-        });
+        const filteredData = filterDeliveryData(data || []);
 
         console.log("Filtered delivery data:", filteredData);
         setDeliveries(filteredData as DeliveryRow[]);
@@ -262,10 +267,9 @@ export default function DeliveryPage() {
 
   const canRoleProcess = (roleId: number, statusId: number) => {
     if (roleId === 1) return true;
-    if (roleId === 8 && [18, 19, 20, 21, 22, 23].includes(statusId)) return true;
+    if (roleId === 8 && [18, 19, 20, 21, 22].includes(statusId)) return true; // Supply role - removed 23
     if (roleId === 3 && statusId === 24) return true; // END-USER forwards to Division Chief
     if (roleId === 2 && statusId === 25) return true; // Division Chief approval
-    if (roleId === 8 && statusId === 22) return true; // Supply can process Delivery LOA preview
     return false;
   };
 
@@ -311,7 +315,7 @@ export default function DeliveryPage() {
       setExpectedDeliveryDate("");
       setSelectedPoId(null);
       const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
-      if (data) setDeliveries(data as DeliveryRow[]);
+      if (data) setDeliveries(filterDeliveryData(data) as DeliveryRow[]);
     } catch (e: any) {
       alert(e?.message ?? "Failed to create delivery.");
     }
@@ -328,19 +332,15 @@ export default function DeliveryPage() {
       } else if (selectedDelivery.status_id === 25) {
         nextStatus = 30; // Division Chief approval goes to Accounting Review (Phase 4)
       }
+      // Normal progression for status 23: 23 → 24 (End-User Forward)
       
-      console.log("=== DELIVERY PROCESS DEBUG ===");
-      console.log("Current status:", selectedDelivery.status_id);
-      console.log("Next status:", nextStatus);
-      console.log("Status flag:", statusFlag);
-      console.log("Notes:", notes);
+      // Status validation for debugging
       
-      // TEMPORARY: Skip all status flag logic and just update status
-      console.log("Attempting direct status update...");
+      // Update delivery status
       
       try {
         const result = await updateDeliveryStatusOnly(selectedDelivery.id, nextStatus);
-        console.log("Direct status update successful:", result);
+        // Status update successful
       } catch (directError: any) {
         console.error("Direct status update failed:", directError);
         alert(`Status update failed: ${directError.message}`);
@@ -354,13 +354,12 @@ export default function DeliveryPage() {
         notes: notes || null,
       };
       
-      console.log("=== UPDATING DELIVERY RECORD ===");
-      console.log("Delivery payload:", payload);
+      // Update delivery record with additional fields
       
       // Update the main delivery record with DR No., SOA No., and notes
       try {
         const updatedDelivery = await updateDelivery(selectedDelivery.id, payload);
-        console.log("Delivery record updated successfully:", updatedDelivery);
+        // Delivery record updated successfully
       } catch (deliveryError: any) {
         console.error("Error updating delivery record:", deliveryError);
         alert(`Failed to update delivery record: ${deliveryError.message}`);
@@ -384,47 +383,35 @@ export default function DeliveryPage() {
       }
 
       // Save document data whenever it's provided
-      console.log("=== SAVING DOCUMENT DATA ===");
-      console.log("IAR data:", iar);
-      console.log("LOA data:", loa);
-      console.log("DV data:", dv);
+      // Save document data if provided
       
       // Check if LOA and DV objects have any actual data
       const hasIarData = iar && Object.keys(iar).length > 0;
       const hasLoaData = loa && Object.keys(loa).length > 0;
       const hasDvData = dv && Object.keys(dv).length > 0;
       
-      console.log("Data existence check:");
-      console.log("Has IAR data:", hasIarData, iar);
-      console.log("Has LOA data:", hasLoaData, loa);
-      console.log("Has DV data:", hasDvData, dv);
+      // Check document data existence
       
       if (hasIarData) {
-        console.log("Saving IAR data...");
         await upsertIARByDelivery(selectedDelivery.id, iar);
-        console.log("IAR data saved successfully");
       } else {
-        console.log("No IAR data to save");
+        // No IAR data to save
       }
       if (hasLoaData) {
-        console.log("Saving LOA data...");
         await upsertLOAByDelivery(selectedDelivery.id, loa);
-        console.log("LOA data saved successfully");
       } else {
-        console.log("No LOA data to save");
+        // No LOA data to save
       }
       if (hasDvData) {
-        console.log("Saving DV data...");
         await upsertDVByDelivery(selectedDelivery.id, dv);
-        console.log("DV data saved successfully");
       } else {
-        console.log("No DV data to save");
+        // No DV data to save
       }
-      console.log("=== DOCUMENT SAVING COMPLETE ===");
+      // Document saving complete
       
       // Refresh deliveries list first
       const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
-      if (data) setDeliveries(data as DeliveryRow[]);
+      if (data) setDeliveries(filterDeliveryData(data) as DeliveryRow[]);
       
       // Then clear form state and close modal
       setProcessModalOpen(false);
@@ -442,40 +429,11 @@ export default function DeliveryPage() {
 
   const handleDeleteDelivery = async (deliveryId: string) => {
     const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
-    if (data) setDeliveries(data as DeliveryRow[]);
+    if (data) setDeliveries(filterDeliveryData(data) as DeliveryRow[]);
   };
 
   const handleOpenProcessModal = async (delivery: DeliveryRow) => {
-    console.log("=== OPENING PROCESS MODAL ===");
-    console.log("Delivery:", delivery);
-    
-    // Status 23 (Delivery DV) - Skip modal, directly forward to Division Chief for signature
-    if (delivery.status_id === 23) {
-      console.log("Delivery DV status - Direct forwarding to Division Chief");
-      
-      if (!confirm("Forward this delivery to Division Chief for signature?")) {
-        return;
-      }
-      
-      try {
-        // Directly update status to Division Chief (25)
-        const result = await updateDeliveryStatusOnly(delivery.id, 25);
-        console.log("Direct status update to Division Chief successful:", result);
-        
-        // Refresh deliveries list
-        const { data } = await supabase.from("deliveries").select("*").order("created_at", { ascending: false });
-        if (data) setDeliveries(data as DeliveryRow[]);
-        
-        alert("Delivery successfully forwarded to Division Chief for signature.");
-        return;
-      } catch (error: any) {
-        console.error("Error forwarding to Division Chief:", error);
-        alert(`Failed to forward to Division Chief: ${error.message}`);
-        return;
-      }
-    }
-    
-    // For all other statuses, proceed with normal modal flow
+    // Proceed with normal modal flow for all statuses
     setSelectedDelivery(delivery);
     setDrNo(delivery.dr_no ?? "");
     setSoaNo(delivery.soa_no ?? "");
@@ -485,21 +443,16 @@ export default function DeliveryPage() {
     setDv(null);
     setStatusFlag(null);
 
-    // Load all document data when opening modal, regardless of status
-    console.log("Fetching document data from database...");
+    // Load document data when opening modal
     const iarDoc = await fetchIARByDelivery(delivery.id);
-    console.log("Fetched IAR:", iarDoc);
     setIar(iarDoc);
     
     const loaDoc = await fetchLOAByDelivery(delivery.id);
-    console.log("Fetched LOA:", loaDoc);
     setLoa(loaDoc);
     
     const dvDoc = await fetchDVByDelivery(delivery.id);
-    console.log("Fetched DV:", dvDoc);
     setDv(dvDoc);
 
-    console.log("Opening modal with document data loaded");
     setProcessModalOpen(true);
   };
 
@@ -811,9 +764,16 @@ export default function DeliveryPage() {
                   className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                 >
                   <option value="">All Statuses</option>
-                  {statuses.map((s) => (
-                    <option key={s.id} value={s.id}>{s.status_name}</option>
-                  ))}
+                  {statuses
+                    .filter(s => {
+                      // Only show Phase 3 delivery statuses (18-25) plus system statuses
+                      const deliveryStatuses = [18, 19, 20, 21, 22, 23, 24, 25];
+                      const systemStatuses = [27, 36]; // Cancelled, On Hold
+                      return deliveryStatuses.includes(s.id) || systemStatuses.includes(s.id);
+                    })
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>{s.status_name}</option>
+                    ))}
                 </select>
               </div>
               <div className="flex-1 min-w-50">
@@ -934,13 +894,7 @@ export default function DeliveryPage() {
                       const statusInfo = STATUS_CFG[delivery.status_id] || { bg: "bg-emerald-100", text: "text-emerald-900", label: "Completed" };
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                       const canProcess = canRoleProcess(currentUser?.role_id || 0, delivery.status_id);
-                      console.log("Process button debug:", {
-                        deliveryId: delivery.id,
-                        deliveryStatus: delivery.status_id,
-                        userRole: currentUser?.role_id,
-                        canProcess,
-                        currentUser
-                      });
+                      // Debug process button permissions
 
                       return (
                         <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
@@ -1005,7 +959,6 @@ export default function DeliveryPage() {
                               {canProcess && (
                                 <button
                                   onClick={() => {
-                                    console.log("Process button clicked for delivery:", delivery);
                                     handleOpenProcessModal(delivery);
                                   }}
                                   className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap"

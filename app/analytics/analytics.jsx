@@ -100,6 +100,23 @@ const AnalyticsDashboard = () => {
           const user = JSON.parse(storedUser);
           setCurrentUser(user);
           setIsAdmin(user.role_id === 1);
+          
+          // Check for special roles that can see all data
+          const isSupplyAccount = 
+            user.username?.toLowerCase() === "supply" ||
+            (user.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+          const isBudgetAccount = 
+            user.roles?.role_name?.toLowerCase().includes("budget") ?? false;
+          const isAccountingAccount = 
+            user.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+          
+          // Store role checks for later use
+          window.currentUserRoles = {
+            isAdmin: user.role_id === 1,
+            isSupplyAccount,
+            isBudgetAccount,
+            isAccountingAccount
+          };
         }
         
         // Fetch PR data with related information (same as Recent Purchase Requests)
@@ -121,11 +138,15 @@ const AnalyticsDashboard = () => {
           try {
             const user = JSON.parse(storedUser);
             
-            if (user.role_id !== 1 && user.divisions?.division_name) {
-              // see only their division's data
+            const userRoles = window.currentUserRoles || {};
+            if (!userRoles.isAdmin && !userRoles.isSupplyAccount && !userRoles.isBudgetAccount && !userRoles.isAccountingAccount && user.divisions?.division_name) {
+              // Regular users can only see their division's data
               filteredData = (prData || []).filter(pr => 
                 pr && pr.office_section === user.divisions.division_name
               );
+            } else if (userRoles.isAdmin || userRoles.isSupplyAccount || userRoles.isBudgetAccount || userRoles.isAccountingAccount) {
+              // Admin, supply, budget, and accounting users can see all data
+              filteredData = prData || [];
             }
           } catch (parseError) {
             console.error('Error parsing stored user:', parseError);
