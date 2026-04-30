@@ -516,14 +516,14 @@
             <span
               class="pdf24_12 pdf24_08 pdf24_36"
               style="word-spacing: 0.0111em"
-              >Date Inspected : {{date_inspected}}&nbsp;</span
+              >Date Inspected : {{inspected_at}}&nbsp;</span
             >
           </div>
           <div class="pdf24_01" style="left: 25.325em; top: 36.6516em">
             <span
               class="pdf24_12 pdf24_08 pdf24_37"
               style="word-spacing: 0.0099em"
-              >Date Received : {{date_received}}&nbsp;</span
+              >Date Received : {{received_at}}&nbsp;</span
             >
           </div>
           <div class="pdf24_01" style="left: 5.0167em; top: 39.0255em">
@@ -534,37 +534,65 @@
               &nbsp;</span
             >
           </div>
-          <div class="pdf24_01" style="left: 28.125em; top: 39.1088em">
-            <span class="pdf24_38 pdf24_08 pdf24_39">Complete &nbsp;</span>
+          <!-- Checkmark overlay for Inspection Verification -->
+          {{#if inspection_verified}}
+          <div style="position: absolute; left: 3.2em; top: 39.3em; z-index: 1000;">
+            <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
           </div>
+          {{/if}}
+          <div class="pdf24_01" style="left: 28.125em; top: 39.1088em">
+            <span class="pdf24_38 pdf24_08 pdf24_39">
+              Complete &nbsp;</span>
+          </div>
+          <!-- Checkmark overlay for Complete -->
+          {{#if items_complete}}
+          <div style="position: absolute; left: 26.2em; top: 39.2em; z-index: 1000;">
+            <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
+          </div>
+          {{/if}}
           <div class="pdf24_01" style="left: 5.0167em; top: 40.158em">
             <span
               class="pdf24_38 pdf24_08 pdf24_40"
               style="word-spacing: 0.0088em"
-              >and specifications &nbsp;</span
-            >
+              >and specifications &nbsp;</span>
           </div>
           <div class="pdf24_01" style="left: 28.125em; top: 41.0413em">
             <span
               class="pdf24_38 pdf24_08 pdf24_41"
               style="word-spacing: 0.0117em"
-              >Partial (pls. specify quantity) &nbsp;</span
-            >
+              >Partial (pls. specify quantity) &nbsp;</span>
+          </div>
+          <!-- Checkmark overlay for Partial -->
+          {{#unless items_complete}}
+          <div style="position: absolute; left: 26.2em; top: 41.13em; z-index: 1000;">
+            <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
+          </div>
+          {{/unless}}
+          <div class="pdf24_01" style="left: 6.2688em; top: 43.6422em">
+            <span
+              class="pdf24_17 pdf24_08 pdf24_36"
+              style="word-spacing: 0.0117em"
+              >{{inspecting_officer_name}} &nbsp;</span>
           </div>
           <div class="pdf24_01" style="left: 6.2688em; top: 44.6422em">
             <span
               class="pdf24_38 pdf24_08 pdf24_42"
               style="word-spacing: 0.0132em"
-              >Inspection Officer/Inspection Committee &nbsp;</span
-            >
+              >Inspection Officer/Inspection Committee &nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 32.1775em; top: 43.6422em">
+            <span
+              class="pdf24_17 pdf24_08 pdf24_36"
+              style="word-spacing: 0.0117em"
+              >{{supply_officer_signature_name}} &nbsp;</span>
           </div>
           <div class="pdf24_01" style="left: 32.1775em; top: 44.6422em">
             <span
               class="pdf24_38 pdf24_08 pdf24_43"
               style="word-spacing: 0.0174em"
-              >ARPT/SUPPLY OFFICER &nbsp;</span
-            >
+              >ARPT/SUPPLY OFFICER &nbsp;</span>
           </div>
+        
         </div>
       </div>
     </div>

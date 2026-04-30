@@ -18,6 +18,10 @@ async function loadTemplate(templateName: string): Promise<string> {
 }
 
 // Placeholder replacement function
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current && current[key], obj);
+}
+
 function replacePlaceholders(template: string, data: any): string {
   let result = template;
   
@@ -64,6 +68,18 @@ function replacePlaceholders(template: string, data: any): string {
     const value = data[key] ?? "";
     const placeholder = new RegExp(`{{${key}}}`, 'g');
     result = result.replace(placeholder, value);
+  });
+  
+  // Handle Handlebars-style conditionals {{#if condition}}content{{/if}} - PROCESS LAST
+  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, condition, content) => {
+    const value = getNestedValue(data, condition);
+    return value ? content : '';
+  });
+  
+  // Handle Handlebars-style conditionals with negation {{#if condition}}content{{else}}other{{/if}} - PROCESS LAST
+  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{else}}([\s\S]*?){{\/if}}/g, (match, condition, trueContent, falseContent) => {
+    const value = getNestedValue(data, condition);
+    return value ? trueContent : falseContent;
   });
   
   return result;
@@ -320,6 +336,20 @@ export default function ViewDeliveryModal({
     if (stored) setCurrentUser(JSON.parse(stored));
   }, []);
 
+  // Debug logging for received props
+  useEffect(() => {
+    if (visible) {
+      console.log("=== VIEW DELIVERY MODAL PROPS ===");
+      console.log("Delivery:", delivery);
+      console.log("IAR data:", iar);
+      console.log("LOA data:", loa);
+      console.log("DV data:", dv);
+      console.log("PO data:", poData);
+      console.log("Default tab:", defaultTab);
+      console.log("Current tab:", tab);
+    }
+  }, [visible, delivery, iar, loa, dv, poData, defaultTab, tab]);
+
   // Update tab when defaultTab changes
   useEffect(() => {
     if (visible) {
@@ -330,6 +360,12 @@ export default function ViewDeliveryModal({
   // Load HTML template when tab or data changes
   useEffect(() => {
     if (!visible) return;
+    
+    console.log("=== LOADING HTML FOR VIEW MODAL ===");
+    console.log("Current tab:", tab);
+    console.log("IAR exists:", !!iar, iar);
+    console.log("LOA exists:", !!loa, loa);
+    console.log("DV exists:", !!dv, dv);
     
     const loadHtml = async () => {
       try {
@@ -344,22 +380,35 @@ export default function ViewDeliveryModal({
         const mergedData = { ...delivery, ...transformedPoData };
         
         if (tab === "iar" && iar) {
+          console.log("Building IAR HTML...");
           const iarData = { ...mergedData, ...iar };
           // Explicitly preserve po_items from mergedData
           iarData.po_items = mergedData.po_items;
           html = await buildIARHtml(iarData);
+          console.log("IAR HTML generated successfully");
         } else if (tab === "loa" && loa) {
+          console.log("Building LOA HTML...");
           const loaData = { ...mergedData, ...loa };
           // Explicitly preserve po_items from mergedData
           loaData.po_items = mergedData.po_items;
           html = await buildLOAHtml(loaData);
+          console.log("LOA HTML generated successfully");
         } else if (tab === "dv" && dv) {
+          console.log("Building DV HTML...");
           const dvData = { ...mergedData, ...dv };
           // Explicitly preserve po_items from mergedData
           dvData.po_items = mergedData.po_items;
           html = await buildDVHtml(dvData);
+          console.log("DV HTML generated successfully");
+        } else {
+          console.log("No data available for tab:", tab, {
+            hasIar: !!iar,
+            hasLoa: !!loa,
+            hasDv: !!dv
+          });
         }
         
+        console.log("Final HTML:", html ? "Generated" : "Not generated");
         setCurrentHtml(html);
       } catch (error) {
         console.error("Error loading document HTML:", error);
@@ -560,13 +609,37 @@ export default function ViewDeliveryModal({
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center</label>
                           <input className={readonlyCls} value={iar?.responsibility_center ?? ""} readOnly tabIndex={-1} />
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Inspector Name</label>
-                          <input className={readonlyCls} value={iar?.inspector_name ?? ""} readOnly tabIndex={-1} />
-                        </div>
+                                                
+                        {/* Inspection Confirmation Display */}
                         <div className="col-span-2">
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Supply Officer Name</label>
-                          <input className={readonlyCls} value={iar?.supply_officer_name ?? ""} readOnly tabIndex={-1} />
+                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Inspection Confirmation</label>
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div className="text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-4 h-4 rounded flex items-center justify-center text-xs font-bold ${iar?.items_complete ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                  {iar?.items_complete ? '✓' : '✗'}
+                                </span>
+                                <span className="text-gray-700">
+                                  {iar?.items_complete ? 'Complete Delivery' : 'Partial Delivery'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Officer Signatures Display */}
+                        <div className="col-span-2">
+                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Officer Signatures</label>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs font-bold text-gray-600 mb-1">INSPECTION OFFICER/INSPECTION COMMITTEE</p>
+                              <input className={readonlyCls} value={iar?.inspecting_officer_name ?? ""} readOnly tabIndex={-1} placeholder="Name of Inspecting Officer" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-600 mb-1">ARPT/SUPPLY OFFICER</p>
+                              <input className={readonlyCls} value={iar?.supply_officer_signature_name ?? ""} readOnly tabIndex={-1} placeholder="Name of Supply Officer" />
+                            </div>
+                          </div>
                         </div>
                       </>
                     )}

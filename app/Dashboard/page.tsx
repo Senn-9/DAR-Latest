@@ -25,6 +25,9 @@ export default function DashboardPage() {
     created_at?: string;
     total_cost: number;
     purchase_request_items?: PRItem[];
+    source?: 'pr' | 'delivery' | 'payment';
+    delivery_no?: string;
+    supplier?: string;
   };
   type CurrentUser = {
     fullname: string;
@@ -61,29 +64,157 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("purchase_requests")
-        .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)")
-        .order("created_at", { ascending: false });
-      if (!error) {
-        setList(
-          (data || []).filter((pr) =>
-            isAdmin || isSupplyAccount ? true : pr.office_section === currentUser?.divisions?.division_name
-          ) as PRListRow[]
-        );
+      
+      try {
+        console.log('Starting dashboard data fetch...');
+        
+        // Fetch purchase requests (PR data)
+        const { data: prData, error: prError } = await supabase
+          .from("purchase_requests")
+          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)")
+          .order("created_at", { ascending: false });
+        
+        console.log('PR fetch result:', { prData: prData?.length, prError });
+        
+        if (prError) {
+          console.error('PR fetch error details:', {
+            message: prError.message,
+            details: prError.details,
+            hint: prError.hint,
+            code: prError.code
+          });
+          throw prError;
+        }
+        
+        // Fetch deliveries (separate table)
+        let deliveryData: any[] = [];
+        try {
+          const { data: deliveries, error: deliveryError } = await supabase
+            .from("deliveries")
+            .select("id, delivery_no, po_no, supplier, office_section, division_id, status_id, created_at")
+            .order("created_at", { ascending: false });
+          
+          if (deliveryError) {
+            console.warn('Delivery fetch failed:', deliveryError);
+          } else {
+            deliveryData = deliveries || [];
+            console.log('Delivery fetch result:', deliveryData.length);
+          }
+        } catch (err) {
+          console.warn('Delivery fetch exception:', err);
+        }
+        
+        // Process purchase requests
+        const processedPRs = (prData || []).map(pr => ({
+          ...pr,
+          source: 'pr' as const
+        }));
+        
+        // Process deliveries - convert to dashboard format
+        const processedDeliveries = deliveryData.map(delivery => {
+          const isPaymentPhase = [35, 26, 27, 28, 29, 30, 31, 32, 36].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
+          
+          let statusText = 'Unknown';
+          let source: 'delivery' | 'payment' = 'delivery';
+          
+          if (isPaymentPhase) {
+            statusText = 'Payment';
+            source = 'payment';
+          } else if (isDeliveryPhase) {
+            statusText = 'Delivery';
+            source = 'delivery';
+          }
+          
+          console.log(`Processing delivery ${delivery.id}: status_id=${delivery.status_id}, mapped to ${statusText}`);
+          
+          return {
+            id: delivery.id,
+            entity_name: delivery.supplier || 'Unknown Supplier',
+            pr_no: delivery.po_no || delivery.delivery_no || 'Unknown',
+            office_section: delivery.office_section || 'Unassigned',
+            status: statusText,
+            status_id: delivery.status_id,
+            created_at: delivery.created_at,
+            total_cost: 0, // deliveries table doesn't have total_cost column
+            purchase_request_items: [],
+            source,
+            delivery_no: delivery.delivery_no,
+            supplier: delivery.supplier
+          };
+        });
+        
+        console.log(`Status breakdown: PR=${processedPRs.length}, Delivery=${processedDeliveries.filter(d => d.source === 'delivery').length}, Payment=${processedDeliveries.filter(d => d.source === 'payment').length}`);
+        
+        // Combine and filter data
+        const allData = [...processedPRs, ...processedDeliveries];
+        console.log('Combined data before filtering:', allData.length);
+        
+        const filteredData = allData.filter(item => {
+          const matchesAccess = isAdmin || isSupplyAccount ? true : item.office_section === currentUser?.divisions?.division_name;
+          return matchesAccess;
+        });
+        
+        console.log('Final filtered data:', filteredData.length);
+        console.log('User role:', { isAdmin, isSupplyAccount, userDivision: currentUser?.divisions?.division_name });
+        
+        setList(filteredData as PRListRow[]);
+      } catch (error) {
+        console.error('Critical error in dashboard data fetch:', {
+          error: String(error),
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorDetails: (error as any)?.details || 'No details available',
+          errorStack: error instanceof Error ? error.stack : 'No stack available'
+        });
+        
+        // Final fallback - try minimal PR fetch
+        try {
+          console.log('Attempting minimal PR fetch as final fallback...');
+          const { data: minimalPRData, error: minimalError } = await supabase
+            .from("purchase_requests")
+            .select("id, pr_no, office_section, status, created_at")
+            .limit(10);
+          
+          if (!minimalError && minimalPRData) {
+            const minimalData = minimalPRData.map(pr => ({
+              ...pr,
+              entity_name: 'Unknown',
+              status_id: null,
+              total_cost: 0,
+              purchase_request_items: [],
+              source: 'pr' as const
+            }));
+            console.log('Using minimal fallback data:', minimalData.length);
+            setList(minimalData as PRListRow[]);
+          } else {
+            console.error('Even minimal fetch failed:', minimalError);
+            setList([]);
+          }
+        } catch (finalError) {
+          console.error('Final fallback failed:', finalError);
+          setList([]);
+        }
       }
+      
       setLoading(false);
     };
     fetchData();
   }, [supabase, isAdmin, currentUser, isSupplyAccount]);
 
-  const getStatusInfo = (status: string | null) => {
+  const getStatusInfo = (status: string | null, source?: string) => {
+    // For delivery and payment sources, use source-based detection
+    if (source === 'delivery') return { name: "Delivery", color: "delivery" };
+    if (source === 'payment') return { name: "Payment", color: "payment" };
+    
+    // For purchase requests, use text-based status detection
     const k = (status || "unknown").toLowerCase();
     if (k.includes("pending"))        return { name: status || "Unknown", color: "pending" };
     if (k.includes("processing"))     return { name: status || "Unknown", color: "processing" };
     if (k.includes("canvassing"))     return { name: status || "Unknown", color: "canvassing" };
     if (k.includes("bac resolution")) return { name: status || "Unknown", color: "bac" };
     if (k.includes("aaa issuance"))   return { name: status || "Unknown", color: "aaa" };
+    if (k.includes("delivery"))       return { name: status || "Unknown", color: "delivery" };
+    if (k.includes("payment"))        return { name: status || "Unknown", color: "payment" };
     if (k.includes("po"))             return { name: status || "Unknown", color: "po" };
     if (k.includes("approve"))        return { name: status || "Unknown", color: "approved" };
     if (k.includes("reject"))         return { name: status || "Unknown", color: "rejected" };
@@ -96,6 +227,8 @@ export default function DashboardPage() {
     canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
     bac:        "bg-purple-50 text-purple-800 border border-purple-200",
     aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
+    delivery:   "bg-cyan-50 text-cyan-800 border border-cyan-200",
+    payment:    "bg-orange-50 text-orange-800 border border-orange-200",
     po:         "bg-teal-50 text-teal-800 border border-teal-200",
     approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
     rejected:   "bg-red-50 text-red-800 border border-red-200",
@@ -124,7 +257,7 @@ export default function DashboardPage() {
       const matchSearch =
         pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const { color } = getStatusInfo(pr.status);
+      const { color } = getStatusInfo(pr.status, pr.source);
       return matchSearch && (statusFilter === "all" || color === statusFilter);
     })
     .sort((a, b) => {
@@ -163,6 +296,8 @@ export default function DashboardPage() {
     { value: "canvassing", label: "Canvassing" },
     { value: "bac",        label: "BAC Resolution" },
     { value: "aaa",        label: "AAA Issuance" },
+    { value: "delivery",   label: "Delivery" },
+    { value: "payment",    label: "Payment" },
     { value: "po",         label: "PO" },
     { value: "approved",   label: "Approved" },
     { value: "rejected",   label: "Rejected" },
@@ -349,13 +484,18 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {pagedList.map((form, index) => {
-                    const { name: statusName, color: statusColor } = getStatusInfo(form.status);
+                    const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.source);
                     const cost = form.total_cost || 0;
                     const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                    const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+                    const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || 
+                                (form.source === 'delivery' || form.source === 'payment' ? `Supplier: ${form.supplier || 'N/A'}` : '');
                       return (
                         <tr key={form.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>{form.pr_no}</td>
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
+                            {form.source === 'delivery' || form.source === 'payment' 
+                              ? form.delivery_no || form.pr_no 
+                              : form.pr_no}
+                          </td>
                           <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>

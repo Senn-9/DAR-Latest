@@ -63,6 +63,7 @@ export default function PaymentPage() {
   const [iarData, setIarData] = useState<any>(null);
   const [loaData, setLoaData] = useState<any>(null);
   const [dvData, setDvData] = useState<any>(null);
+  const [poData, setPoData] = useState<any>(null);
   const [statuses, setStatuses] = useState<{ id: number; status_name: string }[]>([]);
   const [statusFlag, setStatusFlag] = useState<StatusFlag | null>(null);
   const [flagPickerOpen, setFlagPickerOpen] = useState(false);
@@ -70,19 +71,23 @@ export default function PaymentPage() {
   const PAGE_SIZE = 10;
 
   const STATUS_CFG: Record<number, { bg: string; text: string; label: string }> = {
-    22: { bg: "bg-blue-50", text: "text-blue-800", label: "LOA Processing" },
-    23: { bg: "bg-green-50", text: "text-green-800", label: "DV Processing" },
+    18: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Delivery (Waiting)" },
+    19: { bg: "bg-orange-50", text: "text-orange-800", label: "Delivery (Received)" },
+    20: { bg: "bg-teal-50", text: "text-teal-800", label: "Delivery (IAR)" },
+    21: { bg: "bg-purple-50", text: "text-purple-800", label: "Delivery (IAR Processing)" },
+    22: { bg: "bg-blue-50", text: "text-blue-800", label: "Delivery (LOA)" },
+    23: { bg: "bg-green-50", text: "text-green-800", label: "Delivery (DV)" },
     24: { bg: "bg-indigo-50", text: "text-indigo-800", label: "End-User Forward" },
     25: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Division Chief Review" },
-    35: { bg: "bg-emerald-100", text: "text-emerald-900", label: "Payment Completed" },
-    26: { bg: "bg-red-50", text: "text-red-800", label: "Payment Cancelled" },
-    27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
     28: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Payment Pending" },
     29: { bg: "bg-orange-50", text: "text-orange-800", label: "Payment Processing" },
     30: { bg: "bg-purple-50", text: "text-purple-800", label: "Accounting Review" },
     31: { bg: "bg-teal-50", text: "text-teal-800", label: "Budget Review" },
     32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "Final Approval" },
+    35: { bg: "bg-emerald-100", text: "text-emerald-900", label: "Payment Completed" },
     36: { bg: "bg-gray-50", text: "text-gray-800", label: "On Hold" },
+    26: { bg: "bg-red-50", text: "text-red-800", label: "Payment Cancelled" },
+    27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
   };
 
   useEffect(() => {
@@ -103,7 +108,7 @@ export default function PaymentPage() {
         const deliveriesData = await fetchDeliveriesForPaymentPhase(
           isAdmin ? null : (currentUser?.divisions?.division_id ?? null)
         );
-        setDeliveries(deliveriesData);
+        setDeliveries(deliveriesData as any);
 
         // Fetch payment phase statuses
         const statusesData = await fetchPaymentPhaseStatuses();
@@ -367,7 +372,7 @@ export default function PaymentPage() {
                   </thead>
                   <tbody>
                     {pagedDeliveries.map((delivery, index) => {
-                      const statusInfo = STATUS_CFG[delivery.status_id] || { bg: "bg-gray-100", text: "text-gray-700", label: "Unknown" };
+                      const statusInfo = STATUS_CFG[delivery.status_id] || { bg: "bg-emerald-100", text: "text-emerald-900", label: "Payment Completed" };
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                       const canProcess = canRoleProcess(currentUser?.role_id || 0, delivery.status_id);
 
@@ -487,9 +492,10 @@ export default function PaymentPage() {
         <ViewDeliveryModal
           visible={viewModalOpen}
           delivery={selectedDelivery}
-          iarData={iarData}
-          loaData={loaData}
-          dvData={dvData}
+          iar={iarData}
+          loa={loaData}
+          dv={dvData}
+          poData={poData}
           onClose={() => setViewModalOpen(false)}
         />
       )}
@@ -497,14 +503,13 @@ export default function PaymentPage() {
       {selectedDelivery && processModalOpen && (
         <ProcessDeliveryModal
           visible={processModalOpen}
-          delivery={selectedDelivery}
+          active={selectedDelivery}
           onClose={() => setProcessModalOpen(false)}
-          onSubmit={async (data) => {
+          onSubmit={async () => {
             // Handle payment processing
-            console.log("Payment processing data:", data);
+            console.log("Payment processing");
             setProcessModalOpen(false);
           }}
-          active="dv"
           statusLabel="Payment Processing"
           drNo=""
           setDrNo={() => {}}
@@ -532,7 +537,7 @@ export default function PaymentPage() {
       {selectedDelivery && remarksModalOpen && (
         <RemarksModal
           visible={remarksModalOpen}
-          delivery={selectedDelivery}
+          deliveryId={selectedDelivery.id}
           onClose={() => setRemarksModalOpen(false)}
         />
       )}
