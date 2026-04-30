@@ -139,6 +139,13 @@ export default function DeliveryPage() {
     27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
   };
 
+  const SUB_TAB_OPTIONS = [
+    { value: "all" as const, label: "All" },
+    { value: "deliveries" as const, label: "Deliveries" },
+    { value: "inspection" as const, label: "Inspection" },
+    { value: "acceptance" as const, label: "Acceptance" },
+  ];
+
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
@@ -727,27 +734,27 @@ export default function DeliveryPage() {
           )}
         </div>
 
-        {/* Back to Procurement */}
-        <button
-          onClick={() => router.push("/Procurement")}
-          className="text-sm text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
-        >
-          ← Back to Procurement
-        </button>
-
-        {/* Sub-tabs */}
+        {/* ── TABS ── */}
         <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-          {(["all", "deliveries", "inspection", "acceptance"] as SubTab[]).map((tab) => (
+          {([
+            { key: "pr",       label: "Purchase Request",   href: "/Procurement"                        },
+            { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"      },
+            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract"     },
+            { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
+            { key: "delivery", label: "Delivery", href: null     },
+            { key: "payment", label: "Payment", href: "/Procurement/Payment"     },
+
+          ] as const).map(({ key, label, href }) => (
             <button
-              key={tab}
-              onClick={() => { setSubTab(tab); setCurrentPage(1); }}
+              key={key}
+              onClick={() => href && router.push(href)}
               className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-                subTab === tab
+                key === "delivery"
                   ? "bg-emerald-700 text-white shadow-sm"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }`}
             >
-              {tab === "all" ? "All" : tab === "deliveries" ? "Deliveries" : tab === "inspection" ? "Inspection" : "Acceptance"}
+              {label}
             </button>
           ))}
         </div>
@@ -830,29 +837,46 @@ export default function DeliveryPage() {
 
         {/* Table Panel */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">All Deliveries</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex items-center">
-                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search delivery, PO or supplier…"
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
-                />
+          <div className="mb-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-gray-800 shrink-0">All Deliveries</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex items-center">
+                  <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search delivery, PO or supplier…"
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                    className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
+                  />
+                </div>
+                <button
+                  onClick={() => setFilterOpen(!filterOpen)}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-lg border transition-colors ${
+                    filterOpen
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                      : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  Filters
+                </button>
               </div>
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className={`px-3 py-1.5 text-sm font-semibold rounded-lg border transition-colors ${
-                  filterOpen
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                Filters
-              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {SUB_TAB_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setSubTab(value); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                    subTab === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
