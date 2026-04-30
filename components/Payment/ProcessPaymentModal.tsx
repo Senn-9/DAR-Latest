@@ -39,6 +39,7 @@ export default function ProcessPaymentModal({
   dv,
   poData,
 }: ProcessPaymentModalProps) {
+  const formPaneRef = useRef<HTMLDivElement | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [notes, setNotes] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<"voucher" | "ors" | "dv">("voucher");
@@ -83,6 +84,12 @@ export default function ProcessPaymentModal({
       }
     }
   }, [visible, voucher, ors, dv, active?.status_id]);
+
+  useEffect(() => {
+    if (visible) {
+      formPaneRef.current?.focus();
+    }
+  }, [visible]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -486,7 +493,7 @@ export default function ProcessPaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-emerald-700 text-white px-6 py-4 border-b border-emerald-800">
           <div className="flex items-center justify-between">
@@ -506,8 +513,8 @@ export default function ProcessPaymentModal({
         </div>
 
         {/* Progress Steps */}
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-4">
-          <div className="flex items-center gap-2">
+        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-4 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2 min-w-max">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
@@ -540,9 +547,15 @@ export default function ProcessPaymentModal({
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 overflow-hidden">
+        <div
+          className="flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row"
+        >
           {/* Form Side */}
-          <div className="flex-[2] overflow-y-auto bg-white p-6">
+          <div
+            ref={formPaneRef}
+            tabIndex={0}
+            className="flex-[2] min-h-0 overflow-y-auto bg-white p-6 outline-none"
+          >
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Status Flag */}
               <div>
@@ -609,7 +622,7 @@ export default function ProcessPaymentModal({
           </div>
 
           {/* Preview Side */}
-          <div className="flex-[1] overflow-y-auto bg-gray-100 border-l border-gray-200">
+          <div className="flex-[1] min-h-0 overflow-y-auto bg-gray-100 border-t lg:border-t-0 lg:border-l border-gray-200">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">DOCUMENT PREVIEW</h3>

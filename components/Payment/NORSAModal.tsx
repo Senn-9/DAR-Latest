@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RiCloseLine, RiFileListLine, RiAlertLine, RiMailSendLine } from "react-icons/ri";
 
 interface NORSAModalProps {
@@ -16,6 +16,7 @@ export default function NORSAModal({
   onClose,
   onSubmit,
 }: NORSAModalProps) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [norsaData, setNorsaData] = useState({
     norsa_no: "",
     original_ors_no: "",
@@ -34,11 +35,17 @@ export default function NORSAModal({
     onClose();
   };
 
+  useEffect(() => {
+    if (visible) {
+      contentRef.current?.focus();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-orange-600 text-white px-6 py-4 border-b border-orange-700">
           <div className="flex items-center justify-between">
@@ -61,13 +68,17 @@ export default function NORSAModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          ref={contentRef}
+          tabIndex={0}
+          className="flex-1 min-h-0 overflow-y-auto p-6 outline-none"
+        >
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* NORSA Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">NORSA Details</h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     NORSA Number
@@ -116,7 +127,7 @@ export default function NORSAModal({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Original Amount (₱)
@@ -167,7 +178,7 @@ export default function NORSAModal({
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Required Approvals</h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Budget Officer Name
