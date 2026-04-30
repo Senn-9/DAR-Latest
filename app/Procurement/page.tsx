@@ -556,7 +556,7 @@ export default function ProcurementPage() {
             { key: "pr",       label: "Purchase Request",   href: null                        },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"      },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract"     },
-            { key: "purchase order", label: "Purchase Order", href: "/PurchaseOrder"          },
+            { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery", href: "/Procurement/Delivery"     },
             { key: "payment", label: "Payment", href: "/Procurement/Payment"     },
 

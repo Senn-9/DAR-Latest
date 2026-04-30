@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import PurchaseOrderPage from "@/app/PurchaseOrder/page";
 
-export default async function PurchaseOrderRedirectPage() {
-  redirect("/PurchaseOrder");
+export default function ProcurementPurchaseOrderPage() {
+  return <PurchaseOrderPage />;
 }
