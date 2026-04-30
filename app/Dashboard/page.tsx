@@ -25,6 +25,7 @@ export default function DashboardPage() {
     status_id: number | null;
     created_at?: string;
     total_cost: number;
+    req_name?: string;
     purchase_request_items?: PRItem[];
     source?: 'pr' | 'po' | 'delivery' | 'payment';
     delivery_no?: string;
@@ -51,13 +52,18 @@ export default function DashboardPage() {
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const PAGE_SIZE = 10;
 
+  const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
+  const isBACAccount =
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount =
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
-  
   const isBudgetAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
-  
   const isAccountingAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
@@ -80,7 +86,7 @@ export default function DashboardPage() {
         // Fetch purchase requests (PR data)
         const { data: prData, error: prError } = await supabase
           .from("purchase_requests")
-          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, purchase_request_items (*)")
+          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, req_name, purchase_request_items (*)")
           .order("created_at", { ascending: false });
         
         console.log('PR fetch result:', { prData: prData?.length, prError });
@@ -196,12 +202,29 @@ export default function DashboardPage() {
         console.log('Combined data before filtering:', allData.length);
         
         const filteredData = allData.filter(item => {
-          const matchesAccess = isAdmin || isSupplyAccount || isBudgetAccount || isAccountingAccount ? true : item.office_section === currentUser?.divisions?.division_name;
-          return matchesAccess;
+          // For PR records, apply filtering only to End Users and Division Heads
+          if (item.source === 'pr') {
+            // End users can only see their own PRs (where req_name matches their fullname)
+            const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+            if (isEndUser) {
+              return item.req_name === currentUser?.fullname;
+            }
+            
+            // Division heads can only see PRs from their division
+            if (isDivisionHead) {
+              return item.office_section === currentUser?.divisions?.division_name;
+            }
+            
+            // All other roles (Admin, BAC, PARPO, Supply, Budget, Accounting) see all PRs
+            return true;
+          }
+          
+          // For non-PR records (PO, Delivery, Payment), show only to relevant roles
+          return isSupplyAccount || isBudgetAccount || isAccountingAccount || isBACAccount || isPARPOAccount || isAdmin;
         });
         
         console.log('Final filtered data:', filteredData.length);
-        console.log('User role:', { isAdmin, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
+        console.log('User role:', { isAdmin, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
         
         setList(filteredData as PRListRow[]);
       } catch (error) {
@@ -244,7 +267,7 @@ export default function DashboardPage() {
       setLoading(false);
     };
     fetchData();
-  }, [supabase, isAdmin, currentUser, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
+  }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
     const statusById: Record<number, { name: string; color: string }> = {
@@ -607,7 +630,22 @@ export default function DashboardPage() {
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
+<<<<<<< HEAD
                               {form.source === 'pr' && (
+=======
+                              <button 
+                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiEyeLine size={14} />
+                                View
+                              </button>
+                              {/* Edit button - only for End Users */}
+                              {form.source === 'pr' && (() => {
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                return isEndUser && form.status_id === 1;
+                              })() && (
+>>>>>>> 84f0e319a962a86125680e0ba4c781d3acc09611
                                 <button 
                                   onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
@@ -615,6 +653,7 @@ export default function DashboardPage() {
                                   Edit
                                 </button>
                               )}
+<<<<<<< HEAD
                               <button 
                                 onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
                                 className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
@@ -633,6 +672,51 @@ export default function DashboardPage() {
                                 <RiPlayCircleLine size={14} />
                                 Process
                               </button>
+=======
+                              {/* Open button - for all roles except End Users */}
+                              {(() => {
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                return !isEndUser;
+                              })() && (
+                                <button 
+                                  onClick={() => {
+                                    if (form.source === 'pr') {
+                                      // Navigate to specific tab based on PR status
+                                      if (form.status_id === 1) {
+                                        // Pending - go to Purchase Request tab
+                                        router.push(`/Procurement?id=${form.id}`);
+                                      } else if ([6, 7, 8, 9].includes(form.status_id!)) {
+                                        // Canvassing stages - go to Canvass tab
+                                        router.push(`/Procurement/Canvass?id=${form.id}`);
+                                      } else if (form.status_id === 10) {
+                                        // Abstract of Awards - go to Abstract tab
+                                        router.push(`/Procurement/Abstract?id=${form.id}`);
+                                      } else if ([11, 12, 13, 14, 15, 16, 17].includes(form.status_id!)) {
+                                        // PO stages - go to Purchase Order tab
+                                        router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                      } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
+                                        // Delivery stages - go to Delivery tab
+                                        router.push(`/Procurement/Delivery?id=${form.id}`);
+                                      } else if ([26, 28, 29, 30, 31, 32, 35, 36].includes(form.status_id!)) {
+                                        // Payment stages - go to Payment tab
+                                        router.push(`/Procurement/Payment?id=${form.id}`);
+                                      } else {
+                                        // Default to Purchase Request tab for other statuses
+                                        router.push(`/Procurement?id=${form.id}`);
+                                      }
+                                    } else if (form.source === 'po') {
+                                      router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                    } else if (form.source === 'delivery' || form.source === 'payment') {
+                                      router.push(`/Procurement/Delivery?id=${form.id}`);
+                                    }
+                                  }}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiEyeLine size={14} />
+                                  Open
+                                </button>
+                              )}
+>>>>>>> 84f0e319a962a86125680e0ba4c781d3acc09611
                             </div>
                           </td>
                         </tr>

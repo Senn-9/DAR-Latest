@@ -229,15 +229,16 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
   // Fetch PR data
   useEffect(() => {
     const fetchPR = async () => {
-      setLoading(true);
-      const { data: form, error: formErr } = await supabase
-        .from("purchase_requests")
-        .select("*")
-        .eq("id", prId)
-        .single();
+      try {
+        setLoading(true);
+        const { data: form, error: formErr } = await supabase
+          .from("purchase_requests")
+          .select("*")
+          .eq("id", prId)
+          .single();
 
       if (formErr || !form) {
-        console.error("Error fetching PR:", formErr);
+        console.error("Error fetching PR:", formErr?.message || formErr);
         setLoading(false);
         return;
       }
@@ -261,7 +262,9 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
         .select("*")
         .eq("pr_id", prId);
 
-      if (!itemErr && itemData) {
+      if (itemErr) {
+        console.error("Error fetching PR items:", itemErr?.message || itemErr);
+      } else if (itemData) {
         setItems(
           itemData.map((i: any) => ({
             stock_no:   i.stock_no    || "",
@@ -276,6 +279,10 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
       }
 
       setLoading(false);
+      } catch (error) {
+        console.error("Unexpected error fetching PR:", error);
+        setLoading(false);
+      }
     };
 
     fetchPR();
