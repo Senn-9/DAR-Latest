@@ -630,22 +630,11 @@ export default function DashboardPage() {
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
-<<<<<<< HEAD
-                              {form.source === 'pr' && (
-=======
-                              <button 
-                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                View
-                              </button>
-                              {/* Edit button - only for End Users */}
+                              {/* Edit button - only for End Users and PR in pending status */}
                               {form.source === 'pr' && (() => {
                                 const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
                                 return isEndUser && form.status_id === 1;
                               })() && (
->>>>>>> 84f0e319a962a86125680e0ba4c781d3acc09611
                                 <button 
                                   onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
@@ -653,7 +642,8 @@ export default function DashboardPage() {
                                   Edit
                                 </button>
                               )}
-<<<<<<< HEAD
+                              
+                              {/* View button */}
                               <button 
                                 onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
                                 className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
@@ -661,19 +651,8 @@ export default function DashboardPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
-                              <button 
-                                onClick={() => {
-                                  if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
-                                  else if (form.source === 'delivery' || form.source === 'payment') router.push(`/Procurement/Delivery`);
-                                  else router.push(`/Procurement?id=${form.id}`);
-                                }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiPlayCircleLine size={14} />
-                                Process
-                              </button>
-=======
-                              {/* Open button - for all roles except End Users */}
+                              
+                              {/* Process button - for all roles except End Users */}
                               {(() => {
                                 const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
                                 return !isEndUser;
@@ -683,25 +662,18 @@ export default function DashboardPage() {
                                     if (form.source === 'pr') {
                                       // Navigate to specific tab based on PR status
                                       if (form.status_id === 1) {
-                                        // Pending - go to Purchase Request tab
                                         router.push(`/Procurement?id=${form.id}`);
                                       } else if ([6, 7, 8, 9].includes(form.status_id!)) {
-                                        // Canvassing stages - go to Canvass tab
                                         router.push(`/Procurement/Canvass?id=${form.id}`);
                                       } else if (form.status_id === 10) {
-                                        // Abstract of Awards - go to Abstract tab
                                         router.push(`/Procurement/Abstract?id=${form.id}`);
                                       } else if ([11, 12, 13, 14, 15, 16, 17].includes(form.status_id!)) {
-                                        // PO stages - go to Purchase Order tab
                                         router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
                                       } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
-                                        // Delivery stages - go to Delivery tab
                                         router.push(`/Procurement/Delivery?id=${form.id}`);
                                       } else if ([26, 28, 29, 30, 31, 32, 35, 36].includes(form.status_id!)) {
-                                        // Payment stages - go to Payment tab
                                         router.push(`/Procurement/Payment?id=${form.id}`);
                                       } else {
-                                        // Default to Purchase Request tab for other statuses
                                         router.push(`/Procurement?id=${form.id}`);
                                       }
                                     } else if (form.source === 'po') {
@@ -710,13 +682,12 @@ export default function DashboardPage() {
                                       router.push(`/Procurement/Delivery?id=${form.id}`);
                                     }
                                   }}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
-                                  <RiEyeLine size={14} />
-                                  Open
+                                  <RiPlayCircleLine size={14} />
+                                  Process
                                 </button>
                               )}
->>>>>>> 84f0e319a962a86125680e0ba4c781d3acc09611
                             </div>
                           </td>
                         </tr>
