@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RiCloseLine, RiFileListLine, RiMoneyDollarCircleLine, RiUserLine, RiCalendarLine, RiCheckLine, RiTimeLine, RiArrowRightLine } from "react-icons/ri";
 
 interface ViewPaymentModalProps {
@@ -23,6 +23,7 @@ export default function ViewPaymentModal({
   onClose,
 }: ViewPaymentModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "voucher" | "ors" | "dv" | "timeline">("overview");
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   const paymentStatuses = [
     { id: 28, label: "Payment Pending", color: "bg-yellow-100 text-yellow-800" },
@@ -44,11 +45,17 @@ export default function ViewPaymentModal({
     { step: 6, title: "Final Approval", status: delivery?.status_id >= 35 ? "completed" : "pending", date: dv?.final_approval_date },
   ];
 
+  useEffect(() => {
+    if (visible) {
+      contentRef.current?.focus();
+    }
+  }, [visible, activeTab]);
+
   if (!visible) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-emerald-700 text-white px-6 py-4 border-b border-emerald-800">
           <div className="flex items-center justify-between">
@@ -68,8 +75,8 @@ export default function ViewPaymentModal({
         </div>
 
         {/* Tabs */}
-        <div className="bg-gray-50 border-b border-gray-200 px-6">
-          <div className="flex gap-4">
+        <div className="bg-gray-50 border-b border-gray-200 px-6 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-4 min-w-max">
             {[
               { id: "overview", label: "Overview", icon: RiFileListLine },
               { id: "voucher", label: "Voucher", icon: RiMoneyDollarCircleLine },
@@ -80,7 +87,7 @@ export default function ViewPaymentModal({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                   activeTab === tab.id
                     ? "border-emerald-700 text-emerald-700"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -94,7 +101,11 @@ export default function ViewPaymentModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          ref={contentRef}
+          tabIndex={0}
+          className="flex-1 min-h-0 overflow-y-auto p-6 outline-none"
+        >
           {activeTab === "overview" && (
             <div className="space-y-6">
               {/* Status Badge */}
@@ -109,7 +120,7 @@ export default function ViewPaymentModal({
               </div>
 
               {/* Basic Information */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Delivery Information</h4>
                   <div className="space-y-1">
@@ -133,23 +144,20 @@ export default function ViewPaymentModal({
               {/* Progress Overview */}
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Payment Progress</h4>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {timeline.map((item) => (
-                    <div key={item.step} className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                    <div key={item.step} className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
                         item.status === "completed" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
                       }`}>
                         {item.status === "completed" ? <RiCheckLine size={12} /> : item.step}
                       </div>
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {item.status === "completed" ? `Completed on ${item.date}` : "Pending"}
+                        <p className="text-xs text-gray-500 truncate">
+                          {item.status === "completed" ? `Completed on ${item.date || "N/A"}` : "Pending"}
                         </p>
                       </div>
-                      {item.status === "completed" && (
-                        <RiArrowRightLine className="text-emerald-600" size={16} />
-                      )}
                     </div>
                   ))}
                 </div>
@@ -162,7 +170,7 @@ export default function ViewPaymentModal({
               <h3 className="text-lg font-semibold text-gray-900">Voucher Details</h3>
               {voucher ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Voucher Number</label>
                       <p className="text-sm text-gray-900 mt-1">{voucher.voucher_no || "N/A"}</p>
@@ -209,7 +217,7 @@ export default function ViewPaymentModal({
               <h3 className="text-lg font-semibold text-gray-900">Obligation Request & Status (ORS)</h3>
               {ors ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">ORS Number</label>
                       <p className="text-sm text-gray-900 mt-1">{ors.ors_no || "N/A"}</p>
@@ -248,7 +256,7 @@ export default function ViewPaymentModal({
               <h3 className="text-lg font-semibold text-gray-900">Disbursement Voucher (DV)</h3>
               {dv ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">PARPO Name</label>
                       <p className="text-sm text-gray-900 mt-1">{dv.parpo_name || "N/A"}</p>
@@ -301,27 +309,20 @@ export default function ViewPaymentModal({
           {activeTab === "timeline" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Payment Processing Timeline</h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {timeline.map((item, index) => (
-                  <div key={item.step} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                        item.status === "completed" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
-                      }`}>
-                        {item.status === "completed" ? <RiCheckLine size={16} /> : item.step}
-                      </div>
-                      {index < timeline.length - 1 && (
-                        <div className={`w-0.5 h-16 mt-2 ${
-                          item.status === "completed" ? "bg-emerald-600" : "bg-gray-200"
-                        }`} />
-                      )}
+                  <div key={item.step} className="rounded-xl border border-gray-100 bg-gray-50 p-4 flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
+                      item.status === "completed" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
+                    }`}>
+                      {item.status === "completed" ? <RiCheckLine size={16} /> : item.step}
                     </div>
-                    <div className="flex-1 pb-8">
+                    <div className="min-w-0 flex-1">
                       <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
                       <p className="text-sm text-gray-600 mt-1">
                         {item.status === "completed" ? (
                           <>
-                            Completed on <span className="font-medium">{item.date}</span>
+                            Completed on <span className="font-medium">{item.date || "N/A"}</span>
                           </>
                         ) : (
                           "Pending completion"

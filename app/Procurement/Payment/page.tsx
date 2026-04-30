@@ -465,14 +465,14 @@ export default function PaymentPage() {
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleViewPayment(delivery)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
                               >
                                 Payment
                               </button>
                               {canRoleProcess(currentUser?.role_id || 0, delivery.status_id) && (
                                 <button
                                   onClick={() => handleProcessPayment(delivery)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
                                 >
                                   <RiPlayCircleLine size={14} />
                                   Process
@@ -481,7 +481,7 @@ export default function PaymentPage() {
                               {canIssueNORSA(currentUser?.role_id || 0, delivery.status_id) && (
                                 <button
                                   onClick={() => handleIssueNORSA(delivery)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
                                 >
                                   NORSA
                                 </button>

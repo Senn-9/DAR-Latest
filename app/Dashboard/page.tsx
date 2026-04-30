@@ -607,13 +607,6 @@ export default function DashboardPage() {
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1">
-                              <button 
-                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                View
-                              </button>
                               {form.source === 'pr' && (
                                 <button 
                                   onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
@@ -622,6 +615,13 @@ export default function DashboardPage() {
                                   Edit
                                 </button>
                               )}
+                              <button 
+                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiEyeLine size={14} />
+                                View
+                              </button>
                               <button 
                                 onClick={() => {
                                   if (form.source === 'po') router.push(`/Procurement/PurchaseOrder`);
