@@ -61,7 +61,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-50
-        w-64 md:w-80 bg-emerald-900 p-4 text-white
+        w-64 md:w-80 bg-emerald-900 p-4 text-white font-[family-name:var(--font-sora)] antialiased
         flex flex-col transition-all duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         overflow-y-auto

@@ -869,7 +869,7 @@ export default function DeliveryPage() {
         </div>
 
         {/* Table Panel */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">All Deliveries</h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -904,10 +904,10 @@ export default function DeliveryPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                    <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                       {[
                         { label: "Delivery No", field: "delivery_no" as const, align: "text-left" },
                         { label: "PO Number", field: "po_no" as const, align: "text-left" },
@@ -920,7 +920,7 @@ export default function DeliveryPage() {
                         <th
                           key={label}
                           onClick={field ? () => handleSort(field) : undefined}
-                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
+                          className={`px-2 py-2 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none cursor-pointer" : ""}`}
                         >
                           <span className="inline-flex items-center gap-0.5">
                             {label}{field && <SortIcon field={field} />}
@@ -943,27 +943,27 @@ export default function DeliveryPage() {
                       });
 
                       return (
-                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors">
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
                             {delivery.delivery_no}
                           </td>
-                          <td className={`mono px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 text-gray-600 whitespace-nowrap ${rowBg}`}>
                             {delivery.po_no}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {delivery.supplier || <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {delivery.created_at
                               ? new Date(delivery.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
                               {statusInfo.label}
                             </span>
                           </td>
-                          <td className={`px-5 py-3.5 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 whitespace-nowrap ${rowBg}`}>
                             {(() => {
                               const dueStatus = getDueDateStatus(delivery.expected_delivery_date);
                               const timeUntilDelivery = getTimeUntilDelivery(delivery.expected_delivery_date);
@@ -972,7 +972,7 @@ export default function DeliveryPage() {
                               }
                               return (
                                 <div className="flex flex-col">
-                                  <span className="text-sm text-gray-600">
+                                  <span className="text-xs text-gray-600">
                                     {new Date(delivery.expected_delivery_date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
                                   </span>
                                   {dueStatus && (
@@ -984,7 +984,7 @@ export default function DeliveryPage() {
                               );
                             })()}
                           </td>
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => { 
@@ -992,13 +992,13 @@ export default function DeliveryPage() {
                                   setDefaultViewTab("iar"); 
                                   handlePreviewDocument("iar");
                                 }}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
                               >
                                 View
                               </button>
                               <button
                                 onClick={() => { setSelectedDelivery(delivery); setRemarksModalOpen(true); }}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
                               >
                                 Remarks
                               </button>

@@ -134,6 +134,7 @@ export type BacResolution = {
   session_id: number | null
   resolution_no: string | null
   prepared_by: number | null
+  pr_request_id: number | null
   resolved_at: string | null
   notes: string | null
   mode: string | null

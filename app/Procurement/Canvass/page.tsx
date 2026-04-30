@@ -371,7 +371,7 @@ export default function CanvassPage() {
         </div>
 
         {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Canvass Records</h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -410,10 +410,10 @@ export default function CanvassPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="bg-emerald-700 text-white text-xs uppercase tracking-wider">
+                    <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                       {([
                         { label: "PR Number",        field: null,                      align: "text-left"   },
                         { label: "Office / Section", field: "office_section" as const, align: "text-left"   },
@@ -426,7 +426,7 @@ export default function CanvassPage() {
                         <th
                           key={label}
                           onClick={field ? () => handleSort(field) : undefined}
-                          className={`px-5 py-3 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none" : ""}`}
+                          className={`px-2 py-2 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none cursor-pointer" : ""}`}
                         >
                           <span className="inline-flex items-center gap-0.5">
                             {label}{field && <SortIcon field={field} />}
@@ -443,41 +443,41 @@ export default function CanvassPage() {
                       const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
 
                       return (
-                        <tr key={index} className="tr-row border-b border-gray-100 transition-colors">
+                        <tr key={index} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
 
-                          <td className={`mono px-5 py-3.5 font-semibold text-gray-800 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
                             {form.pr_no}
                           </td>
 
-                          <td className={`px-5 py-3.5 text-gray-600 ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
                             {form.office_section || <span className="text-gray-300">—</span>}
                           </td>
 
-                          <td className={`px-5 py-3.5 text-gray-500 max-w-xs ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>
                             {desc
-                              ? <span className="line-clamp-2 leading-snug">{desc}</span>
+                              ? desc
                               : <span className="text-gray-300">—</span>}
                           </td>
 
-                          <td className={`px-5 py-3.5 text-gray-500 whitespace-nowrap ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
                           </td>
 
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
                               {statusName}
                             </span>
                           </td>
 
-                          <td className={`mono px-5 py-3.5 text-right font-semibold text-gray-800 ${rowBg}`}>
+                          <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0
                               ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                               : <span className="text-gray-300 font-normal">—</span>}
                           </td>
 
-                          <td className={`px-5 py-3.5 text-center ${rowBg}`}>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
                               {/* <button
                                 onClick={() => setViewPrId(form.id)}
@@ -489,7 +489,7 @@ export default function CanvassPage() {
                               <button
                                 type="button"
                                 onClick={() => setViewPrId(form.id)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-all whitespace-nowrap"
+                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-colors whitespace-nowrap"
                               >
                                 View PR
                               </button>
@@ -498,7 +498,7 @@ export default function CanvassPage() {
                               {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
                                 <button
                                   onClick={() => setReceptionTarget(form)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-colors whitespace-nowrap"
                                 >
                                   Reception
                                 </button>
@@ -508,7 +508,7 @@ export default function CanvassPage() {
                               {!isBudgetAccount && isBACAccount && form.status_id === 7 && (
                                 <button
                                   onClick={() => setResolutionTarget(form)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all whitespace-nowrap"
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors whitespace-nowrap"
                                 >
                                   Resolution
                                 </button>
