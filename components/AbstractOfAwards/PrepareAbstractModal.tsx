@@ -146,21 +146,23 @@ export default function PrepareAbstractModal({
 	return (
 		<div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 p-4">
 			<div className="w-full max-w-4xl rounded-2xl bg-white shadow-xl">
-				<div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-					<div>
-						<h2 className="text-lg font-semibold text-gray-900">Prepare Awarding</h2>
-						<p className="text-xs text-gray-500">
-							{prNo ? `PR No: ${prNo}` : "PR reference"}
-							{prId ? ` | PR ID: ${prId}` : ""}
-						</p>
+<div className="px-6 pt-6 pb-4">
+				<div className="flex items-start justify-between gap-4">
+					<div className="min-w-0">
+						<p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">Stage · Abstract</p>
+						<h2 className="text-2xl font-extrabold text-gray-900 mt-1">Prepare Awarding</h2>
+						<p className="text-sm text-gray-500 mt-1 font-mono">{new Date().toLocaleDateString("en-PH")}</p>
 					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-					>
-						X
-					</button>
+					<div className="flex items-start gap-2 flex-shrink-0">
+						<div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex flex-col items-center justify-center leading-none shadow-sm">
+							<span className="text-lg font-extrabold">09</span>
+							<span className="text-[10px] font-bold opacity-90 mt-0.5">STEP</span>
+						</div>
+						<button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500">
+							X
+						</button>
+					</div>
+				</div>
 				</div>
 
 				<form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto px-6 py-5">
@@ -350,6 +352,15 @@ export default function PrepareAbstractModal({
 							className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
 						>
 							Cancel
+						</button>
+
+						<button
+							type="button"
+							onClick={() => window.open('https://youtube.com', '_blank', 'noopener,noreferrer')}
+							disabled={isSaving}
+							className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+						>
+							Prepare Abstract of Awards
 						</button>
 						<button
 							type="submit"

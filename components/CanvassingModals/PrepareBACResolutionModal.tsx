@@ -509,15 +509,24 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-8 py-5 text-white flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Prepare BAC Resolution</h2>
-            <p className="mt-1 text-sm text-purple-100">Multi-PR Resolution Processing</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/10">
-            <RiCloseLine size={24} />
-          </button>
-        </div>
+              <div className="px-6 pt-6 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-extrabold uppercase tracking-widest text-purple-600">Resolution · BAC</p>
+                    <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Prepare BAC Resolution</h2>
+                    <p className="text-sm text-gray-500 mt-1 font-mono">{new Date().toLocaleDateString("en-PH")}</p>
+                  </div>
+                  <div className="flex items-start gap-2 flex-shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white flex flex-col items-center justify-center leading-none shadow-sm">
+                      <span className="text-lg font-extrabold">07</span>
+                      <span className="text-[10px] font-bold opacity-90 mt-0.5">STEP</span>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500">
+                      <RiCloseLine size={22} />
+                    </button>
+                  </div>
+                </div>
+              </div>
 
         <div className="max-h-[75vh] overflow-y-auto bg-gray-50 p-8 space-y-6">
           {loading ? (
@@ -774,7 +783,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
             disabled={loading || saving || preparing || selectedPrIds.length === 0}
             className="rounded-lg bg-purple-700 px-5 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-purple-800 disabled:opacity-60"
           >
-            {saving ? "Processing..." : "Process Selected PRs"}
+            {saving ? "Processing..." : "Submit Selected PRs"}
           </button>
         </div>
       </div>
