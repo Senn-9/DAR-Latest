@@ -1,17 +1,481 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine } from "react-icons/ri";
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 
-export default function CreatePOModal({
-  visible,
-  onClose,
-  onCreate,
-}: {
+type CreatePOModalProps = {
   visible: boolean;
   onClose: () => void;
   onCreate: (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => Promise<void>;
+};
+
+const inputCls =
+  "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300";
+
+function formatMoney(value: number | null | undefined) {
+  const amount = Number(value ?? 0);
+  return `₱${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function getItemTotal(item: PurchaseOrderItemRow) {
+  const quantity = Number(item.quantity ?? 0);
+  const unitPrice = Number(item.unit_price ?? 0);
+  return Number.isFinite(quantity) && Number.isFinite(unitPrice) ? quantity * unitPrice : 0;
+}
+
+function getGrandTotal(items: PurchaseOrderItemRow[]) {
+  return items.reduce((sum, item) => sum + getItemTotal(item), 0);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function toWords(amount: number): string {
+  if (!amount || isNaN(amount)) return "ZERO PESOS";
+
+  const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
+  const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+
+  function threeDigits(n: number): string {
+    if (n === 0) return "";
+    if (n < 20) return ones[n];
+    if (n < 100) return `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ""}`;
+    return `${ones[Math.floor(n / 100)]} HUNDRED${n % 100 ? ` ${threeDigits(n % 100)}` : ""}`;
+  }
+
+  const pesos = Math.floor(amount);
+  const centavos = Math.round((amount - pesos) * 100);
+  const parts: string[] = [];
+
+  if (pesos >= 1_000_000_000) parts.push(`${threeDigits(Math.floor(pesos / 1_000_000_000))} BILLION`);
+  if (pesos % 1_000_000_000 >= 1_000_000) parts.push(`${threeDigits(Math.floor((pesos % 1_000_000_000) / 1_000_000))} MILLION`);
+  if (pesos % 1_000_000 >= 1_000) parts.push(`${threeDigits(Math.floor((pesos % 1_000_000) / 1_000))} THOUSAND`);
+  if (pesos % 1_000 > 0) parts.push(threeDigits(pesos % 1_000));
+
+  const pesoWords = pesos === 0 ? "ZERO" : parts.join(" ");
+  const centWords = centavos > 0 ? ` AND ${threeDigits(centavos)}/100` : "";
+  return `${pesoWords} PESOS${centWords}`;
+}
+
+function POPreview({
+  supplier,
+  address,
+  tin,
+  procurementMode,
+  deliveryPlace,
+  deliveryTerm,
+  deliveryDate,
+  paymentTerm,
+  fundsAvailable,
+  orsNo,
+  orsDate,
+  orsAmount,
+  fundCluster,
+  items,
+}: {
+  supplier: string;
+  address: string;
+  tin: string;
+  procurementMode: string;
+  deliveryPlace: string;
+  deliveryTerm: string;
+  deliveryDate: string;
+  paymentTerm: string;
+  fundsAvailable: string;
+  orsNo: string;
+  orsDate: string;
+  orsAmount: string;
+  officeSection: string;
+  fundCluster: string;
+  items: PurchaseOrderItemRow[];
 }) {
+  const grandTotal = getGrandTotal(items);
+  const amountWords = toWords(grandTotal);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const normalizedItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          String(item.description ?? "").trim() ||
+          String(item.stock_no ?? "").trim() ||
+          String(item.unit ?? "").trim() ||
+          Number(item.quantity ?? 0) > 0 ||
+          Number(item.unit_price ?? 0) > 0,
+      ),
+    [items],
+  );
+
+  const stockCol = normalizedItems.map((item) => String(item.stock_no ?? "")).join("\n");
+  const unitCol = normalizedItems.map((item) => String(item.unit ?? "")).join("\n");
+  const descCol = normalizedItems.map((item) => String(item.description ?? "")).join("\n");
+  const qtyCol = normalizedItems.map((item) => (Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : "")).join("\n");
+  const unitCostCol = normalizedItems
+    .map((item) => (Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""))
+    .join("\n");
+  const amountCol = normalizedItems
+    .map((item) => {
+      const total = getItemTotal(item);
+      return total ? formatMoney(total).replace("₱", "") : "";
+    })
+    .join("\n");
+
+  return (
+    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", color: "#000", padding: 0, margin: 0 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "4px" }}>
+        <tbody>
+          <tr>
+            <td style={{ textAlign: "right", fontSize: "11pt", fontWeight: "bold", padding: 0 }}>Appendix 61</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #111", tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "34%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "10.5%" }} />
+          <col style={{ width: "14.5%" }} />
+        </colgroup>
+        <tbody>
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Supplier : <span style={{ fontWeight: "normal" }}>{supplier}</span>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              P.O. No. : <span style={{ fontWeight: "normal" }}></span>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Address : <span style={{ fontWeight: "normal" }}>{address}</span>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Date : <span style={{ fontWeight: "normal" }}>{today}</span>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              TIN : <span style={{ fontWeight: "normal" }}>{tin}</span>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Mode of Procurement : <span style={{ fontWeight: "normal" }}>{procurementMode}</span>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", verticalAlign: "top" }}>
+              Gentlemen:
+              <div style={{ fontWeight: "normal", marginLeft: "52px", fontSize: "9pt" }}>
+                Please furnish this Office the following articles subject to the terms and conditions contained herein:
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Place of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryPlace}</span>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Delivery Term : <span style={{ fontWeight: "normal" }}>{deliveryTerm}</span>
+              <div style={{ fontWeight: "bold", marginTop: "2px" }}>
+                Payment Term : <span style={{ fontWeight: "normal" }}>{paymentTerm}</span>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Date of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryDate}</span>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt" }} />
+          </tr>
+
+          <tr>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Stock/ Property No.</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Description</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Quantity</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit Cost</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Amount</td>
+          </tr>
+
+          <tr style={{ height: "250px" }}>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{stockCol}</td>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{unitCol}</td>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{descCol}</td>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{qtyCol}</td>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{unitCostCol}</td>
+            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{amountCol}</td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt", fontWeight: "bold" }}>
+              (Total Amount in Words)
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
+              <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
+                In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
+              </div>
+
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt" }}>Conforme:</td>
+                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
+                    </td>
+                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
+                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    </td>
+                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Date</td>
+                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Designation</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Fund Cluster :</b> {fundCluster}</div>
+              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> {fundsAvailable}</div>
+
+              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "36px auto 2px" }} />
+              <div style={{ textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> {orsNo}</div>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> {orsDate}</div>
+              <div style={{ fontSize: "10pt" }}><b>Amount :</b> {orsAmount || (grandTotal ? formatMoney(grandTotal) : "")}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function buildPurchaseOrderPrintHtml(data: {
+  supplier: string;
+  address: string;
+  tin: string;
+  procurementMode: string;
+  deliveryPlace: string;
+  deliveryTerm: string;
+  deliveryDate: string;
+  paymentTerm: string;
+  fundsAvailable: string;
+  orsNo: string;
+  orsDate: string;
+  orsAmount: string;
+  fundCluster: string;
+  items: PurchaseOrderItemRow[];
+}) {
+  const grandTotal = getGrandTotal(data.items);
+  const amountWords = toWords(grandTotal);
+  const today = new Date().toISOString().slice(0, 10);
+  const normalizedItems = data.items.filter(
+    (item) =>
+      String(item.description ?? "").trim() ||
+      String(item.stock_no ?? "").trim() ||
+      String(item.unit ?? "").trim() ||
+      Number(item.quantity ?? 0) > 0 ||
+      Number(item.unit_price ?? 0) > 0,
+  );
+
+  const rowCount = Math.max(normalizedItems.length, 1);
+  const itemRows = Array.from({ length: rowCount })
+    .map((_, index) => {
+      const item = normalizedItems[index];
+      const qty = Number(item?.quantity ?? 0);
+      const unitCost = Number(item?.unit_price ?? 0);
+      const amount = item ? getItemTotal(item) : 0;
+      return `
+        <tr style="height:18px">
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.stock_no ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.unit ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.description ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
+        </tr>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Purchase Order</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; color: #000; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th { border: 1px solid #111; }
+    .right { text-align: right; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .small { font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <table style="margin-bottom:4px;border:none">
+    <tr><td style="border:none;text-align:right;font-size:11pt;font-weight:bold;padding:0">Appendix 61</td></tr>
+  </table>
+
+  <table>
+    <colgroup>
+      <col style="width:14%" />
+      <col style="width:11%" />
+      <col style="width:34%" />
+      <col style="width:16%" />
+      <col style="width:10.5%" />
+      <col style="width:14.5%" />
+    </colgroup>
+    <tbody>
+      <tr>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Supplier : <span style="font-weight:normal">${escapeHtml(data.supplier)}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">P.O. No. :</td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${today}</span></td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">TIN : <span style="font-weight:normal">${escapeHtml(data.tin)}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Mode of Procurement : <span style="font-weight:normal">${escapeHtml(data.procurementMode)}</span></td>
+      </tr>
+      <tr>
+        <td colSpan="6" style="padding:3px 4px;font-size:9pt;font-weight:bold;vertical-align:top">Gentlemen:<div style="font-weight:normal;margin-left:52px">Please furnish this Office the following articles subject to the terms and conditions contained herein:</div></td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Place of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryPlace)}</span></td>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Delivery Term : <span style="font-weight:normal">${escapeHtml(data.deliveryTerm)}</span><div style="font-weight:bold;margin-top:2px">Payment Term : <span style="font-weight:normal">${escapeHtml(data.paymentTerm)}</span></div></td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Date of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryDate)}</span></td>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt"></td>
+      </tr>
+      <tr>
+        <td class="center bold small" style="padding:4px 2px">Stock/ Property No.</td>
+        <td class="center bold small" style="padding:4px 2px">Unit</td>
+        <td class="center bold small" style="padding:4px 2px">Description</td>
+        <td class="center bold small" style="padding:4px 2px">Quantity</td>
+        <td class="center bold small" style="padding:4px 2px">Unit Cost</td>
+        <td class="center bold small" style="padding:4px 2px">Amount</td>
+      </tr>
+      ${itemRows || `<tr style="height:18px"><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td></tr>`}
+      <tr>
+        <td colSpan="6" style="padding:2px 6px;font-size:9pt;font-weight:bold">(Total Amount in Words)</td>
+      </tr>
+      <tr>
+        <td colSpan="6" style="padding:0">
+          <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+          <table style="border:none">
+            <tr>
+              <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
+              <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
+              <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
+              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+              <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
+              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Designation</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+          <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
+          <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable)}</div>
+          <div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
+          <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+        </td>
+        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+          <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> ${escapeHtml(data.orsNo)}</div>
+          <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> ${escapeHtml(data.orsDate)}</div>
+          <div style="font-size:10pt"><b>Amount :</b> ${escapeHtml(data.orsAmount || (grandTotal ? formatMoney(grandTotal) : ""))}</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function downloadPDF(data: {
+  supplier: string;
+  address: string;
+  tin: string;
+  procurementMode: string;
+  deliveryPlace: string;
+  deliveryTerm: string;
+  deliveryDate: string;
+  paymentTerm: string;
+  fundsAvailable: string;
+  orsNo: string;
+  orsDate: string;
+  orsAmount: string;
+  fundCluster: string;
+  items: PurchaseOrderItemRow[];
+}) {
+  const printWindow = window.open("", "", "height=900,width=1200");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(buildPurchaseOrderPrintHtml(data));
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 250);
+}
+
+export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOModalProps) {
   const [supplier, setSupplier] = useState("");
   const [address, setAddress] = useState("");
   const [tin, setTin] = useState("");
@@ -22,11 +486,20 @@ export default function CreatePOModal({
   const [paymentTerm, setPaymentTerm] = useState("");
   const [officeSection, setOfficeSection] = useState("");
   const [fundCluster, setFundCluster] = useState("");
+  const [fundsAvailable, setFundsAvailable] = useState("");
+  const [orsNo, setOrsNo] = useState("");
+  const [orsDate, setOrsDate] = useState("");
+  const [orsAmount, setOrsAmount] = useState("");
   const [items, setItems] = useState<PurchaseOrderItemRow[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!visible) resetForm();
+    if (visible) {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [visible]);
 
   function resetForm() {
@@ -40,6 +513,10 @@ export default function CreatePOModal({
     setPaymentTerm("");
     setOfficeSection("");
     setFundCluster("");
+    setFundsAvailable("");
+    setOrsNo("");
+    setOrsDate("");
+    setOrsAmount("");
     setItems([]);
     setSaving(false);
   }
@@ -49,18 +526,27 @@ export default function CreatePOModal({
   }
 
   function updateItem(idx: number, patch: Partial<PurchaseOrderItemRow>) {
-    setItems((s) => s.map((it, i) => (i === idx ? { ...it, ...patch, subtotal: computeSubtotal({ ...it, ...patch }) } : it)));
+    setItems((s) =>
+      s.map((it, i) =>
+        i === idx
+          ? {
+              ...it,
+              ...patch,
+              subtotal:
+                Number.isFinite(Number(patch.quantity ?? it.quantity)) && Number.isFinite(Number(patch.unit_price ?? it.unit_price))
+                  ? Number(patch.quantity ?? it.quantity) * Number(patch.unit_price ?? it.unit_price)
+                  : it.subtotal,
+            }
+          : it,
+      ),
+    );
   }
 
   function removeItem(idx: number) {
     setItems((s) => s.filter((_, i) => i !== idx));
   }
 
-  function computeSubtotal(it: PurchaseOrderItemRow) {
-    const qty = Number(it.quantity ?? 0);
-    const price = Number(it.unit_price ?? 0);
-    return isNaN(qty) || isNaN(price) ? 0 : qty * price;
-  }
+  const grandTotal = getGrandTotal(items);
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
@@ -78,10 +564,15 @@ export default function CreatePOModal({
         payment_term: paymentTerm,
         office_section: officeSection,
         fund_cluster: fundCluster,
-        total_amount: items.reduce((acc, it) => acc + Number(it.subtotal ?? 0), 0),
-        status_id: 11, // default to PO (Creation)
+        funds_available: fundsAvailable,
+        ors_no: orsNo,
+        ors_date: orsDate || null,
+        ors_amount: orsAmount ? Number(orsAmount) : null,
+        total_amount: grandTotal,
+        status_id: 11,
       };
       await onCreate(header, items);
+      resetForm();
       onClose();
     } catch (err) {
       console.error(err);
@@ -94,90 +585,252 @@ export default function CreatePOModal({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
-        <div className="px-6 py-4 bg-emerald-700 text-white">
-          <h3 className="text-lg font-bold">Create Purchase Order</h3>
-          <p className="text-xs text-emerald-100 mt-0.5">Create a new PO and add line items</p>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Supplier</label>
-              <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Office / Section</label>
-              <input value={officeSection} onChange={(e) => setOfficeSection(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Address</label>
-              <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Fund Cluster</label>
-              <input value={fundCluster} onChange={(e) => setFundCluster(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">TIN</label>
-              <input value={tin} onChange={(e) => setTin(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Procurement Mode</label>
-              <input value={procurementMode} onChange={(e) => setProcurementMode(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Delivery Place</label>
-              <input value={deliveryPlace} onChange={(e) => setDeliveryPlace(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Delivery Term</label>
-              <input value={deliveryTerm} onChange={(e) => setDeliveryTerm(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Delivery Date</label>
-              <input type="date" value={deliveryDate ?? ""} onChange={(e) => setDeliveryDate(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Payment Term</label>
-              <input value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm" />
-            </div>
-          </div>
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-base font-semibold text-gray-800">Line Items</h4>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={addItem} className="px-3 py-1 rounded-xl bg-emerald-700 text-white text-sm">Add Item</button>
+            <h2 className="text-xl font-bold">Create Purchase Order</h2>
+            <p className="text-emerald-100 text-sm mt-1">Appendix 61 · Official Government Form</p>
+          </div>
+          <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
+            <RiCloseLine size={24} />
+          </button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          <form onSubmit={handleSubmit} className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
+            <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Supplier Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Supplier *</label>
+                    <input className={inputCls} placeholder="Supplier name" value={supplier} onChange={(e) => setSupplier(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address</label>
+                    <input className={inputCls} placeholder="Supplier address" value={address} onChange={(e) => setAddress(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-600 mb-2">TIN</label>
+                      <input className={inputCls} placeholder="Tax ID" value={tin} onChange={(e) => setTin(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Mode of Procurement</label>
+                      <input className={inputCls} placeholder="e.g., Public Bidding" value={procurementMode} onChange={(e) => setProcurementMode(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Delivery Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Place of Delivery</label>
+                    <input className={inputCls} placeholder="Delivery location" value={deliveryPlace} onChange={(e) => setDeliveryPlace(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Delivery Term</label>
+                      <input className={inputCls} placeholder="e.g., FOB" value={deliveryTerm} onChange={(e) => setDeliveryTerm(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Delivery Date</label>
+                      <input type="date" className={inputCls} value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Payment Term</label>
+                      <input className={inputCls} placeholder="e.g., Net 30" value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Office Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
+                    <input className={inputCls} placeholder="e.g., Procurement" value={officeSection} onChange={(e) => setOfficeSection(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Fund Cluster</label>
+                    <input className={inputCls} placeholder="e.g., 01" value={fundCluster} onChange={(e) => setFundCluster(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Accounting Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Funds Available</label>
+                    <input className={inputCls} placeholder="Funds available" value={fundsAvailable} onChange={(e) => setFundsAvailable(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS No.</label>
+                    <input className={inputCls} placeholder="ORS number" value={orsNo} onChange={(e) => setOrsNo(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date of the ORS</label>
+                    <input type="date" className={inputCls} value={orsDate} onChange={(e) => setOrsDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Amount</label>
+                    <input className={inputCls} placeholder="ORS amount" value={orsAmount} onChange={(e) => setOrsAmount(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700">Line Items</h3>
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-emerald-300 rounded hover:bg-emerald-50 transition-colors"
+                  >
+                    <RiAddLine size={14} /> Add Item
+                  </button>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {items.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 border border-dashed border-gray-200 rounded-lg">No items yet — click "Add Item" to start</div>
+                  ) : (
+                    items.map((item, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
+                        {items.length > 1 && (
+                          <button type="button" onClick={() => removeItem(index)} className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold">×</button>
+                        )}
+                        <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
+                        <div className="mb-2">
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description</label>
+                          <input className={inputCls} placeholder="Item description" value={item.description ?? ""} onChange={(e) => updateItem(index, { description: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock No.</label>
+                            <input className={inputCls} placeholder="Stock #" value={item.stock_no ?? ""} onChange={(e) => updateItem(index, { stock_no: e.target.value })} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
+                            <input className={inputCls} placeholder="pcs" value={item.unit ?? ""} onChange={(e) => updateItem(index, { unit: e.target.value })} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Quantity</label>
+                            <input type="number" className={inputCls} placeholder="0" value={item.quantity ?? 0} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
+                            <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={item.unit_price ?? 0} onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Subtotal</label>
+                            <input className={`${inputCls} bg-emerald-50 font-bold text-emerald-700`} value={formatMoney(getItemTotal(item))} readOnly />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-emerald-700 text-white px-4 py-3 rounded-lg flex justify-between items-center font-bold">
+                <span>GRAND TOTAL</span>
+                <span className="text-lg">{formatMoney(grandTotal)}</span>
               </div>
             </div>
 
-            {items.length === 0 ? (
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 text-center text-gray-400">No items yet — add one.</div>
-            ) : (
-              <div className="space-y-3">
-                {items.map((it, idx) => (
-                  <div key={idx} className="rounded-xl border border-gray-200 bg-white p-3 grid grid-cols-12 gap-2 items-center">
-                    <input className="col-span-2 rounded-lg border border-gray-200 px-2 py-1 text-sm" placeholder="Stock No" value={it.stock_no ?? ""} onChange={(e) => updateItem(idx, { stock_no: e.target.value })} />
-                    <input className="col-span-1 rounded-lg border border-gray-200 px-2 py-1 text-sm" placeholder="Unit" value={it.unit ?? ""} onChange={(e) => updateItem(idx, { unit: e.target.value })} />
-                    <input className="col-span-5 rounded-lg border border-gray-200 px-2 py-1 text-sm" placeholder="Description" value={it.description ?? ""} onChange={(e) => updateItem(idx, { description: e.target.value })} />
-                    <input type="number" className="col-span-1 rounded-lg border border-gray-200 px-2 py-1 text-sm text-right" placeholder="Qty" value={String(it.quantity ?? 0)} onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })} />
-                    <input type="number" step="0.01" className="col-span-1 rounded-lg border border-gray-200 px-2 py-1 text-sm text-right" placeholder="Unit Price" value={String(it.unit_price ?? 0)} onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })} />
-                    <div className="col-span-1 text-right text-sm font-semibold">₱{(it.subtotal ?? 0).toFixed(2)}</div>
-                    <button type="button" onClick={() => removeItem(idx)} className="col-span-12 md:col-span-12 text-xs text-red-600">Remove</button>
-                  </div>
-                ))}
+            <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+              <button type="button" onClick={onClose} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+              <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
+                <RiSaveLine size={18} /> {saving ? "Creating..." : "Create PO"}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadPDF({
+                    supplier,
+                    address,
+                    tin,
+                    procurementMode,
+                    deliveryPlace,
+                    deliveryTerm,
+                    deliveryDate,
+                    paymentTerm,
+                    fundsAvailable,
+                    orsNo,
+                    orsDate,
+                    orsAmount,
+                    officeSection,
+                    fundCluster,
+                    items,
+                  })
+                }
+                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition-colors"
+              >
+                <RiFilePdf2Line size={18} /> PDF
+              </button>
+            </div>
+          </form>
+
+          <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
+                <button
+                  onClick={() =>
+                    downloadPDF({
+                      supplier,
+                      address,
+                      tin,
+                      procurementMode,
+                      deliveryPlace,
+                      deliveryTerm,
+                      deliveryDate,
+                      paymentTerm,
+                      fundsAvailable,
+                      orsNo,
+                      orsDate,
+                      orsAmount,
+                      officeSection,
+                      fundCluster,
+                      items,
+                    })
+                  }
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                >
+                  <RiFilePdf2Line size={16} /> PDF
+                </button>
               </div>
-            )}
+              <div className="bg-white rounded-lg shadow-lg p-4 text-black">
+                <POPreview
+                  supplier={supplier}
+                  address={address}
+                  tin={tin}
+                  procurementMode={procurementMode}
+                  deliveryPlace={deliveryPlace}
+                  deliveryTerm={deliveryTerm}
+                  deliveryDate={deliveryDate}
+                  paymentTerm={paymentTerm}
+                  fundsAvailable={fundsAvailable}
+                  orsNo={orsNo}
+                  orsDate={orsDate}
+                  orsAmount={orsAmount}
+                  officeSection={officeSection}
+                  fundCluster={fundCluster}
+                  items={items}
+                />
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-700 text-white font-semibold disabled:opacity-50">{saving ? "Creating…" : "Create PO"}</button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

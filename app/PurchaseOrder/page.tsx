@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
-import CreatePOModal from "@/components/CreatePOModal";
+import CreatePOModal from "../../components/CreatePOModal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
@@ -837,7 +837,7 @@ export default function PurchaseOrderPage() {
       <CreatePOModal
         visible={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreate={async (header, items) => {
+        onCreate={async (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => {
           await handleCreate(header, items);
           setCreateOpen(false);
         }}
