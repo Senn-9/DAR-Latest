@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
+import PrepareAbstractModal, { type CanvassEntryFormValues } from "@/components/AbstractOfAwards/PrepareAbstractModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -62,6 +63,7 @@ export default function AbstractPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewPrId, setViewPrId]       = useState<number | null>(null);
   const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
+  const [prepareAwardingTarget, setPrepareAwardingTarget] = useState<PRListRow | null>(null);
   const PAGE_SIZE = 10;
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
@@ -181,6 +183,71 @@ export default function AbstractPage() {
       acc.push(p);
       return acc;
     }, []);
+
+  const handlePrepareAwardingSubmit = async (entries: CanvassEntryFormValues[]) => {
+    if (!prepareAwardingTarget?.id) {
+      return { ok: false, message: "No PR selected for awarding." };
+    }
+
+    const cleanedEntries = entries.filter(
+      (entry) =>
+        (entry.description || "").trim() !== "" ||
+        (entry.supplier_name || "").trim() !== "" ||
+        entry.unit_price !== null ||
+        entry.quantity !== null
+    );
+
+    if (cleanedEntries.length === 0) {
+      return { ok: false, message: "Please fill at least one entry before saving." };
+    }
+
+    const { data: sessionRow, error: sessionError } = await supabase
+      .from("canvass_sessions")
+      .select("id")
+      .eq("pr_id", prepareAwardingTarget.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (sessionError) {
+      return { ok: false, message: sessionError.message || "Failed to find canvass session." };
+    }
+
+    const sessionId = sessionRow?.id ?? null;
+    if (!sessionId) {
+      return { ok: false, message: "No canvass session found for this PR." };
+    }
+
+    const payload = cleanedEntries.map((entry) => ({
+      session_id: sessionId,
+      item_no: entry.item_no,
+      description: entry.description.trim() || null,
+      unit: entry.unit.trim() || null,
+      quantity: entry.quantity,
+      supplier_name: entry.supplier_name.trim() || null,
+      unit_price: entry.unit_price,
+      total_price:
+        entry.quantity !== null && entry.unit_price !== null
+          ? Number(entry.quantity) * Number(entry.unit_price)
+          : entry.total_price,
+      is_winning: entry.is_winning,
+      tin_no: entry.tin_no.trim() || null,
+      delivery_days: entry.delivery_days.trim() || null,
+      supplier_address: entry.supplier_address.trim() || null,
+      quotation_no: entry.quotation_no,
+    }));
+
+    const { error: insertError } = await supabase.from("canvass_entries").insert(payload);
+
+    if (insertError) {
+      return { ok: false, message: insertError.message || "Failed to save awarding details." };
+    }
+
+    return {
+      ok: true,
+      message: `${payload.length} awarding entr${payload.length > 1 ? "ies" : "y"} saved successfully.`,
+    };
+  };
 
   /* ── SKELETON LOADING ── */
   if (loading) {
@@ -444,6 +511,14 @@ export default function AbstractPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => setPrepareAwardingTarget(form)}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiPlayCircleLine size={14} />
+                                Prepare Awarding
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -524,6 +599,16 @@ export default function AbstractPage() {
           onOpenResolutionProcess={() => {
             setViewCanvassTarget(null);
           }}
+        />
+      )}
+
+      {prepareAwardingTarget && (
+        <PrepareAbstractModal
+          open={Boolean(prepareAwardingTarget)}
+          prId={prepareAwardingTarget.id}
+          prNo={prepareAwardingTarget.pr_no}
+          onSubmit={handlePrepareAwardingSubmit}
+          onClose={() => setPrepareAwardingTarget(null)}
         />
       )}
 
