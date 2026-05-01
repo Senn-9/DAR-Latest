@@ -38,7 +38,7 @@ function replacePlaceholders(template: string, data: any): string {
       });
       
       // Handle {{add @index value}} for positioning
-      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (match, value) => {
+      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (_match: string, value: string) => {
         return (index + parseFloat(value)).toString();
       });
       
@@ -47,7 +47,7 @@ function replacePlaceholders(template: string, data: any): string {
   });
   
   // Handle nested property access like {{po_items.length}}
-  result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match, fullExpression, property) => {
+  result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match: string, fullExpression: string, _property: string) => {
     const parts = fullExpression.split('.');
     let value = data;
     

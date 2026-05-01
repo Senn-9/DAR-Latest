@@ -1,30 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiMoneyDollarCircleLine, RiCheckLine, RiAlertLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine, RiAddLine, RiEditLine,
+  RiCalendarLine, RiCalculatorLine, RiEyeLine, RiEdit2Line, RiInformationLine, RiCloseLine,
 } from "react-icons/ri";
 import CreateBudgetModal from "@/components/Budget/CreateBudgetModal";
 import EditBudgetModal from "@/components/Budget/EditBudgetModal";
+import {
+  fetchBudgets,
+  fetchOrsEntries,
+  fetchPurchaseOrders,
+  fetchPurchaseOrdersByDivision,
+  type DivisionBudgetRow,
+  type OrsEntryRow,
+  type PORow,
+} from "./budget";
 
 export default function BudgetPage() {
   const supabase = createClient();
 
+  // Extended Budget type based on DivisionBudgetRow with UI-compatible field names
   type Budget = {
-    budget_id: number;
-    budget_number: string;
-    budget_year: number;
+    id: string;
+    budget_id: number; // alias for compatibility
     division_id: number;
     division_name: string;
-    total_allocated: number;
-    total_earmarked: number;
-    total_spent: number;
-    total_remaining: number;
-    budget_status: string;
+    budget_year: number; // alias for fiscal_year
+    fiscal_year: number;
+    total_allocated: number; // alias for allocated
+    allocated: number;
+    total_earmarked: number; // calculated from ORS
+    total_spent: number; // alias for utilized
+    utilized: number;
+    total_remaining: number; // calculated
+    remaining: number;
+    notes?: string | null;
     utilizationPercent: number;
+    remainingPercent: number;
     status: "on-track" | "warning" | "critical";
+    // Fields for EditBudgetModal compatibility
+    budget_number: string;
+    budget_status: string;
   };
 
   type Division = {
@@ -41,10 +60,29 @@ export default function BudgetPage() {
     roles?: { role_name: string };
   };
 
+  // ─── Constants ────────────────────────────────────────────────────────────
+  const CURRENT_YEAR = new Date().getFullYear();
+  const PAGE_SIZE = 10;
+  /** Roles that may write to this module */
+  const EDIT_ROLES = new Set([1, 4]); // Admin, Budget
+  /** Role that sees only their own division */
+  const ENDUSER_ROLE = 6;
+
+  // ─── State ───────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [isEndUser, setIsEndUser] = useState(false);
 
+  // Year selection
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  // Calculation mode: 'earmarked' (ORS) | 'spent' (PO)
+  const [calcMode, setCalcMode] = useState<"earmarked" | "spent">("earmarked");
+
+  // Budget data
   const [totalAllocated, setTotalAllocated] = useState(0);
   const [totalEarmarked, setTotalEarmarked] = useState(0);
   const [totalSpent, setTotalSpent] = useState(0);
@@ -54,20 +92,22 @@ export default function BudgetPage() {
   const [budgetList, setBudgetList] = useState<Budget[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState<"division_name" | "total_allocated" | "total_earmarked" | "utilizationPercent">("division_name");
+  const [sortField, setSortField] = useState<"division_name" | "allocated" | "utilizationPercent">("division_name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  const PAGE_SIZE = 10;
 
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
     if (stored) {
       const user = JSON.parse(stored);
       setCurrentUser(user);
-      setIsAdmin(user.role_id === 1);
+      const roleId = user.role_id ?? 0;
+      setIsAdmin(roleId === 1);
+      setCanEdit(EDIT_ROLES.has(roleId));
+      setIsEndUser(roleId === ENDUSER_ROLE);
     }
   }, []);
 
@@ -82,88 +122,131 @@ export default function BudgetPage() {
     fetchDivisions();
   }, [supabase]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  // ─── Data Loading ─────────────────────────────────────────────────────────
+  const loadBudgetData = useCallback(async () => {
+    if (!currentUser) return;
+    setLoading(true);
 
-      try {
-        // Query budgets with division names
-        let query = supabase
-          .from("budgets")
-          .select(
-            `budget_id, budget_number, budget_year, division_id, total_allocated, 
-             total_earmarked, total_spent, total_remaining, budget_status, 
-             divisions(division_name)`
-          );
+    try {
+      // Fetch budgets, ORS entries, and POs in parallel
+      const divisionId = currentUser?.user_id && isEndUser ? currentUser.user_id : undefined;
+      
+      // Fetch POs based on user role
+      const poFetch = isEndUser && divisionId
+        ? fetchPurchaseOrdersByDivision(Number(divisionId), selectedYear)
+        : fetchPurchaseOrders(selectedYear);
+      
+      const [budgetsData, orsData, poData] = await Promise.all([
+        fetchBudgets(selectedYear),
+        fetchOrsEntries(selectedYear, isEndUser && divisionId ? divisionId : undefined),
+        poFetch,
+      ]);
 
-        // Filter by user's division if not admin
-        if (!isAdmin && currentUser?.divisions?.division_name) {
-          const { data: divData } = await supabase
-            .from("divisions")
-            .select("division_id")
-            .eq("division_name", currentUser.divisions.division_name)
-            .single();
-
-          if (divData) {
-            query = query.eq("division_id", divData.division_id);
-          }
+      // Filter by user's division if end user
+      let filteredBudgets = budgetsData;
+      if (isEndUser && currentUser?.divisions?.division_name) {
+        const { data: userDivision } = await supabase
+          .from("divisions")
+          .select("division_id")
+          .eq("division_name", currentUser.divisions.division_name)
+          .single();
+        if (userDivision) {
+          filteredBudgets = budgetsData.filter((b) => b.division_id === userDivision.division_id);
         }
-
-        const { data, error } = await query;
-
-        if (!error && data) {
-          // Transform data with calculations
-          const budgetsWithMetrics: Budget[] = (data as any[]).map((b) => {
-            const utilized = b.total_earmarked + b.total_spent;
-            const utilizationPercent = b.total_allocated > 0 ? Math.min((utilized / b.total_allocated) * 100, 100) : 0;
-
-            let status: "on-track" | "warning" | "critical" = "on-track";
-            if (utilizationPercent >= 90) status = "critical";
-            else if (utilizationPercent >= 75) status = "warning";
-
-            return {
-              budget_id: b.budget_id,
-              budget_number: b.budget_number,
-              budget_year: b.budget_year,
-              division_id: b.division_id,
-              division_name: b.divisions?.division_name || "Unknown",
-              total_allocated: b.total_allocated,
-              total_earmarked: b.total_earmarked,
-              total_spent: b.total_spent,
-              total_remaining: b.total_remaining,
-              budget_status: b.budget_status,
-              utilizationPercent,
-              status,
-            };
-          });
-
-          // Calculate totals
-          const sumAllocated = budgetsWithMetrics.reduce((sum, b) => sum + b.total_allocated, 0);
-          const sumEarmarked = budgetsWithMetrics.reduce((sum, b) => sum + b.total_earmarked, 0);
-          const sumSpent = budgetsWithMetrics.reduce((sum, b) => sum + b.total_spent, 0);
-          const sumRemaining = budgetsWithMetrics.reduce((sum, b) => sum + b.total_remaining, 0);
-          const utilization = sumAllocated > 0 ? Math.min(((sumEarmarked + sumSpent) / sumAllocated) * 100, 100) : 0;
-
-          setTotalAllocated(sumAllocated);
-          setTotalEarmarked(sumEarmarked);
-          setTotalSpent(sumSpent);
-          setTotalRemaining(sumRemaining);
-          setUtilizationRate(utilization);
-          setBudgetList(budgetsWithMetrics);
-        }
-      } catch (err) {
-        console.error("Error fetching budget data:", err);
       }
 
-      setLoading(false);
-    };
+      // Calculate ORS amounts per division
+      const orsByDivision: Record<number, number> = {};
+      orsData.forEach((ors) => {
+        if (ors.division_id) {
+          orsByDivision[ors.division_id] = (orsByDivision[ors.division_id] || 0) + ors.amount;
+        }
+      });
 
-    if (currentUser) {
-      fetchData();
+      // Calculate PO amounts per division
+      const poByDivision: Record<number, number> = {};
+      poData.forEach((po) => {
+        if (po.division_id && po.total_amount) {
+          poByDivision[po.division_id] = (poByDivision[po.division_id] || 0) + po.total_amount;
+        }
+      });
+
+      // Process budgets data with DivisionBudgetRow structure
+      const processedBudgets: Budget[] = filteredBudgets.map((item) => {
+        const allocated = item.allocated || 0;
+        const orsAmount = orsByDivision[item.division_id] || 0;
+        const poAmount = poByDivision[item.division_id] || 0;
+        
+        // Calculate utilized based on calcMode:
+        // - 'earmarked' (ORS): ORS amounts + PO amounts
+        // - 'spent' (PO): PO amounts only
+        const utilized = calcMode === "earmarked" 
+          ? orsAmount + poAmount  // ORS mode: obligations from ORS + POs
+          : poAmount;             // PO mode: actual disbursements from POs
+        
+        const remaining = allocated - utilized;
+        const utilizationPercent = allocated > 0 ? (utilized / allocated) * 100 : 0;
+        const remainingPercent = allocated > 0 ? (remaining / allocated) * 100 : 0;
+
+        // Determine status based on utilization AND remaining budget
+        let status: "on-track" | "warning" | "critical" = "on-track";
+        if (utilizationPercent > 90 || remaining < 0) {
+          status = "critical"; // Over-allocated or negative remaining
+        } else if (utilizationPercent > 75 || remainingPercent < 25) {
+          status = "warning"; // High utilization or low remaining
+        }
+
+        return {
+          ...item,
+          budget_id: item.division_id,
+          budget_year: item.fiscal_year,
+          total_allocated: allocated,
+          total_earmarked: orsAmount,
+          total_spent: poAmount,
+          total_remaining: remaining,
+          utilized,
+          remaining,
+          utilizationPercent,
+          remainingPercent,
+          status,
+          budget_number: `BUD-${item.fiscal_year}-${item.division_id}`,
+          budget_status: remaining < 0 ? "Over Budget" : remainingPercent < 25 ? "Low Remaining" : "Active",
+        } as Budget;
+      });
+
+      // Calculate totals
+      const totalAllocated = processedBudgets.reduce((sum, b) => sum + b.allocated, 0);
+      const totalEarmarked = processedBudgets.reduce((sum, b) => sum + b.total_earmarked, 0);
+      const totalSpent = processedBudgets.reduce((sum, b) => sum + b.total_spent, 0);
+      const totalUtilized = processedBudgets.reduce((sum, b) => sum + b.utilized, 0);
+
+      setBudgetList(processedBudgets);
+      setTotalAllocated(totalAllocated);
+      setTotalEarmarked(totalEarmarked);
+      setTotalSpent(totalSpent);
+      setTotalRemaining(totalAllocated - totalUtilized);
+      setUtilizationRate(totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0);
+    } catch (err) {
+      console.error("Error fetching budget data:", err);
     }
-  }, [isAdmin, currentUser, supabase]);
 
-  const handleSort = (field: "division_name" | "total_allocated" | "total_earmarked" | "utilizationPercent") => {
+    setLoading(false);
+  }, [currentUser, isEndUser, selectedYear, calcMode, supabase]);
+
+  useEffect(() => {
+    loadBudgetData();
+  }, [loadBudgetData]);
+
+  // ─── Year Picker Options ──────────────────────────────────────────────────
+  const yearOptions = useMemo(() => {
+    const years = [];
+    for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) {
+      years.push(y);
+    }
+    return years;
+  }, []);
+
+  const handleSort = (field: "division_name" | "allocated" | "utilizationPercent") => {
     if (sortField === field) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
@@ -173,7 +256,7 @@ export default function BudgetPage() {
   };
 
   const filteredList = budgetList.filter(item =>
-    item.division_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.division_name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const sortedList = [...filteredList].sort((a, b) => {
@@ -223,6 +306,36 @@ export default function BudgetPage() {
     return "from-blue-500 to-blue-600";
   };
 
+  // ─── Formatting Helpers ───────────────────────────────────────────────────
+
+  /** Format number to compact form with 1 decimal (1.6K instead of 2K) */
+  const formatCompact = (n: number): string => {
+    const absN = Math.abs(n);
+    if (absN >= 1000000) return (n / 1000000).toFixed(1) + "M";
+    if (absN >= 1000) return (n / 1000).toFixed(1) + "K";
+    return n.toString();
+  };
+
+  /** Format full amount with peso sign */
+  const formatFull = (n: number): string => {
+    return "₱" + Math.abs(n).toLocaleString("en-PH");
+  };
+
+  /** Amount component with tooltip showing full value */
+  const Amount = ({ value, className = "" }: { value: number; className?: string }) => {
+    const isNegative = value < 0;
+    return (
+      <span className={`group relative cursor-help ${className}`}>
+        {isNegative && "-"}₱{formatCompact(value)}
+        {/* Tooltip */}
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-lg">
+          {isNegative ? "-" : ""}{formatFull(value)}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+        </span>
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -253,45 +366,155 @@ export default function BudgetPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-linear-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 flex flex-col justify-between text-white shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-emerald-100 font-medium mb-1">Total Allocated</p>
-              <p className="mono text-2xl font-bold">₱{(totalAllocated / 1000000).toFixed(1)}M</p>
+      {/* ─── Page Header ────────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 rounded-2xl p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold tracking-widest uppercase text-white/50 mb-1">
+              DAR · Budget Management
+            </p>
+            <h1 className="text-2xl font-bold">Budget Overview</h1>
+            <p className="text-sm text-white/70 mt-1">
+              Monitor allocation and utilization across divisions
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Year Selector */}
+            <button
+              onClick={() => setShowYearPicker(true)}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl px-4 py-2.5 transition-colors"
+            >
+              <RiCalendarLine size={18} className="text-white/70" />
+              <span className="font-semibold">FY {selectedYear}</span>
+              <RiArrowDownLine size={14} className="text-white/50" />
+            </button>
+
+            {/* Role Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${canEdit ? "bg-emerald-600" : "bg-white/10"}`}
+            >
+              {canEdit ? <RiEdit2Line size={14} /> : <RiEyeLine size={14} />}
+              <span className="text-xs font-bold uppercase tracking-wide">
+                {canEdit ? "Edit Access" : "Read-Only"}
+              </span>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
-              <RiMoneyDollarCircleLine size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Summary Cards with Progress Bars ─────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Total Allocated */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm group">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+            Total Allocated
+          </p>
+          <div className="flex items-baseline gap-1">
+            <Amount value={totalAllocated} className="text-2xl font-bold text-emerald-700" />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Annual Procurement Plan {selectedYear}
+          </p>
+        </div>
+
+        {/* Total Utilized */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm group">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+            Total {calcMode === "earmarked" ? "Utilized" : "Spent"}
+          </p>
+          <div className="flex items-baseline gap-1">
+            <Amount 
+              value={calcMode === "earmarked" ? totalEarmarked + totalSpent : totalSpent} 
+              className="text-2xl font-bold text-emerald-600" 
+            />
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-emerald-500"
+              style={{ width: `${Math.min(utilizationRate, 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            {utilizationRate.toFixed(1)}% of total budget
+          </p>
+        </div>
+
+        {/* Remaining */}
+        <div className={`bg-white rounded-2xl p-5 border shadow-sm group ${totalRemaining < 0 ? 'border-red-300 bg-red-50' : totalRemaining / totalAllocated < 0.25 ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <p className={`text-xs font-semibold uppercase tracking-wide ${totalRemaining < 0 ? 'text-red-500' : totalRemaining / totalAllocated < 0.25 ? 'text-amber-600' : 'text-gray-400'}`}>
+              Remaining
+            </p>
+            {totalRemaining < 0 && (
+              <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                OVER BUDGET
+              </span>
+            )}
+            {totalRemaining >= 0 && totalRemaining / totalAllocated < 0.25 && (
+              <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">
+                LOW
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-1">
+            <Amount 
+              value={totalRemaining} 
+              className={`text-2xl font-bold ${totalRemaining < 0 ? "text-red-600" : totalRemaining / totalAllocated < 0.25 ? "text-amber-600" : "text-emerald-600"}`} 
+            />
+          </div>
+          <div className="h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${totalRemaining < 0 ? 'bg-red-500' : totalRemaining / totalAllocated < 0.25 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              style={{ width: `${Math.max(0, Math.min((totalRemaining / totalAllocated) * 100, 100))}%` }}
+            />
+          </div>
+          <p className={`text-xs mt-2 ${totalRemaining < 0 ? 'text-red-600 font-medium' : totalRemaining / totalAllocated < 0.25 ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+            {totalRemaining < 0 
+              ? <>Over budget by <Amount value={totalRemaining} className="font-semibold" /></>
+              : `${((totalRemaining / totalAllocated) * 100).toFixed(1)}% of budget remaining`}
+          </p>
+        </div>
+      </div>
+
+      {/* ─── Calculation Mode Toggle ─────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <RiCalculatorLine size={18} className="text-gray-500" />
+            <span className="text-sm font-semibold text-gray-700">
+              Utilization Calculation Mode
+            </span>
+            <div className="relative group">
+              <RiInformationLine size={16} className="text-gray-400 cursor-help" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                Select how budget utilization is calculated:
+                • ORS: Earmarked + Spent (obligation-based)
+                • PO: Spent only (actual disbursement)
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-2xl p-4 flex flex-col justify-between text-white shadow-sm hover:shadow-md transition-shadow">
-          <div>
-            <p className="text-xs text-blue-100 font-medium mb-1">Earmarked</p>
-            <p className="mono text-2xl font-bold">₱{(totalEarmarked / 1000).toFixed(0)}K</p>
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-indigo-500 to-indigo-600 rounded-2xl p-4 flex flex-col justify-between text-white shadow-sm hover:shadow-md transition-shadow">
-          <div>
-            <p className="text-xs text-indigo-100 font-medium mb-1">Spent</p>
-            <p className="mono text-2xl font-bold">₱{(totalSpent / 1000).toFixed(0)}K</p>
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-cyan-500 to-cyan-600 rounded-2xl p-4 flex flex-col justify-between text-white shadow-sm hover:shadow-md transition-shadow">
-          <div>
-            <p className="text-xs text-cyan-100 font-medium mb-1">Remaining</p>
-            <p className="mono text-2xl font-bold">{totalRemaining < 0 ? "P-" : "P"}{Math.abs(totalRemaining / 1000).toFixed(0)}K</p>
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-violet-500 to-violet-600 rounded-2xl p-4 flex flex-col justify-between text-white shadow-sm hover:shadow-md transition-shadow">
-          <div>
-            <p className="text-xs text-violet-100 font-medium mb-1">Utilization</p>
-            <p className="mono text-2xl font-bold">{utilizationRate.toFixed(1)}%</p>
+          <div className="flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setCalcMode("earmarked")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                calcMode === "earmarked"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              ORS (Earmarked + Spent)
+            </button>
+            <button
+              onClick={() => setCalcMode("spent")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                calcMode === "spent"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              PO (Spent Only)
+            </button>
           </div>
         </div>
       </div>
@@ -317,7 +540,7 @@ export default function BudgetPage() {
                 className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
               />
             </div>
-            {isAdmin && (
+            {canEdit && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
@@ -343,8 +566,8 @@ export default function BudgetPage() {
                   <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                     {([
                       { label: "Division", field: "division_name" as const, align: "text-left", width: "flex-1 min-w-40" },
-                      { label: "Allocated", field: "total_allocated" as const, align: "text-right", width: "w-28" },
-                      { label: "Earmarked", field: "total_earmarked" as const, align: "text-right", width: "w-28" },
+                      { label: "Allocated", field: "allocated" as const, align: "text-right", width: "w-28" },
+                      { label: "Earmarked", field: null, align: "text-right", width: "w-28" },
                       { label: "Spent", field: null, align: "text-right", width: "w-24" },
                       { label: "Remaining", field: null, align: "text-right", width: "w-24" },
                       { label: "Utilization", field: "utilizationPercent" as const, align: "text-center", width: "w-32" },
@@ -373,26 +596,46 @@ export default function BudgetPage() {
                           {item.division_name}
                         </td>
                         <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
-                          ₱{(item.total_allocated / 1000).toFixed(0)}K
+                          <span className="group relative cursor-help" title={formatFull(item.total_allocated)}>
+                            ₱{formatCompact(item.total_allocated)}
+                          </span>
                         </td>
                         <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
-                          ₱{(item.total_earmarked / 1000).toFixed(0)}K
+                          <span className="group relative cursor-help" title={formatFull(item.total_earmarked)}>
+                            ₱{formatCompact(item.total_earmarked)}
+                          </span>
                         </td>
                         <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
-                          ₱{(item.total_spent / 1000).toFixed(0)}K
+                          <span className="group relative cursor-help" title={formatFull(item.total_spent)}>
+                            ₱{formatCompact(item.total_spent)}
+                          </span>
                         </td>
-                        <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
-                          ₱{(item.total_remaining / 1000).toFixed(0)}K
+                        <td className={`mono px-2 py-2 text-right ${rowBg} ${item.total_remaining < 0 ? 'text-red-600 font-bold' : item.remainingPercent < 25 ? 'text-amber-600 font-medium' : 'text-gray-700'}`}>
+                          <div className="flex items-center justify-end gap-1">
+                            {item.total_remaining < 0 && <span className="text-red-500 text-xs">▼</span>}
+                            {item.total_remaining >= 0 && item.remainingPercent < 25 && <span className="text-amber-500 text-xs">⚠</span>}
+                            <span className="group relative cursor-help" title={item.total_remaining < 0 ? "-" + formatFull(item.total_remaining) : formatFull(item.total_remaining)}>
+                              ₱{formatCompact(Math.abs(item.total_remaining))}
+                            </span>
+                          </div>
                         </td>
                         <td className={`px-2 py-2 text-center ${rowBg}`}>
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full bg-linear-to-r ${getUtilizationColor(item.utilizationPercent)}`}
-                                style={{ width: `${Math.min(item.utilizationPercent, 100)}%` }}
-                              />
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full bg-linear-to-r ${getUtilizationColor(item.utilizationPercent)}`}
+                                  style={{ width: `${Math.min(item.utilizationPercent, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-gray-700 w-10 text-right">{item.utilizationPercent.toFixed(1)}%</span>
                             </div>
-                            <span className="text-xs font-semibold text-gray-700 w-10 text-right">{item.utilizationPercent.toFixed(1)}%</span>
+                            {item.remainingPercent < 25 && item.total_remaining >= 0 && (
+                              <span className="text-[10px] text-amber-600 font-medium">{item.remainingPercent.toFixed(0)}% left</span>
+                            )}
+                            {item.total_remaining < 0 && (
+                              <span className="text-[10px] text-red-600 font-bold">Over budget!</span>
+                            )}
                           </div>
                         </td>
                         <td className={`px-2 py-2 text-center ${rowBg}`}>
@@ -442,7 +685,7 @@ export default function BudgetPage() {
                   ) : (
                     <button
                       key={p}
-                      onClick={() => setCurrentPage(p)}
+                      onClick={() => setCurrentPage(p as number)}
                       className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold border transition-all ${
                         currentPage === p
                           ? "bg-emerald-700 text-white border-emerald-700"
@@ -502,17 +745,63 @@ export default function BudgetPage() {
         }}
         onBudgetUpdated={() => {
           // Refresh data when budget is updated
-          if (currentUser) {
-            const stored = localStorage.getItem("currentUser");
-            if (stored) {
-              const user = JSON.parse(stored);
-              setCurrentUser(user);
-            }
-          }
+          loadBudgetData();
         }}
         divisions={divisions}
         isAdmin={isAdmin}
       />
+
+      {/* ─── Year Picker Modal ──────────────────────────────────────────────── */}
+      {showYearPicker && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+              </div>
+              <button
+                onClick={() => setShowYearPicker(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <RiCloseLine size={22} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="max-h-72 overflow-y-auto py-2">
+              {yearOptions.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => {
+                    setSelectedYear(year);
+                    setShowYearPicker(false);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${
+                    selectedYear === year ? "bg-emerald-50" : "hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={`font-semibold ${selectedYear === year ? "text-emerald-700" : "text-gray-700"}`}>
+                    FY {year}
+                  </span>
+                  {selectedYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Read-only Notice ───────────────────────────────────────────────── */}
+      {!canEdit && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4">
+          <RiInformationLine size={20} className="text-blue-600 flex-shrink-0" />
+          <p className="text-sm text-blue-800">
+            {isEndUser
+              ? "You are viewing your division's budget summary. Contact the Budget office to request changes."
+              : "You have read-only access to the budget module. Contact an administrator for modifications."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

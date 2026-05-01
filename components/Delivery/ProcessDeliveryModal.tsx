@@ -33,7 +33,7 @@ function replacePlaceholders(template: string, data: any): string {
       });
       
       // Handle {{add @index value}} for positioning
-      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (match, value) => {
+      itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (_match: string, value: string) => {
         return (index + parseFloat(value)).toString();
       });
       
@@ -42,12 +42,12 @@ function replacePlaceholders(template: string, data: any): string {
   });
 
   // Handle Handlebars conditionals
-  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, condition, content) => {
+  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (_match: string, condition: string, content: string) => {
     const value = data[condition];
     return value ? content : '';
   });
 
-  result = result.replace(/{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g, (match, condition, content) => {
+  result = result.replace(/{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g, (_match: string, condition: string, content: string) => {
     const value = data[condition];
     return !value ? content : '';
   });
@@ -713,7 +713,7 @@ export default function ProcessDeliveryModal({
   
   // Determine which steps to show based on status
   const getAvailableSteps = () => {
-    const steps = [];
+    const steps: Array<{ id: number; label: string; icon: string }> = [];
     
     // Status 21 (IAR Processing) - External work, no steps needed
     if (active?.status_id === 21) {
@@ -1509,7 +1509,7 @@ export default function ProcessDeliveryModal({
                 <label className="flex items-center gap-3 cursor-pointer hover:bg-white rounded-lg p-2 transition-colors">
                   <input
                     type="checkbox"
-                    checked={!iar?.items_complete ?? false}
+                    checked={!iar?.items_complete}
                     onChange={(e) => setIar((p: any) => ({ ...(p ?? {}), items_complete: !e.target.checked }))}
                     className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
                   />

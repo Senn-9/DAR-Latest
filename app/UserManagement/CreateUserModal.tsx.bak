@@ -5,13 +5,7 @@
  * division, and role.
  */
 
-import {
-  createUser,
-  fetchAllDivisions,
-  fetchAllRoles,
-  type DivisionRow,
-  type RoleRow,
-} from "@/lib/supabase/index";
+import { createClient } from "@/utils/supabase/client";
 import { DatabaseUser } from "@/types/user";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { useEffect, useState } from "react";
@@ -28,6 +22,38 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DropdownPicker from "./DropdownPicker";
+
+// Types
+interface DivisionRow {
+  division_id: number;
+  division_name: string;
+}
+
+interface RoleRow {
+  role_id: number;
+  role_name: string;
+}
+
+const supabase = createClient();
+
+// Local implementations of missing imports
+const fetchAllDivisions = async (): Promise<DivisionRow[]> => {
+  const { data, error } = await supabase.from("divisions").select("division_id, division_name");
+  if (error) throw error;
+  return data || [];
+};
+
+const fetchAllRoles = async (): Promise<RoleRow[]> => {
+  const { data, error } = await supabase.from("roles").select("role_id, role_name");
+  if (error) throw error;
+  return data || [];
+};
+
+const createUser = async (userData: Partial<DatabaseUser>) => {
+  const { data, error } = await supabase.from("users").insert([userData]).select().single();
+  if (error) throw error;
+  return data;
+};
 
 interface CreateUserModalProps {
   visible: boolean;

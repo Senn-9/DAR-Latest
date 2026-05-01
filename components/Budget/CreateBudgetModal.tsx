@@ -117,7 +117,10 @@ export default function CreateBudgetModal({
               <input
                 type="number"
                 value={budgetYear}
-                onChange={(e) => setBudgetYear(parseInt(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? new Date().getFullYear() : parseInt(e.target.value, 10);
+                  setBudgetYear(isNaN(val) ? new Date().getFullYear() : val);
+                }}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
                 disabled={loading}
               />
