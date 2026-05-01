@@ -79,8 +79,6 @@ export default function BudgetModal({
   const [showFlagPicker, setShowFlagPicker] = useState(false);
 
   const [formData, setFormData] = useState({
-    budgetNumber: "",
-    papCode: "",
     flagId: 1,
     remarks: "",
     attachment: null as File | null,
@@ -144,15 +142,6 @@ export default function BudgetModal({
   };
 
   const handleSubmit = async () => {
-    if (!formData.budgetNumber.trim()) {
-      setErrorModal({ show: true, message: "Budget Number is required!" });
-      return;
-    }
-    if (!formData.papCode.trim()) {
-      setErrorModal({ show: true, message: "PAP / Activity Code is required!" });
-      return;
-    }
-
     setProcessing(true);
 
     try {
@@ -192,8 +181,6 @@ export default function BudgetModal({
       const { error: updateErr } = await supabase
         .from("purchase_requests")
         .update({
-          budget_number: formData.budgetNumber,
-          pap_code: formData.papCode,
           status_id: 5,
           status: "Processing (PARPO)",
         })
@@ -376,37 +363,11 @@ export default function BudgetModal({
               </div>
             </div>
 
-            {/* ── EARMARKING DETAILS ─────────────────────────────────────── */}
+            {/* ── REMARKS ───────────────────────────────────────────────── */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold uppercase text-gray-500 tracking-wider">
-                Earmarking Details
+                Remarks
               </h3>
-
-              {/* Budget Number */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                  Budget Number (from PPMP) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  className={inputCls}
-                  placeholder="e.g. 2026-PPMP-0042"
-                  value={formData.budgetNumber}
-                  onChange={(e) => setFormData({ ...formData, budgetNumber: e.target.value })}
-                />
-              </div>
-
-              {/* PAP / Activity Code */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                  PAP / Activity Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  className={inputCls}
-                  placeholder="e.g. ARDSP-2026-001"
-                  value={formData.papCode}
-                  onChange={(e) => setFormData({ ...formData, papCode: e.target.value })}
-                />
-              </div>
 
               {/* Status Flag */}
               <div>
@@ -507,12 +468,12 @@ export default function BudgetModal({
               {/* Earmarking Notes */}
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                  Earmarking Notes
+                  Remarks
                 </label>
                 <textarea
                   className={`${inputCls} resize-none`}
                   rows={4}
-                  placeholder="e.g. Funds available under MFO 2. Forwarding to PARPO."
+                  placeholder="Add remarks for budget review before forwarding to PARPO."
                   value={formData.remarks}
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 />

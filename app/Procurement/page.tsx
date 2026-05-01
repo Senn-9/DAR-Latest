@@ -818,8 +818,8 @@ export default function ProcurementPage() {
                               )}
 
                               
-                              {/* Process — admin always, Division Head when status_id=2 */}
-                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (isDivisionHead && form.status_id === 2)) && (
+                              {/* Process — admin always, Division Head for pending/submitted PRs in their division */}
+                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (isDivisionHead && [1, 2].includes(form.status_id ?? 0))) && (
                                 <button
                                   onClick={() => setProcessTarget({ prId: form.id, prNo: form.pr_no, statusId: form.status_id })}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"

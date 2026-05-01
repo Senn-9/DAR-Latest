@@ -351,7 +351,7 @@ export default function CanvassResolutionDetailsPanel({
 
       const { error: prErr } = await supabase
         .from("purchase_requests")
-        .update({ status_id: 11, status: "Abstract of Awards" })
+        .update({ status_id: 10, status: "Abstract of Awards" })
         .eq("id", prId);
       if (prErr) throw prErr;
 
