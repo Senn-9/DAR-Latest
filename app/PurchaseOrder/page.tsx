@@ -41,6 +41,18 @@ type CurrentUser = {
   roles?: { role_name: string };
 };
 
+type DivisionRow = {
+  division_id: number;
+  division_name: string | null;
+};
+
+type POUserContext = {
+  role_id: number;
+  username?: string | null;
+  roles?: { role_name: string };
+  divisions?: { division_id: number; division_name: string };
+} | null;
+
 type POStatusMeta = {
   label: string;
   color: string;
@@ -91,40 +103,75 @@ function getPhase(statusId: number | null | undefined): "po" | "ors" | "accounti
   return "unknown";
 }
 
-function nextStatusOptions(statusId: number, roleId: number) {
+function normalizeText(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isStodDivision(divisionName: string | null | undefined) {
+  return normalizeText(divisionName).includes("stod");
+}
+
+function isBudgetUser(user: POUserContext) {
+  return user?.role_id === 4 || normalizeText(user?.roles?.role_name).includes("budget");
+}
+
+function isSupplyUser(user: POUserContext) {
+  return user?.role_id === 8 || normalizeText(user?.roles?.role_name).includes("supply");
+}
+
+function isPPMPPointPerson(user: POUserContext) {
+  const roleName = normalizeText(user?.roles?.role_name);
+  const username = normalizeText(user?.username);
+  return roleName.includes("ppmp") || roleName.includes("point person") || username.includes("ppmp");
+}
+
+function nextStatusOptions(statusId: number, user: POUserContext, divisionName?: string | null) {
+  const roleId = user?.role_id ?? 0;
+
   if (roleId === 1) {
     return [11, 12, 13, 14, 15, 16, 17, 34].filter((s) => s !== statusId);
   }
-  if (roleId === 4) {
-    if (statusId === 13) return [14];
-    if (statusId === 14) return [15];
-    return [];
-  }
-  if (roleId === 8) {
+
+  if (isSupplyUser(user)) {
     if (statusId === 11) return [12];
     if (statusId === 12) return [13];
     if (statusId === 16) return [17];
     if (statusId === 17) return [34];
     return [];
   }
+
+  if (isBudgetUser(user)) {
+    if (statusId === 13) return [14];
+    if (statusId === 14) return [15];
+    if (statusId === 15) return [16];
+    return [];
+  }
+
+  if (isPPMPPointPerson(user)) {
+    if (statusId === 15) return [16];
+    return [];
+  }
+
   return [];
 }
 
-function canProcessPO(roleId: number, statusId: number | null) {
+function canProcessPO(user: POUserContext, statusId: number | null, divisionName?: string | null) {
   if (statusId == null) return false;
-  return nextStatusOptions(statusId, roleId).length > 0;
+  return nextStatusOptions(statusId, user, divisionName).length > 0;
 }
 
 function ProcessModal({
   visible,
   po,
   roleId,
+  divisionName,
   onClose,
   onSubmit,
 }: {
   visible: boolean;
   po: PurchaseOrderRow | null;
   roleId: number;
+  divisionName: string | null;
   onClose: () => void;
   onSubmit: (statusId: number, remarks: string) => Promise<void>;
 }) {
@@ -134,15 +181,24 @@ function ProcessModal({
 
   useEffect(() => {
     if (!visible || !po) return;
-    const options = nextStatusOptions(Number(po.status_id ?? 0), roleId);
+    const options = nextStatusOptions(
+      Number(po.status_id ?? 0),
+      { role_id: roleId, divisions: { division_id: Number(po.division_id ?? 0), division_name: divisionName ?? "" } },
+      divisionName,
+    );
     setStatusId(options[0] ?? "");
     setRemarks("");
     setSaving(false);
-  }, [visible, po, roleId]);
+  }, [visible, po, roleId, divisionName]);
 
   if (!visible || !po) return null;
 
-  const options = nextStatusOptions(Number(po.status_id ?? 0), roleId);
+  const options = nextStatusOptions(
+    Number(po.status_id ?? 0),
+    { role_id: roleId, divisions: { division_id: Number(po.division_id ?? 0), division_name: divisionName ?? "" } },
+    divisionName,
+  );
+  const isStod = isStodDivision(divisionName);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -152,6 +208,11 @@ function ProcessModal({
           <p className="text-xs text-emerald-100 mt-0.5">{po.po_no ?? "Unknown PO"}</p>
         </div>
         <div className="p-6 space-y-4">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+            {isStod
+              ? "STOD divisions follow the direct PCAO approval path for status 16."
+              : "Non-STOD divisions require the PPMP point person signature before PO serving."}
+          </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><p className="text-xs text-gray-500">PR No</p><p className="font-semibold">{po.pr_no ?? "—"}</p></div>
             <div><p className="text-xs text-gray-500">Supplier</p><p className="font-semibold">{po.supplier ?? "—"}</p></div>
@@ -395,6 +456,7 @@ export default function PurchaseOrderPage() {
   const [processOpen, setProcessOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [divisionNames, setDivisionNames] = useState<Record<number, string>>({});
 
   const isAdmin = currentUser?.role_id === 1;
   const isBudget = currentUser?.role_id === 4 || (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
@@ -407,6 +469,19 @@ export default function PurchaseOrderPage() {
       setCurrentUser(JSON.parse(storedUser));
     }
   }, []);
+
+  useEffect(() => {
+    const loadDivisions = async () => {
+      const { data } = await supabase.from("divisions").select("division_id, division_name");
+      const map: Record<number, string> = {};
+      (data ?? []).forEach((division: DivisionRow) => {
+        map[division.division_id] = division.division_name ?? "";
+      });
+      setDivisionNames(map);
+    };
+
+    loadDivisions();
+  }, [supabase]);
 
   useEffect(() => {
     const loadPOs = async () => {
@@ -507,6 +582,13 @@ export default function PurchaseOrderPage() {
       setLoadingItems(false);
     }
   };
+
+  const getDivisionName = (divisionId: number | null | undefined) => {
+    if (divisionId == null) return null;
+    return divisionNames[divisionId] ?? null;
+  };
+
+  const selectedPoDivisionName = getDivisionName(selectedPo?.division_id);
 
   const processPO = async (statusId: number, remarks: string) => {
     if (!selectedPo) return;
@@ -722,7 +804,7 @@ export default function PurchaseOrderPage() {
                     {pagedList.map((po, index) => {
                       const meta = getStatusMeta(po.status_id);
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const canProcess = canProcessPO(currentUser?.role_id ?? 0, po.status_id);
+                      const canProcess = canProcessPO(currentUser, po.status_id, getDivisionName(po.division_id));
 
                       return (
                         <tr key={po.id} className="border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
@@ -820,13 +902,14 @@ export default function PurchaseOrderPage() {
         onClose={() => setDetailsOpen(false)}
         onOpenRemarks={() => setRemarksOpen(true)}
         onOpenProcess={() => setProcessOpen(true)}
-        canProcess={selectedPo ? canProcessPO(currentUser?.role_id ?? 0, selectedPo.status_id) : false}
+        canProcess={selectedPo ? canProcessPO(currentUser, selectedPo.status_id, selectedPoDivisionName) : false}
       />
 
       <ProcessModal
         visible={processOpen}
         po={selectedPo}
         roleId={currentUser?.role_id ?? 0}
+        divisionName={selectedPoDivisionName}
         onClose={() => setProcessOpen(false)}
         onSubmit={async (statusId, remarks) => {
           await processPO(statusId, remarks);
