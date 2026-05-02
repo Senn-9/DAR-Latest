@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import PrepareAbstractModal, { type ItemWithDealers } from "@/components/AbstractOfAwards/PrepareAbstractModal";
+import PrepareAbstractModal, { type SupplierQuotePayload } from "@/components/AbstractOfAwards/PrepareAbstractModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -223,12 +223,12 @@ export default function AbstractPage() {
           session_id: sessionId,
           pr_items: item.id, // Linking to purchase_request_items.id
           pr_no: prepareAwardingTarget.pr_no,
-          unit: item.unit.trim() || null,
+          unit: item.unit?.trim() || null,
           quantity: quantity,
           supplier_name: dealer.supplier_name.trim() || null,
           unit_price: unitPrice,
           total_price: quantity * unitPrice,
-          is_winning: false, // Default to false as checkbox is removed
+          is_winning: false,
           created_at: new Date().toISOString(),
         });
       });
@@ -300,7 +300,7 @@ export default function AbstractPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-                <div className="skeleton-shimmer w-10 h-10 rounded-xl flex-shrink-0" />
+                <div className="skeleton-shimmer w-10 h-10 rounded-xl shrink-0" />
                 <div className="space-y-1.5 flex-1">
                   <div className="skeleton-shimmer h-3 w-16 rounded" />
                   <div className="skeleton-shimmer h-6 w-12 rounded" />
@@ -321,13 +321,13 @@ export default function AbstractPage() {
             <div className="divide-y divide-gray-100">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="px-5 py-4 flex items-center gap-4">
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-32 rounded flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-32 rounded shrink-0" />
                   <div className="skeleton-shimmer h-4 w-full max-w-xs rounded" />
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0" />
-                  <div className="skeleton-shimmer h-6 w-28 rounded-full flex-shrink-0" />
-                  <div className="skeleton-shimmer h-4 w-24 rounded flex-shrink-0 ml-auto" />
-                  <div className="skeleton-shimmer h-7 w-24 rounded-lg flex-shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0" />
+                  <div className="skeleton-shimmer h-6 w-28 rounded-full shrink-0" />
+                  <div className="skeleton-shimmer h-4 w-24 rounded shrink-0 ml-auto" />
+                  <div className="skeleton-shimmer h-7 w-24 rounded-lg shrink-0" />
                 </div>
               ))}
             </div>
@@ -412,7 +412,7 @@ export default function AbstractPage() {
               key={label}
               className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
             >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0`}>
+              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>
                 <RiFileListLine size={20} />
               </div>
               <div>
