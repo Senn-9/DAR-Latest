@@ -274,7 +274,7 @@ export default function ReleaseCanvassStepModal({ prId, prNo, requestingDivision
                         {rows.map((u) => {
                           const a = assignmentFor(d.division_id, u.id);
                           const released = a ? isReleased(a) : false;
-                          const statusLabel = released ? "Released" : "Pending";
+                          const statusLabel = released ? "Released to Canvasser" : "Pending";
                           const statusCls = released
                             ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                             : "bg-amber-100 text-amber-800 border-amber-200";
@@ -307,7 +307,7 @@ export default function ReleaseCanvassStepModal({ prId, prNo, requestingDivision
                                   } disabled:opacity-60 inline-flex items-center gap-2`}
                                 >
                                   {released ? <RiCheckboxCircleLine size={16} /> : null}
-                                  {isSaving ? "Releasing…" : released ? "Released" : "Release"}
+                                  {isSaving ? "Releasing…" : released ? "Released to Canvasser" : "Release"}
                                 </button>
                               </div>
                             </div>
