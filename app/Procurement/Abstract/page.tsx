@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import PrepareAbstractModal, { type CanvassEntryFormValues } from "@/components/AbstractOfAwards/PrepareAbstractModal";
+import PrepareAbstractModal, { type ItemWithDealers } from "@/components/AbstractOfAwards/PrepareAbstractModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -182,23 +182,12 @@ export default function AbstractPage() {
       return acc;
     }, []);
 
-  const handlePrepareAwardingSubmit = async (entries: CanvassEntryFormValues[]) => {
+  const handlePrepareAwardingSubmit = async (itemsWithDealers: any[]) => {
     if (!prepareAwardingTarget?.id) {
       return { ok: false, message: "No PR selected for awarding." };
     }
 
-    const cleanedEntries = entries.filter(
-      (entry) =>
-        (entry.description || "").trim() !== "" ||
-        (entry.supplier_name || "").trim() !== "" ||
-        entry.unit_price !== null ||
-        entry.quantity !== null
-    );
-
-    if (cleanedEntries.length === 0) {
-      return { ok: false, message: "Please fill at least one entry before saving." };
-    }
-
+    // 1. Find the active canvass session for this PR
     const { data: sessionRow, error: sessionError } = await supabase
       .from("canvass_sessions")
       .select("id")
@@ -216,34 +205,61 @@ export default function AbstractPage() {
       return { ok: false, message: "No canvass session found for this PR." };
     }
 
-    const payload = cleanedEntries.map((entry) => ({
-      session_id: sessionId,
-      item_no: entry.item_no,
-      description: entry.description.trim() || null,
-      unit: entry.unit.trim() || null,
-      quantity: entry.quantity,
-      supplier_name: entry.supplier_name.trim() || null,
-      unit_price: entry.unit_price,
-      total_price:
-        entry.quantity !== null && entry.unit_price !== null
-          ? Number(entry.quantity) * Number(entry.unit_price)
-          : entry.total_price,
-      is_winning: entry.is_winning,
-      tin_no: entry.tin_no.trim() || null,
-      delivery_days: entry.delivery_days.trim() || null,
-      supplier_address: entry.supplier_address.trim() || null,
-      quotation_no: entry.quotation_no,
-    }));
+    // 2. Prepare payload for canvass_entries
+    // Each item-dealer combination becomes a row in canvass_entries
+    const payload: any[] = [];
+    
+    itemsWithDealers.forEach((item) => {
+      // Only include dealers that have at least a supplier_name or unit_price
+      const validDealers = item.dealers.filter(
+        (d: any) => (d.supplier_name || "").trim() !== "" || d.unit_price !== null
+      );
 
+      validDealers.forEach((dealer: any) => {
+        const unitPrice = dealer.unit_price ?? 0;
+        const quantity = item.quantity ?? 0;
+        
+        payload.push({
+          session_id: sessionId,
+          pr_items: item.id, // Linking to purchase_request_items.id
+          pr_no: prepareAwardingTarget.pr_no,
+          unit: item.unit.trim() || null,
+          quantity: quantity,
+          supplier_name: dealer.supplier_name.trim() || null,
+          unit_price: unitPrice,
+          total_price: quantity * unitPrice,
+          is_winning: false, // Default to false as checkbox is removed
+          created_at: new Date().toISOString(),
+        });
+      });
+    });
+
+    if (payload.length === 0) {
+      return { ok: false, message: "Please fill in at least one dealer for any item." };
+    }
+
+    // 3. Delete existing entries for this session to avoid duplicates
+    const { error: deleteError } = await supabase
+      .from("canvass_entries")
+      .delete()
+      .eq("session_id", sessionId);
+
+    if (deleteError) {
+      return { ok: false, message: deleteError.message || "Failed to clear existing awarding details." };
+    }
+
+    // 4. Insert entries into database
     const { error: insertError } = await supabase.from("canvass_entries").insert(payload);
 
     if (insertError) {
       return { ok: false, message: insertError.message || "Failed to save awarding details." };
     }
 
+    // 5. Optionally update PR status or add a remark
+    // For now, we'll just return success as requested
     return {
       ok: true,
-      message: `${payload.length} awarding entr${payload.length > 1 ? "ies" : "y"} saved successfully.`,
+      message: `${payload.length} awarding entr${payload.length > 1 ? "ies" : "y"} saved successfully to database.`,
     };
   };
 
@@ -510,14 +526,16 @@ export default function AbstractPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrepareAwardingTarget(form)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiPlayCircleLine size={14} />
-                                Prepare Awarding
-                              </button>
+                              {currentUser?.role_id === 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPrepareAwardingTarget(form)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Prepare Awarding
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

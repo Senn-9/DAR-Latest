@@ -204,8 +204,8 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
       }
 
       const statusFlagId = selectedFlag.id;
-      const nextStatusId = shouldReturnToPending ? 1 : 8;
-      const nextStatusText = shouldReturnToPending ? "Pending" : "Canvassing (Releasing)";
+      const nextStatusId = shouldReturnToPending ? 1 : 7;
+      const nextStatusText = shouldReturnToPending ? "Pending" : "BAC Resolution";
 
       const { error: updateErr } = await supabase
         .from("purchase_requests")
@@ -280,8 +280,8 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
   const handleSuccessConfirm = () => {
     setSuccessModal(false);
     onProcessed(prId, {
-      status_id: shouldReturnToPending ? 1 : 8,
-      status: shouldReturnToPending ? "Pending" : "Canvassing (Releasing)",
+      status_id: shouldReturnToPending ? 1 : 7,
+      status: shouldReturnToPending ? "Pending" : "BAC Resolution",
     });
     onClose();
   };
@@ -510,7 +510,7 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
                 Processing...
               </>
             ) : (
-              <>{isBACResolution ? "Canvassing (Releasing)" : !hasSelectedFlag ? "Select Status Flag First" : shouldReturnToPending ? "Return to Pending" : "Acknowledged -> Release Canvass"}</>
+              <>{isBACResolution ? "BAC Resolution" : !hasSelectedFlag ? "Select Status Flag First" : shouldReturnToPending ? "Return to Pending" : "Acknowledged"}</>
             )}
           </button>
         )}
@@ -540,7 +540,7 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
             <p className="text-gray-600 mb-6">
               {shouldReturnToPending
                 ? `Canvassing reception for PR ${currentPrNo} has been recorded and returned to Pending.`
-                : `Canvassing reception for PR ${currentPrNo} has been completed successfully. Moving to Canvassing (Releasing).`}
+                : `Canvassing reception for PR ${currentPrNo} has been completed successfully. Moving to BAC Resolution.`}
             </p>
             <button onClick={handleSuccessConfirm} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors">
               Continue

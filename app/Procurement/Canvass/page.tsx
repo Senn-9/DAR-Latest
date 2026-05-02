@@ -6,9 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
-import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
-import ReceiveCanvassModal from "@/components/Canvassing/ReceiveCanvassModal";
-import CollectCanvassModal from "@/components/Canvassing/CollectCanvassModal";
+import ReleaseAndRecieveModal from "@/components/CanvassingModals/ReleaseAndRecieveModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -68,9 +66,7 @@ export default function CanvassPage() {
   const PAGE_SIZE = 10;
 
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
-  const [releaseTarget, setReleaseTarget] = useState<PRListRow | null>(null);
-  const [receiveTarget, setReceiveTarget] = useState<PRListRow | null>(null);
-  const [collectTarget, setCollectTarget] = useState<PRListRow | null>(null);
+  const [releaseAndRecieveTarget, setReleaseAndRecieveTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -133,8 +129,8 @@ export default function CanvassPage() {
     const statusMap: Record<number, { name: string; color: string }> = {
       6: { name: "Canvassing (Reception)", color: "reception" },
       // 7: { name: "Canvassing (Releasing)", color: "releasing" }, ang 7 is bac resolution
-      8: { name: "Canvassing (Releasing)", color: "releasing" },
-      9: { name: "Canvassing (Collection)", color: "collection" },
+      8: { name: "Canvassing (Waiting to Release)", color: "releasing" },
+      9: { name: "Canvassing (Waiting to Collect)", color: "collection" },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
@@ -508,36 +504,14 @@ export default function CanvassPage() {
                                 </button>
                               )}
 
-                              {/* Release — BAC account for canvass distribution */}
-                              {isBACAccount && [7, 8].includes(form.status_id ?? 0) && (
+                              {/* Release and Recieve — Another button for quick release/return */}
+                              {isBACAccount && [7, 8, 9].includes(form.status_id ?? 0) && (
                                 <button
-                                  onClick={() => setReleaseTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                                  onClick={() => setReleaseAndRecieveTarget(form)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1"
                                 >
                                   <RiPlayCircleLine size={14} />
-                                  Release
-                                </button>
-                              )}
-
-                              {/* Mark Received — canvasser account acknowledges the physical copy */}
-                              {isCanvasserAccount && [7, 8].includes(form.status_id ?? 0) && (
-                                <button
-                                  onClick={() => setReceiveTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  <RiCheckboxCircleLine size={14} />
-                                  Mark Received
-                                </button>
-                              )}
-
-                              {/* Collect — BAC account confirms physical canvass form is collected and advances to resolution */}
-                              {isBACAccount && form.status_id === 9 && (
-                                <button
-                                  onClick={() => setCollectTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  <RiPlayCircleLine size={14} />
-                                  Collect
+                                  Release and Recieve
                                 </button>
                               )}
 
@@ -610,44 +584,6 @@ export default function CanvassPage() {
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
-      {releaseTarget && (
-        <ReleaseCanvassStepModal
-          prId={releaseTarget.id}
-          prNo={releaseTarget.pr_no}
-          requestingDivision={releaseTarget.office_section}
-          onClose={() => setReleaseTarget(null)}
-          onAdvanced={(prId) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 9, status: "Canvassing (Collection)" } : p)));
-            setReleaseTarget(null);
-          }}
-        />
-      )}
-
-      {receiveTarget && (
-        <ReceiveCanvassModal
-          prId={receiveTarget.id}
-          prNo={receiveTarget.pr_no}
-          requestingDivision={receiveTarget.office_section}
-          onClose={() => setReceiveTarget(null)}
-          onAdvanced={(prId) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 9, status: "Canvassing (Collection)" } : p)));
-            setReceiveTarget(null);
-          }}
-        />
-      )}
-
-      {collectTarget && (
-        <CollectCanvassModal
-          prId={collectTarget.id}
-          prNo={collectTarget.pr_no}
-          onClose={() => setCollectTarget(null)}
-          onAdvancedToResolution={(prId) => {
-            setList((prev) => prev.filter((p) => p.id !== prId));
-            setCollectTarget(null);
-          }}
-        />
-      )}
-
       {receptionTarget && (
         <CanvassingReceptionModal
           prId={receptionTarget.id}
@@ -669,7 +605,22 @@ export default function CanvassPage() {
           onProcessed={(prId, patch) => {
             setList((prev) =>
               prev.map((p) =>
-                p.id === prId ? { ...p, ...(patch ?? { status_id: 8, status: "Canvassing (Releasing)" }) } : p
+                p.id === prId ? { ...p, ...(patch ?? { status_id: 7, status: "BAC Resolution" }) } : p
+              )
+            );
+          }}
+        />
+      )}
+
+      {releaseAndRecieveTarget && (
+        <ReleaseAndRecieveModal
+          prId={releaseAndRecieveTarget.id}
+          prNo={releaseAndRecieveTarget.pr_no}
+          onClose={() => setReleaseAndRecieveTarget(null)}
+          onProcessed={(prId) => {
+            setList((prev) =>
+              prev.map((p) =>
+                p.id === prId ? { ...p, status_id: 9, status: "Canvassing (Collection)" } : p
               )
             );
           }}
