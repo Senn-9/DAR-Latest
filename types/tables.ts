@@ -149,6 +149,7 @@ export interface Database {
           division_id: number | null
           canvasser_id: number | null
           released_at: string | null
+          received_at: string | null
           returned_at: string | null
           status: string | null
           canvass_no: string | null
@@ -160,6 +161,7 @@ export interface Database {
           division_id?: number | null
           canvasser_id?: number | null
           released_at?: string | null
+          received_at?: string | null
           returned_at?: string | null
           status?: string | null
           canvass_no?: string | null

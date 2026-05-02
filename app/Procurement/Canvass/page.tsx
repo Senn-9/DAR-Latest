@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import ResolutionModal from "@/components/CanvassingModals/ResolutionModal";
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
-import PrepareBACResolutionModal from "@/components/CanvassingModals/PrepareBACResolutionModal";
+import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
+import ReceiveCanvassModal from "@/components/Canvassing/ReceiveCanvassModal";
+import CollectCanvassModal from "@/components/Canvassing/CollectCanvassModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
-  RiFileAddLine, RiEyeLine, RiPlayCircleLine,
+  RiEyeLine, RiPlayCircleLine, RiCheckboxCircleLine,
 } from "react-icons/ri";
 
 export default function CanvassPage() {
@@ -66,9 +67,10 @@ export default function CanvassPage() {
   const [viewPrId, setViewPrId]       = useState<number | null>(null);
   const PAGE_SIZE = 10;
 
-  const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
-  const [prepareBACModalOpen, setPrepareBACModalOpen] = useState(false);
+  const [releaseTarget, setReleaseTarget] = useState<PRListRow | null>(null);
+  const [receiveTarget, setReceiveTarget] = useState<PRListRow | null>(null);
+  const [collectTarget, setCollectTarget] = useState<PRListRow | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -77,6 +79,9 @@ export default function CanvassPage() {
   const isPARPOAccount =
     currentUser?.username?.toLowerCase() === "parpo" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isCanvasserAccount =
+    currentUser?.username?.toLowerCase().includes("canvasser") ??
+    (currentUser?.roles?.role_name?.toLowerCase().includes("canvasser") ?? false);
   const isBudgetAccount =
     currentUser?.username?.toLowerCase() === "budget" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
@@ -107,7 +112,7 @@ export default function CanvassPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .in("status_id", [6, 7, 8, 9, 10, 11])
+          .in("status_id", [6, 7, 8, 9])
           .order("created_at", { ascending: false });
 
         if (!error) {
@@ -126,28 +131,26 @@ export default function CanvassPage() {
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
-      6:  { name: "Canvassing (Reception)",  color: "canvassing" },
-      7:  { name: "BAC Resolution",          color: "bac"        },
-      8:  { name: "Canvassing (Releasing)",  color: "canvassing" },
-      9:  { name: "Canvassing (Collection)", color: "canvassing" },
-      10: { name: "Abstract of Awards",    color: "aaa"        },
-      11: { name: "PO (Creation)",          color: "po"         },
+      6: { name: "Canvassing (Reception)", color: "reception" },
+      7: { name: "Canvassing (Releasing)", color: "releasing" },
+      8: { name: "Canvassing (Releasing)", color: "releasing" },
+      9: { name: "Canvassing (Collection)", color: "collection" },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
-    canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
-    bac:        "bg-purple-50 text-purple-800 border border-purple-200",
-    aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
-    default:    "bg-gray-100 text-gray-700 border border-gray-200",
+    reception: "bg-violet-50 text-violet-800 border border-violet-200",
+    releasing: "bg-purple-50 text-purple-800 border border-purple-200",
+    collection: "bg-blue-50 text-blue-800 border border-blue-200",
+    default: "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
   const STATUS_OPTIONS = [
-    { value: "all",        label: "All" },
-    { value: "canvassing", label: "Canvassing" },
-    { value: "bac",        label: "BAC Resolution" },
-    { value: "aaa",        label: "Abstract of Awards" },
+    { value: "all", label: "All" },
+    { value: "reception", label: "Canvassing (Reception)" },
+    { value: "releasing", label: "Canvassing (Releasing)" },
+    { value: "collection", label: "Canvassing (Collection)" },
   ];
 
   const countByColor = (color: string) =>
@@ -155,9 +158,9 @@ export default function CanvassPage() {
 
   const STAT_CARDS = [
     { label: "Total",          value: list.length,               cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
-    { label: "Canvassing",     value: countByColor("canvassing"), cardBg: "bg-violet-50",  border: "border-violet-100",  iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600"  },
-    { label: "BAC Resolution", value: countByColor("bac"),        cardBg: "bg-purple-50",  border: "border-purple-100",  iconBg: "bg-purple-100",  iconColor: "text-purple-600",  numColor: "text-purple-600"  },
-    { label: "AAA Issuance",   value: countByColor("aaa"),        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600"    },
+    { label: "Canvassing (Reception)", value: countByColor("reception"), cardBg: "bg-violet-50", border: "border-violet-100", iconBg: "bg-violet-100", iconColor: "text-violet-600", numColor: "text-violet-600" },
+    { label: "Canvassing (Releasing)", value: countByColor("releasing"), cardBg: "bg-purple-50", border: "border-purple-100", iconBg: "bg-purple-100", iconColor: "text-purple-600", numColor: "text-purple-600" },
+    { label: "Canvassing (Collection)", value: countByColor("collection"), cardBg: "bg-blue-50", border: "border-blue-100", iconBg: "bg-blue-100", iconColor: "text-blue-600", numColor: "text-blue-600" },
   ];
 
   const handleSort = (f: typeof sortField) => {
@@ -330,15 +333,6 @@ export default function CanvassPage() {
               </p>
             )}
           </div>
-          {isBACAccount && (
-            <button
-              onClick={() => setPrepareBACModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-all shadow-sm hover:shadow-md"
-            >
-              <RiFileAddLine size={18} />
-              Prepare BAC Resolution
-            </button>
-          )}
         </div>
 
         {/* ── TABS ── */}
@@ -346,6 +340,7 @@ export default function CanvassPage() {
           {([
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
+            { key: "bac",      label: "BAC Resolution",     href: "/Procurement/BACResolution" },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
@@ -513,6 +508,39 @@ export default function CanvassPage() {
                                 </button>
                               )}
 
+                              {/* Release — BAC account for canvass distribution */}
+                              {isBACAccount && [7, 8].includes(form.status_id ?? 0) && (
+                                <button
+                                  onClick={() => setReleaseTarget(form)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Release
+                                </button>
+                              )}
+
+                              {/* Mark Received — canvasser account acknowledges the physical copy */}
+                              {isCanvasserAccount && [7, 8].includes(form.status_id ?? 0) && (
+                                <button
+                                  onClick={() => setReceiveTarget(form)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiCheckboxCircleLine size={14} />
+                                  Mark Received
+                                </button>
+                              )}
+
+                              {/* Collect — BAC account confirms physical canvass form is collected and advances to resolution */}
+                              {isBACAccount && form.status_id === 9 && (
+                                <button
+                                  onClick={() => setCollectTarget(form)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiPlayCircleLine size={14} />
+                                  Collect
+                                </button>
+                              )}
+
                             </div>
                           </td>
                         </tr>
@@ -582,6 +610,44 @@ export default function CanvassPage() {
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
+      {releaseTarget && (
+        <ReleaseCanvassStepModal
+          prId={releaseTarget.id}
+          prNo={releaseTarget.pr_no}
+          requestingDivision={releaseTarget.office_section}
+          onClose={() => setReleaseTarget(null)}
+          onAdvanced={(prId) => {
+            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 9, status: "Canvassing (Collection)" } : p)));
+            setReleaseTarget(null);
+          }}
+        />
+      )}
+
+      {receiveTarget && (
+        <ReceiveCanvassModal
+          prId={receiveTarget.id}
+          prNo={receiveTarget.pr_no}
+          requestingDivision={receiveTarget.office_section}
+          onClose={() => setReceiveTarget(null)}
+          onAdvanced={(prId) => {
+            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 9, status: "Canvassing (Collection)" } : p)));
+            setReceiveTarget(null);
+          }}
+        />
+      )}
+
+      {collectTarget && (
+        <CollectCanvassModal
+          prId={collectTarget.id}
+          prNo={collectTarget.pr_no}
+          onClose={() => setCollectTarget(null)}
+          onAdvancedToResolution={(prId) => {
+            setList((prev) => prev.filter((p) => p.id !== prId));
+            setCollectTarget(null);
+          }}
+        />
+      )}
+
       {receptionTarget && (
         <CanvassingReceptionModal
           prId={receptionTarget.id}
@@ -603,33 +669,7 @@ export default function CanvassPage() {
           onProcessed={(prId, patch) => {
             setList((prev) =>
               prev.map((p) =>
-                p.id === prId ? { ...p, ...(patch ?? { status_id: 7, status: "BAC Resolution" }) } : p
-              )
-            );
-          }}
-        />
-      )}
-
-      {/* ── RESOLUTION MODAL ── */}
-      {resolutionTarget && (
-        <ResolutionModal
-          prId={resolutionTarget.id}
-          prNo={resolutionTarget.pr_no}
-          onClose={() => setResolutionTarget(null)}
-          onSubmitted={(prId: number) => {
-            setList((prev) => prev.map((p) => (p.id === prId ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p)));
-          }}
-        />
-      )}
-
-      {/* ── PREPARE BAC RESOLUTION MODAL ── */}
-      {prepareBACModalOpen && (
-        <PrepareBACResolutionModal
-          onClose={() => setPrepareBACModalOpen(false)}
-          onProcessed={(prIds) => {
-            setList((prev) =>
-              prev.map((p) =>
-                prIds.includes(p.id) ? { ...p, status_id: 8, status: "Canvassing (Releasing)" } : p
+                p.id === prId ? { ...p, ...(patch ?? { status_id: 8, status: "Canvassing (Releasing)" }) } : p
               )
             );
           }}

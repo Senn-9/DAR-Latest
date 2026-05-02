@@ -5,16 +5,14 @@ import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionMod
 import ReleaseCanvassStepModal from "@/components/Canvassing/ReleaseCanvassStepModal";
 import ReleasedCanvasserEntryButton from "@/components/Canvassing/ReleasedCanvasserEntryButton";
 import CollectCanvassStepPanel from "@/components/Canvassing/CollectCanvassStepPanel";
-import CanvassAAADetailsPanel from "@/components/Canvassing/CanvassAAADetailsPanel";
 import { RiCloseLine, RiCheckboxCircleLine, RiArrowRightSLine } from "react-icons/ri";
 
-type StepKey = "pr_received" | "release" | "collect" | "aaa";
+type StepKey = "pr_received" | "release" | "collect";
 
 const steps: { key: StepKey; label: string }[] = [
   { key: "pr_received", label: "PR Received" },
   { key: "release", label: "Release" },
   { key: "collect", label: "Collect" },
-  { key: "aaa", label: "AAA" },
 ];
 
 type Props = {
@@ -43,10 +41,11 @@ type Props = {
 
 const stepIndexForStatusId = (statusId: number | null): number => {
   if (statusId === 6) return 0;
+  if (statusId === 7) return 1; // releasing
   if (statusId === 8) return 1; // release
   if (statusId === 9) return 2; // collect
-  if (statusId === 10) return 2; // resolution (mapped to collect for modal)
-  if (statusId === 11) return 3; // aaa
+  if (statusId === 10) return 2; // BAC Resolution is handled in its own tab
+  if (statusId === 11) return 2; // PO Creation is handled after BAC Resolution
   return 0;
 };
 
@@ -106,9 +105,9 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-[90] bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
+      <div className="relative z-[90] bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="px-5 pt-5 pb-3 border-b border-gray-100">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">Canvass · Processing</p>
@@ -121,19 +120,19 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
           </div>
 
           {/* PR Summary (compact) */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Office / Section</p>
               <p className="text-sm font-semibold text-gray-900 mt-1">{pr.office_section || "—"}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Amount</p>
               <p className="text-sm font-semibold text-gray-900 mt-1">{formatCurrency(pr.total_cost)}</p>
             </div>
           </div>
 
           {/* Stepper tabs (like screenshot) */}
-          <div className="mt-5 flex items-center gap-3 overflow-x-auto pb-1">
+          <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
             {steps.map((s, idx) => {
               const active = activeStep === s.key;
               const unlocked = stepTabUnlocked(idx, s.key);
@@ -143,7 +142,7 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                   key={s.key}
                   type="button"
                   onClick={() => (unlocked ? setActiveStep(s.key) : null)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border transition-all whitespace-nowrap ${
                     active
                       ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                       : unlocked
@@ -174,9 +173,9 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto bg-gray-50">
+        <div className="p-4 max-h-[64vh] overflow-y-auto bg-gray-50">
           {activeStep === "pr_received" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <CanvassingReceptionModal
                 embedded
                 readonly={isPastStep}
@@ -185,19 +184,20 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
                 prData={prData}
                 onClose={() => {}}
                 onProcessed={(prId, patch) => {
-                  onUpdated(prId, patch ?? { status_id: 7, status: "BAC Resolution" });
+                  onUpdated(prId, patch ?? { status_id: 8, status: "Canvassing (Releasing)" });
                 }}
               />
             </div>
           )}
 
           {activeStep === "release" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <ReleaseCanvassStepModal
                 embedded
                 readonly={isPastStep}
                 prId={pr.id}
                 prNo={pr.pr_no}
+                requestingDivision={pr.office_section}
                 onClose={() => {}}
                 onAdvanced={(prId) => onUpdated(prId, { status_id: 9, status: "Canvassing (Collection)" })}
               />
@@ -205,15 +205,13 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
           )}
 
           {activeStep === "collect" && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <CollectCanvassStepPanel
                 prId={pr.id}
                 prNo={pr.pr_no}
                 readonly={isPastStep}
                 onViewRfq={onViewRfq}
                 onPreviousStep={() => setActiveStep("release")}
-                onNextStep={() => setActiveStep("aaa")}
-                canGoNextStep={unlockedIdx >= 3}
                 onAdvancedToResolution={(prId) => {
                   onUpdated(prId, { status_id: 10, status: "BAC Resolution" });
                 }}
@@ -222,11 +220,9 @@ export default function CanvassProcessModal({ initialStep, pr, onClose, onUpdate
             </div>
           )}
 
-          {activeStep === "aaa" && (
-            <CanvassAAADetailsPanel prId={pr.id} prNo={pr.pr_no} />
-          )}
         </div>
       </div>
     </div>
   );
 }
+

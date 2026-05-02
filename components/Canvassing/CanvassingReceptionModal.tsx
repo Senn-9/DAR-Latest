@@ -214,8 +214,8 @@ export default function CanvassingReceptionModal({
       // Get status flag ID
       const statusFlagId = selectedFlag.id;
 
-      const nextStatusId = shouldReturnToPending ? 1 : 7;
-      const nextStatusText = shouldReturnToPending ? "Pending" : "BAC Resolution";
+      const nextStatusId = shouldReturnToPending ? 1 : 8;
+      const nextStatusText = shouldReturnToPending ? "Pending" : "Canvassing (Releasing)";
 
       // Update purchase_requests status based on selected flag.
       const { error: updateErr } = await supabase
@@ -233,7 +233,7 @@ export default function CanvassingReceptionModal({
       }
 
       if (!shouldReturnToPending) {
-        // Create canvass session only when PR proceeds to BAC Resolution.
+        // Create canvass session only when PR proceeds to Canvassing (Releasing).
         const { error: sessionErr } = await supabase
           .from("canvass_sessions")
           .insert({
@@ -298,8 +298,8 @@ export default function CanvassingReceptionModal({
   const handleSuccessConfirm = () => {
     setSuccessModal(false);
     onProcessed(prId, {
-      status_id: shouldReturnToPending ? 1 : 7,
-      status: shouldReturnToPending ? "Pending" : "BAC Resolution",
+      status_id: shouldReturnToPending ? 1 : 8,
+      status: shouldReturnToPending ? "Pending" : "Canvassing (Releasing)",
     });
     onClose();
   };
@@ -555,7 +555,7 @@ export default function CanvassingReceptionModal({
                 Processing…
               </>
             ) : (
-              <>{isBACResolution ? "BAC Resolution" : shouldReturnToPending ? "Return to Pending" : "Acknowledged → Release Canvass"}</>
+              <>{isBACResolution ? "Canvassing (Releasing)" : shouldReturnToPending ? "Return to Pending" : "Acknowledged → Release Canvass"}</>
             )}
           </button>
         )}
@@ -586,7 +586,7 @@ export default function CanvassingReceptionModal({
             <p className="text-gray-600 mb-6">
               {shouldReturnToPending
                 ? `Canvassing reception for PR ${currentPrNo} has been recorded and returned to Pending.`
-                : `Canvassing reception for PR ${currentPrNo} has been completed successfully. Moving to BAC Resolution.`}
+                : `Canvassing reception for PR ${currentPrNo} has been completed successfully. Moving to Canvassing (Releasing).`}
             </p>
             <button
               onClick={handleSuccessConfirm}

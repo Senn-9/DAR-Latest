@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import type { BacResolution } from "@/types/tables";
+// import type { BacResolution } from "@/types/tables";
 import { RiArrowRightLine } from "react-icons/ri";
 
 type UserRow = { id: number; fullname: string | null };
@@ -176,7 +176,7 @@ export default function CanvassResolutionDetailsPanel({
       setUsers((userRows as UserRow[]) ?? []);
 
       if (resQuery.error) throw resQuery.error;
-      const row = resQuery.data as BacResolution | null;
+      const row = resQuery.data as Record<string, any> | null;
 
       if (row?.id != null) {
         setResolutionId(row.id);

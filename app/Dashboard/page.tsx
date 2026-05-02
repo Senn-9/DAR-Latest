@@ -275,7 +275,7 @@ export default function DashboardPage() {
       4:  { name: "Processing (Budget)", color: "processing" },
       5:  { name: "Processing (PARPO)", color: "processing" },
       6:  { name: "Canvassing (Reception)", color: "canvassing" },
-      7:  { name: "BAC Resolution", color: "bac" },
+      7:  { name: "Canvassing (Releasing)", color: "canvassing" },
       8:  { name: "Canvassing (Releasing)", color: "canvassing" },
       9:  { name: "Canvassing (Collection)", color: "canvassing" },
       10: { name: "Abstract of Awards", color: "aaa" },

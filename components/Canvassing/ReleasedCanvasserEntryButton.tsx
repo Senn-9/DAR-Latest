@@ -24,6 +24,7 @@ type AssignmentRow = {
   division_id: number | null;
   canvasser_id: number | null;
   released_at: string | null;
+  received_at: string | null;
   returned_at: string | null;
   status: string | null;
 };
@@ -445,6 +446,30 @@ export default function ReleasedCanvasserEntryButton({ prId, prNo, onViewRfq, on
   const [me, setMe] = useState<{ id: number; role_id: number | null; division_id: number | null } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [returnedOnly, setReturnedOnly] = useState(false);
+  const [receiptSaving, setReceiptSaving] = useState(false);
+
+  const handleProcessCanvass = async () => {
+    if (!assignment?.id) return;
+    if (!assignment.received_at) {
+      setReceiptSaving(true);
+      try {
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from("canvasser_assignments")
+          .update({ received_at: now, status: "received" })
+          .eq("id", assignment.id);
+        if (error) throw error;
+        await refresh();
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Failed to confirm receipt.");
+        return;
+      } finally {
+        setReceiptSaving(false);
+      }
+    }
+
+    setModalOpen(true);
+  };
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -475,7 +500,7 @@ export default function ReleasedCanvasserEntryButton({ prId, prNo, onViewRfq, on
 
       const { data: asgList } = await supabase
         .from("canvasser_assignments")
-        .select("id, session_id, division_id, canvasser_id, released_at, returned_at, status")
+        .select("id, session_id, division_id, canvasser_id, released_at, received_at, returned_at, status")
         .eq("session_id", sid)
         .eq("canvasser_id", userRow.id);
 
@@ -488,6 +513,9 @@ export default function ReleasedCanvasserEntryButton({ prId, prNo, onViewRfq, on
       });
       const alreadyReturned = list.some(
         (a) => Boolean(a.returned_at) || stNorm(a.status) === "returned"
+      );
+      const alreadyReceived = list.some(
+        (a) => Boolean(a.received_at) || stNorm(a.status) === "received"
       );
 
       if (released) {
@@ -502,7 +530,7 @@ export default function ReleasedCanvasserEntryButton({ prId, prNo, onViewRfq, on
       } else {
         setAssignment(null);
         setEntries([]);
-        setReturnedOnly(alreadyReturned);
+        setReturnedOnly(alreadyReturned || alreadyReceived);
       }
     } finally {
       setLoading(false);
@@ -535,20 +563,36 @@ export default function ReleasedCanvasserEntryButton({ prId, prNo, onViewRfq, on
         <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">
-              Your assignment is released
+              {assignment.received_at ? "Physical copy received" : "Your assignment is released"}
             </p>
             <p className="text-sm text-gray-600 mt-1">
-              Enter supplier names and unit prices for each PR line, then submit to BAC.
+              {assignment.received_at
+                ? "Enter supplier names and unit prices for each PR line, then submit to BAC."
+                : "Confirm you received the physical canvass copy before entering quotations."}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="shrink-0 px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-extrabold transition-colors"
-          >
-            Enter supplier quotations
-          </button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleProcessCanvass}
+              disabled={receiptSaving}
+              className="shrink-0 px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-extrabold transition-colors disabled:opacity-60"
+            >
+              {receiptSaving ? "Processing…" : assignment.received_at ? "Process Canvass" : "Process Canvass + Receive Copy"}
+            </button>
+          </div>
         </div>
+
+        {assignment.received_at && (
+          <div className="mt-3 flex items-start gap-3 px-4 py-3 bg-sky-50 border border-sky-100 rounded-2xl">
+            <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0 text-sky-700 font-extrabold text-sm">
+              ✓
+            </div>
+            <p className="text-sm font-semibold text-sky-900 leading-snug">
+              Physical canvass copy acknowledged. You can now proceed with quotations.
+            </p>
+          </div>
+        )}
 
         {modalOpen && (
           <SupplierQuotationsModal

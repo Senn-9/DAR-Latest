@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import type { AAADocument, BacResolution } from "@/types/tables";
+// import type { AAADocument, BacResolution } from "@/types/tables";
 import { RiCheckLine, RiArrowRightLine } from "react-icons/ri";
 
 type UserRow = { id: number; fullname: string | null };
@@ -53,7 +53,7 @@ export default function CanvassAAADetailsPanel({ prId, prNo, canProceed = false,
   const [success, setSuccess] = useState<string | null>(null);
 
   const [session, setSession] = useState<SessionRow | null>(null);
-  const [resolution, setResolution] = useState<BacResolution | null>(null);
+  const [resolution, setResolution] = useState<Record<string, any> | null>(null);
   const [aaaId, setAaaId] = useState<number | null>(null);
 
   const [aaaNo, setAaaNo] = useState("");
@@ -103,10 +103,10 @@ export default function CanvassAAADetailsPanel({ prId, prNo, canProceed = false,
       ]);
 
       if (resRes.error) throw resRes.error;
-      setResolution((resRes.data as BacResolution) ?? null);
+      setResolution((resRes.data as Record<string, any>) ?? null);
 
       // AAA doc is non-blocking; keep rendering even if RLS/table missing.
-      const arow = (aaaRes.data as AAADocument) ?? null;
+      const arow = (aaaRes.data as Record<string, any>) ?? null;
       setAaaId(arow?.id ?? null);
       setAaaNo(arow?.aaa_no ?? "");
       setParticulars(arow?.particulars ?? "");
