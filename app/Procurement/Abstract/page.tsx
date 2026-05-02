@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import ViewCanvass from "@/components/CanvassUsers/ViewCanvass";
 import PrepareAbstractModal, { type CanvassEntryFormValues } from "@/components/AbstractOfAwards/PrepareAbstractModal";
 import {
   RiFileListLine, RiSearchLine,
@@ -62,7 +61,6 @@ export default function AbstractPage() {
   const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewPrId, setViewPrId]       = useState<number | null>(null);
-  const [viewCanvassTarget, setViewCanvassTarget] = useState<PRListRow | null>(null);
   const [prepareAwardingTarget, setPrepareAwardingTarget] = useState<PRListRow | null>(null);
   const PAGE_SIZE = 10;
 
@@ -506,7 +504,7 @@ export default function AbstractPage() {
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => setViewCanvassTarget(form)}
+                                onClick={() => setViewPrId(form.id)}
                                 className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                               >
                                 <RiEyeLine size={14} />
@@ -586,21 +584,6 @@ export default function AbstractPage() {
       {/* ── VIEW PR MODAL ── */}
       {viewPrId !== null && (
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
-      )}
-
-      {viewCanvassTarget && (
-        <ViewCanvass
-          pr={viewCanvassTarget}
-          onClose={() => setViewCanvassTarget(null)}
-          onViewRfq={() => {
-            const id = viewCanvassTarget.id;
-            setViewCanvassTarget(null);
-            setViewPrId(id);
-          }}
-          onOpenResolutionProcess={() => {
-            setViewCanvassTarget(null);
-          }}
-        />
       )}
 
       {prepareAwardingTarget && (

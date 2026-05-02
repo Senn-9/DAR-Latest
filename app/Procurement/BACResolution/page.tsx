@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
-import ResolutionModal from "@/components/BACResolution/ResolutionModal";
+import PrepareBACResolutionModal from "@/components/BACResolution/PrepareBACResolutionModal";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -51,6 +51,8 @@ export default function BACResolutionPage() {
     roles?: { role_name: string };
   };
 
+  const BAC_RESOLUTION_STATUS_ID = 7;
+
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -61,7 +63,7 @@ export default function BACResolutionPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewPrId, setViewPrId] = useState<number | null>(null);
-  const [resolutionTarget, setResolutionTarget] = useState<PRListRow | null>(null);
+  const [prepareResolutionOpen, setPrepareResolutionOpen] = useState(false);
   const PAGE_SIZE = 10;
 
   const isBACAccount =
@@ -100,11 +102,12 @@ export default function BACResolutionPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .eq("status_id", 10)
+          .eq("status_id", BAC_RESOLUTION_STATUS_ID)
           .order("created_at", { ascending: false });
 
         if (!error) {
           const filteredData = (data || []).filter((pr) => {
+            if (pr.status_id !== BAC_RESOLUTION_STATUS_ID) return false;
             if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) return true;
             return pr.office_section === currentUser?.divisions?.division_name;
           });
@@ -119,7 +122,7 @@ export default function BACResolutionPage() {
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
-      10: { name: "BAC Resolution", color: "bac" },
+      7: { name: "BAC Resolution", color: "bac" },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
@@ -220,6 +223,16 @@ export default function BACResolutionPage() {
               </p>
             )}
           </div>
+          {isBACAccount && (
+            <button
+              type="button"
+              onClick={() => setPrepareResolutionOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-purple-700"
+            >
+              <RiPlayCircleLine size={16} />
+              Prepare BAC Resolution
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
@@ -345,16 +358,6 @@ export default function BACResolutionPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
-                              {isBACAccount && (
-                                <button
-                                  type="button"
-                                  onClick={() => setResolutionTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  <RiPlayCircleLine size={14} />
-                                  Process
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -408,14 +411,12 @@ export default function BACResolutionPage() {
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
       )}
 
-      {resolutionTarget && (
-        <ResolutionModal
-          prId={resolutionTarget.id}
-          prNo={resolutionTarget.pr_no}
-          onClose={() => setResolutionTarget(null)}
-          onSubmitted={(prId: number) => {
-            setList((prev) => prev.filter((p) => p.id !== prId));
-            setResolutionTarget(null);
+      {prepareResolutionOpen && (
+        <PrepareBACResolutionModal
+          onClose={() => setPrepareResolutionOpen(false)}
+          onProcessed={(prIds: number[]) => {
+            setList((prev) => prev.filter((p) => !prIds.includes(p.id)));
+            setPrepareResolutionOpen(false);
           }}
         />
       )}

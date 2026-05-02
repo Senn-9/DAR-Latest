@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiCloseLine, RiCheckboxCircleLine, RiInformationLine, RiCloseCircleLine, RiPencilLine, RiPauseCircleLine, RiAlertLine, RiSubtractLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
+import type { BacResolution } from "@/types/tables";
 
 type Props = {
   prId: number;
   prNo: string;
   onClose: () => void;
   onSubmitted?: (prId: number) => void;
-  embedded?: boolean;
 };
 
 type UserRow = { id: number; fullname: string | null };
@@ -55,7 +55,7 @@ function readCurrentUser(): CurrentUser | null {
   }
 }
 
-export default function ResolutionModal({ prId, prNo, onClose, onSubmitted, embedded }: Props) {
+export default function ResolutionModal({ prId, prNo, onClose, onSubmitted }: Props) {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -145,7 +145,7 @@ export default function ResolutionModal({ prId, prNo, onClose, onSubmitted, embe
 
       setUsers((userRows as UserRow[]) ?? []);
 
-      const row = resolutionRow as (Record<string, any> & { pr_request_id?: number | null }) | null;
+      const row = resolutionRow as (BacResolution & { pr_request_id?: number | null }) | null;
 
       if (row?.id != null) {
         setResolutionId(row.id);
@@ -594,6 +594,3 @@ export default function ResolutionModal({ prId, prNo, onClose, onSubmitted, embe
     </div>
   );
 }
-
-
-

@@ -112,7 +112,7 @@ export default function CanvassPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .in("status_id", [6, 7, 8, 9])
+          .in("status_id", [6, 8, 9]) // tig hali ko si 7 ta 7 = bac resolution
           .order("created_at", { ascending: false });
 
         if (!error) {
@@ -132,7 +132,7 @@ export default function CanvassPage() {
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
       6: { name: "Canvassing (Reception)", color: "reception" },
-      7: { name: "Canvassing (Releasing)", color: "releasing" },
+      // 7: { name: "Canvassing (Releasing)", color: "releasing" }, ang 7 is bac resolution
       8: { name: "Canvassing (Releasing)", color: "releasing" },
       9: { name: "Canvassing (Collection)", color: "collection" },
     };

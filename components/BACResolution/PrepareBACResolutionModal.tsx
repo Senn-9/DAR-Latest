@@ -45,6 +45,8 @@ type FlagOption = {
   iconColor: string;
 };
 
+const BAC_RESOLUTION_STATUS_ID = 7;
+
 const iconForSlug = (slug: string) => {
   if (slug === "complete") return <RiCheckboxCircleLine size={16} />;
   if (slug === "incomplete_info") return <RiInformationLine size={16} />;
@@ -142,7 +144,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
         supabase
           .from("purchase_requests")
           .select("id, pr_no, office_section, purpose, total_cost, status_id, status")
-          .eq("status_id", 7)
+          .eq("status_id", BAC_RESOLUTION_STATUS_ID)
           .order("created_at", { ascending: false }),
         supabase.from("users").select("id, fullname").order("fullname", { ascending: true }),
       ]);
@@ -150,7 +152,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
       if (prErr) throw prErr;
       if (usersErr) throw usersErr;
 
-      const prs = (prData as PRRow[]) ?? [];
+      const prs = ((prData as PRRow[]) ?? []).filter((pr) => pr.status_id === BAC_RESOLUTION_STATUS_ID);
       setPrList(prs);
       setUsers((userRows as UserRow[]) ?? []);
 
