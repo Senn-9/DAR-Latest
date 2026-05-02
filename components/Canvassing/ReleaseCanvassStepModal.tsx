@@ -120,6 +120,7 @@ export default function ReleaseCanvassStepModal({ prId, prNo, requestingDivision
 
   const nameOf = (u: UserRow) => (u.fullname && u.fullname.trim() ? u.fullname.trim() : "—");
   const roleLabel = (roleId: number | null) => (roleId === 7 ? "Canvasser" : roleId === 6 ? "End User" : "User");
+  const normalize = (value?: string | null) => (value ?? "").trim().toLowerCase();
 
   const handleRelease = async (divisionId: number, userId: number) => {
     if (readonly) return;
@@ -196,132 +197,133 @@ export default function ReleaseCanvassStepModal({ prId, prNo, requestingDivision
 
   const panel = (
     <div className={`bg-white ${embedded ? "" : "rounded-2xl shadow-2xl"} w-full ${embedded ? "" : "max-w-2xl"} overflow-hidden`}>
-        {/* Header (matches screenshot style) */}
-        <div className="px-6 pt-6 pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">
-                Stage 2 · Canvass Release
-              </p>
-              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Release Canvass to Canvassers</h2>
-              <p className="text-sm text-gray-500 mt-1">Release canvass sheets (RFQs) to the canvassers assigned per division.</p>
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700">Stage 2 · Canvass Release</p>
+            <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Release Canvass to Canvassers</h2>
+            <p className="text-sm text-gray-500 mt-1">Release canvass sheets (RFQs) to the canvassers assigned per division.</p>
+          </div>
+          <div className="flex items-start gap-2 flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex flex-col items-center justify-center leading-none shadow-sm">
+              <span className="text-lg font-extrabold">07</span>
+              <span className="text-[10px] font-bold opacity-90 mt-0.5">STEP</span>
             </div>
-            <div className="flex items-start gap-2 flex-shrink-0">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex flex-col items-center justify-center leading-none shadow-sm">
-                <span className="text-lg font-extrabold">07</span>
-                <span className="text-[10px] font-bold opacity-90 mt-0.5">STEP</span>
-              </div>
-              {!embedded && (
-                <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500">
-                  <RiCloseLine size={22} />
-                </button>
-              )}
-            </div>
+            {!embedded && (
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500">
+                <RiCloseLine size={22} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 space-y-4 max-h-[68vh] overflow-y-auto">
+        <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border-l-4 border-amber-400 rounded-xl">
+          <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <RiAlertLine size={18} className="text-amber-700" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-amber-800">
+              Verify availability before releasing. <span className="font-semibold">Canvassers (role 7)</span> are listed by division.
+            </p>
           </div>
         </div>
 
-        <div className="px-6 pb-6 space-y-4 max-h-[68vh] overflow-y-auto">
-          <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border-l-4 border-amber-400 rounded-xl">
-            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <RiAlertLine size={18} className="text-amber-700" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-amber-800">
-                Verify availability before releasing. <span className="font-semibold">Canvassers (role 7)</span> are listed by division.
-              </p>
-            </div>
+        {error && (
+          <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 font-semibold">{error}</div>
+        )}
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-400">Canvassers by Division</h3>
+            <div className="text-[10px] text-gray-400 font-mono">{loading ? "Loading…" : session?.id ? `Session #${session.id}` : "No session"}</div>
           </div>
 
-          {error && (
-            <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 font-semibold">
-              {error}
-            </div>
-          )}
+          <div className="p-4 space-y-4 bg-gray-50">
+            {loading ? (
+              <div className="text-sm text-gray-500 px-2 py-6">Loading canvassers…</div>
+            ) : (() => {
+              const visibleDivisions = divisions.filter((d) =>
+                requestingDivision ? normalize(d.division_name) === normalize(requestingDivision) : true
+              );
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-400">
-                Canvassers by Division
-              </h3>
-              <div className="text-[10px] text-gray-400 font-mono">
-                {loading ? "Loading…" : session?.id ? `Session #${session.id}` : "No session"}
-              </div>
-            </div>
+              const visibleRows = visibleDivisions.flatMap((d) => {
+                const divUsers = byDivision.get(d.division_id) ?? [];
+                return divUsers.filter((u) => u.role_id === 7).map((u) => ({ division: d, user: u }));
+              });
 
-            <div className="p-4 space-y-4 bg-gray-50">
-              {loading ? (
-                <div className="text-sm text-gray-500 px-2 py-6">Loading canvassers…</div>
-              ) : (
-                divisions.map((d) => {
-                  // Filter to only show the requesting division
-                  if (requestingDivision && d.division_name !== requestingDivision) {
-                    return null;
-                  }
-                  const divUsers = byDivision.get(d.division_id) ?? [];
-                  const canvassers = divUsers.filter((u) => u.role_id === 7);
-                  const rows = canvassers;
-                  if (rows.length === 0) return null;
+              if (visibleRows.length === 0) {
+                return (
+                  <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center">
+                    <p className="text-sm font-bold text-gray-800">No canvasser accounts are available for this division yet.</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {requestingDivision
+                        ? `Division: ${requestingDivision}. The release modal needs at least one role 7 canvasser to show status and button controls.`
+                        : "Add a canvasser account or check the division filter."}
+                    </p>
+                  </div>
+                );
+              }
 
-                  return (
-                    <div key={d.division_id} className="bg-white rounded-2xl border border-gray-100 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold uppercase tracking-wide">
-                          {(d.division_name || "Division").trim()}
-                        </span>
-                      </div>
+              return visibleDivisions.map((d) => {
+                const rows = (byDivision.get(d.division_id) ?? []).filter((u) => u.role_id === 7);
+                if (rows.length === 0) return null;
 
-                      <div className="space-y-2">
-                        {rows.map((u) => {
-                          const a = assignmentFor(d.division_id, u.id);
-                          const released = a ? isReleased(a) : false;
-                          const statusLabel = released ? "Released to Canvasser" : "Pending";
-                          const statusCls = released
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                            : "bg-amber-100 text-amber-800 border-amber-200";
-
-                          const key = `${d.division_id}:${u.id}`;
-                          const isSaving = savingKey === key;
-
-                          return (
-                            <div
-                              key={u.id}
-                              className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between gap-3"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm font-extrabold text-gray-900 truncate">{nameOf(u)}</p>
-                                <p className="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">
-                                  {roleLabel(u.role_id)}
-                                </p>
-                              </div>
-
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`${pillCls} ${statusCls}`}>{statusLabel}</span>
-                                <button
-                                  type="button"
-                                  disabled={Boolean(readonly) || !session?.id || isSaving || released}
-                                  onClick={() => handleRelease(d.division_id, u.id)}
-                                  className={`px-3 py-2 rounded-lg text-xs font-extrabold transition-all ${
-                                    released
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-not-allowed"
-                                      : "bg-emerald-700 hover:bg-emerald-800 text-white"
-                                  } disabled:opacity-60 inline-flex items-center gap-2`}
-                                >
-                                  {released ? <RiCheckboxCircleLine size={16} /> : null}
-                                  {isSaving ? "Releasing…" : released ? "Released to Canvasser" : "Release"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                return (
+                  <div key={d.division_id} className="bg-white rounded-2xl border border-gray-100 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold uppercase tracking-wide">
+                        {(d.division_name || "Division").trim()}
+                      </span>
                     </div>
-                  );
-                })
-              )}
-            </div>
+
+                    <div className="space-y-2">
+                      {rows.map((u) => {
+                        const a = assignmentFor(d.division_id, u.id);
+                        const released = a ? isReleased(a) : false;
+                        const statusLabel = released ? "Released to Canvasser" : "Pending";
+                        const statusCls = released
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                          : "bg-amber-100 text-amber-800 border-amber-200";
+
+                        const key = `${d.division_id}:${u.id}`;
+                        const isSaving = savingKey === key;
+
+                        return (
+                          <div key={u.id} className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-extrabold text-gray-900 truncate">{nameOf(u)}</p>
+                              <p className="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">{roleLabel(u.role_id)}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`${pillCls} ${statusCls}`}>{statusLabel}</span>
+                              <button
+                                type="button"
+                                disabled={Boolean(readonly) || !session?.id || isSaving || released}
+                                onClick={() => handleRelease(d.division_id, u.id)}
+                                className={`px-3 py-2 rounded-lg text-xs font-extrabold transition-all ${
+                                  released
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-not-allowed"
+                                    : "bg-emerald-700 hover:bg-emerald-800 text-white"
+                                } disabled:opacity-60 inline-flex items-center gap-2`}
+                              >
+                                {released ? <RiCheckboxCircleLine size={16} /> : null}
+                                {isSaving ? "Releasing…" : released ? "Released to Canvasser" : "Release"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
-
+      </div>
     </div>
   );
 
