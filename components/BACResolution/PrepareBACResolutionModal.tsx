@@ -26,6 +26,7 @@ type PRRow = {
   total_cost: number;
   status_id: number;
   status: string;
+  created_at?: string | null;
 };
 
 type UserRow = { id: number; fullname: string | null };
@@ -71,6 +72,20 @@ function readCurrentUser(): CurrentUser | null {
   } catch {
     return null;
   }
+}
+
+function formatCreatedAt(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getDateKey(value?: string | null) {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 10);
 }
 
 async function getCurrentUserId(supabase: ReturnType<typeof createClient>): Promise<number | null> {
@@ -143,7 +158,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
       const [{ data: prData, error: prErr }, { data: userRows, error: usersErr }] = await Promise.all([
         supabase
           .from("purchase_requests")
-          .select("id, pr_no, office_section, purpose, total_cost, status_id, status")
+          .select("id, pr_no, office_section, purpose, total_cost, status_id, status, created_at")
           .eq("status_id", BAC_RESOLUTION_STATUS_ID)
           .order("created_at", { ascending: false }),
         supabase.from("users").select("id, fullname").order("fullname", { ascending: true }),
@@ -263,38 +278,74 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
     void load();
   }, [load]);
 
-  const togglePrSelection = (prId: number) => {
+  const resetFormToDefaults = useCallback(() => {
+    const currentUser = readCurrentUser();
+    setResolutionNo("");
+    setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
+    setDivisionId(currentUser?.division_id ?? null);
+  }, []);
+
+  const selectedDateKey = selectedPrIds.length > 0
+    ? getDateKey(prList.find((pr) => pr.id === selectedPrIds[0])?.created_at)
+    : "";
+
+  const isPrSelectable = useCallback((pr: PRRow) => {
+    if (!selectedDateKey) return true;
+    return getDateKey(pr.created_at) === selectedDateKey;
+  }, [selectedDateKey]);
+
+  const togglePrSelection = useCallback((prId: number) => {
     setSelectedPrIds((prev) => {
       const isSelected = prev.includes(prId);
-      if (isSelected) {
-        // Deselecting - just remove from selection
-        return prev.filter((id) => id !== prId);
-      } else {
-        // Selecting - load this PR's resolution data into the form
-        const prData = prResolutionData.get(prId);
+      const pr = prList.find((item) => item.id === prId);
+      if (!pr) return prev;
+      const currentSelectedDateKey = prev.length > 0
+        ? getDateKey(prList.find((item) => item.id === prev[0])?.created_at)
+        : "";
+      const selectable = !currentSelectedDateKey || getDateKey(pr.created_at) === currentSelectedDateKey;
+      if (!isSelected && !selectable) return prev;
+
+      const nextSelected = isSelected
+        ? prev.filter((id) => id !== prId)
+        : [...prev, prId];
+
+      if (nextSelected.length === 0) {
+        resetFormToDefaults();
+        return nextSelected;
+      }
+
+      if (nextSelected.length === 1) {
+        const selectedId = nextSelected[0];
+        const prData = prResolutionData.get(selectedId);
         if (prData) {
           setResolutionNo(prData.resolution_no);
           setPreparedBy(prData.prepared_by != null ? String(prData.prepared_by) : "");
           setDivisionId(prData.division_id);
         } else {
-          // No existing data - clear form
-          setResolutionNo("");
-          const currentUser = readCurrentUser();
-          setPreparedBy(currentUser?.id != null ? String(currentUser.id) : "");
-          setDivisionId(currentUser?.division_id ?? null);
+          resetFormToDefaults();
         }
-        // Single selection mode - only select this PR
-        return [prId];
       }
+
+      return nextSelected;
     });
-  };
+  }, [prList, prResolutionData, resetFormToDefaults]);
 
   const selectAll = () => {
-    setSelectedPrIds(prList.map((pr) => pr.id));
+    if (prList.length === 0) {
+      resetFormToDefaults();
+      return;
+    }
+    const targetDateKey = selectedDateKey || getDateKey(prList[0]?.created_at);
+    setSelectedPrIds(
+      prList
+        .filter((pr) => getDateKey(pr.created_at) === targetDateKey)
+        .map((pr) => pr.id)
+    );
   };
 
   const deselectAll = () => {
     setSelectedPrIds([]);
+    resetFormToDefaults();
   };
 
   const buildPayload = () => {
@@ -672,15 +723,22 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                     <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
                       {selectedPrIds.length} selected
                     </span>
+                    {selectedDateKey && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        Date locked: {formatCreatedAt(prList.find((pr) => pr.id === selectedPrIds[0])?.created_at)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={selectAll}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                     >
                       Select All
                     </button>
                     <button
+                      type="button"
                       onClick={deselectAll}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                     >
@@ -702,33 +760,44 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">PR Number</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Resolution No.</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Office/Section</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-700">Purpose</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700">Created At</th>
                           <th className="px-4 py-2 text-right font-semibold text-gray-700">Total Cost</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {prList.map((pr) => {
                           const isSelected = selectedPrIds.includes(pr.id);
+                          const isSelectable = isPrSelectable(pr);
                           const hasExistingResolution = existingResolutions.has(pr.id);
                           const prResData = prResolutionData.get(pr.id);
                           return (
                             <tr
                               key={pr.id}
-                              onClick={() => togglePrSelection(pr.id)}
-                              className={`cursor-pointer transition-colors ${
-                                isSelected ? "bg-purple-50" : "hover:bg-gray-50"
+                              onClick={() => {
+                                if (isSelectable || isSelected) togglePrSelection(pr.id);
+                              }}
+                              className={`transition-colors ${
+                                isSelected
+                                  ? "bg-purple-50 cursor-pointer"
+                                  : isSelectable
+                                    ? "hover:bg-gray-50 cursor-pointer"
+                                    : "bg-gray-50/80 text-gray-400 cursor-not-allowed opacity-60"
                               }`}
                             >
                               <td className="px-4 py-3">
                                 <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                                  isSelected ? "bg-purple-600 border-purple-600" : "border-gray-300"
+                                  isSelected
+                                    ? "bg-purple-600 border-purple-600"
+                                    : isSelectable
+                                      ? "border-gray-300"
+                                      : "border-gray-200 bg-gray-100"
                                 }`}>
                                   {isSelected && <RiCheckboxCircleLine size={14} className="text-white" />}
                                 </div>
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-900">{pr.pr_no}</span>
+                                  <span className={`font-medium ${isSelectable || isSelected ? "text-gray-900" : "text-gray-400"}`}>{pr.pr_no}</span>
                                   {hasExistingResolution && (
                                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
                                       Saved
@@ -746,7 +815,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                                 )}
                               </td>
                               <td className="px-4 py-3 text-gray-600">{pr.office_section}</td>
-                              <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{pr.purpose}</td>
+                              <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatCreatedAt(pr.created_at)}</td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
                                 ₱{pr.total_cost?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                               </td>
