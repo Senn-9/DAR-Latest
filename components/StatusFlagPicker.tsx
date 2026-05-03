@@ -24,7 +24,7 @@ export const STATUS_FLAGS: StatusFlag[] = [
   "urgent",
 ];
 
-const FLAG_CONFIG: Record<
+export const FLAG_CONFIG: Record<
   StatusFlag,
   { label: string; color: string; bgColor: string }
 > = {
@@ -126,7 +126,7 @@ export function StatusFlagPicker({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 bg-emerald-700 text-white">

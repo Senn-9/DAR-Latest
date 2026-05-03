@@ -10,6 +10,7 @@ import BACProcessModal from "@/components/BACProcessModal";
 import PARPOProcessModal from "@/components/PARPOProcessModal";
 import BudgetProcessModal from "@/components/BudgetProcessModal";
 import { useRouter } from "next/navigation";
+import { fetchDeliveriesForPaymentPhase } from "@/utils/supabase/delivery";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
@@ -179,21 +180,12 @@ export default function ProcurementPage() {
           return;
         }
         
-        // Fetch deliveries (separate table)
+        // Fetch deliveries for payment phase (same logic as Payment tab)
         let deliveryData: any[] = [];
         try {
-          const { data: deliveries, error: deliveryError } = await supabase
-            .from("deliveries")
-            .select("id, delivery_no, po_no, supplier, office_section, division_id, status_id, created_at")
-            .order("created_at", { ascending: false });
-          
-          if (deliveryError) {
-            console.warn('Delivery fetch failed:', deliveryError);
-          } else {
-            deliveryData = deliveries || [];
-          }
+          deliveryData = await fetchDeliveriesForPaymentPhase(null);
         } catch (err) {
-          console.warn('Delivery fetch exception:', err);
+          console.warn('Payment phase delivery fetch exception:', err);
         }
         
         // Process purchase requests
@@ -205,16 +197,13 @@ export default function ProcurementPage() {
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
           const isPaymentPhase = [35, 26, 27, 28, 29, 30, 31, 32, 36].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23].includes(delivery.status_id);
           
-          let statusText = 'Unknown';
           let source: 'delivery' | 'payment' = 'delivery';
           
           if (isPaymentPhase) {
-            statusText = 'Payment';
             source = 'payment';
           } else if (isDeliveryPhase) {
-            statusText = 'Delivery';
             source = 'delivery';
           }
           
@@ -227,7 +216,6 @@ export default function ProcurementPage() {
             purpose: `Delivery - ${delivery.supplier || 'Unknown Supplier'}`,
             total_cost: 0, // deliveries table doesn't have total_cost column
             is_high_value: false,
-            status: statusText,
             status_id: delivery.status_id,
             fund_cluster: '',
             req_name: '',
@@ -312,20 +300,18 @@ export default function ProcurementPage() {
       20: { name: "Delivery (IAR)",            color: "delivery"   },
       21: { name: "Delivery (IAR Processing)", color: "delivery" },
       22: { name: "Delivery (LOA)",            color: "delivery"   },
-      23: { name: "Delivery (DV)",             color: "delivery"   },
-      24: { name: "Payment (Accounting)",      color: "payment"    },
       25: { name: "Payment (PARPO)",           color: "payment"    },
       26: { name: "Payment (DVS)",             color: "payment"    },
       27: { name: "Payment (Approved)",        color: "payment"    },
       28: { name: "Payment (PARPO)",           color: "payment"    },
       29: { name: "Payment (ORS)",             color: "payment"    },
-      30: { name: "Payment (Report Encoding)", color: "payment"    },
+      30: { name: "Payment", color: "payment"    },
       31: { name: "Payment (Tax Processing)",  color: "payment"    },
       32: { name: "Payment (Releasing)",       color: "payment"    },
       33: { name: "Completed (PR Phase)",      color: "completed"  },
       34: { name: "Completed (PO Phase)",      color: "completed"  },
-      35: { name: "Completed (Delivery Phase)", color: "completed" },
-      36: { name: "Completed (Payment Phase)", color: "completed"  },
+      35: { name: "Completed (Delivery Phase)", color: "payment" },
+      36: { name: "Completed (Payment Phase)", color: "payment"  },
       37: { name: "Cancelled",                 color: "rejected"   },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };

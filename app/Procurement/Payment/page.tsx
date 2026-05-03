@@ -4,10 +4,24 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
-  RiFileListLine, RiSearchLine, RiTimeLine, RiCheckboxCircleLine,
-  RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine,
-  RiEyeLine, RiMoneyDollarCircleLine, RiCheckLine, RiCloseCircleLine,
-  RiTruckLine, RiMore2Line, RiChat3Line, RiPlayCircleLine,
+  RiFileListLine,
+  RiSearchLine,
+  RiTimeLine,
+  RiCheckboxCircleLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiEyeLine,
+  RiMoneyDollarCircleLine,
+  RiCheckLine,
+  RiCloseCircleLine,
+  RiTruckLine,
+  RiMore2Line,
+  RiChat3Line,
+  RiPlayCircleLine,
+  RiDeleteBinLine,
+  RiRefreshLine,
 } from "react-icons/ri";
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
@@ -15,8 +29,26 @@ import RemarksModal from "@/components/Delivery/RemarksModal";
 import ProcessPaymentModal from "@/components/Payment/ProcessPaymentModal";
 import ViewPaymentModal from "@/components/Payment/ViewPaymentModal";
 import NORSAModal from "@/components/Payment/NORSAModal";
-import { fetchDeliveriesForPaymentPhase, fetchPaymentPhaseStatuses, insertDeliveryProcessRemark, fetchIARByDelivery, fetchLOAByDelivery, fetchDVByDelivery, upsertIARByDelivery, upsertLOAByDelivery, upsertDVByDelivery } from "@/utils/supabase/delivery";
-import { FlagButton, StatusFlagPicker, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
+import DeletePaymentModal from "@/components/Payment/DeletePaymentModal";
+import {
+  fetchDeliveriesForPaymentPhase,
+  fetchPaymentPhaseStatuses,
+  insertDeliveryProcessRemark,
+  fetchIARByDelivery,
+  fetchLOAByDelivery,
+  fetchDVByDelivery,
+  upsertIARByDelivery,
+  upsertLOAByDelivery,
+  upsertDVByDelivery,
+  updateDeliveryStatusOnly,
+} from "@/utils/supabase/delivery";
+import { fetchPOWithItemsById } from "@/utils/supabase/po";
+import {
+  FlagButton,
+  StatusFlagPicker,
+  type StatusFlag,
+  getFlagId,
+} from "@/components/StatusFlagPicker";
 
 export default function PaymentPage() {
   const supabase = createClient();
@@ -44,6 +76,7 @@ export default function PaymentPage() {
   };
 
   type CurrentUser = {
+    id: number;
     fullname: string;
     username: string;
     role_id: number;
@@ -55,43 +88,104 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Role checks for specialized accounts (same logic as Dashboard)
+  const isBACAccount = 
+    currentUser?.username?.toLowerCase() === "bac" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("bac") ?? false);
+  const isPARPOAccount = 
+    currentUser?.username?.toLowerCase() === "parpo" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false);
+  const isSupplyAccount = 
+    currentUser?.username?.toLowerCase() === "supply" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
+  const isBudgetAccount = 
+    currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
+  const isAccountingAccount = 
+    currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState<"delivery_no" | "po_no" | "created_at">("created_at");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortField, setSortField] = useState<
+    "delivery_no" | "po_no" | "created_at"
+  >("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryRow | null>(null);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryRow | null>(
+    null,
+  );
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [processModalOpen, setProcessModalOpen] = useState(false);
-  const [remarksModalOpen, setRemarksModalOpen] = useState(false);
+    const [remarksModalOpen, setRemarksModalOpen] = useState(false);
   const [paymentViewModalOpen, setPaymentViewModalOpen] = useState(false);
   const [paymentProcessModalOpen, setPaymentProcessModalOpen] = useState(false);
   const [norsaModalOpen, setNorsaModalOpen] = useState(false);
+  const [deletePaymentModalOpen, setDeletePaymentModalOpen] = useState(false);
   const [iarData, setIarData] = useState<any>(null);
   const [loaData, setLoaData] = useState<any>(null);
   const [dvData, setDvData] = useState<any>(null);
   const [poData, setPoData] = useState<any>(null);
-  const [statuses, setStatuses] = useState<{ id: number; status_name: string }[]>([]);
+  const [statuses, setStatuses] = useState<
+    { id: number; status_name: string }[]
+  >([]);
   const [statusFlag, setStatusFlag] = useState<StatusFlag | null>(null);
-  const [flagPickerOpen, setFlagPickerOpen] = useState(false);
 
   const PAGE_SIZE = 10;
 
-  const STATUS_CFG: Record<number, { bg: string; text: string; label: string }> = {
-    18: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Delivery (Waiting)" },
-    19: { bg: "bg-orange-50", text: "text-orange-800", label: "Delivery (Received)" },
+  const PAYMENT_STATUS_OPTIONS = [
+    { value: "all", label: "All Statuses" },
+    { value: "loa-processing", label: "LOA Processing" },
+    { value: "pending-review", label: "Pending Review" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
+  const STATUS_CFG: Record<
+    number,
+    { bg: string; text: string; label: string }
+  > = {
+    18: {
+      bg: "bg-yellow-50",
+      text: "text-yellow-800",
+      label: "Delivery (Waiting)",
+    },
+    19: {
+      bg: "bg-orange-50",
+      text: "text-orange-800",
+      label: "Delivery (Received)",
+    },
     20: { bg: "bg-teal-50", text: "text-teal-800", label: "Delivery (IAR)" },
-    21: { bg: "bg-purple-50", text: "text-purple-800", label: "Delivery (IAR Processing)" },
+    21: {
+      bg: "bg-purple-50",
+      text: "text-purple-800",
+      label: "Delivery (IAR Processing)",
+    },
     22: { bg: "bg-blue-50", text: "text-blue-800", label: "Delivery (LOA)" },
-    23: { bg: "bg-green-50", text: "text-green-800", label: "Delivery (DV)" },
-    24: { bg: "bg-indigo-50", text: "text-indigo-800", label: "End-User Forward" },
-    25: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Division Chief Review" },
-    28: { bg: "bg-yellow-50", text: "text-yellow-800", label: "Payment Pending" },
-    29: { bg: "bg-orange-50", text: "text-orange-800", label: "Payment Processing" },
-    30: { bg: "bg-purple-50", text: "text-purple-800", label: "Accounting Review" },
-    31: { bg: "bg-teal-50", text: "text-teal-800", label: "Budget Review" },
-    32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "Final Approval" },
-    35: { bg: "bg-emerald-100", text: "text-emerald-900", label: "Payment Completed" },
+    25: {
+      bg: "bg-emerald-50",
+      text: "text-emerald-800",
+      label: "Division Chief Review",
+    },
+    28: {
+      bg: "bg-yellow-50",
+      text: "text-yellow-800",
+      label: "Payment Pending",
+    },
+    29: {
+      bg: "bg-orange-50",
+      text: "text-orange-800",
+      label: "Voucher Verification",
+    },
+    30: {
+      bg: "bg-purple-50",
+      text: "text-purple-800",
+      label: "Accounting Review",
+    },
+        32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "Final Approval" },
+    35: {
+      bg: "bg-emerald-100",
+      text: "text-emerald-900",
+      label: "Payment Completed",
+    },
     36: { bg: "bg-gray-50", text: "text-gray-800", label: "On Hold" },
     26: { bg: "bg-red-50", text: "text-red-800", label: "Payment Cancelled" },
     27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
@@ -110,12 +204,22 @@ export default function PaymentPage() {
     const fetchPaymentData = async () => {
       try {
         setLoading(true);
+
+        // Fetch all deliveries for payment phase (admin gets all, users get filtered client-side)
+        const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
         
-        // Fetch deliveries for payment phase
-        const deliveriesData = await fetchDeliveriesForPaymentPhase(
-          isAdmin ? null : (currentUser?.divisions?.division_id ?? null)
-        );
-        setDeliveries(deliveriesData as any);
+        // Apply client-side filtering based on user role (same logic as Dashboard)
+        const filteredDeliveries = deliveriesData.filter(delivery => {
+          // Admin and specialized roles see all payment data
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+            return true;
+          }
+          
+          // Division heads and end users see payment data from their division based on office_section
+          return delivery.office_section === currentUser?.divisions?.division_name;
+        });
+        
+        setDeliveries(filteredDeliveries as any);
 
         // Fetch payment phase statuses
         const statusesData = await fetchPaymentPhaseStatuses();
@@ -132,6 +236,15 @@ export default function PaymentPage() {
     }
   }, [currentUser, isAdmin]);
 
+  const getPaymentStatusCategory = (statusId: number) => {
+    // Map status IDs to filter categories
+    if (statusId === 22) return "loa-processing"; // LOA Processing
+    if ([24, 25, 28, 29, 30, 32, 36].includes(statusId)) return "pending-review"; // Pending Review (including On Hold)
+    if (statusId === 35) return "completed"; // Payment Completed
+    if ([26, 27].includes(statusId)) return "cancelled"; // Cancelled
+    return "other"; // Other statuses
+  };
+
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -142,27 +255,39 @@ export default function PaymentPage() {
   };
 
   const SortIcon = ({ field }: { field: typeof sortField }) => {
-    if (sortField !== field) return <RiArrowUpLine size={10} className="text-gray-400" />;
-    return sortDir === "asc" ? 
-      <RiArrowUpLine size={10} className="text-white" /> : 
-      <RiArrowDownLine size={10} className="text-white" />;
+    if (sortField !== field)
+      return <RiArrowUpLine size={10} className="text-gray-400" />;
+    return sortDir === "asc" ? (
+      <RiArrowUpLine size={10} className="text-white" />
+    ) : (
+      <RiArrowDownLine size={10} className="text-white" />
+    );
   };
 
-  const filteredDeliveries = deliveries.filter(delivery =>
-    delivery.delivery_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    delivery.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (delivery.supplier?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+  const filteredDeliveries = deliveries.filter(
+    (delivery) => {
+      const matchSearch =
+        delivery.delivery_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        delivery.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (delivery.supplier?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+          false);
+      
+      const statusCategory = getPaymentStatusCategory(delivery.status_id);
+      const matchStatus = statusFilter === "all" || statusCategory === statusFilter;
+      
+      return matchSearch && matchStatus;
+    },
   );
 
   const sortedDeliveries = [...filteredDeliveries].sort((a, b) => {
     let aVal: any = a[sortField];
     let bVal: any = b[sortField];
-    
+
     if (sortField === "created_at") {
       aVal = new Date(aVal).getTime();
       bVal = new Date(bVal).getTime();
     }
-    
+
     if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
     if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
     return 0;
@@ -170,7 +295,10 @@ export default function PaymentPage() {
 
   const totalPages = Math.ceil(sortedDeliveries.length / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const pagedDeliveries = sortedDeliveries.slice(startIndex, startIndex + PAGE_SIZE);
+  const pagedDeliveries = sortedDeliveries.slice(
+    startIndex,
+    startIndex + PAGE_SIZE,
+  );
 
   const canRoleProcess = (roleId: number, statusId: number) => {
     // Define role permissions for payment processing by status
@@ -181,9 +309,7 @@ export default function PaymentPage() {
         return [1, 9].includes(roleId); // Admin, Accounting
       case 30: // Accounting Review
         return [1, 9].includes(roleId); // Admin, Accounting
-      case 31: // Budget Review
-        return [1, 4].includes(roleId); // Admin, Budget
-      case 32: // Final Approval
+            case 32: // Final Approval
         return [1, 5].includes(roleId); // Admin, PARPO
       case 35: // Payment Completed
         return false; // No processing needed
@@ -199,7 +325,7 @@ export default function PaymentPage() {
 
   const handleViewDelivery = async (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
-    
+
     // Fetch related documents
     try {
       const [iar, loa, dv] = await Promise.all([
@@ -207,22 +333,18 @@ export default function PaymentPage() {
         fetchLOAByDelivery(delivery.id),
         fetchDVByDelivery(delivery.id),
       ]);
-      
+
       setIarData(iar);
       setLoaData(loa);
       setDvData(dv);
     } catch (error) {
       console.error("Error fetching delivery documents:", error);
     }
-    
+
     setViewModalOpen(true);
   };
 
-  const handleProcessDelivery = (delivery: DeliveryRow) => {
-    setSelectedDelivery(delivery);
-    setProcessModalOpen(true);
-  };
-
+  
   const handleOpenRemarks = (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
     setRemarksModalOpen(true);
@@ -233,8 +355,41 @@ export default function PaymentPage() {
     setPaymentViewModalOpen(true);
   };
 
-  const handleProcessPayment = (delivery: DeliveryRow) => {
+  const handleProcessPayment = async (delivery: DeliveryRow) => {
+    console.log("Opening payment modal for delivery:", delivery);
     setSelectedDelivery(delivery);
+    
+    // Don't reset status flag - let user maintain their selection during the session
+    
+    // Fetch IAR, LOA, and PO data for Voucher Verification (status 29)
+    if (delivery.status_id === 29) {
+      try {
+        console.log("Fetching IAR, LOA, and PO data for Voucher Verification...");
+        const [iar, loa, poDataResult] = await Promise.all([
+          fetchIARByDelivery(delivery.id),
+          fetchLOAByDelivery(delivery.id),
+          delivery.po_id ? fetchPOWithItemsById(delivery.po_id) : Promise.resolve(null)
+        ]);
+
+        console.log("IAR data:", iar);
+        console.log("LOA data:", loa);
+        console.log("PO data:", poDataResult);
+        setIarData(iar);
+        setLoaData(loa);
+        
+        // Transform PO data to match expected structure
+        if (poDataResult) {
+          const transformedPoData = {
+            ...poDataResult.header,
+            purchase_order_items: poDataResult.items
+          };
+          setPoData(transformedPoData);
+        }
+      } catch (error) {
+        console.error("Error fetching documents for Voucher Verification:", error);
+      }
+    }
+    
     setPaymentProcessModalOpen(true);
   };
 
@@ -243,15 +398,229 @@ export default function PaymentPage() {
     setNorsaModalOpen(true);
   };
 
-  const handlePreviewDocument = (type: 'iar' | 'loa' | 'dv') => {
+  const handleDeletePayment = (delivery: DeliveryRow) => {
+    setSelectedDelivery(delivery);
+    setDeletePaymentModalOpen(true);
+  };
+
+  const handleDebugToggleStatus = async (delivery: DeliveryRow) => {
+    if (!isAccountingAccount) {
+      alert("Debug mode is only available for accounting accounts.");
+      return;
+    }
+
+    // Define the forward-only status sequence for accounting
+    const statusSequence = {
+      28: 29, // Payment Pending -> Voucher Verification
+      29: 30, // Voucher Verification -> Accounting Review
+      30: 32, // Accounting Review -> Final Approval (skip Budget Review)
+      32: 35, // Final Approval -> Payment Completed
+      26: 28, // Payment Cancelled -> Payment Pending
+      27: 28, // Cancelled -> Payment Pending
+      36: 28, // On Hold -> Payment Pending
+    };
+
+    const nextStatusId = statusSequence[delivery.status_id as keyof typeof statusSequence];
+    
+    if (!nextStatusId) {
+      if (delivery.status_id === 35) {
+        alert("Payment is already completed. Cannot move forward from completed status.");
+      } else {
+        alert(`Cannot advance from current status ID: ${delivery.status_id}`);
+      }
+      return;
+    }
+
+    const statusLabels: Record<number, string> = {
+      28: "Payment Pending",
+      29: "Voucher Verification", 
+      30: "Accounting Review",
+      32: "PARPO Approval",
+      35: "Payment Completed",
+      26: "Payment Cancelled",
+      27: "Cancelled",
+      36: "On Hold",
+    };
+
+    const currentStatusLabel = statusLabels[delivery.status_id] || `Status ${delivery.status_id}`;
+    const nextStatusLabel = statusLabels[nextStatusId] || `Status ${nextStatusId}`;
+
+    const confirmed = window.confirm(
+      `Debug: Advance process status for ${delivery.delivery_no}?\n\n` +
+      `Current: ${currentStatusLabel}\n` +
+      `Next: ${nextStatusLabel}\n\n` +
+      "This will move the payment process forward only."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await updateDeliveryStatusOnly(delivery.id, nextStatusId);
+      
+      // Refresh the deliveries data to show the updated status
+      const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
+      const filteredDeliveries = deliveriesData.filter(d => {
+        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+          return true;
+        }
+        return d.office_section === currentUser?.divisions?.division_name;
+      });
+      setDeliveries(filteredDeliveries as any);
+
+      alert(`Status successfully updated to: ${nextStatusLabel}`);
+    } catch (error) {
+      console.error("Error updating delivery status:", error);
+      alert("Failed to update status. Please try again.");
+    }
+  };
+
+  const handleDebugBackStatus = async (delivery: DeliveryRow) => {
+    if (!isAccountingAccount) {
+      alert("Debug mode is only available for accounting accounts.");
+      return;
+    }
+
+    // Define the backward status sequence for accounting
+    const backStatusSequence = {
+      29: 28, // Voucher Verification -> Payment Pending
+      30: 29, // Accounting Review -> Voucher Verification
+      32: 30, // Final Approval -> Accounting Review (skip Budget Review)
+      35: 32, // Payment Completed -> Final Approval
+      28: 36, // Payment Pending -> On Hold (can't go back further, so go to on hold)
+      26: 36, // Payment Cancelled -> On Hold
+      27: 36, // Cancelled -> On Hold
+      36: 36, // On Hold -> On Hold (stay in on hold)
+    };
+
+    const backStatusId = backStatusSequence[delivery.status_id as keyof typeof backStatusSequence];
+    
+    const statusLabels: Record<number, string> = {
+      28: "Payment Pending",
+      29: "Voucher Verification", 
+      30: "Accounting Review",
+      32: "Final Approval",
+      35: "Payment Completed",
+      26: "Payment Cancelled",
+      27: "Cancelled",
+      36: "On Hold",
+    };
+
+    const currentStatusLabel = statusLabels[delivery.status_id] || `Status ${delivery.status_id}`;
+    const backStatusLabel = statusLabels[backStatusId] || `Status ${backStatusId}`;
+
+    const confirmed = window.confirm(
+      `Debug: Move back process status for ${delivery.delivery_no}?\n\n` +
+      `Current: ${currentStatusLabel}\n` +
+      `Back to: ${backStatusLabel}\n\n` +
+      "This will move the payment process backward."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await updateDeliveryStatusOnly(delivery.id, backStatusId);
+      
+      // Refresh the deliveries data to show the updated status
+      const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
+      const filteredDeliveries = deliveriesData.filter(d => {
+        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+          return true;
+        }
+        return d.office_section === currentUser?.divisions?.division_name;
+      });
+      setDeliveries(filteredDeliveries as any);
+
+      alert(`Status successfully updated to: ${backStatusLabel}`);
+    } catch (error) {
+      console.error("Error updating delivery status:", error);
+      alert("Failed to update status. Please try again.");
+    }
+  };
+
+  const handlePreviewDocument = (type: "iar" | "loa" | "dv") => {
     // Implementation for document preview
     console.log(`Preview ${type} document`);
   };
 
-  const handlePreviewPaymentDocument = (type: 'voucher' | 'ors' | 'dv') => {
-    // Implementation for payment document preview
-    console.log(`Preview ${type} document`);
+  const handlePreviewPaymentDocument = async (type: "voucher" | "ors" | "dv" | "iar" | "loa") => {
+    if (!selectedDelivery) return;
+    
+    try {
+      // For IAR and LOA, use the same HTML template viewing as delivery system
+      if (type === "iar" || type === "loa") {
+        // Transform poData to have the correct structure for templates
+        const transformedPoData = poData ? {
+          ...poData,
+          po_items: poData.purchase_order_items || []
+        } : {};
+        
+        const mergedData = { ...selectedDelivery, ...transformedPoData };
+        
+        let html: string | null = null;
+        
+        if (type === "iar") {
+          const iarDocumentData = { ...mergedData, ...iarData };
+          iarDocumentData.po_items = mergedData.po_items;
+          html = await buildIARHtml(iarDocumentData);
+        } else if (type === "loa") {
+          const loaDocumentData = { ...mergedData, ...loaData };
+          loaDocumentData.po_items = mergedData.po_items;
+          html = await buildLOAHtml(loaDocumentData);
+        }
+        
+        if (html) {
+          // Open HTML in new window for full document view
+          const printWindow = window.open("", "", "height=800,width=1200");
+          if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+          }
+        } else {
+          alert(`Unable to generate ${type.toUpperCase()} document. No document data available.`);
+        }
+      } else {
+        // For voucher, ORS, DV - use existing implementation or placeholder
+        console.log(`Preview ${type} document (placeholder implementation)`);
+        alert(`${type.toUpperCase()} document preview not yet implemented.`);
+      }
+    } catch (error) {
+      console.error(`Error generating ${type} document:`, error);
+      alert(`Failed to generate ${type.toUpperCase()} document. Please try again.`);
+    }
   };
+
+// Helper functions for HTML generation (same as delivery system)
+async function buildIARHtml(d: any): Promise<string> {
+  try {
+    const response = await fetch(`/documents/IAR-template.html`);
+    if (!response.ok) throw new Error('Failed to load IAR template');
+    const template = await response.text();
+    
+    // Replace placeholders
+    return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return d[key] !== undefined ? String(d[key]) : match;
+    });
+  } catch (error) {
+    console.error('Error building IAR HTML:', error);
+    throw error;
+  }
+}
+
+async function buildLOAHtml(d: any): Promise<string> {
+  try {
+    const response = await fetch(`/documents/LOA-template.html`);
+    if (!response.ok) throw new Error('Failed to load LOA template');
+    const template = await response.text();
+    
+    // Replace placeholders
+    return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return d[key] !== undefined ? String(d[key]) : match;
+    });
+  } catch (error) {
+    console.error('Error building LOA HTML:', error);
+    throw error;
+  }
+}
 
   // Skeleton loading component
   if (loading) {
@@ -318,16 +687,21 @@ export default function PaymentPage() {
       `}</style>
 
       <div className="w-full p-6 md:p-10 space-y-6">
-
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
-            <h1 className="text-3xl font-bold text-gray-900">Payment Processing</h1>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">
+              Procurement Portal
+            </p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Payment Processing
+            </h1>
             {currentUser && (
               <p className="text-sm text-gray-400 mt-1">
                 Signed in as{" "}
-                <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+                <span className="text-gray-700 font-semibold">
+                  {currentUser.fullname}
+                </span>
                 {currentUser.divisions?.division_name && (
                   <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
                     {currentUser.divisions.division_name}
@@ -339,14 +713,36 @@ export default function PaymentPage() {
         </div>
 
         <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-          {([
-            { key: "pr", label: "Purchase Request", href: "/Procurement" },
-            { key: "canvass", label: "Canvass", href: "/Procurement/Canvass" },
-            { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
-            { key: "purchase-order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
-            { key: "delivery", label: "Delivery", href: "/Procurement/Delivery" },
-            { key: "payment", label: "Payment", href: "/Procurement/Payment" },
-          ] as const).map(({ key, label, href }) => {
+          {(
+            [
+              { key: "pr", label: "Purchase Request", href: "/Procurement" },
+              {
+                key: "canvass",
+                label: "Canvass",
+                href: "/Procurement/Canvass",
+              },
+              {
+                key: "abstract",
+                label: "Abstract of Awards",
+                href: "/Procurement/Abstract",
+              },
+              {
+                key: "purchase-order",
+                label: "Purchase Order",
+                href: "/Procurement/PurchaseOrder",
+              },
+              {
+                key: "delivery",
+                label: "Delivery",
+                href: "/Procurement/Delivery",
+              },
+              {
+                key: "payment",
+                label: "Payment",
+                href: "/Procurement/Payment",
+              },
+            ] as const
+          ).map(({ key, label, href }) => {
             const isActive = pathname === href;
             return (
               <button
@@ -367,35 +763,124 @@ export default function PaymentPage() {
         {/* Payment Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { label: "Total Payments", value: deliveries.length, icon: <RiMoneyDollarCircleLine />, bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", iconColor: "text-emerald-700", numColor: "text-emerald-700" },
-            { label: "LOA Processing", value: deliveries.filter(d => d.status_id === 22).length, icon: <RiFileListLine />, bg: "bg-blue-50", border: "border-blue-200", iconBg: "bg-blue-100", iconColor: "text-blue-700", numColor: "text-blue-700" },
-            { label: "DV Processing", value: deliveries.filter(d => d.status_id === 23).length, icon: <RiFileListLine />, bg: "bg-green-50", border: "border-green-200", iconBg: "bg-green-100", iconColor: "text-green-700", numColor: "text-green-700" },
-            { label: "Pending Review", value: deliveries.filter(d => [24, 25, 28, 29, 30, 31, 32].includes(d.status_id)).length, icon: <RiTimeLine />, bg: "bg-yellow-50", border: "border-yellow-200", iconBg: "bg-yellow-100", iconColor: "text-yellow-700", numColor: "text-yellow-700" },
-            { label: "Completed", value: deliveries.filter(d => d.status_id === 35).length, icon: <RiCheckboxCircleLine />, bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", iconColor: "text-emerald-700", numColor: "text-emerald-700" },
-            { label: "Cancelled", value: deliveries.filter(d => [26, 27].includes(d.status_id)).length, icon: <RiCloseCircleLine />, bg: "bg-red-50", border: "border-red-200", iconBg: "bg-red-100", iconColor: "text-red-700", numColor: "text-red-700" },
-          ].map(({ label, value, icon, bg, border, iconBg, iconColor, numColor }) => (
-            <div key={label} className={`${bg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}>
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{icon}</div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">{label}</p>
-                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+            {
+              label: "Total Payments",
+              value: deliveries.length,
+              icon: <RiMoneyDollarCircleLine />,
+              bg: "bg-emerald-50",
+              border: "border-emerald-200",
+              iconBg: "bg-emerald-100",
+              iconColor: "text-emerald-700",
+              numColor: "text-emerald-700",
+            },
+            {
+              label: "LOA Processing",
+              value: deliveries.filter((d) => d.status_id === 22).length,
+              icon: <RiFileListLine />,
+              bg: "bg-blue-50",
+              border: "border-blue-200",
+              iconBg: "bg-blue-100",
+              iconColor: "text-blue-700",
+              numColor: "text-blue-700",
+            },
+                        {
+              label: "Pending Review",
+              value: deliveries.filter((d) =>
+                [24, 25, 28, 29, 30, 32].includes(d.status_id),
+              ).length,
+              icon: <RiTimeLine />,
+              bg: "bg-yellow-50",
+              border: "border-yellow-200",
+              iconBg: "bg-yellow-100",
+              iconColor: "text-yellow-700",
+              numColor: "text-yellow-700",
+            },
+            {
+              label: "Completed",
+              value: deliveries.filter((d) => d.status_id === 35).length,
+              icon: <RiCheckboxCircleLine />,
+              bg: "bg-emerald-50",
+              border: "border-emerald-200",
+              iconBg: "bg-emerald-100",
+              iconColor: "text-emerald-700",
+              numColor: "text-emerald-700",
+            },
+            {
+              label: "Cancelled",
+              value: deliveries.filter((d) => [26, 27].includes(d.status_id))
+                .length,
+              icon: <RiCloseCircleLine />,
+              bg: "bg-red-50",
+              border: "border-red-200",
+              iconBg: "bg-red-100",
+              iconColor: "text-red-700",
+              numColor: "text-red-700",
+            },
+          ].map(
+            ({
+              label,
+              value,
+              icon,
+              bg,
+              border,
+              iconBg,
+              iconColor,
+              numColor,
+            }) => (
+              <div
+                key={label}
+                className={`${bg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+              >
+                <div
+                  className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}
+                >
+                  {icon}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">{label}</p>
+                  <p className={`mono text-xl font-bold ${numColor}`}>
+                    {value}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
 
         {/* Payment Table */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">Payment Processing Queue</h2>
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">
+              Payment Processing Queue
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
+              {PAYMENT_STATUS_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
+                    ${statusFilter === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
               <div className="relative flex items-center">
-                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                <RiSearchLine
+                  size={14}
+                  className="absolute left-2.5 text-gray-400 pointer-events-none"
+                />
                 <input
                   type="text"
                   placeholder="Search delivery, PO or supplier…"
                   value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
                 />
               </div>
@@ -415,11 +900,27 @@ export default function PaymentPage() {
                   <thead>
                     <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                       {[
-                        { label: "Delivery No", field: "delivery_no" as const, align: "text-left" },
-                        { label: "PO Number", field: "po_no" as const, align: "text-left" },
+                        {
+                          label: "Delivery No",
+                          field: "delivery_no" as const,
+                          align: "text-left",
+                        },
+                        {
+                          label: "PO Number",
+                          field: "po_no" as const,
+                          align: "text-left",
+                        },
                         { label: "Supplier", field: null, align: "text-left" },
-                        { label: "Date", field: "created_at" as const, align: "text-left" },
-                        { label: "Payment Status", field: null, align: "text-center" },
+                        {
+                          label: "Date",
+                          field: "created_at" as const,
+                          align: "text-left",
+                        },
+                        {
+                          label: "Payment Status",
+                          field: null,
+                          align: "text-center",
+                        },
                         { label: "Actions", field: null, align: "text-center" },
                       ].map(({ label, field, align }) => (
                         <th
@@ -428,7 +929,8 @@ export default function PaymentPage() {
                           className={`px-2 py-2 font-semibold whitespace-nowrap ${align} ${field ? "th-sort select-none cursor-pointer" : ""}`}
                         >
                           <span className="inline-flex items-center gap-0.5">
-                            {label}{field && <SortIcon field={field} />}
+                            {label}
+                            {field && <SortIcon field={field} />}
                           </span>
                         </th>
                       ))}
@@ -436,28 +938,59 @@ export default function PaymentPage() {
                   </thead>
                   <tbody>
                     {pagedDeliveries.map((delivery, index) => {
-                      const statusInfo = STATUS_CFG[delivery.status_id] || { bg: "bg-emerald-100", text: "text-emerald-900", label: "Payment Completed" };
+                      const statusInfo = STATUS_CFG[delivery.status_id] || {
+                        bg: "bg-emerald-100",
+                        text: "text-emerald-900",
+                        label: "Payment Completed",
+                      };
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      const canProcess = canRoleProcess(currentUser?.role_id || 0, delivery.status_id);
+                      const canProcess = canRoleProcess(
+                        currentUser?.role_id || 0,
+                        delivery.status_id,
+                      );
 
                       return (
-                        <tr key={delivery.id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
+                        <tr
+                          key={delivery.id}
+                          className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50"
+                        >
+                          <td
+                            className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}
+                          >
                             {delivery.delivery_no}
                           </td>
-                          <td className={`mono px-2 py-2 text-gray-600 whitespace-nowrap ${rowBg}`}>
+                          <td
+                            className={`mono px-2 py-2 text-gray-600 whitespace-nowrap ${rowBg}`}
+                          >
                             {delivery.po_no}
                           </td>
-                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
-                            {delivery.supplier || <span className="text-gray-300">—</span>}
+                          <td
+                            className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}
+                          >
+                            {delivery.supplier || (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
-                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
-                            {delivery.created_at
-                              ? new Date(delivery.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
-                              : <span className="text-gray-300">—</span>}
+                          <td
+                            className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}
+                          >
+                            {delivery.created_at ? (
+                              new Date(delivery.created_at).toLocaleDateString(
+                                "en-PH",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.bg} ${statusInfo.text}`}
+                            >
                               {statusInfo.label}
                             </span>
                           </td>
@@ -467,9 +1000,12 @@ export default function PaymentPage() {
                                 onClick={() => handleViewPayment(delivery)}
                                 className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
                               >
-                                Payment
+                                View Payment
                               </button>
-                              {canRoleProcess(currentUser?.role_id || 0, delivery.status_id) && (
+                              {canRoleProcess(
+                                currentUser?.role_id || 0,
+                                delivery.status_id,
+                              ) && (
                                 <button
                                   onClick={() => handleProcessPayment(delivery)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
@@ -478,12 +1014,42 @@ export default function PaymentPage() {
                                   Process
                                 </button>
                               )}
-                              {canIssueNORSA(currentUser?.role_id || 0, delivery.status_id) && (
+                              {canIssueNORSA(
+                                currentUser?.role_id || 0,
+                                delivery.status_id,
+                              ) && (
                                 <button
                                   onClick={() => handleIssueNORSA(delivery)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
                                 >
                                   NORSA
+                                </button>
+                              )}
+                              {isAccountingAccount && (
+                                <>
+                                  <button
+                                    onClick={() => handleDebugBackStatus(delivery)}
+                                    className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
+                                  >
+                                    <RiArrowLeftLine size={14} />
+                                    Back
+                                  </button>
+                                  <button
+                                    onClick={() => handleDebugToggleStatus(delivery)}
+                                    className="px-2 py-1 text-xs font-semibold rounded border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
+                                  >
+                                    <RiArrowRightLine size={14} />
+                                    Forward
+                                  </button>
+                                </>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleDeletePayment(delivery)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
+                                >
+                                  <RiDeleteBinLine size={14} />
+                                  Delete
                                 </button>
                               )}
                               <button
@@ -505,7 +1071,9 @@ export default function PaymentPage() {
               {/* Pagination */}
               <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, sortedDeliveries.length)} of {sortedDeliveries.length} entries
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(startIndex + PAGE_SIZE, sortedDeliveries.length)} of{" "}
+                  {sortedDeliveries.length} entries
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -515,7 +1083,7 @@ export default function PaymentPage() {
                   >
                     <RiArrowLeftLine size={14} />
                   </button>
-                  
+
                   {/* Page numbers */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -528,7 +1096,7 @@ export default function PaymentPage() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
@@ -543,7 +1111,7 @@ export default function PaymentPage() {
                       </button>
                     );
                   })}
-                  
+
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => p + 1)}
@@ -565,46 +1133,12 @@ export default function PaymentPage() {
           delivery={selectedDelivery}
           iar={iarData}
           loa={loaData}
-          dv={dvData}
           poData={poData}
           onClose={() => setViewModalOpen(false)}
         />
       )}
 
-      {selectedDelivery && processModalOpen && (
-        <ProcessDeliveryModal
-          visible={processModalOpen}
-          active={selectedDelivery}
-          onClose={() => setProcessModalOpen(false)}
-          onSubmit={async () => {
-            // Handle payment processing
-            console.log("Payment processing");
-            setProcessModalOpen(false);
-          }}
-          statusLabel="Payment Processing"
-          drNo=""
-          setDrNo={() => {}}
-          soaNo=""
-          setSoaNo={() => {}}
-          notes=""
-          setNotes={() => {}}
-          iar={iarData}
-          setIar={() => {}}
-          loa={loaData}
-          setLoa={() => {}}
-          dv={dvData}
-          setDv={() => {}}
-          statusFlag={statusFlag}
-          onPressStatusFlag={() => setFlagPickerOpen(true)}
-          flagPickerOpen={flagPickerOpen}
-          onCloseFlagPicker={() => setFlagPickerOpen(false)}
-          onSelectStatusFlag={(flag) => setStatusFlag(flag)}
-          onPreviewIAR={() => handlePreviewDocument('iar')}
-          onPreviewLOA={() => handlePreviewDocument('loa')}
-          onPreviewDV={() => handlePreviewDocument('dv')}
-        />
-      )}
-
+      
       {selectedDelivery && remarksModalOpen && (
         <RemarksModal
           visible={remarksModalOpen}
@@ -631,24 +1165,101 @@ export default function PaymentPage() {
           active={selectedDelivery}
           onClose={() => setPaymentProcessModalOpen(false)}
           onSubmit={async () => {
-            // Handle payment processing
-            console.log("Payment processing");
-            setPaymentProcessModalOpen(false);
+            // Handle payment processing with proper status transition
+            try {
+              console.log("Payment processing onSubmit called");
+              console.log("selectedDelivery:", selectedDelivery);
+              console.log("statusFlag:", statusFlag);
+              console.log("selectedDelivery ID:", selectedDelivery?.id);
+              console.log("selectedDelivery status_id:", selectedDelivery?.status_id);
+              
+              if (!selectedDelivery) {
+                console.error("Missing selected delivery for payment processing");
+                alert("No delivery selected. Please select a delivery and try again.");
+                return;
+              }
+              if (!statusFlag) {
+                console.error("Missing status flag for payment processing");
+                alert("Please set a status flag before processing payment.");
+                return;
+              }
+
+              // Get the next status based on current status
+              let nextStatusId: number;
+              switch (selectedDelivery.status_id) {
+                case 28: // Payment Pending
+                  nextStatusId = 29; // Move to Voucher Verification
+                  break;
+                case 29: // Voucher Verification
+                  nextStatusId = 30; // Move to Accounting Review
+                  break;
+                case 30: // Accounting Review
+                  nextStatusId = 31; // Move to Budget Review
+                  break;
+                case 31: // Budget Review
+                  nextStatusId = 32; // Move to Final Approval
+                  break;
+                case 32: // Final Approval
+                  nextStatusId = 35; // Move to Payment Completed
+                  break;
+                default:
+                  console.error("Invalid status for payment processing");
+                  return;
+              }
+
+              // Update delivery status
+              await updateDeliveryStatusOnly(selectedDelivery.id, nextStatusId);
+
+              // Insert processing remark
+              const stepLabel = selectedDelivery.status_id === 28 ? "Payment Pending" :
+                              selectedDelivery.status_id === 29 ? "Voucher Verification" :
+                              selectedDelivery.status_id === 30 ? "Account Review" :
+                              selectedDelivery.status_id === 31 ? "Budget Review" :
+                              selectedDelivery.status_id === 32 ? "PARPO Approval" : "Unknown Step";
+              
+              await insertDeliveryProcessRemark(
+                selectedDelivery.id,
+                currentUser?.id || null,
+                `Payment processing completed for ${stepLabel}`,
+                getFlagId(statusFlag),
+                "payment"
+              );
+
+              // Refresh the deliveries list
+              const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
+              
+              // Apply client-side filtering based on user role (same logic as Dashboard)
+              const filteredDeliveries = deliveriesData.filter(delivery => {
+                // Admin and specialized roles see all payment data
+                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+                  return true;
+                }
+                
+                // Division heads and end users see payment data from their division based on office_section
+                return delivery.office_section === currentUser?.divisions?.division_name;
+              });
+              
+              setDeliveries(filteredDeliveries as any);
+
+              setPaymentProcessModalOpen(false);
+            } catch (error) {
+              console.error("Error processing payment:", error);
+            }
           }}
           statusLabel="Payment Processing"
           statusFlag={statusFlag}
-          onPressStatusFlag={() => setFlagPickerOpen(true)}
-          flagPickerOpen={flagPickerOpen}
-          onCloseFlagPicker={() => setFlagPickerOpen(false)}
           onSelectStatusFlag={(flag) => setStatusFlag(flag)}
           onPreviewDocument={handlePreviewPaymentDocument}
           voucher={iarData}
           ors={loaData}
           dv={dvData}
+          iar={iarData}
+          loa={loaData}
           poData={poData}
         />
       )}
 
+      
       {selectedDelivery && norsaModalOpen && (
         <NORSAModal
           visible={norsaModalOpen}
@@ -659,6 +1270,37 @@ export default function PaymentPage() {
             console.log("NORSA issued:", norsaData);
             setNorsaModalOpen(false);
           }}
+        />
+      )}
+
+      {selectedDelivery && deletePaymentModalOpen && (
+        <DeletePaymentModal
+          visible={deletePaymentModalOpen}
+          deliveryId={selectedDelivery.id}
+          deliveryNo={selectedDelivery.delivery_no}
+          onClose={() => setDeletePaymentModalOpen(false)}
+          onDeleted={async (deliveryId) => {
+            // Refresh the deliveries list after deletion
+            try {
+              const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
+              
+              // Apply client-side filtering based on user role (same logic as Dashboard)
+              const filteredDeliveries = deliveriesData.filter(delivery => {
+                // Admin and specialized roles see all payment data
+                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+                  return true;
+                }
+                
+                // Division heads and end users see payment data from their division based on office_section
+                return delivery.office_section === currentUser?.divisions?.division_name;
+              });
+              
+              setDeliveries(filteredDeliveries as any);
+            } catch (error) {
+              console.error("Error refreshing payment data:", error);
+            }
+          }}
+          roleId={currentUser?.role_id}
         />
       )}
     </div>

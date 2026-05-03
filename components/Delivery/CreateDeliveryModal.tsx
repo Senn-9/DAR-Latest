@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RiCloseLine, RiSearchLine, RiCalendarLine } from "react-icons/ri";
+import { RiCloseLine, RiSearchLine } from "react-icons/ri";
 
 interface CreateDeliveryModalProps {
   visible: boolean;
-  deliveryNo: string;
-  setDeliveryNo: (v: string) => void;
-  expectedDeliveryDate: string;
-  setExpectedDeliveryDate: (v: string) => void;
   poOptions: any[];
   selectedPoId: number | null;
   setSelectedPoId: (v: number) => void;
@@ -19,10 +15,6 @@ interface CreateDeliveryModalProps {
 
 export default function CreateDeliveryModal({
   visible,
-  deliveryNo,
-  setDeliveryNo,
-  expectedDeliveryDate,
-  setExpectedDeliveryDate,
   poOptions,
   selectedPoId,
   setSelectedPoId,
@@ -35,14 +27,6 @@ export default function CreateDeliveryModal({
 
   const validateFields = () => {
     const errors = [];
-    
-    if (!deliveryNo.trim()) {
-      errors.push("Delivery No. is required");
-    }
-    
-    if (!expectedDeliveryDate) {
-      errors.push("Expected Delivery Date is required");
-    }
     
     if (!selectedPoId) {
       errors.push("Please select a PO");
@@ -116,7 +100,7 @@ export default function CreateDeliveryModal({
               </p>
               <h2 className="text-xl font-bold">Log Delivery</h2>
               <p className="text-sm text-white/80 mt-0.5">
-                Choose a served PO and encode delivery details.
+                Choose a served PO to log delivery.
               </p>
             </div>
             <button
@@ -130,37 +114,6 @@ export default function CreateDeliveryModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Delivery Details */}
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-              Delivery Details
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Delivery No. <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={deliveryNo}
-                  onChange={(e) => setDeliveryNo(e.target.value)}
-                  placeholder="e.g. DEL-2026-0012"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Expected Delivery Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={expectedDeliveryDate}
-                  onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
-              </div>
-            </div>
-          </div>
 
           {/* PO Candidates */}
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
@@ -300,14 +253,10 @@ export default function CreateDeliveryModal({
           <button
             onClick={handleSubmit}
             disabled={
-              !deliveryNo.trim() || 
-              !expectedDeliveryDate || 
               !selectedPoId ||
               Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
             }
             className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold transition-colors ${
-              !deliveryNo.trim() || 
-              !expectedDeliveryDate || 
               !selectedPoId ||
               Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
                 ? "bg-gray-300 cursor-not-allowed"

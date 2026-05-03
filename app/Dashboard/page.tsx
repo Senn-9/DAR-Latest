@@ -167,7 +167,7 @@ export default function DashboardPage() {
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
           const isPaymentPhase = [35, 26, 27, 28, 29, 30, 31, 32, 36].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
           
           let statusText = 'Unknown';
           let source: 'delivery' | 'payment' = 'delivery';
@@ -291,13 +291,11 @@ export default function DashboardPage() {
       20: { name: "Delivery (IAR)", color: "delivery" },
       21: { name: "Delivery (IAR Processing)", color: "delivery" },
       22: { name: "Delivery (LOA)", color: "delivery" },
-      23: { name: "Delivery (DV)", color: "delivery" },
-      24: { name: "Delivery (Division Chief)", color: "delivery" },
-      25: { name: "Delivery (Completed)", color: "delivery" },
+      25: { name: "Delivery (Division Chief)", color: "delivery" },
       26: { name: "Payment", color: "payment" },
       27: { name: "Cancelled", color: "rejected" },
-      28: { name: "Payment", color: "payment" },
-      29: { name: "Payment", color: "payment" },
+      28: { name: "Payment ", color: "payment" },
+      29: { name: "Payment (Voucher)", color: "payment" },
       30: { name: "Payment", color: "payment" },
       31: { name: "Payment", color: "payment" },
       32: { name: "Payment", color: "payment" },
