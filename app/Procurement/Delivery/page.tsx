@@ -202,7 +202,7 @@ export default function DeliveryPage() {
 
   const filterDeliveryData = (data: any[]) => {
 
-    const paymentStatuses = [28, 29, 30, 31, 32, 35];
+    const paymentStatuses = [28, 29, 30, 32, 33, 34, 35, 36];
 
     return data.filter((delivery) => {
 
@@ -264,8 +264,6 @@ export default function DeliveryPage() {
 
 
     25: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Delivery (Division Chief)" },
-
-    36: { bg: "bg-gray-50", text: "text-gray-800", label: "On Hold" },
 
     27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
 
@@ -588,7 +586,7 @@ export default function DeliveryPage() {
 
       if (selectedDelivery.status_id === 25) {
 
-        nextStatus = 29; // Division Chief approval goes to Voucher Verification (Phase 4)
+        nextStatus = 28; // Division Chief approval → Payment Pending (Phase 4)
 
         // Ensure LOA and IAR documents are available for payment phase
         // These documents are required for Voucher Verification
@@ -596,21 +594,21 @@ export default function DeliveryPage() {
         // Check if IAR document exists, if not, warn the user
         const iarData = await fetchIARByDelivery(selectedDelivery.id);
         if (!iarData || Object.keys(iarData).length === 0) {
-          alert("Warning: No IAR document found. IAR is required for Voucher Verification in Payment Phase 4.");
+          alert("Warning: No IAR document found. IAR is required for the payment phase.");
         }
         
         // Check if LOA document exists, if not, warn the user
         const loaData = await fetchLOAByDelivery(selectedDelivery.id);
         if (!loaData || Object.keys(loaData).length === 0) {
-          alert("Warning: No LOA document found. LOA is required for Voucher Verification in Payment Phase 4.");
+          alert("Warning: No LOA document found. LOA is required for the payment phase.");
         }
 
       }
 
       // Normal sequential progression for all other statuses
 
-      // 18→19→20→21→22→25→29→(Phase 4) - DV (23) and End-User Forward (24) are skipped
-      // Phase 3: Delivery (18-25) → Phase 4: Payment (29-32,35) starting with Voucher Verification
+      // 18→19→20→21→22→25→28→(Phase 4) - DV (23) and End-User Forward (24) are skipped
+      // Phase 3: Delivery (18-25) → Phase 4: Payment (28–36, no budget step 31)
 
 
 
@@ -1470,7 +1468,7 @@ export default function DeliveryPage() {
 
                       const deliveryStatuses = [18, 19, 20, 21, 22, 23, 24, 25];
 
-                      const systemStatuses = [27, 36]; // Cancelled, On Hold
+                      const systemStatuses = [27]; // Cancelled
 
                       return deliveryStatuses.includes(s.id) || systemStatuses.includes(s.id);
 

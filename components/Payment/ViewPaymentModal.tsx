@@ -27,22 +27,25 @@ export default function ViewPaymentModal({
 
   const paymentStatuses = [
     { id: 28, label: "Payment Pending", color: "bg-yellow-100 text-yellow-800" },
-    { id: 29, label: "Payment Processing", color: "bg-orange-100 text-orange-800" },
+    { id: 29, label: "Voucher Verification", color: "bg-orange-100 text-orange-800" },
     { id: 30, label: "Accounting Review", color: "bg-purple-100 text-purple-800" },
-    { id: 31, label: "Budget Review", color: "bg-teal-100 text-teal-800" },
-    { id: 32, label: "Final Approval", color: "bg-cyan-100 text-cyan-800" },
-    { id: 35, label: "Payment Completed", color: "bg-emerald-100 text-emerald-800" },
+    { id: 32, label: "PARPO Approval", color: "bg-cyan-100 text-cyan-800" },
+    { id: 33, label: "Forward to Cash", color: "bg-indigo-100 text-indigo-800" },
+    { id: 34, label: "Forward to PARPO office for signature", color: "bg-sky-100 text-sky-800" },
+    { id: 35, label: "Forward to Accounting for Tax processing", color: "bg-amber-100 text-amber-900" },
+    { id: 36, label: "Payment completed", color: "bg-emerald-100 text-emerald-800" },
   ];
 
   const currentStatus = paymentStatuses.find(s => s.id === delivery?.status_id) || paymentStatuses[0];
 
   const timeline = [
-    { step: 1, title: "Voucher Verification", status: delivery?.status_id >= 28 ? "completed" : "pending", date: voucher?.verification_date },
+    { step: 1, title: "Voucher Verification", status: delivery?.status_id >= 29 ? "completed" : "pending", date: voucher?.verification_date },
     { step: 2, title: "Accounting Review", status: delivery?.status_id >= 30 ? "completed" : "pending", date: voucher?.account_review_date },
-    { step: 3, title: "Budget Check", status: delivery?.status_id >= 31 ? "completed" : "pending", date: ors?.budget_review_date },
-    { step: 4, title: "PARPO Approval", status: delivery?.status_id >= 32 ? "completed" : "pending", date: dv?.parpo_approval_date },
-    { step: 5, title: "Cash Processing", status: delivery?.status_id >= 32 ? "completed" : "pending", date: dv?.cash_processing_date },
-    { step: 6, title: "Final Approval", status: delivery?.status_id >= 35 ? "completed" : "pending", date: dv?.final_approval_date },
+    { step: 3, title: "PARPO Approval", status: delivery?.status_id >= 32 ? "completed" : "pending", date: dv?.parpo_approval_date },
+    { step: 4, title: "Forward to Cash", status: delivery?.status_id >= 33 ? "completed" : "pending", date: dv?.cash_processing_date },
+    { step: 5, title: "PARPO office signature", status: delivery?.status_id >= 34 ? "completed" : "pending", date: dv?.parpo_approval_date },
+    { step: 6, title: "Accounting — Tax processing", status: delivery?.status_id >= 35 ? "completed" : "pending", date: voucher?.account_review_date },
+    { step: 7, title: "Cash release / completed", status: delivery?.status_id >= 36 ? "completed" : "pending", date: dv?.final_approval_date },
   ];
 
   useEffect(() => {
@@ -214,7 +217,7 @@ export default function ViewPaymentModal({
 
           {activeTab === "ors" && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Obligation Request & Status (ORS)</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Obligation Request (ORS)</h3>
               {ors ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,25 +225,7 @@ export default function ViewPaymentModal({
                       <label className="block text-sm font-medium text-gray-700">ORS Number</label>
                       <p className="text-sm text-gray-900 mt-1">{ors.ors_no || "N/A"}</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Budget Officer</label>
-                      <p className="text-sm text-gray-900 mt-1">{ors.budget_officer_name || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Budget Status</label>
-                      <p className="text-sm text-gray-900 mt-1">{ors.budget_status || "Not Set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Budget Review Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{ors.budget_review_date || "N/A"}</p>
-                    </div>
                   </div>
-                  {ors.budget_notes && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Budget Review Notes</label>
-                      <p className="text-sm text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg">{ors.budget_notes}</p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">

@@ -196,8 +196,8 @@ export default function ProcurementPage() {
         
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [35, 26, 27, 28, 29, 30, 31, 32, 36].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23].includes(delivery.status_id);
+          const isPaymentPhase = [26, 27, 28, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
           
           let source: 'delivery' | 'payment' = 'delivery';
           
@@ -300,18 +300,17 @@ export default function ProcurementPage() {
       20: { name: "Delivery (IAR)",            color: "delivery"   },
       21: { name: "Delivery (IAR Processing)", color: "delivery" },
       22: { name: "Delivery (LOA)",            color: "delivery"   },
-      25: { name: "Payment (PARPO)",           color: "payment"    },
-      26: { name: "Payment (DVS)",             color: "payment"    },
-      27: { name: "Payment (Approved)",        color: "payment"    },
-      28: { name: "Payment (PARPO)",           color: "payment"    },
-      29: { name: "Payment (ORS)",             color: "payment"    },
-      30: { name: "Payment", color: "payment"    },
-      31: { name: "Payment (Tax Processing)",  color: "payment"    },
-      32: { name: "Payment (Releasing)",       color: "payment"    },
-      33: { name: "Completed (PR Phase)",      color: "completed"  },
-      34: { name: "Completed (PO Phase)",      color: "completed"  },
-      35: { name: "Completed (Delivery Phase)", color: "payment" },
-      36: { name: "Completed (Payment Phase)", color: "payment"  },
+      25: { name: "Delivery (Division Chief)", color: "delivery"   },
+      26: { name: "Payment (cancelled)",       color: "payment"    },
+      27: { name: "Cancelled",                 color: "rejected"   },
+      28: { name: "Payment Pending",           color: "payment"    },
+      29: { name: "Voucher Verification",    color: "payment"    },
+      30: { name: "Accounting Review",         color: "payment"    },
+      32: { name: "PARPO Approval",            color: "payment"    },
+      33: { name: "Forward to Cash",           color: "payment"    },
+      34: { name: "PARPO office signature",    color: "payment"    },
+      35: { name: "Accounting — Tax",          color: "payment"    },
+      36: { name: "Payment completed",         color: "completed"  },
       37: { name: "Cancelled",                 color: "rejected"   },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };

@@ -356,19 +356,25 @@ export default function ProcessPaymentModal({
   const [iarData, setIarData] = useState(iar || {});
   const [loaData, setLoaData] = useState(loa || {});
 
-  // Get current step based on delivery status
+  // Action label for the transition out of the current status (matches Payment page onSubmit)
   const getCurrentStepInfo = () => {
     switch (active?.status_id) {
-      case 28: // Payment Pending
-        return { step: 1, label: "Voucher Verification", nextStatus: 29 };
-      case 29: // Voucher Verification
-        return { step: 1, label: "Voucher Verification", nextStatus: 30 };
-      case 30: // Accounting Review
-        return { step: 2, label: "Account Review", nextStatus: 32 };
-      case 32: // Final Approval
-        return { step: 3, label: "PARPO Approval", nextStatus: 35 };
+      case 28:
+        return { step: 1, label: "Advance to Voucher Verification", nextStatus: 29 };
+      case 29:
+        return { step: 2, label: "Complete Voucher Verification", nextStatus: 30 };
+      case 30:
+        return { step: 3, label: "Complete Accounting Review", nextStatus: 32 };
+      case 32:
+        return { step: 4, label: "Complete PARPO Approval", nextStatus: 33 };
+      case 33:
+        return { step: 5, label: "Complete Forward to Cash", nextStatus: 34 };
+      case 34:
+        return { step: 6, label: "Complete PARPO signature routing", nextStatus: 35 };
+      case 35:
+        return { step: 7, label: "Complete Tax processing handoff", nextStatus: 36 };
       default:
-        return { step: 1, label: "Voucher Verification", nextStatus: 29 };
+        return { step: 1, label: "Advance to Voucher Verification", nextStatus: 29 };
     }
   };
 
@@ -402,17 +408,27 @@ export default function ProcessPaymentModal({
       setIarData(iar || {});
       setLoaData(loa || {});
       
-      // Set current step based on delivery status
       switch (active?.status_id) {
-        case 28: // Payment Pending
-        case 29: // Payment Processing
-          setCurrentStep(1); // Verify Voucher
+        case 28:
+          setCurrentStep(1);
           break;
-        case 30: // Accounting Review
-          setCurrentStep(2); // Account Review
+        case 29:
+          setCurrentStep(2);
           break;
-        case 32: // Final Approval
-          setCurrentStep(3); // PARPO Approval
+        case 30:
+          setCurrentStep(3);
+          break;
+        case 32:
+          setCurrentStep(4);
+          break;
+        case 33:
+          setCurrentStep(5);
+          break;
+        case 34:
+          setCurrentStep(6);
+          break;
+        case 35:
+          setCurrentStep(7);
           break;
         default:
           setCurrentStep(1);
@@ -453,47 +469,90 @@ export default function ProcessPaymentModal({
 
   const renderFormContent = () => {
     switch (active?.status_id) {
-      case 28: // Payment Pending
-      case 29: // Voucher Verification
+      case 28:
         return (
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Step 1: Voucher Verification</h3>
-            
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Payment Pending</h3>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-900">
+                <strong>Payment Pending:</strong> The delivery is in the payment queue. Confirm readiness to begin voucher verification and supporting documents review.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 29:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Voucher Verification</h3>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Voucher Verification:</strong> This step involves reviewing the payment voucher and supporting documents to ensure all required information is accurate and complete. The verification process includes checking the Inspection and Acceptance Report (IAR) and Letter of Acceptance (LOA) documents for compliance with procurement regulations and proper authorization. Set the appropriate status flag to proceed to the next step.
+                <strong>Voucher Verification:</strong> Review the payment voucher and supporting documents. Confirm IAR and LOA where applicable. Set the status flag when this verification is done.
               </p>
             </div>
           </div>
         );
 
-      case 30: // Accounting Review
+      case 30:
         return (
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Step 2: Account Review</h3>
-            
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Accounting Review</h3>
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-purple-800">
-                <strong>Accounting Review:</strong> This is the critical financial validation step where the accounting department reviews all payment documents for accuracy, completeness, and compliance with accounting standards and government regulations. The review includes verification of fund availability, proper allocation, budgetary compliance, and ensuring all supporting documents are properly authenticated. This step prevents financial discrepancies and ensures proper fund management before proceeding to budget review.
+                <strong>Accounting Review:</strong> Validate financial documents for accuracy and compliance before the file moves to PARPO for approval.
               </p>
             </div>
           </div>
         );
 
-      case 32: // Final Approval
+      case 32:
         return (
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Step 3: PARPO Approval</h3>
-            
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">PARPO Approval</h3>
             <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-cyan-800">
-                <strong>PARPO Approval:</strong> This is the final authorization step where the Procurement Administrative and Regulatory Processing Officer (PARPO) provides the ultimate approval for payment processing. This step represents the culmination of all previous reviews and confirms that the payment request has passed all necessary validations including voucher verification, accounting review, and budget availability. Upon approval, the payment proceeds to disbursement and the entire procurement cycle moves toward completion.
+                <strong>PARPO Approval:</strong> Procurement sign-off on the payment package before it is routed to Cash.
               </p>
             </div>
           </div>
         );
 
-      
+      case 33:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Forward to Cash</h3>
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-indigo-900">
+                <strong>Forward to Cash:</strong> Route the voucher to Cash for classification (e.g. check vs LLDAP) and encoding in EMDS as required.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 34:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">PARPO office signature</h3>
+            <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-sky-900">
+                <strong>Forward to PARPO office for signature:</strong> Complete PARPO office signature requirements before returning the file for tax processing.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 35:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Accounting — Tax processing</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-amber-900">
+                <strong>Forward to Accounting for Tax processing:</strong> BIR 2307, JEV, and related tax steps before release.
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -519,8 +578,6 @@ export default function ProcessPaymentModal({
             <h4 className="text-lg font-semibold">ORS Preview</h4>
             <div className="space-y-2">
               <p><strong>ORS No:</strong> {orsData.ors_no || "N/A"}</p>
-              <p><strong>Budget Officer:</strong> {orsData.budget_officer_name || "N/A"}</p>
-              <p><strong>Budget Status:</strong> {orsData.budget_status || "Not Set"}</p>
             </div>
           </div>
         );
@@ -598,10 +655,15 @@ export default function ProcessPaymentModal({
                 Current Status
               </p>
               <p className="text-xs text-gray-500">
-                {active?.status_id === 28 ? "Payment Pending" : 
+                {active?.status_id === 28 ? "Payment Pending" :
                  active?.status_id === 29 ? "Voucher Verification" :
                  active?.status_id === 30 ? "Accounting Review" :
-                 active?.status_id === 32 ? "Final Approval" : "Unknown"}
+                 active?.status_id === 32 ? "PARPO Approval" :
+                 active?.status_id === 33 ? "Forward to Cash" :
+                 active?.status_id === 34 ? "Forward to PARPO office for signature" :
+                 active?.status_id === 35 ? "Forward to Accounting for Tax processing" :
+                 active?.status_id === 36 ? "Payment completed" :
+                 "Unknown"}
               </p>
             </div>
           </div>
@@ -714,8 +776,7 @@ export default function ProcessPaymentModal({
                   Voucher
                 </button>
                 
-                {/* Show IAR and LOA for Voucher Verification (status 29) */}
-                {(active?.status_id === 29) && (
+                {(active?.status_id === 28 || active?.status_id === 29) && (
                   <>
                     <button
                       onClick={() => setSelectedDocument("iar")}

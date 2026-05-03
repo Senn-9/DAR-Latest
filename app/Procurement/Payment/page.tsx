@@ -103,6 +103,9 @@ export default function PaymentPage() {
     currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
   const isAccountingAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+  const isCashAccount =
+    currentUser?.username?.toLowerCase() === "cash" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("cash") ?? false);
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -180,13 +183,27 @@ export default function PaymentPage() {
       text: "text-purple-800",
       label: "Accounting Review",
     },
-        32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "Final Approval" },
+    32: { bg: "bg-cyan-50", text: "text-cyan-800", label: "PARPO Approval" },
+    33: {
+      bg: "bg-indigo-50",
+      text: "text-indigo-800",
+      label: "Forward to Cash",
+    },
+    34: {
+      bg: "bg-sky-50",
+      text: "text-sky-800",
+      label: "Forward to PARPO office for signature",
+    },
     35: {
+      bg: "bg-amber-50",
+      text: "text-amber-900",
+      label: "Forward to Accounting for Tax processing",
+    },
+    36: {
       bg: "bg-emerald-100",
       text: "text-emerald-900",
-      label: "Payment Completed",
+      label: "Payment completed",
     },
-    36: { bg: "bg-gray-50", text: "text-gray-800", label: "On Hold" },
     26: { bg: "bg-red-50", text: "text-red-800", label: "Payment Cancelled" },
     27: { bg: "bg-red-50", text: "text-red-800", label: "Cancelled" },
   };
@@ -211,7 +228,7 @@ export default function PaymentPage() {
         // Apply client-side filtering based on user role (same logic as Dashboard)
         const filteredDeliveries = deliveriesData.filter(delivery => {
           // Admin and specialized roles see all payment data
-          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
             return true;
           }
           
@@ -234,13 +251,14 @@ export default function PaymentPage() {
     if (currentUser) {
       fetchPaymentData();
     }
-  }, [currentUser, isAdmin]);
+  }, [currentUser, isAdmin, isCashAccount]);
 
   const getPaymentStatusCategory = (statusId: number) => {
     // Map status IDs to filter categories
     if (statusId === 22) return "loa-processing"; // LOA Processing
-    if ([24, 25, 28, 29, 30, 32, 36].includes(statusId)) return "pending-review"; // Pending Review (including On Hold)
-    if (statusId === 35) return "completed"; // Payment Completed
+    if ([24, 25, 28, 29, 30, 32, 33, 34, 35].includes(statusId))
+      return "pending-review";
+    if (statusId === 36) return "completed";
     if ([26, 27].includes(statusId)) return "cancelled"; // Cancelled
     return "other"; // Other statuses
   };
@@ -301,18 +319,26 @@ export default function PaymentPage() {
   );
 
   const canRoleProcess = (roleId: number, statusId: number) => {
-    // Define role permissions for payment processing by status
+    const adminOrAccounting = [1, 9].includes(roleId);
+    const adminOrParpo = [1, 5].includes(roleId);
+    const adminOrCash = roleId === 1 || isCashAccount;
     switch (statusId) {
-      case 28: // Payment Pending
-        return [1, 9].includes(roleId); // Admin, Accounting
-      case 29: // Payment Processing
-        return [1, 9].includes(roleId); // Admin, Accounting
-      case 30: // Accounting Review
-        return [1, 9].includes(roleId); // Admin, Accounting
-            case 32: // Final Approval
-        return [1, 5].includes(roleId); // Admin, PARPO
-      case 35: // Payment Completed
-        return false; // No processing needed
+      case 28:
+        return adminOrAccounting;
+      case 29:
+        return adminOrAccounting;
+      case 30:
+        return adminOrAccounting;
+      case 32:
+        return adminOrParpo;
+      case 33:
+        return adminOrCash;
+      case 34:
+        return adminOrParpo;
+      case 35:
+        return adminOrAccounting;
+      case 36:
+        return false;
       default:
         return false;
     }
@@ -361,8 +387,8 @@ export default function PaymentPage() {
     
     // Don't reset status flag - let user maintain their selection during the session
     
-    // Fetch IAR, LOA, and PO data for Voucher Verification (status 29)
-    if (delivery.status_id === 29) {
+    // Fetch IAR, LOA, and PO data for Payment Pending / Voucher Verification
+    if (delivery.status_id === 28 || delivery.status_id === 29) {
       try {
         console.log("Fetching IAR, LOA, and PO data for Voucher Verification...");
         const [iar, loa, poDataResult] = await Promise.all([
@@ -410,20 +436,22 @@ export default function PaymentPage() {
     }
 
     // Define the forward-only status sequence for accounting
-    const statusSequence = {
-      28: 29, // Payment Pending -> Voucher Verification
-      29: 30, // Voucher Verification -> Accounting Review
-      30: 32, // Accounting Review -> Final Approval (skip Budget Review)
-      32: 35, // Final Approval -> Payment Completed
-      26: 28, // Payment Cancelled -> Payment Pending
-      27: 28, // Cancelled -> Payment Pending
-      36: 28, // On Hold -> Payment Pending
+    const statusSequence: Record<number, number> = {
+      28: 29,
+      29: 30,
+      30: 32,
+      32: 33,
+      33: 34,
+      34: 35,
+      35: 36,
+      26: 28,
+      27: 28,
     };
 
-    const nextStatusId = statusSequence[delivery.status_id as keyof typeof statusSequence];
+    const nextStatusId = statusSequence[delivery.status_id];
     
     if (!nextStatusId) {
-      if (delivery.status_id === 35) {
+      if (delivery.status_id === 36) {
         alert("Payment is already completed. Cannot move forward from completed status.");
       } else {
         alert(`Cannot advance from current status ID: ${delivery.status_id}`);
@@ -433,13 +461,15 @@ export default function PaymentPage() {
 
     const statusLabels: Record<number, string> = {
       28: "Payment Pending",
-      29: "Voucher Verification", 
+      29: "Voucher Verification",
       30: "Accounting Review",
       32: "PARPO Approval",
-      35: "Payment Completed",
+      33: "Forward to Cash",
+      34: "Forward to PARPO office for signature",
+      35: "Forward to Accounting for Tax processing",
+      36: "Payment completed",
       26: "Payment Cancelled",
       27: "Cancelled",
-      36: "On Hold",
     };
 
     const currentStatusLabel = statusLabels[delivery.status_id] || `Status ${delivery.status_id}`;
@@ -460,7 +490,7 @@ export default function PaymentPage() {
       // Refresh the deliveries data to show the updated status
       const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
       const filteredDeliveries = deliveriesData.filter(d => {
-        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
           return true;
         }
         return d.office_section === currentUser?.divisions?.division_name;
@@ -481,28 +511,37 @@ export default function PaymentPage() {
     }
 
     // Define the backward status sequence for accounting
-    const backStatusSequence = {
-      29: 28, // Voucher Verification -> Payment Pending
-      30: 29, // Accounting Review -> Voucher Verification
-      32: 30, // Final Approval -> Accounting Review (skip Budget Review)
-      35: 32, // Payment Completed -> Final Approval
-      28: 36, // Payment Pending -> On Hold (can't go back further, so go to on hold)
-      26: 36, // Payment Cancelled -> On Hold
-      27: 36, // Cancelled -> On Hold
-      36: 36, // On Hold -> On Hold (stay in on hold)
+    const backStatusSequence: Record<number, number> = {
+      29: 28,
+      30: 29,
+      32: 30,
+      33: 32,
+      34: 33,
+      35: 34,
+      36: 35,
     };
 
-    const backStatusId = backStatusSequence[delivery.status_id as keyof typeof backStatusSequence];
-    
+    const backStatusId = backStatusSequence[delivery.status_id];
+    if (backStatusId === undefined) {
+      alert(
+        delivery.status_id === 28
+          ? "Already at the first payment step."
+          : `Cannot move back from status ID: ${delivery.status_id}`,
+      );
+      return;
+    }
+
     const statusLabels: Record<number, string> = {
       28: "Payment Pending",
-      29: "Voucher Verification", 
+      29: "Voucher Verification",
       30: "Accounting Review",
-      32: "Final Approval",
-      35: "Payment Completed",
+      32: "PARPO Approval",
+      33: "Forward to Cash",
+      34: "Forward to PARPO office for signature",
+      35: "Forward to Accounting for Tax processing",
+      36: "Payment completed",
       26: "Payment Cancelled",
       27: "Cancelled",
-      36: "On Hold",
     };
 
     const currentStatusLabel = statusLabels[delivery.status_id] || `Status ${delivery.status_id}`;
@@ -523,7 +562,7 @@ export default function PaymentPage() {
       // Refresh the deliveries data to show the updated status
       const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
       const filteredDeliveries = deliveriesData.filter(d => {
-        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+        if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
           return true;
         }
         return d.office_section === currentUser?.divisions?.division_name;
@@ -786,7 +825,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                         {
               label: "Pending Review",
               value: deliveries.filter((d) =>
-                [24, 25, 28, 29, 30, 32].includes(d.status_id),
+                [24, 25, 28, 29, 30, 32, 33, 34, 35].includes(d.status_id),
               ).length,
               icon: <RiTimeLine />,
               bg: "bg-yellow-50",
@@ -797,7 +836,7 @@ async function buildLOAHtml(d: any): Promise<string> {
             },
             {
               label: "Completed",
-              value: deliveries.filter((d) => d.status_id === 35).length,
+              value: deliveries.filter((d) => d.status_id === 36).length,
               icon: <RiCheckboxCircleLine />,
               bg: "bg-emerald-50",
               border: "border-emerald-200",
@@ -939,9 +978,9 @@ async function buildLOAHtml(d: any): Promise<string> {
                   <tbody>
                     {pagedDeliveries.map((delivery, index) => {
                       const statusInfo = STATUS_CFG[delivery.status_id] || {
-                        bg: "bg-emerald-100",
-                        text: "text-emerald-900",
-                        label: "Payment Completed",
+                        bg: "bg-gray-100",
+                        text: "text-gray-800",
+                        label: "Unknown status",
                       };
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                       const canProcess = canRoleProcess(
@@ -1187,20 +1226,26 @@ async function buildLOAHtml(d: any): Promise<string> {
               // Get the next status based on current status
               let nextStatusId: number;
               switch (selectedDelivery.status_id) {
-                case 28: // Payment Pending
-                  nextStatusId = 29; // Move to Voucher Verification
+                case 28:
+                  nextStatusId = 29;
                   break;
-                case 29: // Voucher Verification
-                  nextStatusId = 30; // Move to Accounting Review
+                case 29:
+                  nextStatusId = 30;
                   break;
-                case 30: // Accounting Review
-                  nextStatusId = 31; // Move to Budget Review
+                case 30:
+                  nextStatusId = 32;
                   break;
-                case 31: // Budget Review
-                  nextStatusId = 32; // Move to Final Approval
+                case 32:
+                  nextStatusId = 33;
                   break;
-                case 32: // Final Approval
-                  nextStatusId = 35; // Move to Payment Completed
+                case 33:
+                  nextStatusId = 34;
+                  break;
+                case 34:
+                  nextStatusId = 35;
+                  break;
+                case 35:
+                  nextStatusId = 36;
                   break;
                 default:
                   console.error("Invalid status for payment processing");
@@ -1211,11 +1256,15 @@ async function buildLOAHtml(d: any): Promise<string> {
               await updateDeliveryStatusOnly(selectedDelivery.id, nextStatusId);
 
               // Insert processing remark
-              const stepLabel = selectedDelivery.status_id === 28 ? "Payment Pending" :
-                              selectedDelivery.status_id === 29 ? "Voucher Verification" :
-                              selectedDelivery.status_id === 30 ? "Account Review" :
-                              selectedDelivery.status_id === 31 ? "Budget Review" :
-                              selectedDelivery.status_id === 32 ? "PARPO Approval" : "Unknown Step";
+              const stepLabel =
+                selectedDelivery.status_id === 28 ? "Payment Pending" :
+                selectedDelivery.status_id === 29 ? "Voucher Verification" :
+                selectedDelivery.status_id === 30 ? "Accounting Review" :
+                selectedDelivery.status_id === 32 ? "PARPO Approval" :
+                selectedDelivery.status_id === 33 ? "Forward to Cash" :
+                selectedDelivery.status_id === 34 ? "Forward to PARPO office for signature" :
+                selectedDelivery.status_id === 35 ? "Forward to Accounting for Tax processing" :
+                "Unknown Step";
               
               await insertDeliveryProcessRemark(
                 selectedDelivery.id,
@@ -1231,7 +1280,7 @@ async function buildLOAHtml(d: any): Promise<string> {
               // Apply client-side filtering based on user role (same logic as Dashboard)
               const filteredDeliveries = deliveriesData.filter(delivery => {
                 // Admin and specialized roles see all payment data
-                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
                   return true;
                 }
                 
@@ -1287,7 +1336,7 @@ async function buildLOAHtml(d: any): Promise<string> {
               // Apply client-side filtering based on user role (same logic as Dashboard)
               const filteredDeliveries = deliveriesData.filter(delivery => {
                 // Admin and specialized roles see all payment data
-                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+                if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
                   return true;
                 }
                 

@@ -66,6 +66,9 @@ export default function DashboardPage() {
     currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
   const isAccountingAccount = 
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
+  const isCashAccount =
+    currentUser?.username?.toLowerCase() === "cash" ||
+    (currentUser?.roles?.role_name?.toLowerCase().includes("cash") ?? false);
 
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
@@ -166,7 +169,7 @@ export default function DashboardPage() {
         
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [35, 26, 27, 28, 29, 30, 31, 32, 36].includes(delivery.status_id);
+          const isPaymentPhase = [26, 27, 28, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
           const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
           
           let statusText = 'Unknown';
@@ -207,7 +210,7 @@ export default function DashboardPage() {
         
         const filteredData = allData.filter(item => {
           // Admin and specialized roles see all procurement data
-          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount) {
+          if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
             return true;
           }
           
@@ -222,7 +225,7 @@ export default function DashboardPage() {
         });
         
         console.log('Final filtered data:', filteredData.length);
-        console.log('User role:', { isAdmin, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, userDivision: currentUser?.divisions?.division_name });
+        console.log('User role:', { isAdmin, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, isCashAccount, userDivision: currentUser?.divisions?.division_name });
         
         setList(filteredData as PRListRow[]);
       } catch (error) {
@@ -265,7 +268,7 @@ export default function DashboardPage() {
       setLoading(false);
     };
     fetchData();
-  }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount]);
+  }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, isCashAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
     const statusById: Record<number, { name: string; color: string }> = {
@@ -294,13 +297,14 @@ export default function DashboardPage() {
       25: { name: "Delivery (Division Chief)", color: "delivery" },
       26: { name: "Payment", color: "payment" },
       27: { name: "Cancelled", color: "rejected" },
-      28: { name: "Payment ", color: "payment" },
-      29: { name: "Payment (Voucher)", color: "payment" },
-      30: { name: "Payment", color: "payment" },
-      31: { name: "Payment", color: "payment" },
-      32: { name: "Payment", color: "payment" },
-      35: { name: "Payment", color: "payment" },
-      36: { name: "Payment", color: "payment" },
+      28: { name: "Payment Pending", color: "payment" },
+      29: { name: "Voucher Verification", color: "payment" },
+      30: { name: "Accounting Review", color: "payment" },
+      32: { name: "PARPO Approval", color: "payment" },
+      33: { name: "Forward to Cash", color: "payment" },
+      34: { name: "PARPO signature", color: "payment" },
+      35: { name: "Tax processing", color: "payment" },
+      36: { name: "Payment completed", color: "payment" },
     };
 
     if (statusId != null && statusById[statusId]) {
@@ -628,7 +632,7 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-center gap-1">
                               {/* Edit button - only for End Users and PR in pending status */}
                               {form.source === 'pr' && (() => {
-                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
                                 return isEndUser && form.status_id === 1;
                               })() && (
                                 <button 
@@ -650,7 +654,7 @@ export default function DashboardPage() {
                               
                               {/* Process button - for all roles except End Users */}
                               {(() => {
-                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isAdmin;
+                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
                                 return !isEndUser;
                               })() && (
                                 <button 
@@ -667,14 +671,16 @@ export default function DashboardPage() {
                                         router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
                                       } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
                                         router.push(`/Procurement/Delivery?id=${form.id}`);
-                                      } else if ([26, 28, 29, 30, 31, 32, 35, 36].includes(form.status_id!)) {
+                                      } else if ([26, 28, 29, 30, 32, 33, 34, 35, 36].includes(form.status_id!)) {
                                         router.push(`/Procurement/Payment?id=${form.id}`);
                                       } else {
                                         router.push(`/Procurement?id=${form.id}`);
                                       }
                                     } else if (form.source === 'po') {
                                       router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
-                                    } else if (form.source === 'delivery' || form.source === 'payment') {
+                                    } else if (form.source === 'payment') {
+                                      router.push(`/Procurement/Payment?id=${form.id}`);
+                                    } else if (form.source === 'delivery') {
                                       router.push(`/Procurement/Delivery?id=${form.id}`);
                                     }
                                   }}
