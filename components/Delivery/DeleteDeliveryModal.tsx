@@ -43,7 +43,7 @@ export default function DeleteDeliveryModal({
   }, [visible, deliveryId]);
 
   if (!visible || deliveryId == null) return null;
-  if (roleId !== undefined && roleId !== 1) return null;
+  if (roleId !== undefined && roleId !== 1 && roleId !== 8) return null;
 
   const targetNo = preview?.deliveryNo ?? deliveryNo ?? `DEL#${deliveryId}`;
   const canConfirm =
@@ -67,7 +67,7 @@ export default function DeleteDeliveryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform -translate-y-1/2 top-1/2">
         {/* Header */}
         <div className="px-6 py-4 bg-red-700 text-white">
           <div className="flex items-center justify-between">

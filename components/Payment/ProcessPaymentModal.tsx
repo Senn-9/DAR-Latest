@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { RiCloseLine, RiEyeLine, RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiFilePdf2Line, RiZoomInLine, RiZoomOutLine, RiRefreshLine, RiMoneyDollarCircleLine, RiFileListLine, RiCalculatorLine } from "react-icons/ri";
-import { type StatusFlag, getFlagId } from "../StatusFlagPicker";
+import {
+  RiCloseLine,
+  RiEyeLine,
+  RiCheckLine,
+  RiFilePdf2Line,
+  RiFileTextLine,
+  RiTruckLine,
+  RiBuildingLine,
+} from "react-icons/ri";
+import { type StatusFlag } from "../StatusFlagPicker";
 
 // Template loading function
 async function loadTemplate(templateName: string): Promise<string> {
@@ -313,6 +321,118 @@ function LOADocumentPreview({ delivery, loa, poData }: { delivery: any; loa: any
   );
 }
 
+export type PaymentProcessDocType = "iar" | "loa" | "ors" | "dv";
+
+function documentsForStatus(statusId: number | undefined): PaymentProcessDocType[] {
+  switch (statusId) {
+    case 29:
+      return ["iar", "loa", "ors", "dv"];
+    case 30:
+      return ["ors", "dv", "iar", "loa"];
+    case 32:
+    case 33:
+      return ["dv", "ors"];
+    case 34:
+      return ["dv"];
+    case 35:
+      return ["ors", "dv"];
+    default:
+      return [];
+  }
+}
+
+function docTabLabel(tab: PaymentProcessDocType): string {
+  switch (tab) {
+    case "iar":
+      return "IAR";
+    case "loa":
+      return "LOA";
+    case "ors":
+      return "ORS";
+    case "dv":
+      return "DV";
+  }
+}
+
+function ChecklistRow({
+  checked,
+  onChange,
+  title,
+  subtitle,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <label className="flex gap-3 items-start p-3 rounded-xl border border-gray-200 bg-white hover:border-emerald-300/60 cursor-pointer transition-colors">
+      <input
+        type="checkbox"
+        className="mt-0.5 size-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-gray-900">{title}</p>
+        {subtitle ? <p className="text-xs text-gray-500 mt-0.5 leading-snug">{subtitle}</p> : null}
+      </div>
+    </label>
+  );
+}
+
+function DeliveryContextPanel({ active, poData }: { active: any; poData: any }) {
+  return (
+    <div className="flex flex-col h-full min-h-[280px]">
+      <div className="p-6 space-y-4">
+        <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Record</p>
+          <dl className="space-y-2.5 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500 shrink-0">Delivery No.</dt>
+              <dd className="font-mono font-semibold text-gray-900 text-right truncate">{active?.delivery_no ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500 shrink-0">PO No.</dt>
+              <dd className="font-mono font-medium text-gray-900 text-right truncate">{active?.po_no ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500 shrink-0">Supplier</dt>
+              <dd className="text-gray-900 text-right truncate">{active?.supplier ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500 shrink-0">Section</dt>
+              <dd className="text-gray-900 text-right truncate">{active?.office_section ?? "—"}</dd>
+            </div>
+            {poData?.total_amount != null && (
+              <div className="flex justify-between gap-4 pt-2 border-t border-emerald-100">
+                <dt className="text-gray-500 shrink-0">PO amount</dt>
+                <dd className="font-mono font-semibold text-emerald-900">
+                  ₱{Number(poData.total_amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Supporting documents (IAR, LOA, ORS, DV) open in the preview column on later steps. Advance to Voucher Verification when this record is ready.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const PAYMENT_FLOW_STRIP: { id: number; label: string }[] = [
+  { id: 28, label: "Pending" },
+  { id: 29, label: "Voucher" },
+  { id: 30, label: "Accounting" },
+  { id: 32, label: "PARPO" },
+  { id: 33, label: "Cash" },
+  { id: 34, label: "PARPO sig." },
+  { id: 35, label: "Tax" },
+  { id: 36, label: "Done" },
+];
+
 interface ProcessPaymentModalProps {
   visible: boolean;
   active: any;
@@ -321,7 +441,7 @@ interface ProcessPaymentModalProps {
   statusLabel: string;
   statusFlag: StatusFlag | null;
   onSelectStatusFlag: (flag: StatusFlag | null) => void;
-  onPreviewDocument: (type: 'voucher' | 'ors' | 'dv' | 'iar' | 'loa') => void;
+  onPreviewDocument: (type: PaymentProcessDocType) => void;
   voucher?: any;
   ors?: any;
   dv?: any;
@@ -339,7 +459,7 @@ export default function ProcessPaymentModal({
   statusFlag,
   onSelectStatusFlag,
   onPreviewDocument,
-  voucher,
+  voucher: _voucherUnused,
   ors,
   dv,
   iar,
@@ -347,94 +467,94 @@ export default function ProcessPaymentModal({
   poData,
 }: ProcessPaymentModalProps) {
   const formPaneRef = useRef<HTMLDivElement | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
   const [notes, setNotes] = useState("");
-  const [selectedDocument, setSelectedDocument] = useState<"voucher" | "ors" | "dv" | "iar" | "loa">("voucher");
-  const [voucherData, setVoucherData] = useState(voucher || {});
+  const [previewTab, setPreviewTab] = useState<PaymentProcessDocType | null>(null);
   const [orsData, setOrsData] = useState(ors || {});
   const [dvData, setDvData] = useState(dv || {});
   const [iarData, setIarData] = useState(iar || {});
   const [loaData, setLoaData] = useState(loa || {});
 
+  const [queueReady, setQueueReady] = useState(false);
+  const [iarReviewed, setIarReviewed] = useState(false);
+  const [loaReviewed, setLoaReviewed] = useState(false);
+  const [acctReconciled, setAcctReconciled] = useState(false);
+  const [parpoPackageOk, setParpoPackageOk] = useState(false);
+  const [cashRouted, setCashRouted] = useState(false);
+  const [parpoSignatureDone, setParpoSignatureDone] = useState(false);
+  const [bir2307Done, setBir2307Done] = useState(false);
+  const [jevDone, setJevDone] = useState(false);
+
   // Action label for the transition out of the current status (matches Payment page onSubmit)
   const getCurrentStepInfo = () => {
     switch (active?.status_id) {
       case 28:
-        return { step: 1, label: "Advance to Voucher Verification", nextStatus: 29 };
+        return { label: "Advance to Voucher Verification", nextStatus: 29 };
       case 29:
-        return { step: 2, label: "Complete Voucher Verification", nextStatus: 30 };
+        return { label: "Complete Voucher Verification", nextStatus: 30 };
       case 30:
-        return { step: 3, label: "Complete Accounting Review", nextStatus: 32 };
+        return { label: "Complete Accounting Review", nextStatus: 32 };
       case 32:
-        return { step: 4, label: "Complete PARPO Approval", nextStatus: 33 };
+        return { label: "Complete PARPO Approval", nextStatus: 33 };
       case 33:
-        return { step: 5, label: "Complete Forward to Cash", nextStatus: 34 };
+        return { label: "Complete Forward to Cash", nextStatus: 34 };
       case 34:
-        return { step: 6, label: "Complete PARPO signature routing", nextStatus: 35 };
+        return { label: "Complete PARPO signature routing", nextStatus: 35 };
       case 35:
-        return { step: 7, label: "Complete Tax processing handoff", nextStatus: 36 };
+        return { label: "Complete Tax processing handoff", nextStatus: 36 };
       default:
-        return { step: 1, label: "Advance to Voucher Verification", nextStatus: 29 };
+        return { label: "Advance to Voucher Verification", nextStatus: 29 };
     }
   };
 
   const currentStepInfo = getCurrentStepInfo();
 
-  // Validation function for current status
-  const validateCurrentStatus = () => {
-    // All payment statuses now only require status flag, no input fields needed
-    return true;
+  const stepChecklistOk = (): boolean => {
+    switch (active?.status_id) {
+      case 28:
+        return queueReady;
+      case 29:
+        return iarReviewed && loaReviewed;
+      case 30:
+        return acctReconciled;
+      case 32:
+        return parpoPackageOk;
+      case 33:
+        return cashRouted;
+      case 34:
+        return parpoSignatureDone;
+      case 35:
+        return bir2307Done && jevDone;
+      default:
+        return true;
+    }
   };
 
-  // Check if form is valid for submission
-  const isFormValid = validateCurrentStatus() && statusFlag !== null;
+  const isFormValid = stepChecklistOk() && statusFlag !== null;
 
-  // Debug status flag availability and form validation
-  useEffect(() => {
-    if (visible && active?.status_id === 29) {
-      console.log("Voucher Verification - Status Flag:", statusFlag);
-      console.log("Voucher Verification - Status Flag Required:", statusFlag !== null);
-      console.log("Voucher Verification - Form Valid:", isFormValid);
-      console.log("Voucher Verification - validateCurrentStatus:", validateCurrentStatus());
-    }
-  }, [visible, statusFlag, active?.status_id, isFormValid]);
+  const resetStepFields = () => {
+    setQueueReady(false);
+    setIarReviewed(false);
+    setLoaReviewed(false);
+    setAcctReconciled(false);
+    setParpoPackageOk(false);
+    setCashRouted(false);
+    setParpoSignatureDone(false);
+    setBir2307Done(false);
+    setJevDone(false);
+  };
 
   useEffect(() => {
     if (visible) {
       setNotes("");
-      setVoucherData(voucher || {});
+      resetStepFields();
       setOrsData(ors || {});
       setDvData(dv || {});
       setIarData(iar || {});
       setLoaData(loa || {});
-      
-      switch (active?.status_id) {
-        case 28:
-          setCurrentStep(1);
-          break;
-        case 29:
-          setCurrentStep(2);
-          break;
-        case 30:
-          setCurrentStep(3);
-          break;
-        case 32:
-          setCurrentStep(4);
-          break;
-        case 33:
-          setCurrentStep(5);
-          break;
-        case 34:
-          setCurrentStep(6);
-          break;
-        case 35:
-          setCurrentStep(7);
-          break;
-        default:
-          setCurrentStep(1);
-      }
+      const tabs = documentsForStatus(active?.status_id);
+      setPreviewTab(tabs[0] ?? null);
     }
-  }, [visible, voucher, ors, dv, iar, loa, active?.status_id]);
+  }, [visible, ors, dv, iar, loa, active?.status_id]);
 
   useEffect(() => {
     if (visible) {
@@ -448,409 +568,487 @@ export default function ProcessPaymentModal({
     onClose();
   };
 
-  const handleNext = () => {
-    if (!validateCurrentStatus()) {
-      alert("Validation failed. Please try again.");
-      return;
-    }
-    if (!statusFlag) {
-      alert("Please set a status flag before proceeding.");
-      return;
-    }
-    // For step-by-step processing, we don't navigate within the modal
-    // Each modal handles one status transition
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   const renderFormContent = () => {
     switch (active?.status_id) {
       case 28:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Payment Pending</h3>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-yellow-900">
-                <strong>Payment Pending:</strong> The delivery is in the payment queue. Confirm readiness to begin voucher verification and supporting documents review.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-yellow-800">Payment Pending</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Confirm this delivery is ready to enter voucher verification. Use the checklist and status flag before advancing.
+            </p>
+            <ChecklistRow
+              checked={queueReady}
+              onChange={setQueueReady}
+              title="Ready for voucher verification"
+              subtitle="Delivery, PO, and section are correct; you will move the record to Voucher Verification."
+            />
           </div>
         );
 
       case 29:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Voucher Verification</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Voucher Verification:</strong> Review the payment voucher and supporting documents. Confirm IAR and LOA where applicable. Set the status flag when this verification is done.
-              </p>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-800">Voucher verification</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Use the document preview to review IAR and LOA templates, and ORS/DV references. Confirm each line item below matches your review.
+            </p>
+            <div className="space-y-2">
+              <ChecklistRow
+                checked={iarReviewed}
+                onChange={setIarReviewed}
+                title="IAR reviewed"
+                subtitle="Inspection and acceptance aligns with delivery and PO."
+              />
+              <ChecklistRow
+                checked={loaReviewed}
+                onChange={setLoaReviewed}
+                title="LOA reviewed"
+                subtitle="Letter of acceptance is complete and consistent with IAR/PO."
+              />
             </div>
           </div>
         );
 
       case 30:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Accounting Review</h3>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-purple-800">
-                <strong>Accounting Review:</strong> Validate financial documents for accuracy and compliance before the file moves to PARPO for approval.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-purple-800">Accounting review</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Reconcile ORS and DV with supporting IAR/LOA. Confirm the package is accurate before PARPO approval.
+            </p>
+            <ChecklistRow
+              checked={acctReconciled}
+              onChange={setAcctReconciled}
+              title="Financial package reconciled"
+              subtitle="Amounts, references, and supporting documents are consistent and compliant."
+            />
           </div>
         );
 
       case 32:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">PARPO Approval</h3>
-            <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-cyan-800">
-                <strong>PARPO Approval:</strong> Procurement sign-off on the payment package before it is routed to Cash.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-800">PARPO approval</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              PARPO confirms the procurement and payment package. Review DV (and ORS) in the preview panel.
+            </p>
+            <ChecklistRow
+              checked={parpoPackageOk}
+              onChange={setParpoPackageOk}
+              title="PARPO approval confirmed"
+              subtitle="Procurement sign-off is justified; file may proceed to Cash."
+            />
           </div>
         );
 
       case 33:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Forward to Cash</h3>
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-indigo-900">
-                <strong>Forward to Cash:</strong> Route the voucher to Cash for classification (e.g. check vs LLDAP) and encoding in EMDS as required.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-800">Forward to Cash</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Cash classifies payment instrument (check, LLDAP, etc.) and handles EMDS encoding as applicable.
+            </p>
+            <ChecklistRow
+              checked={cashRouted}
+              onChange={setCashRouted}
+              title="Routed to Cash / classification logged"
+              subtitle="DV and ORS handed off for Cash processing."
+            />
           </div>
         );
 
       case 34:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">PARPO office signature</h3>
-            <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-sky-900">
-                <strong>Forward to PARPO office for signature:</strong> Complete PARPO office signature requirements before returning the file for tax processing.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-sky-800">PARPO office signature</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Complete required PARPO office signatures on the DV chain before tax processing.
+            </p>
+            <ChecklistRow
+              checked={parpoSignatureDone}
+              onChange={setParpoSignatureDone}
+              title="PARPO office signatures obtained"
+              subtitle="Signature block complete per internal procedure."
+            />
           </div>
         );
 
       case 35:
         return (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Accounting — Tax processing</h3>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-amber-900">
-                <strong>Forward to Accounting for Tax processing:</strong> BIR 2307, JEV, and related tax steps before release.
-              </p>
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-900">Tax processing</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Accounting completes BIR 2307, JEV, and related entries before final Cash release.
+            </p>
+            <div className="space-y-2">
+              <ChecklistRow
+                checked={bir2307Done}
+                onChange={setBir2307Done}
+                title="BIR 2307 / withholding completed"
+              />
+              <ChecklistRow checked={jevDone} onChange={setJevDone} title="JEV prepared and linked" />
             </div>
           </div>
         );
 
       default:
-        return null;
+        return (
+          <p className="text-sm text-gray-500">
+            This status is not configured for payment processing in this modal.
+          </p>
+        );
     }
   };
 
   const renderPreviewContent = () => {
-    switch (selectedDocument) {
-      case "voucher":
+    if (active?.status_id === 28) {
+      return <DeliveryContextPanel active={active} poData={poData} />;
+    }
+    
+    // Voucher verification status: use tab-based navigation
+    if (active?.status_id === 29) {
+      // Set default tab to IAR if no tab is selected
+      if (!previewTab) {
+        setPreviewTab("iar");
+      }
+      
+      // Use the same logic as other statuses but with tabs
+      if (!previewTab) {
         return (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Voucher Preview</h4>
-            <div className="space-y-2">
-              <p><strong>Voucher No:</strong> {voucherData.voucher_no || "N/A"}</p>
-              <p><strong>Amount:</strong> ₱{voucherData.amount || "0.00"}</p>
-              <p><strong>Status:</strong> {voucherData.verification_status || "Not Set"}</p>
-              <p><strong>Accountant:</strong> {voucherData.accountant_name || "N/A"}</p>
-            </div>
+          <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-500 text-sm">
+            <RiFileTextLine className="size-10 mb-2 opacity-40" aria-hidden />
+            Select a document to preview.
           </div>
         );
+      }
+      
+      switch (previewTab) {
+        case "iar":
+          return (
+            <div className="flex flex-col h-full">
+              <div className="px-4 py-3 border-b border-gray-100 bg-blue-50/80">
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-700">IAR — template preview</p>
+              </div>
+              <div className="flex-1 overflow-auto bg-white">
+                <IARDocumentPreview delivery={active} iar={iarData} poData={poData} />
+              </div>
+            </div>
+          );
+        case "loa":
+          return (
+            <div className="flex flex-col h-full">
+              <div className="px-4 py-3 border-b border-gray-100 bg-green-50/80">
+                <p className="text-xs font-bold uppercase tracking-widest text-green-700">LOA — template preview</p>
+              </div>
+              <div className="flex-1 overflow-auto bg-white">
+                <LOADocumentPreview delivery={active} loa={loaData} poData={poData} />
+              </div>
+            </div>
+          );
+        case "ors":
+          return (
+            <div className="flex flex-col h-full">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">ORS</p>
+                <p className="text-lg font-mono font-semibold text-gray-900 mt-1">{orsData.ors_no || "—"}</p>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
+                Open the full ORS document when your workflow provides a generated file.
+              </div>
+            </div>
+          );
+        case "dv":
+          return (
+            <div className="flex flex-col h-full">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">DV</p>
+                <p className="text-sm text-gray-700">
+                  <span className="text-gray-500">Payment type:</span>{" "}
+                  <span className="font-medium">{dvData.payment_type || "—"}</span>
+                </p>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
+                Use <span className="font-semibold text-gray-700">View full document</span> when DV HTML/PDF preview is available.
+              </div>
+            </div>
+          );
+        default:
+          return null;
+      }
+    }
+    
+    if (!previewTab) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[240px] text-center p-8 text-gray-500 text-sm">
+          <RiFileTextLine className="size-10 mb-2 opacity-40" aria-hidden />
+          No document preview for this step.
+        </div>
+      );
+    }
+    switch (previewTab) {
       case "ors":
         return (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">ORS Preview</h4>
-            <div className="space-y-2">
-              <p><strong>ORS No:</strong> {orsData.ors_no || "N/A"}</p>
+          <div className="flex flex-col h-full min-h-[240px]">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">ORS</p>
+              <p className="text-lg font-mono font-semibold text-gray-900 mt-1">{orsData.ors_no || "—"}</p>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
+              Open the full ORS document when your workflow provides a generated file. Inline voucher-style fields are not shown here.
             </div>
           </div>
         );
       case "dv":
         return (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">DV Preview</h4>
-            <div className="space-y-2">
-              <p><strong>PARPO:</strong> {dvData.parpo_name || "N/A"}</p>
-              <p><strong>Payment Type:</strong> {dvData.payment_type || "Not Set"}</p>
-              <p><strong>Check No:</strong> {dvData.check_no || "N/A"}</p>
-              <p><strong>Release Date:</strong> {dvData.release_date || "N/A"}</p>
+          <div className="flex flex-col h-full min-h-[240px]">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 space-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">DV</p>
+              <p className="text-sm text-gray-700">
+                <span className="text-gray-500">Payment type:</span>{" "}
+                <span className="font-medium">{dvData.payment_type || "—"}</span>
+              </p>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
+              Use <span className="font-semibold text-gray-700">View full document</span> when DV HTML/PDF preview is wired. No voucher detail block is shown in this panel.
             </div>
           </div>
         );
       case "iar":
         return (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Inspection and Acceptance Report (IAR)</h4>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex flex-col min-h-0">
+            <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/80">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">IAR — template preview</p>
+            </div>
+            <div className="flex-1 min-h-[360px] overflow-auto border-t border-gray-100">
               <IARDocumentPreview delivery={active} iar={iarData} poData={poData} />
             </div>
           </div>
         );
       case "loa":
         return (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Letter of Acceptance (LOA)</h4>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex flex-col min-h-0">
+            <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/80">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">LOA — template preview</p>
+            </div>
+            <div className="flex-1 min-h-[360px] overflow-auto border-t border-gray-100">
               <LOADocumentPreview delivery={active} loa={loaData} poData={poData} />
             </div>
           </div>
         );
       default:
-        return <div>Select a document to preview</div>;
+        return null;
     }
   };
 
   if (!visible) return null;
 
+  const docTabs = documentsForStatus(active?.status_id);
+  const statusBadge =
+    active?.status_id === 28 ? "Payment Pending" :
+    active?.status_id === 29 ? "Voucher Verification" :
+    active?.status_id === 30 ? "Accounting Review" :
+    active?.status_id === 32 ? "PARPO Approval" :
+    active?.status_id === 33 ? "Forward to Cash" :
+    active?.status_id === 34 ? "PARPO office signature" :
+    active?.status_id === 35 ? "Tax processing" :
+    active?.status_id === 36 ? "Payment completed" :
+    "Unknown";
+
+  const canOpenFullTemplate = previewTab === "iar" || previewTab === "loa";
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex flex-col max-h-[85vh] w-full max-w-7xl overflow-hidden rounded-xl shadow-xl">
         {/* Header */}
-        <div className="bg-emerald-700 text-white px-6 py-4 border-b border-emerald-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">{statusLabel}</h2>
-              <p className="text-emerald-100 text-sm mt-1">
-                Delivery: {active?.delivery_no} | PO: {active?.po_no}
-              </p>
+        <header className="flex items-center justify-between border-b bg-emerald-700  border-gray-200 px-6 py-4">
+          <div>
+            <p className="text-xs font-medium text-white-500 uppercase tracking-wide">{statusLabel}</p>
+            <h1 className="text-xl font-semibold text-white mt-1">Process Payment</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm text-white">
+              <span className="flex items-center gap-1">
+                <RiTruckLine className="size-4" />
+                {active?.delivery_no}
+              </span>
+              <span>·</span>
+              <span className="font-mono">{active?.po_no}</span>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
+              {statusBadge}
+            </span>
             <button
+              type="button"
               onClick={onClose}
-              className="text-emerald-100 hover:text-white transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <RiCloseLine size={24} />
+              <RiCloseLine size={20} />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Current Step Info */}
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {currentStepInfo.label}
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Processing: {active?.delivery_no} | PO: {active?.po_no}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-medium text-gray-700">
-                Current Status
-              </p>
-              <p className="text-xs text-gray-500">
-                {active?.status_id === 28 ? "Payment Pending" :
-                 active?.status_id === 29 ? "Voucher Verification" :
-                 active?.status_id === 30 ? "Accounting Review" :
-                 active?.status_id === 32 ? "PARPO Approval" :
-                 active?.status_id === 33 ? "Forward to Cash" :
-                 active?.status_id === 34 ? "Forward to PARPO office for signature" :
-                 active?.status_id === 35 ? "Forward to Accounting for Tax processing" :
-                 active?.status_id === 36 ? "Payment completed" :
-                 "Unknown"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div
-          className="flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row"
-        >
-          {/* Form Side */}
-          <div
-            ref={formPaneRef}
-            tabIndex={0}
-            className="w-full lg:w-2/5 xl:w-1/3 min-h-0 overflow-y-auto bg-white p-6 outline-none border-r border-gray-200"
-          >
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Status Flag */}
-              <div className={`rounded-lg p-4 border ${
-                statusFlag 
-                  ? "bg-emerald-50 border-emerald-200" 
-                  : "bg-gray-50 border-gray-200"
-              }`}>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">
-                  Status Flag {!statusFlag && "*"}
-                </h3>
-                <select
-                value={statusFlag ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  onSelectStatusFlag(value === "" ? null : value as StatusFlag);
-                }}
-                className={`w-full px-3 py-2 text-sm rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
-                  statusFlag 
-                    ? "border-emerald-300 bg-emerald-50" 
-                    : "border-gray-300"
+        {/* Progress Steps */}
+        <div className="flex items-center gap-1 px-6 py-3 bg-gray-50 border-b border-gray-200">
+          {PAYMENT_FLOW_STRIP.map((step) => {
+            const isActive = active?.status_id === step.id;
+            const isPast = PAYMENT_FLOW_STRIP.findIndex(s => s.id === active?.status_id) > PAYMENT_FLOW_STRIP.findIndex(s => s.id === step.id);
+            return (
+              <div
+                key={step.id}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : isPast
+                      ? "bg-white text-gray-600 border border-gray-200"
+                      : "bg-gray-100 text-gray-400"
                 }`}
               >
-                <option value="">Select Status Flag *</option>
-                <option value="complete">✅ Complete</option>
-                <option value="incomplete_info">⚠️ Incomplete Info</option>
-                <option value="wrong_information">❌ Wrong Information</option>
-                <option value="needs_revision">🔄 Needs Revision</option>
-                <option value="on_hold">⏸️ On Hold</option>
-                <option value="urgent">🔥 Urgent</option>
-              </select>
-                {!statusFlag && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Please set a status flag to enable processing.
-                  </p>
-                )}
+                {step.label}
               </div>
+            );
+          })}
+        </div>
 
-              {/* Form Content */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                {renderFormContent()}
-              </div>
+        {/* Main Content */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Left Panel - Form */}
+          <div className="flex-1 flex flex-col border-r border-gray-200 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Next Action */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Next Action</h3>
+                  <p className="text-sm text-gray-600">{currentStepInfo.label}</p>
+                </div>
 
-              {/* Notes */}
-              <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-700 mb-3">Notes</h3>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Processing Notes
+                {/* Form Content */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  {renderFormContent()}
+                </div>
+
+                {/* Status Flag */}
+                <div className={`bg-white rounded-lg border p-4 ${
+                  statusFlag ? "border-emerald-200 bg-emerald-50" : "border-gray-200"
+                }`}>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Status Flag {!statusFlag && <span className="text-red-500">*</span>}
                   </label>
+                  <select
+                    value={statusFlag ?? ""}
+                    onChange={(e) => onSelectStatusFlag(e.target.value === "" ? null : e.target.value as StatusFlag)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="">Select status flag</option>
+                    <option value="complete">Complete</option>
+                    <option value="incomplete_info">Incomplete info</option>
+                    <option value="wrong_information">Wrong information</option>
+                    <option value="needs_revision">Needs revision</option>
+                    <option value="on_hold">On hold</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                  {!statusFlag && (
+                    <p className="mt-2 text-xs text-gray-500">Required together with the step checklist.</p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Notes</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes for this payment processing step…"
+                    placeholder="Optional remarks for this step…"
                     rows={3}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                   />
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <div className="flex items-center justify-end pt-4 border-t border-gray-200 bg-gray-50 -mx-6 px-6 -mb-6 pb-6">
-                <button
-                  type="submit"
-                  disabled={!isFormValid}
-                  className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-colors shadow-sm ${
-                    isFormValid
-                      ? "bg-emerald-700 text-white hover:bg-emerald-800 shadow-emerald-100"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  <RiCheckLine size={16} />
-                  Process {currentStepInfo.label}
-                </button>
-              </div>
-            </form>
+                {/* Submit Button */}
+                <div className="pt-4">
+                  {!isFormValid && (
+                    <p className="text-xs text-amber-600 mb-3 text-center">
+                      Complete the step checklist and choose a status flag to enable submit.
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={!isFormValid}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                      isFormValid
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <RiCheckLine size={18} />
+                    {currentStepInfo.label}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
 
-          {/* Preview Side */}
-          <div className="w-full lg:w-3/5 xl:w-2/3 min-h-0 overflow-y-auto bg-gray-100 border-t lg:border-t-0 lg:border-l border-gray-200">
-            <div className="p-4 lg:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">DOCUMENT PREVIEW</h3>
-              </div>
-
-              {/* Document Selection */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                  onClick={() => setSelectedDocument("voucher")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedDocument === "voucher"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  Voucher
-                </button>
-                
-                {(active?.status_id === 28 || active?.status_id === 29) && (
-                  <>
+          {/* Right Panel - Document Preview */}
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-sm font-medium text-gray-900">
+                {active?.status_id === 28 ? "Record Details" : 
+                 active?.status_id === 29 ? "Voucher Documents" : "Documents"}
+              </h2>
+              {docTabs.length > 0 && (
+                <div className="flex gap-2">
+                  {docTabs.map((tab) => (
                     <button
-                      onClick={() => setSelectedDocument("iar")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        selectedDocument === "iar"
-                          ? "bg-emerald-700 text-white"
-                          : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                      key={tab}
+                      type="button"
+                      onClick={() => setPreviewTab(tab)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        previewTab === tab
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
-                      IAR
+                      {docTabLabel(tab)}
                     </button>
-                    <button
-                      onClick={() => setSelectedDocument("loa")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        selectedDocument === "loa"
-                          ? "bg-emerald-700 text-white"
-                          : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      LOA
-                    </button>
-                  </>
-                )}
-                
-                <button
-                  onClick={() => setSelectedDocument("ors")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedDocument === "ors"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  ORS
-                </button>
-                <button
-                  onClick={() => setSelectedDocument("dv")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedDocument === "dv"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  DV
-                </button>
-              </div>
-
-              {/* Preview Content */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="min-h-[400px] lg:min-h-[450px]">
-                  {renderPreviewContent()}
+                  ))}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Preview Actions */}
-              <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={() => onPreviewDocument(selectedDocument)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                >
-                  <RiEyeLine size={16} />
-                  View Full Document
-                </button>
-                {selectedDocument === "iar" || selectedDocument === "loa" ? (
-                  <div className="text-xs text-gray-500 flex items-center">
-                    <RiFilePdf2Line size={14} className="mr-1" />
-                    HTML Template Preview
-                  </div>
+            <div className="flex-1 overflow-hidden bg-white">
+              {renderPreviewContent()}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <button
+                type="button"
+                disabled={!previewTab || active?.status_id === 28}
+                onClick={() => previewTab && onPreviewDocument(previewTab)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  previewTab && active?.status_id !== 28
+                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                    : "text-gray-400 bg-gray-100 cursor-not-allowed"
+                }`}
+              >
+                <RiEyeLine size={16} />
+                View Full {previewTab ? docTabLabel(previewTab) : "Document"}
+              </button>
+              
+              <div className="text-xs text-gray-500">
+                {canOpenFullTemplate && active?.status_id !== 28 ? (
+                  <span className="flex items-center gap-1">
+                    <RiFilePdf2Line size={14} />
+                    Opens as HTML template
+                  </span>
+                ) : previewTab && active?.status_id !== 28 ? (
+                  <span>Document preview available</span>
                 ) : null}
               </div>
             </div>
           </div>
         </div>
-
-        </div>
+      </div>
     </div>
   );
 }

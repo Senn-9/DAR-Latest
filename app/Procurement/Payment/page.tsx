@@ -26,9 +26,10 @@ import {
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
 import RemarksModal from "@/components/Delivery/RemarksModal";
-import ProcessPaymentModal from "@/components/Payment/ProcessPaymentModal";
+import ProcessPaymentModal, {
+  type PaymentProcessDocType,
+} from "@/components/Payment/ProcessPaymentModal";
 import ViewPaymentModal from "@/components/Payment/ViewPaymentModal";
-import NORSAModal from "@/components/Payment/NORSAModal";
 import DeletePaymentModal from "@/components/Payment/DeletePaymentModal";
 import {
   fetchDeliveriesForPaymentPhase,
@@ -121,7 +122,6 @@ export default function PaymentPage() {
     const [remarksModalOpen, setRemarksModalOpen] = useState(false);
   const [paymentViewModalOpen, setPaymentViewModalOpen] = useState(false);
   const [paymentProcessModalOpen, setPaymentProcessModalOpen] = useState(false);
-  const [norsaModalOpen, setNorsaModalOpen] = useState(false);
   const [deletePaymentModalOpen, setDeletePaymentModalOpen] = useState(false);
   const [iarData, setIarData] = useState<any>(null);
   const [loaData, setLoaData] = useState<any>(null);
@@ -344,11 +344,7 @@ export default function PaymentPage() {
     }
   };
 
-  const canIssueNORSA = (roleId: number, statusId: number) => {
-    // Only Accounting can issue NORSA during Accounting Review
-    return statusId === 30 && [1, 9].includes(roleId);
-  };
-
+  
   const handleViewDelivery = async (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
 
@@ -419,10 +415,6 @@ export default function PaymentPage() {
     setPaymentProcessModalOpen(true);
   };
 
-  const handleIssueNORSA = (delivery: DeliveryRow) => {
-    setSelectedDelivery(delivery);
-    setNorsaModalOpen(true);
-  };
 
   const handleDeletePayment = (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
@@ -581,7 +573,7 @@ export default function PaymentPage() {
     console.log(`Preview ${type} document`);
   };
 
-  const handlePreviewPaymentDocument = async (type: "voucher" | "ors" | "dv" | "iar" | "loa") => {
+  const handlePreviewPaymentDocument = async (type: PaymentProcessDocType) => {
     if (!selectedDelivery) return;
     
     try {
@@ -1053,17 +1045,6 @@ async function buildLOAHtml(d: any): Promise<string> {
                                   Process
                                 </button>
                               )}
-                              {canIssueNORSA(
-                                currentUser?.role_id || 0,
-                                delivery.status_id,
-                              ) && (
-                                <button
-                                  onClick={() => handleIssueNORSA(delivery)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
-                                >
-                                  NORSA
-                                </button>
-                              )}
                               {isAccountingAccount && (
                                 <>
                                   <button
@@ -1082,7 +1063,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                                   </button>
                                 </>
                               )}
-                              {isAdmin && (
+                                                                                          {isAdmin && (
                                 <button
                                   onClick={() => handleDeletePayment(delivery)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
@@ -1309,18 +1290,6 @@ async function buildLOAHtml(d: any): Promise<string> {
       )}
 
       
-      {selectedDelivery && norsaModalOpen && (
-        <NORSAModal
-          visible={norsaModalOpen}
-          delivery={selectedDelivery}
-          onClose={() => setNorsaModalOpen(false)}
-          onSubmit={async (norsaData) => {
-            // Handle NORSA issuance
-            console.log("NORSA issued:", norsaData);
-            setNorsaModalOpen(false);
-          }}
-        />
-      )}
 
       {selectedDelivery && deletePaymentModalOpen && (
         <DeletePaymentModal
