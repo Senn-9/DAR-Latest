@@ -104,7 +104,7 @@ export default function CreateBudgetModal({
               placeholder="e.g., BUD-2024-001"
               value={budgetNumber}
               onChange={(e) => setBudgetNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               disabled={loading}
             />
           </div>
@@ -121,7 +121,7 @@ export default function CreateBudgetModal({
                   const val = e.target.value === "" ? new Date().getFullYear() : parseInt(e.target.value, 10);
                   setBudgetYear(isNaN(val) ? new Date().getFullYear() : val);
                 }}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               />
             </div>
@@ -132,7 +132,7 @@ export default function CreateBudgetModal({
               <select
                 value={divisionId}
                 onChange={(e) => setDivisionId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               >
                 <option value="">Select...</option>
@@ -154,7 +154,7 @@ export default function CreateBudgetModal({
               placeholder="0.00"
               value={totalAllocated}
               onChange={(e) => setTotalAllocated(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               step="0.01"
               min="0"
               disabled={loading}

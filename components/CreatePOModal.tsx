@@ -1,8 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine } from "react-icons/ri";
+import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine, RiSearchLine } from "react-icons/ri";
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
+import { createClient } from "@/utils/supabase/client";
+
+// Types for PR and Canvass data
+type PurchaseRequest = {
+  id: number;
+  pr_no: string;
+  purpose: string;
+  office_section: string;
+  fund_cluster: string | null;
+  entity_name: string | null;
+  total_cost: number;
+};
+
+type CanvassEntry = {
+  id: number;
+  pr_no: string | null;
+  supplier_name: string | null;
+  supplier_address: string | null;
+  tin_no: string | null;
+  unit_price: number | null;
+  total_price: number | null;
+  is_winning: boolean | null;
+  delivery_days: string | null;
+  unit: string | null;
+  quantity: number | null;
+  description: string | null;
+};
 
 type CreatePOModalProps = {
   visible: boolean;
@@ -77,6 +104,7 @@ function POPreview({
   orsNo,
   orsDate,
   orsAmount,
+  officeSection,
   fundCluster,
   items,
 }: {
@@ -462,6 +490,7 @@ function downloadPDF(data: {
   orsNo: string;
   orsDate: string;
   orsAmount: string;
+  officeSection: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
 }) {
@@ -476,6 +505,15 @@ function downloadPDF(data: {
 }
 
 export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOModalProps) {
+  const supabase = createClient();
+  
+  // PR Selection state
+  const [availablePRs, setAvailablePRs] = useState<PurchaseRequest[]>([]);
+  const [selectedPRId, setSelectedPRId] = useState<string>("");
+  const [loadingPRs, setLoadingPRs] = useState(false);
+  const [prSearch, setPrSearch] = useState("");
+  
+  // PO Form state
   const [supplier, setSupplier] = useState("");
   const [address, setAddress] = useState("");
   const [tin, setTin] = useState("");
@@ -502,7 +540,131 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     };
   }, [visible]);
 
+  // Fetch PRs with Abstract of Awards status (status_id = 33)
+  useEffect(() => {
+    if (visible) {
+      fetchAvailablePRs();
+    }
+  }, [visible]);
+
+  async function fetchAvailablePRs() {
+    setLoadingPRs(true);
+    try {
+      const { data, error } = await supabase
+        .from("purchase_requests")
+        .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost")
+        .eq("status_id", 33) // Abstract of Awards status
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching PRs:", error);
+        return;
+      }
+
+      setAvailablePRs(data || []);
+    } catch (err) {
+      console.error("Error fetching PRs:", err);
+    } finally {
+      setLoadingPRs(false);
+    }
+  }
+
+  // Handle PR selection - fetch winning canvass and pre-fill PO fields
+  async function handlePRSelect(prId: string) {
+    setSelectedPRId(prId);
+    if (!prId) {
+      resetForm();
+      return;
+    }
+
+    const selectedPR = availablePRs.find((pr) => pr.id.toString() === prId);
+    if (!selectedPR) return;
+
+    // Pre-fill office info from PR
+    setOfficeSection(selectedPR.office_section || "");
+    setFundCluster(selectedPR.fund_cluster || "");
+    setDeliveryPlace(selectedPR.entity_name || "");
+
+    // Fetch winning canvass entry for this PR through canvass session
+    try {
+      // First, get the canvass session for this PR
+      const { data: session, error: sessionError } = await supabase
+        .from("canvass_sessions")
+        .select("id")
+        .eq("pr_id", selectedPR.id)
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+
+      if (sessionError) {
+        console.error("Error fetching canvass session:", sessionError);
+        return;
+      }
+
+      if (!session?.id) {
+        console.log("No canvass session found for PR:", selectedPR.pr_no);
+        return;
+      }
+
+      // Get assignments for this session
+      const { data: assignments, error: assignmentError } = await supabase
+        .from("canvasser_assignments")
+        .select("id, name_of_canvasser")
+        .eq("session_id", session.id);
+
+      if (assignmentError) {
+        console.error("Error fetching assignments:", assignmentError);
+        return;
+      }
+
+      if (!assignments || assignments.length === 0) {
+        console.log("No assignments found for session:", session.id);
+        return;
+      }
+
+      // Get winning entries from all assignments
+      const assignmentIds = assignments.map((a) => a.id);
+      const { data: winningEntries, error: entriesError } = await supabase
+        .from("canvass_entries")
+        .select("*")
+        .in("assignment_id", assignmentIds)
+        .eq("is_winning", true);
+
+      if (entriesError) {
+        console.error("Error fetching canvass entries:", entriesError);
+        return;
+      }
+
+      if (winningEntries && winningEntries.length > 0) {
+        // Use the first winning entry for supplier info
+        const firstEntry = winningEntries[0];
+        setSupplier(firstEntry.supplier_name || "");
+        setAddress(firstEntry.supplier_address || "");
+        setTin(firstEntry.tin_no || "");
+        setDeliveryTerm(firstEntry.delivery_days ? `${firstEntry.delivery_days} days` : "");
+
+        // Build line items from all winning entries
+        const poItems = winningEntries
+          .filter((entry) => entry.description || entry.unit_price)
+          .map((entry) => ({
+            stock_no: null,
+            unit: entry.unit || null,
+            description: entry.description || null,
+            quantity: Number(entry.quantity) || 1,
+            unit_price: Number(entry.unit_price) || 0,
+            subtotal: Number(entry.total_price) || 0,
+          }));
+
+        if (poItems.length > 0) {
+          setItems(poItems);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching winning canvass:", err);
+    }
+  }
+
   function resetForm() {
+    setSelectedPRId("");
     setSupplier("");
     setAddress("");
     setTin("");
@@ -601,6 +763,60 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         <div className="flex flex-1 overflow-hidden">
           <form onSubmit={handleSubmit} className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
             <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
+              {/* PR Selection Section */}
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Select Purchase Request</h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Search PR number..."
+                        value={prSearch}
+                        onChange={(e) => setPrSearch(e.target.value)}
+                        className={`${inputCls} pl-9`}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchAvailablePRs}
+                      disabled={loadingPRs}
+                      className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      {loadingPRs ? "Loading..." : "Refresh"}
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
+                      Available PRs (Abstract of Awards) *
+                    </label>
+                    <select
+                      value={selectedPRId}
+                      onChange={(e) => handlePRSelect(e.target.value)}
+                      className={inputCls}
+                      required={!supplier} // Require PR selection if no manual entry
+                    >
+                      <option value="">-- Select a PR --</option>
+                      {availablePRs
+                        .filter((pr) =>
+                          pr.pr_no.toLowerCase().includes(prSearch.toLowerCase()) ||
+                          pr.purpose.toLowerCase().includes(prSearch.toLowerCase())
+                        )
+                        .map((pr) => (
+                          <option key={pr.id} value={pr.id}>
+                            {pr.pr_no} - {pr.purpose.substring(0, 50)}{pr.purpose.length > 50 ? "..." : ""} (₱{pr.total_cost.toLocaleString()})
+                          </option>
+                        ))}
+                    </select>
+                    {availablePRs.length === 0 && !loadingPRs && (
+                      <p className="text-xs text-gray-500 mt-1">No PRs with Abstract of Awards status available.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Supplier Information</h3>
                 <div className="space-y-4">

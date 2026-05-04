@@ -173,7 +173,7 @@ export default function EditBudgetModal({
               placeholder="e.g., BUD-2024-001"
               value={budgetNumber}
               onChange={(e) => setBudgetNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               disabled={loading}
             />
           </div>
@@ -187,7 +187,7 @@ export default function EditBudgetModal({
                 type="number"
                 value={budgetYear}
                 onChange={(e) => setBudgetYear(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               />
             </div>
@@ -198,7 +198,7 @@ export default function EditBudgetModal({
               <select
                 value={divisionId}
                 onChange={(e) => setDivisionId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               >
                 {divisions.map((d) => (
@@ -219,7 +219,7 @@ export default function EditBudgetModal({
               placeholder="0.00"
               value={totalAllocated}
               onChange={(e) => setTotalAllocated(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               step="0.01"
               min={utilized}
               disabled={loading}
@@ -237,7 +237,7 @@ export default function EditBudgetModal({
               <select
                 value={budgetStatus}
                 onChange={(e) => setBudgetStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               >
                 <option value="Active">Active</option>
