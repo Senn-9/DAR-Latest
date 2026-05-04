@@ -83,6 +83,17 @@ export default function LoginPage() {
       return;
     }
 
+    // Update last_login timestamp
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ last_login: new Date().toISOString() })
+      .eq("id", matchedUser.id);
+
+    if (updateError) {
+      console.error("Error updating last_login:", updateError);
+      // Don't block login on update error
+    }
+
     localStorage.setItem("currentUser", JSON.stringify(matchedUser));
     setIsLoading(false);
     router.push("/Dashboard");

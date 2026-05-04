@@ -390,12 +390,12 @@ export default function BudgetPage() {
               <RiArrowDownLine size={14} className="text-white/50" />
             </button>
 
-            {/* Role Badge */}
+            {/* Role Badge - flat style, not button-like */}
             <div
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${canEdit ? "bg-emerald-600" : "bg-white/10"}`}
+              className={`flex items-center gap-1.5 px-2 py-1 ${canEdit ? "text-emerald-200" : "text-white/60"}`}
             >
               {canEdit ? <RiEdit2Line size={14} /> : <RiEyeLine size={14} />}
-              <span className="text-xs font-bold uppercase tracking-wide">
+              <span className="text-xs font-medium uppercase tracking-wide">
                 {canEdit ? "Edit Access" : "Read-Only"}
               </span>
             </div>
@@ -646,16 +646,18 @@ export default function BudgetPage() {
                           </span>
                         </td>
                         <td className={`px-2 py-2 text-center ${rowBg}`}>
-                          <button
-                            onClick={() => {
-                              setSelectedBudget(item);
-                              setShowEditModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-emerald-600 hover:bg-emerald-50 rounded text-xs font-medium transition-colors"
-                          >
-                            <RiEditLine size={14} />
-                            Edit
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setSelectedBudget(item);
+                                setShowEditModal(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-emerald-600 hover:bg-emerald-50 rounded text-xs font-medium transition-colors"
+                            >
+                              <RiEditLine size={14} />
+                              Edit
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
