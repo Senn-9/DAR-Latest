@@ -100,10 +100,6 @@ function POPreview({
   deliveryTerm,
   deliveryDate,
   paymentTerm,
-  fundsAvailable,
-  orsNo,
-  orsDate,
-  orsAmount,
   officeSection,
   fundCluster,
   items,
@@ -116,10 +112,6 @@ function POPreview({
   deliveryTerm: string;
   deliveryDate: string;
   paymentTerm: string;
-  fundsAvailable: string;
-  orsNo: string;
-  orsDate: string;
-  orsAmount: string;
   officeSection: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
@@ -141,19 +133,19 @@ function POPreview({
     [items],
   );
 
-  const stockCol = normalizedItems.map((item) => String(item.stock_no ?? "")).join("\n");
-  const unitCol = normalizedItems.map((item) => String(item.unit ?? "")).join("\n");
-  const descCol = normalizedItems.map((item) => String(item.description ?? "")).join("\n");
-  const qtyCol = normalizedItems.map((item) => (Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : "")).join("\n");
-  const unitCostCol = normalizedItems
-    .map((item) => (Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""))
-    .join("\n");
-  const amountCol = normalizedItems
-    .map((item) => {
-      const total = getItemTotal(item);
-      return total ? formatMoney(total).replace("₱", "") : "";
-    })
-    .join("\n");
+  const itemRows = normalizedItems.map((item, index) => {
+    const total = getItemTotal(item);
+    return (
+      <tr key={index} style={{ height: "auto" }}>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.stock_no ?? "")}</td>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.unit ?? "")}</td>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.description ?? "")}</td>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : ""}</td>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""}</td>
+        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{total ? formatMoney(total).replace("₱", "") : ""}</td>
+      </tr>
+    );
+  });
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", color: "#000", padding: 0, margin: 0 }}>
@@ -239,14 +231,7 @@ function POPreview({
             <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Amount</td>
           </tr>
 
-          <tr style={{ height: "250px" }}>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{stockCol}</td>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{unitCol}</td>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", fontSize: "9pt", lineHeight: 1.3 }}>{descCol}</td>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{qtyCol}</td>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{unitCostCol}</td>
-            <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", whiteSpace: "pre-wrap", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{amountCol}</td>
-          </tr>
+          {itemRows}
 
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt", fontWeight: "bold" }}>
@@ -298,15 +283,15 @@ function POPreview({
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Fund Cluster :</b> {fundCluster}</div>
-              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> {fundsAvailable}</div>
+              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> </div>
 
               <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "36px auto 2px" }} />
               <div style={{ textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
-              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> {orsNo}</div>
-              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> {orsDate}</div>
-              <div style={{ fontSize: "10pt" }}><b>Amount :</b> {orsAmount || (grandTotal ? formatMoney(grandTotal) : "")}</div>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> </div>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> </div>
+              <div style={{ fontSize: "10pt" }}><b>Amount :</b> </div>
             </td>
           </tr>
         </tbody>
@@ -324,10 +309,6 @@ function buildPurchaseOrderPrintHtml(data: {
   deliveryTerm: string;
   deliveryDate: string;
   paymentTerm: string;
-  fundsAvailable: string;
-  orsNo: string;
-  orsDate: string;
-  orsAmount: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
 }) {
@@ -461,14 +442,14 @@ function buildPurchaseOrderPrintHtml(data: {
       <tr>
         <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
           <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
-          <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable)}</div>
+          <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> </div>
           <div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
           <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
         </td>
         <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
-          <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> ${escapeHtml(data.orsNo)}</div>
-          <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> ${escapeHtml(data.orsDate)}</div>
-          <div style="font-size:10pt"><b>Amount :</b> ${escapeHtml(data.orsAmount || (grandTotal ? formatMoney(grandTotal) : ""))}</div>
+          <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> </div>
+          <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> </div>
+          <div style="font-size:10pt"><b>Amount :</b> ${grandTotal ? formatMoney(grandTotal) : ""}</div>
         </td>
       </tr>
     </tbody>
@@ -486,10 +467,6 @@ function downloadPDF(data: {
   deliveryTerm: string;
   deliveryDate: string;
   paymentTerm: string;
-  fundsAvailable: string;
-  orsNo: string;
-  orsDate: string;
-  orsAmount: string;
   officeSection: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
@@ -514,6 +491,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [prSearch, setPrSearch] = useState("");
   
   // PO Form state
+  const [poNo, setPoNo] = useState("");
   const [supplier, setSupplier] = useState("");
   const [address, setAddress] = useState("");
   const [tin, setTin] = useState("");
@@ -524,10 +502,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [paymentTerm, setPaymentTerm] = useState("");
   const [officeSection, setOfficeSection] = useState("");
   const [fundCluster, setFundCluster] = useState("");
-  const [fundsAvailable, setFundsAvailable] = useState("");
-  const [orsNo, setOrsNo] = useState("");
-  const [orsDate, setOrsDate] = useState("");
-  const [orsAmount, setOrsAmount] = useState("");
   const [items, setItems] = useState<PurchaseOrderItemRow[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -553,7 +527,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       const { data, error } = await supabase
         .from("purchase_requests")
         .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost")
-        .eq("status_id", 33) // Abstract of Awards status
+        .eq("status_id", 33) // Completed (PR Phase) status
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -585,54 +559,20 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     setFundCluster(selectedPR.fund_cluster || "");
     setDeliveryPlace(selectedPR.entity_name || "");
 
-    // Fetch winning canvass entry for this PR through canvass session
+    // Fetch winning canvass entries for this PR directly using pr_no
     try {
-      // First, get the canvass session for this PR
-      const { data: session, error: sessionError } = await supabase
-        .from("canvass_sessions")
-        .select("id")
-        .eq("pr_id", selectedPR.id)
-        .order("created_at", { ascending: false })
-        .maybeSingle();
-
-      if (sessionError) {
-        console.error("Error fetching canvass session:", sessionError);
-        return;
-      }
-
-      if (!session?.id) {
-        console.log("No canvass session found for PR:", selectedPR.pr_no);
-        return;
-      }
-
-      // Get assignments for this session
-      const { data: assignments, error: assignmentError } = await supabase
-        .from("canvasser_assignments")
-        .select("id, name_of_canvasser")
-        .eq("session_id", session.id);
-
-      if (assignmentError) {
-        console.error("Error fetching assignments:", assignmentError);
-        return;
-      }
-
-      if (!assignments || assignments.length === 0) {
-        console.log("No assignments found for session:", session.id);
-        return;
-      }
-
-      // Get winning entries from all assignments
-      const assignmentIds = assignments.map((a) => a.id);
       const { data: winningEntries, error: entriesError } = await supabase
         .from("canvass_entries")
         .select("*")
-        .in("assignment_id", assignmentIds)
+        .eq("pr_no", selectedPR.pr_no)
         .eq("is_winning", true);
 
       if (entriesError) {
         console.error("Error fetching canvass entries:", entriesError);
         return;
       }
+
+      console.log("Found winning entries:", winningEntries);
 
       if (winningEntries && winningEntries.length > 0) {
         // Use the first winning entry for supplier info
@@ -644,7 +584,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
         // Build line items from all winning entries
         const poItems = winningEntries
-          .filter((entry) => entry.description || entry.unit_price)
+          .filter((entry) => entry.unit || entry.unit_price || entry.quantity)
           .map((entry) => ({
             stock_no: null,
             unit: entry.unit || null,
@@ -657,6 +597,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         if (poItems.length > 0) {
           setItems(poItems);
         }
+      } else {
+        console.log("No winning entries found for PR:", selectedPR.pr_no);
       }
     } catch (err) {
       console.error("Error fetching winning canvass:", err);
@@ -665,6 +607,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
   function resetForm() {
     setSelectedPRId("");
+    setPoNo("");
     setSupplier("");
     setAddress("");
     setTin("");
@@ -675,10 +618,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     setPaymentTerm("");
     setOfficeSection("");
     setFundCluster("");
-    setFundsAvailable("");
-    setOrsNo("");
-    setOrsDate("");
-    setOrsAmount("");
     setItems([]);
     setSaving(false);
   }
@@ -713,9 +652,11 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!supplier) return alert("Supplier is required");
+    if (!poNo.trim()) return alert("PO Number is required");
     setSaving(true);
     try {
       const header: Partial<PurchaseOrderRow> = {
+        po_no: poNo,
         supplier,
         address,
         tin,
@@ -726,10 +667,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         payment_term: paymentTerm,
         office_section: officeSection,
         fund_cluster: fundCluster,
-        funds_available: fundsAvailable,
-        ors_no: orsNo,
-        ors_date: orsDate || null,
-        ors_amount: orsAmount ? Number(orsAmount) : null,
         total_amount: grandTotal,
         status_id: 11,
       };
@@ -867,7 +804,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Office Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
                     <input className={inputCls} placeholder="e.g., Procurement" value={officeSection} onChange={(e) => setOfficeSection(e.target.value)} />
@@ -877,27 +814,9 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     <input className={inputCls} placeholder="e.g., 01" value={fundCluster} onChange={(e) => setFundCluster(e.target.value)} />
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Accounting Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Funds Available</label>
-                    <input className={inputCls} placeholder="Funds available" value={fundsAvailable} onChange={(e) => setFundsAvailable(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS No.</label>
-                    <input className={inputCls} placeholder="ORS number" value={orsNo} onChange={(e) => setOrsNo(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date of the ORS</label>
-                    <input type="date" className={inputCls} value={orsDate} onChange={(e) => setOrsDate(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Amount</label>
-                    <input className={inputCls} placeholder="ORS amount" value={orsAmount} onChange={(e) => setOrsAmount(e.target.value)} />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PO Number *</label>
+                  <input className={inputCls} placeholder="e.g., PO-2024-001" value={poNo} onChange={(e) => setPoNo(e.target.value)} required />
                 </div>
               </div>
 
@@ -979,10 +898,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     deliveryTerm,
                     deliveryDate,
                     paymentTerm,
-                    fundsAvailable,
-                    orsNo,
-                    orsDate,
-                    orsAmount,
                     officeSection,
                     fundCluster,
                     items,
@@ -1010,10 +925,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                       deliveryTerm,
                       deliveryDate,
                       paymentTerm,
-                      fundsAvailable,
-                      orsNo,
-                      orsDate,
-                      orsAmount,
                       officeSection,
                       fundCluster,
                       items,
@@ -1034,10 +945,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   deliveryTerm={deliveryTerm}
                   deliveryDate={deliveryDate}
                   paymentTerm={paymentTerm}
-                  fundsAvailable={fundsAvailable}
-                  orsNo={orsNo}
-                  orsDate={orsDate}
-                  orsAmount={orsAmount}
                   officeSection={officeSection}
                   fundCluster={fundCluster}
                   items={items}
