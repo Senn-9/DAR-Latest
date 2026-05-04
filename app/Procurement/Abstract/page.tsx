@@ -228,7 +228,7 @@ export default function AbstractPage() {
           supplier_name: dealer.supplier_name.trim() || null,
           unit_price: unitPrice,
           total_price: quantity * unitPrice,
-          is_winning: false,
+          is_winning: Boolean(dealer.is_winning),
           created_at: new Date().toISOString(),
         });
       });

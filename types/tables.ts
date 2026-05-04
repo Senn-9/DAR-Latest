@@ -71,7 +71,7 @@ export type CanvasserAssignment = {
   released_at: string | null; // ISO timestamp
   returned_at: string | null; // ISO timestamp
   status: string | null;
-  canvass_no: string | null;
+  quotation_no: string | null;
   rfq_index: number | null;
   received_at: string | null; // ISO timestamp
   name_of_canvasser: string | null;

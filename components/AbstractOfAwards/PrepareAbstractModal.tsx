@@ -20,6 +20,7 @@ type PrepareAbstractModalProps = {
 export type Dealer = {
 	supplier_name: string;
 	unit_price: number | null;
+	is_winning: boolean;
 };
 
 type SupplierBlock = {
@@ -31,6 +32,7 @@ type SupplierBlock = {
 export type SupplierQuotePayload = {
 	supplier_name: string;
 	unit_price: number | null;
+	is_winning: boolean;
 };
 
 export type ItemWithDealers = {
@@ -235,11 +237,14 @@ export default function PrepareAbstractModal({
 
 		setIsSaving(true);
 		try {
+			const winningSupplierIndex = getWinningSupplierIndex();
+
 			// Build itemsWithDealers: for each item, collect dealers from supplier blocks
 			const itemsWithDealers = items.map((item) => {
-				const dealers = supplierQuotes.map((s) => ({
+				const dealers = supplierQuotes.map((s, supplierIndex) => ({
 					supplier_name: s.supplier_name,
 					unit_price: s.prices[item.id] && s.prices[item.id] !== "" ? Number(s.prices[item.id]) : null,
+					is_winning: winningSupplierIndex === supplierIndex,
 				}));
 				return {
 					id: item.id,
@@ -261,6 +266,35 @@ export default function PrepareAbstractModal({
 		} finally {
 			setIsSaving(false);
 		}
+	};
+
+	const getWinningSupplierIndex = (): number | null => {
+		let lowestTotal = Number.POSITIVE_INFINITY;
+		let winningIndex: number | null = null;
+
+		supplierQuotes.forEach((supplier, supplierIndex) => {
+			if (supplier.supplier_name.trim() === "") return;
+
+			let supplierTotal = 0;
+			let hasQuote = false;
+
+			Object.values(supplier.prices).forEach((rawValue) => {
+				if (rawValue == null || rawValue === "") return;
+				const parsedValue = Number(rawValue);
+				if (Number.isNaN(parsedValue)) return;
+				hasQuote = true;
+				supplierTotal += parsedValue;
+			});
+
+			if (!hasQuote) return;
+
+			if (supplierTotal < lowestTotal) {
+				lowestTotal = supplierTotal;
+				winningIndex = supplierIndex;
+			}
+		});
+
+		return winningIndex;
 	};
 
 	return (
@@ -348,9 +382,21 @@ export default function PrepareAbstractModal({
 											{supplierQuotes.map((quote, quoteIndex) => (
 												<div key={quote.key} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end rounded-xl bg-white border border-emerald-100 p-4">
 													<div className="md:col-span-5">
-														<label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
-															Supplier Name
-														</label>
+														<div className="mb-1.5 ml-1 flex items-center justify-between gap-2">
+															<label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+																Supplier Name
+															</label>
+															<label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 select-none">
+																<input
+																	type="checkbox"
+																	checked={getWinningSupplierIndex() === quoteIndex}
+																	readOnly
+																	disabled
+																	className="h-3.5 w-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-100 disabled:cursor-default"
+																/>
+																<span>Winning</span>
+															</label>
+														</div>
 														<input
 															type="text"
 															value={quote.supplier_name}

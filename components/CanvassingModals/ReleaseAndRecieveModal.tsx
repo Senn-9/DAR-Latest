@@ -23,6 +23,7 @@ type AssignmentRow = {
   id?: number;
   session_id: number | null;
   name_of_canvasser: string | null;
+  quotation_no: string | null;
   rfq_index: number | null;
   released_at: string | null;
   returned_at: string | null;
@@ -103,6 +104,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
         session_id: sessionId,
         pr_no: prNo,
         name_of_canvasser: "",
+        quotation_no: "",
         rfq_index: 0,
         released_at: null,
         returned_at: null,
@@ -273,7 +275,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                         <RiDeleteBinLine size={18} />
                       </button>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Canvasser Name</label>
                           <input
@@ -286,6 +288,22 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                             onChange={(e) => {
                               const newAsgs = [...assignments];
                               newAsgs[idx].name_of_canvasser = e.target.value;
+                              setAssignments(newAsgs);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Quotation No.</label>
+                          <input
+                            type="text"
+                            className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                            placeholder="e.g. QTN-2026-001"
+                            value={asg.quotation_no || ""}
+                            disabled={!!asg.released_at}
+                            onBlur={(e) => handleUpdateAssignment(idx, { quotation_no: e.target.value.trim() || null })}
+                            onChange={(e) => {
+                              const newAsgs = [...assignments];
+                              newAsgs[idx].quotation_no = e.target.value;
                               setAssignments(newAsgs);
                             }}
                           />
