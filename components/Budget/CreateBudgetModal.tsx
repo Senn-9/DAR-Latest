@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { RiCloseLine } from "react-icons/ri";
+import { RiCloseLine, RiEditLine } from "react-icons/ri";
 
 interface CreateBudgetModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface CreateBudgetModalProps {
   onBudgetCreated: () => void;
   divisions: Array<{ division_id: number; division_name: string }>;
   currentUserId: number;
+  onEditExisting?: (divisionId: number, fiscalYear: number) => void;
 }
 
 export default function CreateBudgetModal({
@@ -18,6 +19,7 @@ export default function CreateBudgetModal({
   onBudgetCreated,
   divisions,
   currentUserId,
+  onEditExisting,
 }: CreateBudgetModalProps) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
@@ -25,15 +27,59 @@ export default function CreateBudgetModal({
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear());
   const [divisionId, setDivisionId] = useState("");
   const [totalAllocated, setTotalAllocated] = useState("");
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [duplicateCheck, setDuplicateCheck] = useState<{
+    exists: boolean;
+    existingBudget: { id: string; allocated: number; utilized: number } | null;
+  }>({ exists: false, existingBudget: null });
+
+  // Check for existing budget when division or year changes
+  useEffect(() => {
+    const checkDuplicate = async () => {
+      if (!divisionId || !budgetYear) {
+        setDuplicateCheck({ exists: false, existingBudget: null });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("division_budgets")
+        .select("id, allocated, utilized")
+        .eq("division_id", parseInt(divisionId))
+        .eq("fiscal_year", budgetYear)
+        .single();
+
+      if (data && !error) {
+        setDuplicateCheck({ exists: true, existingBudget: data });
+      } else {
+        setDuplicateCheck({ exists: false, existingBudget: null });
+      }
+    };
+
+    checkDuplicate();
+  }, [divisionId, budgetYear, supabase]);
+
+  const handleEditExisting = () => {
+    if (duplicateCheck.exists && onEditExisting) {
+      onEditExisting(parseInt(divisionId), budgetYear);
+      onClose();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Prevent submission if duplicate exists
+    if (duplicateCheck.exists) {
+      setError(`A budget already exists for this division and fiscal year. Click "Edit Existing" to modify it.`);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!budgetNumber || !divisionId || !totalAllocated) {
+      if (!divisionId || !totalAllocated) {
         throw new Error("Please fill in all fields");
       }
 
@@ -42,17 +88,13 @@ export default function CreateBudgetModal({
         throw new Error("Budget amount must be a positive number");
       }
 
-      const { error: insertError } = await supabase.from("budgets").insert([
+      const { error: insertError } = await supabase.from("division_budgets").insert([
         {
-          budget_number: budgetNumber,
-          budget_year: budgetYear,
           division_id: parseInt(divisionId),
-          total_allocated: allocatedAmount,
-          total_earmarked: 0,
-          total_spent: 0,
-          total_remaining: allocatedAmount,
-          budget_status: "Active",
-          created_by_user_id: currentUserId,
+          fiscal_year: budgetYear,
+          allocated: allocatedAmount,
+          utilized: 0,
+          notes: notes?.trim() || null,
         },
       ]);
 
@@ -62,6 +104,8 @@ export default function CreateBudgetModal({
       setBudgetNumber("");
       setTotalAllocated("");
       setDivisionId("");
+      setNotes("");
+      setDuplicateCheck({ exists: false, existingBudget: null });
       onBudgetCreated();
       onClose();
     } catch (err: any) {
@@ -112,7 +156,7 @@ export default function CreateBudgetModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Budget Year
+                Fiscal Year
               </label>
               <input
                 type="number"
@@ -132,7 +176,9 @@ export default function CreateBudgetModal({
               <select
                 value={divisionId}
                 onChange={(e) => setDivisionId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900 ${
+                  duplicateCheck.exists ? "border-amber-400 bg-amber-50" : "border-gray-200"
+                }`}
                 disabled={loading}
               >
                 <option value="">Select...</option>
@@ -144,6 +190,33 @@ export default function CreateBudgetModal({
               </select>
             </div>
           </div>
+
+          {/* Duplicate Warning */}
+          {duplicateCheck.exists && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800 font-medium">
+                    Budget already exists for this division and year
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Allocated: ₱{duplicateCheck.existingBudget?.allocated.toLocaleString()} | 
+                    Utilized: ₱{duplicateCheck.existingBudget?.utilized.toLocaleString()}
+                  </p>
+                </div>
+                {onEditExisting && (
+                  <button
+                    type="button"
+                    onClick={handleEditExisting}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <RiEditLine size={16} />
+                    Edit Existing
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

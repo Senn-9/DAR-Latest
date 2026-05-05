@@ -5,16 +5,21 @@ import { createClient } from "@/utils/supabase/client";
 import { RiCloseLine, RiDeleteBinLine } from "react-icons/ri";
 
 interface Budget {
-  budget_id: number;
+  id: string;
+  budget_id: number; // alias for compatibility
   budget_number: string;
-  budget_year: number;
+  budget_year: number; // alias for fiscal_year
+  fiscal_year: number;
   division_id: number;
   division_name: string;
-  total_allocated: number;
-  total_earmarked: number;
-  total_spent: number;
-  total_remaining: number;
+  total_allocated: number; // alias for allocated
+  allocated: number;
+  total_earmarked: number; // calculated from ORS
+  total_spent: number; // alias for utilized
+  utilized: number;
+  total_remaining: number; // calculated
   budget_status: string;
+  notes?: string | null;
 }
 
 interface EditBudgetModalProps {
@@ -44,14 +49,18 @@ export default function EditBudgetModal({
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+
+  const [notes, setNotes] = useState("");
+
   // Populate form when budget changes
   useEffect(() => {
     if (budget) {
-      setBudgetNumber(budget.budget_number);
-      setBudgetYear(budget.budget_year);
+      setBudgetNumber(budget.budget_number || `BUD-${budget.fiscal_year}-${budget.division_id}`);
+      setBudgetYear(budget.fiscal_year || budget.budget_year);
       setDivisionId(budget.division_id.toString());
-      setTotalAllocated(budget.total_allocated.toString());
-      setBudgetStatus(budget.budget_status);
+      setTotalAllocated((budget.allocated || budget.total_allocated).toString());
+      setBudgetStatus(budget.budget_status || "Active");
+      setNotes(budget.notes || "");
       setError("");
     }
   }, [budget]);
@@ -74,25 +83,22 @@ export default function EditBudgetModal({
       }
 
       // Check if spent + earmarked exceeds new allocated amount
-      const utilized = budget.total_spent + budget.total_earmarked;
+      const utilized = (budget.utilized || budget.total_spent || 0) + (budget.total_earmarked || 0);
       if (allocatedAmount < utilized) {
         throw new Error(
-          `Cannot reduce budget below current utilization (₱${(utilized / 1000).toFixed(0)}K)`
+          `Cannot reduce budget below current utilization (₱${utilized.toLocaleString()})`
         );
       }
 
       const { error: updateError } = await supabase
-        .from("budgets")
+        .from("division_budgets")
         .update({
-          budget_number: budgetNumber,
-          budget_year: budgetYear,
+          fiscal_year: budgetYear,
           division_id: parseInt(divisionId),
-          total_allocated: allocatedAmount,
-          total_remaining: allocatedAmount - utilized,
-          budget_status: budgetStatus,
-          updated_at: new Date().toISOString(),
+          allocated: allocatedAmount,
+          notes: notes?.trim() || null,
         })
-        .eq("budget_id", budget.budget_id);
+        .eq("id", budget.id);
 
       if (updateError) throw updateError;
 
@@ -111,9 +117,9 @@ export default function EditBudgetModal({
     setLoading(true);
     try {
       const { error: deleteError } = await supabase
-        .from("budgets")
+        .from("division_budgets")
         .delete()
-        .eq("budget_id", budget.budget_id);
+        .eq("id", budget.id);
 
       if (deleteError) throw deleteError;
 
@@ -129,7 +135,7 @@ export default function EditBudgetModal({
 
   if (!isOpen || !budget) return null;
 
-  const utilized = budget.total_spent + budget.total_earmarked;
+  const utilized = (budget.utilized || budget.total_spent || 0) + (budget.total_earmarked || 0);
   const canModifyStatus = isAdmin;
 
   return (
@@ -166,7 +172,7 @@ export default function EditBudgetModal({
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Budget Number
+              Budget Number (Optional)
             </label>
             <input
               type="text"
@@ -176,17 +182,21 @@ export default function EditBudgetModal({
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               disabled={loading}
             />
+            <p className="text-xs text-gray-500 mt-1">This is for reference only. Stored in notes field.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Budget Year
+                Fiscal Year
               </label>
               <input
                 type="number"
                 value={budgetYear}
-                onChange={(e) => setBudgetYear(parseInt(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? new Date().getFullYear() : parseInt(e.target.value, 10);
+                  setBudgetYear(isNaN(val) ? new Date().getFullYear() : val);
+                }}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               />
@@ -221,12 +231,26 @@ export default function EditBudgetModal({
               onChange={(e) => setTotalAllocated(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
               step="0.01"
-              min={utilized}
+              min="0"
               disabled={loading}
             />
             <p className="text-xs text-gray-500 mt-1">
               Minimum: ₱{(utilized / 1000).toFixed(0)}K (current utilization)
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes or budget number reference..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+              rows={2}
+              disabled={loading}
+            />
           </div>
 
           {canModifyStatus && (

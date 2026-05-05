@@ -725,16 +725,21 @@ export default function BudgetPage() {
         onClose={() => setShowCreateModal(false)}
         onBudgetCreated={() => {
           // Refresh data when budget is created
-          if (currentUser) {
-            const stored = localStorage.getItem("currentUser");
-            if (stored) {
-              const user = JSON.parse(stored);
-              setCurrentUser(user);
-            }
-          }
+          loadBudgetData();
+          setShowCreateModal(false);
         }}
         divisions={divisions}
         currentUserId={currentUser?.user_id || 0}
+        onEditExisting={(divisionId, fiscalYear) => {
+          // Find the existing budget and open edit modal
+          const existingBudget = budgetList.find(
+            (b) => b.division_id === divisionId && b.fiscal_year === fiscalYear
+          );
+          if (existingBudget) {
+            setSelectedBudget(existingBudget);
+            setShowEditModal(true);
+          }
+        }}
       />
 
       {/* Edit Budget Modal */}
