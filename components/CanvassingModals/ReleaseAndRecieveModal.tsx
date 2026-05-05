@@ -275,7 +275,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                         <RiDeleteBinLine size={18} />
                       </button>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Canvasser Name</label>
                           <input
@@ -304,22 +304,6 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                             onChange={(e) => {
                               const newAsgs = [...assignments];
                               newAsgs[idx].quotation_no = e.target.value;
-                              setAssignments(newAsgs);
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">RFQ Index (Papers)</label>
-                          <input
-                            type="number"
-                            className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                            placeholder="0"
-                            value={asg.rfq_index || ""}
-                            disabled={!!asg.released_at}
-                            onBlur={(e) => handleUpdateAssignment(idx, { rfq_index: parseInt(e.target.value) || 0 })}
-                            onChange={(e) => {
-                              const newAsgs = [...assignments];
-                              newAsgs[idx].rfq_index = parseInt(e.target.value) || 0;
                               setAssignments(newAsgs);
                             }}
                           />
