@@ -487,6 +487,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   // PR Selection state
   const [availablePRs, setAvailablePRs] = useState<PurchaseRequest[]>([]);
   const [selectedPRId, setSelectedPRId] = useState<string>("");
+  const [selectedPRNo, setSelectedPRNo] = useState<string>("");
   const [loadingPRs, setLoadingPRs] = useState(false);
   const [prSearch, setPrSearch] = useState("");
   
@@ -554,6 +555,9 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     const selectedPR = availablePRs.find((pr) => pr.id.toString() === prId);
     if (!selectedPR) return;
 
+    // Store PR number for PO creation
+    setSelectedPRNo(selectedPR.pr_no);
+
     // Pre-fill office info from PR
     setOfficeSection(selectedPR.office_section || "");
     setFundCluster(selectedPR.fund_cluster || "");
@@ -607,6 +611,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
   function resetForm() {
     setSelectedPRId("");
+    setSelectedPRNo("");
     setPoNo("");
     setSupplier("");
     setAddress("");
@@ -657,6 +662,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     try {
       const header: Partial<PurchaseOrderRow> = {
         po_no: poNo,
+        pr_no: selectedPRNo || null,
         supplier,
         address,
         tin,

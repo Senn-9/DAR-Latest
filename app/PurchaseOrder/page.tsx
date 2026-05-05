@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import CreatePOModal from "../../components/CreatePOModal";
+import ORSProcessModal from "@/components/ORSProcessModal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
@@ -905,17 +906,30 @@ export default function PurchaseOrderPage() {
         canProcess={selectedPo ? canProcessPO(currentUser, selectedPo.status_id, selectedPoDivisionName) : false}
       />
 
-      <ProcessModal
-        visible={processOpen}
-        po={selectedPo}
-        roleId={currentUser?.role_id ?? 0}
-        divisionName={selectedPoDivisionName}
-        onClose={() => setProcessOpen(false)}
-        onSubmit={async (statusId, remarks) => {
-          await processPO(statusId, remarks);
-          setProcessOpen(false);
-        }}
-      />
+      {selectedPo?.status_id === 13 ? (
+        <ORSProcessModal
+          visible={processOpen}
+          po={selectedPo}
+          currentUser={currentUser}
+          onClose={() => setProcessOpen(false)}
+          onSubmit={async (statusId, remarks) => {
+            await processPO(statusId, remarks);
+            setProcessOpen(false);
+          }}
+        />
+      ) : (
+        <ProcessModal
+          visible={processOpen}
+          po={selectedPo}
+          roleId={currentUser?.role_id ?? 0}
+          divisionName={selectedPoDivisionName}
+          onClose={() => setProcessOpen(false)}
+          onSubmit={async (statusId, remarks) => {
+            await processPO(statusId, remarks);
+            setProcessOpen(false);
+          }}
+        />
+      )}
 
       <CreatePOModal
         visible={createOpen}

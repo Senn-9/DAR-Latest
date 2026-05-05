@@ -189,6 +189,16 @@ export type OrsEntry = {
   approved_by_name: string | null;
   approved_by_desig: string | null;
   date_created: string | null;
+  // Appendix 11 ORS form fields
+  entity_name: string | null;
+  payee_address: string | null;
+  office: string | null;
+  reference_no: string | null; // ORS/JEV/Check/ADA/TRA No.
+  obligation_amount: number; // default 0
+  payable_amount: number; // default 0
+  payment_amount: number; // default 0
+  not_yet_due_balance: number; // default 0
+  due_demandable_balance: number; // default 0
 };
 
 export type Proposal = {
