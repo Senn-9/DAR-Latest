@@ -22,6 +22,7 @@ export interface OrsEntryRow {
   division_id?: number | null;
   fiscal_year: number;
   amount: number;
+  obligation_amount?: number | null;
   status: OrsStatus;
   prepared_by?: number | null;
   approved_by?: number | null;

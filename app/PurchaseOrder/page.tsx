@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import CreatePOModal from "../../components/CreatePOModal";
-import ORSProcessModal from "@/components/ORSProcessModal";
+import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
+import POServingProcessModal from "@/components/PO/POServingProcessModal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
@@ -126,6 +127,12 @@ function isPPMPPointPerson(user: POUserContext) {
   return roleName.includes("ppmp") || roleName.includes("point person") || username.includes("ppmp");
 }
 
+function isPARPOUser(user: POUserContext) {
+  const roleName = normalizeText(user?.roles?.role_name);
+  const username = normalizeText(user?.username);
+  return roleName.includes("parpo") || username.includes("parpo");
+}
+
 function nextStatusOptions(statusId: number, user: POUserContext, divisionName?: string | null) {
   const roleId = user?.role_id ?? 0;
 
@@ -148,6 +155,12 @@ function nextStatusOptions(statusId: number, user: POUserContext, divisionName?:
     return [];
   }
 
+  if (isPARPOUser(user)) {
+    // PARPO users process status 16 (PARPO) and move to 17 (Serving)
+    if (statusId === 16) return [17];
+    return [];
+  }
+
   if (isPPMPPointPerson(user)) {
     if (statusId === 15) return [16];
     return [];
@@ -158,8 +171,17 @@ function nextStatusOptions(statusId: number, user: POUserContext, divisionName?:
 
 function canProcessPO(user: POUserContext, statusId: number | null, divisionName?: string | null) {
   if (statusId == null) return false;
+  // Completed POs (status 34) cannot be processed further
+  if (statusId === 34) return false;
   return nextStatusOptions(statusId, user, divisionName).length > 0;
 }
+
+type FlagOption = {
+  id: number;
+  label: string;
+  slug: string;
+  description: string;
+};
 
 function ProcessModal({
   visible,
@@ -174,11 +196,42 @@ function ProcessModal({
   roleId: number;
   divisionName: string | null;
   onClose: () => void;
-  onSubmit: (statusId: number, remarks: string) => Promise<void>;
+  onSubmit: (statusId: number, remarks: string, statusFlagId?: number | null) => Promise<void>;
 }) {
+  const supabase = createClient();
   const [statusId, setStatusId] = useState<number | "">("");
   const [remarks, setRemarks] = useState("");
   const [saving, setSaving] = useState(false);
+  const [flagOptions, setFlagOptions] = useState<FlagOption[]>([]);
+  const [selectedFlagId, setSelectedFlagId] = useState<number | null>(null);
+
+  // Fetch status flags
+  useEffect(() => {
+    const fetchFlags = async () => {
+      const { data } = await supabase.from("status_flag").select("id, flag_name").order("id", { ascending: true });
+      const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
+      const opts: FlagOption[] = (data || []).map((row: { id: number; flag_name: string | null }) => ({
+        id: row.id,
+        label: row.flag_name || "Unknown",
+        slug: toSlug(row.flag_name || ""),
+        description:
+          row.flag_name === "Complete" ? "All information is correct and complete." :
+          row.flag_name === "Incomplete Info" ? "Required fields or attachments are missing." :
+          row.flag_name === "Wrong Information" ? "Submitted data contains errors that must be corrected." :
+          row.flag_name === "Needs Revision" ? "Minor corrections needed before forwarding." :
+          row.flag_name === "On Hold" ? "Processing paused pending clarification." :
+          row.flag_name === "Urgent" ? "Requires immediate attention." :
+          "Leave flag unset",
+      }));
+      setFlagOptions(opts);
+      const noFlag = opts.find((o) => o.slug === "no_flag")?.id ?? opts[0]?.id ?? null;
+      setSelectedFlagId(noFlag);
+    };
+
+    if (visible) {
+      fetchFlags();
+    }
+  }, [supabase, visible]);
 
   useEffect(() => {
     if (!visible || !po) return;
@@ -240,6 +293,25 @@ function ProcessModal({
             </select>
           </div>
 
+          {/* Status Flag Picker */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Status Flag</label>
+            <select
+              value={selectedFlagId ?? ""}
+              onChange={(e) => setSelectedFlagId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            >
+              {flagOptions.map((flag) => (
+                <option key={flag.id} value={flag.id}>
+                  {flag.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {flagOptions.find((f) => f.id === selectedFlagId)?.description}
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Remarks</label>
             <textarea
@@ -264,7 +336,7 @@ function ProcessModal({
               if (statusId === "") return;
               setSaving(true);
               try {
-                await onSubmit(statusId, remarks);
+                await onSubmit(statusId, remarks, selectedFlagId);
                 onClose();
               } finally {
                 setSaving(false);
@@ -462,7 +534,8 @@ export default function PurchaseOrderPage() {
   const isAdmin = currentUser?.role_id === 1;
   const isBudget = currentUser?.role_id === 4 || (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
   const isSupply = currentUser?.role_id === 8 || (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
-  const canViewAll = isAdmin || isBudget || isSupply;
+  const isPARPO = currentUser?.role_id === 9 || (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false) || (currentUser?.username?.toLowerCase().includes("parpo") ?? false);
+  const canViewAll = isAdmin || isBudget || isSupply || isPARPO;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -484,23 +557,24 @@ export default function PurchaseOrderPage() {
     loadDivisions();
   }, [supabase]);
 
-  useEffect(() => {
-    const loadPOs = async () => {
-      try {
-        setLoading(true);
-        const rows = canViewAll
-          ? await fetchPurchaseOrders()
-          : currentUser?.division_id != null
-            ? await fetchPurchaseOrdersByDivision(currentUser.division_id)
-            : [];
-        setList(rows);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadData = async () => {
+    if (!currentUser) return;
+    try {
+      setLoading(true);
+      const rows = canViewAll
+        ? await fetchPurchaseOrders()
+        : currentUser?.division_id != null
+          ? await fetchPurchaseOrdersByDivision(currentUser.division_id)
+          : [];
+      setList(rows);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (currentUser) {
-      loadPOs();
+      loadData();
     }
   }, [currentUser, canViewAll]);
 
@@ -591,7 +665,7 @@ export default function PurchaseOrderPage() {
 
   const selectedPoDivisionName = getDivisionName(selectedPo?.division_id);
 
-  const processPO = async (statusId: number, remarks: string) => {
+  const processPO = async (statusId: number, remarks: string, statusFlagId?: number | null) => {
     if (!selectedPo) return;
     setSaving(true);
     try {
@@ -602,7 +676,7 @@ export default function PurchaseOrderPage() {
         user_id: currentUser?.id ?? null,
         remark: `[PO] ${remarks.trim()}`,
         phase: "po",
-        status_flag_id: null,
+        status_flag_id: statusFlagId ?? null,
       });
       const rows = canViewAll
         ? await fetchPurchaseOrders()
@@ -906,16 +980,29 @@ export default function PurchaseOrderPage() {
         canProcess={selectedPo ? canProcessPO(currentUser, selectedPo.status_id, selectedPoDivisionName) : false}
       />
 
-      {selectedPo?.status_id === 13 ? (
-        <ORSProcessModal
+      {selectedPo?.status_id === 16 ? (
+        <POPARPOProcessModal
           visible={processOpen}
           po={selectedPo}
           currentUser={currentUser}
-          onClose={() => setProcessOpen(false)}
-          onSubmit={async (statusId, remarks) => {
-            await processPO(statusId, remarks);
+          onClose={() => {
             setProcessOpen(false);
+            setSelectedPo(null);
+            loadData();
           }}
+          onSubmit={processPO}
+        />
+      ) : selectedPo?.status_id === 17 ? (
+        <POServingProcessModal
+          visible={processOpen}
+          po={selectedPo}
+          currentUser={currentUser}
+          onClose={() => {
+            setProcessOpen(false);
+            setSelectedPo(null);
+            loadData();
+          }}
+          onSubmit={processPO}
         />
       ) : (
         <ProcessModal
@@ -924,8 +1011,8 @@ export default function PurchaseOrderPage() {
           roleId={currentUser?.role_id ?? 0}
           divisionName={selectedPoDivisionName}
           onClose={() => setProcessOpen(false)}
-          onSubmit={async (statusId, remarks) => {
-            await processPO(statusId, remarks);
+          onSubmit={async (statusId: number, remarks: string, statusFlagId?: number | null) => {
+            await processPO(statusId, remarks, statusFlagId);
             setProcessOpen(false);
           }}
         />

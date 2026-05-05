@@ -128,22 +128,11 @@ export default function BudgetPage() {
     setLoading(true);
 
     try {
-      // Fetch budgets, ORS entries, and POs in parallel
-      const divisionId = currentUser?.user_id && isEndUser ? currentUser.user_id : undefined;
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 1: Determine user's division for filtering
+      // ═══════════════════════════════════════════════════════════════════
+      let userDivisionId: number | undefined;
       
-      // Fetch POs based on user role
-      const poFetch = isEndUser && divisionId
-        ? fetchPurchaseOrdersByDivision(Number(divisionId), selectedYear)
-        : fetchPurchaseOrders(selectedYear);
-      
-      const [budgetsData, orsData, poData] = await Promise.all([
-        fetchBudgets(selectedYear),
-        fetchOrsEntries(selectedYear, isEndUser && divisionId ? divisionId : undefined),
-        poFetch,
-      ]);
-
-      // Filter by user's division if end user
-      let filteredBudgets = budgetsData;
       if (isEndUser && currentUser?.divisions?.division_name) {
         const { data: userDivision } = await supabase
           .from("divisions")
@@ -151,38 +140,70 @@ export default function BudgetPage() {
           .eq("division_name", currentUser.divisions.division_name)
           .single();
         if (userDivision) {
-          filteredBudgets = budgetsData.filter((b) => b.division_id === userDivision.division_id);
+          userDivisionId = userDivision.division_id;
         }
       }
 
-      // Calculate ORS amounts per division
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 2: Fetch budgets, ORS entries, and POs in parallel
+      // ═══════════════════════════════════════════════════════════════════
+      const [budgetsData, orsData, poData] = await Promise.all([
+        fetchBudgets(selectedYear),
+        fetchOrsEntries(selectedYear, userDivisionId),
+        userDivisionId 
+          ? fetchPurchaseOrdersByDivision(userDivisionId, selectedYear)
+          : fetchPurchaseOrders(selectedYear),
+      ]);
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 3: Filter budgets by user's division if end user
+      // ═══════════════════════════════════════════════════════════════════
+      const filteredBudgets = userDivisionId
+        ? budgetsData.filter((b) => b.division_id === userDivisionId)
+        : budgetsData;
+
+      // Get the set of valid division IDs from filtered budgets
+      const validDivisionIds = new Set(filteredBudgets.map(b => b.division_id));
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 4: BUDGET CALCULATION LOGIC
+      // ═══════════════════════════════════════════════════════════════════
+      
+      // ─── ORS Calculation ───
+      // Uses obligation_amount (accurate obligation request amount) 
+      // Falls back to amount field if obligation_amount is not available
+      // Only includes ORS entries for divisions that have budgets
       const orsByDivision: Record<number, number> = {};
       orsData.forEach((ors) => {
-        if (ors.division_id) {
-          orsByDivision[ors.division_id] = (orsByDivision[ors.division_id] || 0) + ors.amount;
+        if (ors.division_id && validDivisionIds.has(ors.division_id)) {
+          // Use obligation_amount for accurate budget earmarking, fallback to amount
+          const orsValue = ors.obligation_amount ?? ors.amount ?? 0;
+          orsByDivision[ors.division_id] = (orsByDivision[ors.division_id] || 0) + orsValue;
         }
       });
 
-      // Calculate PO amounts per division
+      // ─── PO Calculation ───
+      // Uses total_amount from purchase orders for actual disbursements
+      // Only includes POs for divisions that have budgets
       const poByDivision: Record<number, number> = {};
       poData.forEach((po) => {
-        if (po.division_id && po.total_amount) {
+        if (po.division_id && po.total_amount && validDivisionIds.has(po.division_id)) {
           poByDivision[po.division_id] = (poByDivision[po.division_id] || 0) + po.total_amount;
         }
       });
 
-      // Process budgets data with DivisionBudgetRow structure
+      // ─── Budget Processing ───
       const processedBudgets: Budget[] = filteredBudgets.map((item) => {
         const allocated = item.allocated || 0;
-        const orsAmount = orsByDivision[item.division_id] || 0;
-        const poAmount = poByDivision[item.division_id] || 0;
+        const orsAmount = orsByDivision[item.division_id] || 0;  // Earmarked (ORS obligations)
+        const poAmount = poByDivision[item.division_id] || 0;    // Spent (PO disbursements)
         
         // Calculate utilized based on calcMode:
-        // - 'earmarked' (ORS): ORS amounts + PO amounts
-        // - 'spent' (PO): PO amounts only
+        // - 'earmarked' (ORS): ORS obligation amounts + PO amounts
+        // - 'spent' (PO): PO amounts only (actual disbursements)
         const utilized = calcMode === "earmarked" 
-          ? orsAmount + poAmount  // ORS mode: obligations from ORS + POs
-          : poAmount;             // PO mode: actual disbursements from POs
+          ? orsAmount + poAmount   // ORS mode: obligations from ORS + actual PO disbursements
+          : poAmount;              // PO mode: actual disbursements from POs only
         
         const remaining = allocated - utilized;
         const utilizationPercent = allocated > 0 ? (utilized / allocated) * 100 : 0;

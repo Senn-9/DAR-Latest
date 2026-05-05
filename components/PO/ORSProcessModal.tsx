@@ -5,8 +5,10 @@ import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
   RiSaveLine,
+  RiFlagLine,
 } from "react-icons/ri";
 import type { PurchaseOrderRow, PurchaseOrderItemRow } from "@/utils/supabase/po";
+import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 
 interface ORSProcessModalProps {
   visible: boolean;
@@ -19,7 +21,7 @@ interface ORSProcessModalProps {
     division_id?: number | null;
   } | null;
   onClose: () => void;
-  onSubmit: (statusId: number, remarks: string) => Promise<void>;
+  onSubmit: (statusId: number, remarks: string, statusFlagId?: number | null) => Promise<void>;
 }
 
 // Number to words converter
@@ -486,13 +488,35 @@ export default function ORSProcessModal({
   const [preparedByDesig, setPreparedByDesig] = useState("");
   const [remarks, setRemarks] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedFlag, setSelectedFlag] = useState<StatusFlag | null>(null);
+  const [showFlagPicker, setShowFlagPicker] = useState(false);
+  
+  // Division state for dropdown
+  const [divisions, setDivisions] = useState<{ division_id: number; division_name: string }[]>([]);
+  const [selectedDivisionId, setSelectedDivisionId] = useState<number | null>(null);
+
+  // Fetch divisions on mount
+  useEffect(() => {
+    const fetchDivisions = async () => {
+      const { data } = await supabase
+        .from("divisions")
+        .select("division_id, division_name")
+        .order("division_name");
+      if (data) {
+        setDivisions(data);
+      }
+    };
+    fetchDivisions();
+  }, [supabase]);
 
   useEffect(() => {
     if (po && visible) {
       setEntityName(po.office_section || "");
       setPayee(po.supplier || "");
       setPayeeAddress("");
+      // Set office from PO and try to match division
       setOffice(po.office_section || "");
+      setSelectedDivisionId(po.division_id ?? null);
       setFundCluster(po.fund_cluster || "");
       setResponsibilityCenter("");
       setParticulars(`Payment for ${po.supplier || "supplier"} - ${po.pr_no || ""}`);
@@ -523,13 +547,14 @@ export default function ORSProcessModal({
   const handleSave = async () => {
     if (!po) return;
     if (!orsNo.trim()) { alert("ORS Number is required"); return; }
+    if (!selectedDivisionId) { alert("Office / Division is required"); return; }
     setSaving(true);
     try {
       const { error: orsError } = await supabase.from("ors_entries").insert({
         ors_no: orsNo,
         pr_id: po.pr_id,
         pr_no: po.pr_no,
-        division_id: po.division_id,
+        division_id: selectedDivisionId,
         fiscal_year: new Date().getFullYear(),
         amount: obligationAmount,
         status: "Pending",
@@ -575,10 +600,10 @@ export default function ORSProcessModal({
         user_id: currentUser?.id || null,
         remark: `[ORS Created] ORS No: ${orsNo}. ${remarks.trim()}`,
         phase: "po",
-        status_flag_id: null,
+        status_flag_id: selectedFlag ? getFlagId(selectedFlag) : null,
       });
 
-      await onSubmit(14, `ORS ${orsNo} created`);
+      await onSubmit(14, `ORS ${orsNo} created`, selectedFlag ? getFlagId(selectedFlag) : null);
       onClose();
     } catch (err) {
       console.error("Error saving ORS:", err);
@@ -654,13 +679,26 @@ export default function ORSProcessModal({
                       />
                     </div>
                     <div>
-                      <label className={labelCls}>Office</label>
-                      <input
+                      <label className={labelCls}>Office / Division *</label>
+                      <select
                         className={inputCls}
-                        placeholder="e.g., Regional Office"
-                        value={office}
-                        onChange={(e) => setOffice(e.target.value)}
-                      />
+                        value={selectedDivisionId ?? ""}
+                        onChange={(e) => {
+                          const divId = e.target.value ? Number(e.target.value) : null;
+                          setSelectedDivisionId(divId);
+                          // Also update office text to division name
+                          const div = divisions.find(d => d.division_id === divId);
+                          if (div) setOffice(div.division_name);
+                        }}
+                        required
+                      >
+                        <option value="">Select Division...</option>
+                        {divisions.map((div) => (
+                          <option key={div.division_id} value={div.division_id}>
+                            {div.division_name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div>
@@ -855,7 +893,15 @@ export default function ORSProcessModal({
                 </div>
               </FormSection>
 
-              {/* ⑦ Remarks */}
+              {/* ⑦ Status Flag */}
+              <FormSection title="Status Flag">
+                <FlagButton
+                  selected={selectedFlag}
+                  onPress={() => setShowFlagPicker(true)}
+                />
+              </FormSection>
+
+              {/* ⑧ Remarks */}
               <FormSection title="Remarks">
                 <textarea
                   className={`${inputCls} min-h-[52px] resize-y`}
@@ -878,7 +924,7 @@ export default function ORSProcessModal({
               </button>
               <button
                 type="button"
-                disabled={saving || !orsNo.trim()}
+                disabled={saving || !orsNo.trim() || !selectedDivisionId}
                 onClick={handleSave}
                 className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-50 transition"
               >
@@ -935,6 +981,14 @@ export default function ORSProcessModal({
 
         </div>
       </div>
+
+      {/* Status Flag Picker Modal */}
+      <StatusFlagPicker
+        visible={showFlagPicker}
+        selected={selectedFlag}
+        onSelect={(flag) => setSelectedFlag(flag)}
+        onClose={() => setShowFlagPicker(false)}
+      />
     </div>
   );
 }
