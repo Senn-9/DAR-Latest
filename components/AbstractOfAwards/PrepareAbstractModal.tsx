@@ -61,6 +61,8 @@ export default function PrepareAbstractModal({
 	const [loading, setLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [feedback, setFeedback] = useState<SubmitResult | null>(null);
+	const [showUploadAOAModal, setShowUploadAOAModal] = useState(false);
+	const [aoaLink, setAoaLink] = useState("");
 
 	useEffect(() => {
 		if (!open) {
@@ -297,6 +299,64 @@ export default function PrepareAbstractModal({
 		return winningIndex;
 	};
 
+	const handleUploadAOALink = async () => {
+		if (!aoaLink.trim()) {
+			setFeedback({ ok: false, message: "Please enter an AOA link." });
+			return;
+		}
+
+		if (!prId) {
+			setFeedback({ ok: false, message: "PR ID is missing." });
+			return;
+		}
+
+		setIsSaving(true);
+		setFeedback(null);
+
+		try {
+			// Check for existing document
+			const { data: existingDoc, error: checkErr } = await supabase
+				.from("documents")
+				.select("id, pr_id")
+				.eq("pr_id", prId)
+				.maybeSingle();
+
+			if (checkErr) throw checkErr;
+
+			if (existingDoc) {
+				// Update existing document
+				const { error: updateErr } = await supabase
+					.from("documents")
+					.update({ abstract_link: aoaLink.trim() })
+					.eq("pr_id", prId);
+
+				if (updateErr) throw updateErr;
+			} else {
+				// Insert new document
+				const { error: insertErr } = await supabase.from("documents").insert({
+					pr_id: prId,
+					pr_no: prNo,
+					abstract_link: aoaLink.trim(),
+					bac_reso_link: null,
+				});
+
+				if (insertErr) throw insertErr;
+			}
+
+			setFeedback({ ok: true, message: "AOA link uploaded successfully." });
+			setAoaLink("");
+			setShowUploadAOAModal(false);
+		} catch (error) {
+			console.error("Upload error:", error);
+			setFeedback({
+				ok: false,
+				message: error instanceof Error ? error.message : "Could not upload AOA link.",
+			});
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	return (
 		<div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
 			<div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
@@ -508,10 +568,93 @@ export default function PrepareAbstractModal({
 								<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
 								Saving...
 							</>
-						) : "Save Awarding Details"}
+						) : "Save AOA Details"}
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowUploadAOAModal(true)}
+						disabled={isSaving}
+						className="px-8 py-2.5 rounded-xl bg-blue-700 text-white text-sm font-bold hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all"
+					>
+						Upload AOA Link
 					</button>
 				</div>
 			</div>
+
+			{showUploadAOAModal && (
+				<div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+					<div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowUploadAOAModal(false)} />
+					<div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+						<div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white flex items-center justify-between">
+							<div>
+								<p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Document Upload</p>
+								<h3 className="text-lg font-extrabold mt-1">Upload AOA Link</h3>
+							</div>
+							<button
+								type="button"
+								onClick={() => setShowUploadAOAModal(false)}
+								className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+							>
+								<RiCloseLine size={20} />
+							</button>
+						</div>
+
+						<div className="p-6 space-y-4">
+							{feedback && (
+								<div
+									className={`rounded-lg border px-4 py-3 text-sm font-semibold ${
+										feedback.ok
+											? "border-emerald-200 bg-emerald-50 text-emerald-800"
+											: "border-red-200 bg-red-50 text-red-700"
+									}`}
+								>
+									{feedback.message}
+								</div>
+							)}
+
+							<div>
+								<label className="mb-2 block text-sm font-semibold text-gray-700">
+									AOA Link <span className="text-red-500">*</span>
+								</label>
+								<input
+									type="url"
+									placeholder="https://example.com/abstract-of-awards"
+									value={aoaLink}
+									onChange={(e) => setAoaLink(e.target.value)}
+									className={textInputCls}
+								/>
+								<p className="mt-2 text-xs text-gray-500">
+									Enter the complete URL to the Abstract of Awards document
+								</p>
+							</div>
+
+							<div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+								<p className="text-xs text-emerald-700">
+									<span className="font-semibold">PR:</span> {prNo}
+								</p>
+							</div>
+						</div>
+
+						<div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => setShowUploadAOAModal(false)}
+								className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleUploadAOALink}
+								disabled={isSaving || !aoaLink.trim()}
+								className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:opacity-60"
+							>
+								{isSaving ? "Uploading..." : "Upload Link"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

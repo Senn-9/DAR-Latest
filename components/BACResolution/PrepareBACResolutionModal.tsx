@@ -137,6 +137,9 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
   const [flagId, setFlagId] = useState(2);
   const [remarks, setRemarks] = useState("");
 
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [bacResolutionLink, setBacResolutionLink] = useState("");
+
   const selectedFlag = flagOptions.find((f) => f.id === flagId) ?? {
     id: 2,
     label: "Complete",
@@ -557,6 +560,83 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
     }
   };
 
+  const handleUploadResolutionLink = async () => {
+    if (!bacResolutionLink.trim()) {
+      setError("Please enter a BAC Resolution link.");
+      return;
+    }
+
+    if (selectedPrIds.length === 0) {
+      setError("Please select at least one PR to upload the resolution link.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Get PR numbers for selected IDs
+      const selectedPrs = prList.filter((pr) => selectedPrIds.includes(pr.id));
+
+      // Check for existing documents
+      const { data: existingDocs, error: checkErr } = await supabase
+        .from("documents")
+        .select("id, pr_id")
+        .in("pr_id", selectedPrIds);
+
+      if (checkErr) throw checkErr;
+
+      const existingPrIds = new Set((existingDocs || []).map((doc: { pr_id: number }) => doc.pr_id));
+
+      // Separate into updates and inserts
+      const toUpdate: { pr_id: number; pr_no: string; bac_reso_link: string; abstract_link: null }[] = [];
+      const toInsert: { pr_id: number; pr_no: string; bac_reso_link: string; abstract_link: null }[] = [];
+
+      selectedPrs.forEach((pr) => {
+        const data = {
+          pr_id: pr.id,
+          pr_no: pr.pr_no,
+          bac_reso_link: bacResolutionLink.trim(),
+          abstract_link: null,
+        };
+
+        if (existingPrIds.has(pr.id)) {
+          toUpdate.push(data);
+        } else {
+          toInsert.push(data);
+        }
+      });
+
+      // Update existing documents
+      if (toUpdate.length > 0) {
+        for (const doc of toUpdate) {
+          const { error: updateErr } = await supabase
+            .from("documents")
+            .update({ bac_reso_link: doc.bac_reso_link })
+            .eq("pr_id", doc.pr_id);
+
+          if (updateErr) throw updateErr;
+        }
+      }
+
+      // Insert new documents
+      if (toInsert.length > 0) {
+        const { error: insertErr } = await supabase.from("documents").insert(toInsert);
+        if (insertErr) throw insertErr;
+      }
+
+      setSuccess(`BAC Resolution link uploaded for ${selectedPrIds.length} PR(s).`);
+      setBacResolutionLink("");
+      setShowUploadModal(false);
+    } catch (e) {
+      console.error("Upload error:", e);
+      setError(e instanceof Error ? e.message : "Could not upload resolution link.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -850,13 +930,88 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
           </button>
           <button
             type="button"
-            onClick={handleProcess}
+            onClick={() => setShowUploadModal(true)}
             disabled={loading || saving || preparing || selectedPrIds.length === 0}
             className="rounded-lg bg-purple-700 px-5 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-purple-800 disabled:opacity-60"
           >
-            {saving ? "Processing..." : "Submit Selected PRs"}
+            Upload Resolution Link
           </button>
         </div>
+
+        {showUploadModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowUploadModal(false)} />
+            <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-purple-100">Document Upload</p>
+                  <h3 className="text-lg font-extrabold mt-1">Upload BAC Resolution Link</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+                >
+                  <RiCloseLine size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {error && (
+                  <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                    {success}
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    BAC Resolution Link <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/resolution"
+                    value={bacResolutionLink}
+                    onChange={(e) => setBacResolutionLink(e.target.value)}
+                    className={inputCls}
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    Enter the complete URL to the BAC Resolution document
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">
+                    <span className="font-semibold">Selected PRs:</span> {selectedPrIds.length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUploadResolutionLink}
+                  disabled={saving || !bacResolutionLink.trim()}
+                  className="rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-purple-800 disabled:opacity-60"
+                >
+                  {saving ? "Uploading..." : "Upload Link"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

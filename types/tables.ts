@@ -2,16 +2,6 @@
 // tables.ts — TypeScript types for all public schema tables
 // ============================================================
 
-export type AaaDocument = {
-  id: number;
-  session_id: number | null;
-  aaa_no: string | null;
-  prepared_by: number | null;
-  prepared_at: string | null; // ISO timestamp
-  file_url: string | null;
-  particulars: string | null;
-};
-
 export type BacResolution = {
   id: number;
   session_id: number | null;
@@ -112,6 +102,14 @@ export type Division = {
   division_name: string | null;
 };
 
+export type Document = {
+  id: number;
+  pr_id: number | null;
+  pr_no: string | null;
+  bac_reso_link: string | null;
+  abstract_link: string | null;
+};
+
 export type DvDocument = {
   id: number;
   delivery_id: number;
@@ -149,6 +147,7 @@ export type IarDocument = {
   created_by: number | null;
   created_at: string; // ISO timestamp
   updated_at: string | null;
+  missing_units_items: string | null;
 };
 
 export type LoaDocument = {
@@ -190,35 +189,6 @@ export type OrsEntry = {
   approved_by_name: string | null;
   approved_by_desig: string | null;
   date_created: string | null;
-};
-
-export type PrForm = {
-  pr_id: number; // UNIQUE
-  entity_name: string | null;
-  fund_cluster: string | null;
-  office_section: string | null;
-  pr_num: string; // UNIQUE, default ''
-  responsibility_code: string | null;
-  created_at: string; // ISO timestamp
-  purpose: string | null;
-  req_by: string | null;
-  req_designation: string | null;
-  app_by: string | null;
-  app_designation: string | null;
-  status_id: number | null;
-  division: number | null;
-};
-
-export type PrItem = {
-  prItem_id: number;
-  created_at: string; // ISO timestamp
-  stock_num: string | null;
-  unit: string | null;
-  description: string | null;
-  quantity: string | null;
-  unit_cost: string | null;
-  total_cost: string | null;
-  pr_id: number | null;
 };
 
 export type Proposal = {
@@ -318,7 +288,6 @@ export type Remark = {
   user_id: number | null;
   pr_id: number | null;
   status_flag_id: number | null;
-  prform_id: number | null;
   po_id: number | null;
   delivery_id: number | null;
   phase: RemarkPhase | null;
@@ -357,7 +326,6 @@ export type User = {
 export type Database = {
   public: {
     Tables: {
-      aaa_documents: { Row: AaaDocument };
       bac_resolution: { Row: BacResolution };
       bac_resolution_prs: { Row: BacResolutionPr };
       canvass_entries: { Row: CanvassEntry };
@@ -366,12 +334,11 @@ export type Database = {
       deliveries: { Row: Delivery };
       division_budgets: { Row: DivisionBudget };
       divisions: { Row: Division };
+      documents: { Row: Document };
       dv_documents: { Row: DvDocument };
       iar_documents: { Row: IarDocument };
       loa_documents: { Row: LoaDocument };
       ors_entries: { Row: OrsEntry };
-      pr_form: { Row: PrForm };
-      pr_item: { Row: PrItem };
       proposals: { Row: Proposal };
       purchase_order_items: { Row: PurchaseOrderItem };
       purchase_orders: { Row: PurchaseOrder };
