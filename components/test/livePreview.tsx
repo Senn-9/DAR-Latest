@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RiCloseLine } from "react-icons/ri";
+import { RiCloseLine, RiPrinterLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
+import { printLivePreview } from "./printResolution";
 
 type LivePreviewProps = {
 	open: boolean;
@@ -48,6 +49,10 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 			next[r][c] = v;
 			return next;
 		});
+	};
+
+	const handlePrint = () => {
+		printLivePreview(meta, cells, supplierNames, supplierTotals);
 	};
 
 	const setMetaField = (k: keyof typeof meta, v: string) => setMeta((m) => ({ ...m, [k]: v }));
@@ -192,14 +197,26 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 		<div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6">
 			<div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-			<button
-				type="button"
-				onClick={onClose}
-				className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-				aria-label="Close preview"
-			>
-				<RiCloseLine size={20} />
-			</button>
+			<div className="absolute right-4 top-4 z-20 flex gap-2">
+				<button
+					type="button"
+					onClick={handlePrint}
+					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+					aria-label="Print preview"
+					title="Print"
+				>
+					<RiPrinterLine size={20} />
+				</button>
+				<button
+					type="button"
+					onClick={onClose}
+					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+					aria-label="Close preview"
+					title="Close"
+				>
+					<RiCloseLine size={20} />
+				</button>
+			</div>
 
 			<div className="relative mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10" style={{ maxWidth: "768px" }}>
 				<div
