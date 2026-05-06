@@ -12,11 +12,8 @@ import EditBudgetModal from "@/components/Budget/EditBudgetModal";
 import {
   fetchBudgets,
   fetchOrsEntries,
-  fetchPurchaseOrders,
-  fetchPurchaseOrdersByDivision,
   type DivisionBudgetRow,
   type OrsEntryRow,
-  type PORow,
 } from "./budget";
 
 export default function BudgetPage() {
@@ -79,8 +76,7 @@ export default function BudgetPage() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
 
-  // Calculation mode: 'earmarked' (ORS) | 'spent' (PO)
-  const [calcMode, setCalcMode] = useState<"earmarked" | "spent">("earmarked");
+  // Budget is calculated based on ORS obligated amounts
 
   // Budget data
   const [totalAllocated, setTotalAllocated] = useState(0);
@@ -145,14 +141,11 @@ export default function BudgetPage() {
       }
 
       // ═══════════════════════════════════════════════════════════════════
-      // STEP 2: Fetch budgets, ORS entries, and POs in parallel
+      // STEP 2: Fetch budgets and ORS entries in parallel
       // ═══════════════════════════════════════════════════════════════════
-      const [budgetsData, orsData, poData] = await Promise.all([
+      const [budgetsData, orsData] = await Promise.all([
         fetchBudgets(selectedYear),
         fetchOrsEntries(selectedYear, userDivisionId),
-        userDivisionId 
-          ? fetchPurchaseOrdersByDivision(userDivisionId, selectedYear)
-          : fetchPurchaseOrders(selectedYear),
       ]);
 
       // ═══════════════════════════════════════════════════════════════════
@@ -182,28 +175,13 @@ export default function BudgetPage() {
         }
       });
 
-      // ─── PO Calculation ───
-      // Uses total_amount from purchase orders for actual disbursements
-      // Only includes POs for divisions that have budgets
-      const poByDivision: Record<number, number> = {};
-      poData.forEach((po) => {
-        if (po.division_id && po.total_amount && validDivisionIds.has(po.division_id)) {
-          poByDivision[po.division_id] = (poByDivision[po.division_id] || 0) + po.total_amount;
-        }
-      });
-
       // ─── Budget Processing ───
       const processedBudgets: Budget[] = filteredBudgets.map((item) => {
         const allocated = item.allocated || 0;
-        const orsAmount = orsByDivision[item.division_id] || 0;  // Earmarked (ORS obligations)
-        const poAmount = poByDivision[item.division_id] || 0;    // Spent (PO disbursements)
+        const orsAmount = orsByDivision[item.division_id] || 0;  // Obligated from ORS entries
         
-        // Calculate utilized based on calcMode:
-        // - 'earmarked' (ORS): ORS obligation amounts + PO amounts
-        // - 'spent' (PO): PO amounts only (actual disbursements)
-        const utilized = calcMode === "earmarked" 
-          ? orsAmount + poAmount   // ORS mode: obligations from ORS + actual PO disbursements
-          : poAmount;              // PO mode: actual disbursements from POs only
+        // Utilization is calculated using ORS obligated amounts only
+        const utilized = orsAmount;
         
         const remaining = allocated - utilized;
         const utilizationPercent = allocated > 0 ? (utilized / allocated) * 100 : 0;
@@ -223,7 +201,7 @@ export default function BudgetPage() {
           budget_year: item.fiscal_year,
           total_allocated: allocated,
           total_earmarked: orsAmount,
-          total_spent: poAmount,
+          total_spent: 0, // Not used - budget calculated on ORS obligated amounts only
           total_remaining: remaining,
           utilized,
           remaining,
@@ -252,7 +230,7 @@ export default function BudgetPage() {
     }
 
     setLoading(false);
-  }, [currentUser, isEndUser, selectedYear, calcMode, supabase]);
+  }, [currentUser, isEndUser, selectedYear, supabase]);
 
   useEffect(() => {
     loadBudgetData();
@@ -329,17 +307,17 @@ export default function BudgetPage() {
 
   // ─── Formatting Helpers ───────────────────────────────────────────────────
 
-  /** Format number to compact form with 1 decimal (1.6K instead of 2K) */
+  /** Format number to compact form with 2 decimals (1.63K instead of 2K) */
   const formatCompact = (n: number): string => {
     const absN = Math.abs(n);
-    if (absN >= 1000000) return (n / 1000000).toFixed(1) + "M";
-    if (absN >= 1000) return (n / 1000).toFixed(1) + "K";
-    return n.toString();
+    if (absN >= 1000000) return (n / 1000000).toFixed(2) + "M";
+    if (absN >= 1000) return (n / 1000).toFixed(2) + "K";
+    return n.toFixed(2);
   };
 
-  /** Format full amount with peso sign */
+  /** Format full amount with peso sign and 2 decimal places */
   const formatFull = (n: number): string => {
-    return "₱" + Math.abs(n).toLocaleString("en-PH");
+    return "₱" + Math.abs(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   /** Amount component with tooltip showing full value */
@@ -432,32 +410,33 @@ export default function BudgetPage() {
             Total Allocated
           </p>
           <div className="flex items-baseline gap-1">
-            <Amount value={totalAllocated} className="text-2xl font-bold text-emerald-700" />
+            <span className="text-2xl font-bold text-emerald-700">
+              {formatFull(totalAllocated)}
+            </span>
           </div>
           <p className="text-xs text-gray-400 mt-2">
             Annual Procurement Plan {selectedYear}
           </p>
         </div>
 
-        {/* Total Utilized */}
+        {/* Total Obligated (ORS) */}
         <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm group">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
-            Total {calcMode === "earmarked" ? "Utilized" : "Spent"}
+            Total Obligated (ORS)
           </p>
           <div className="flex items-baseline gap-1">
-            <Amount 
-              value={calcMode === "earmarked" ? totalEarmarked + totalSpent : totalSpent} 
-              className="text-2xl font-bold text-emerald-600" 
-            />
+            <span className="text-2xl font-bold text-emerald-600">
+              {formatFull(totalEarmarked)}
+            </span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
             <div
               className="h-full rounded-full bg-emerald-500"
-              style={{ width: `${Math.min(utilizationRate, 100)}%` }}
+              style={{ width: `${Math.min(totalAllocated > 0 ? (totalEarmarked / totalAllocated) * 100 : 0, 100)}%` }}
             />
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            {utilizationRate.toFixed(1)}% of total budget
+            {totalAllocated > 0 ? ((totalEarmarked / totalAllocated) * 100).toFixed(1) : "0.0"}% of total budget
           </p>
         </div>
 
@@ -479,64 +458,23 @@ export default function BudgetPage() {
             )}
           </div>
           <div className="flex items-baseline gap-1">
-            <Amount 
-              value={totalRemaining} 
-              className={`text-2xl font-bold ${totalRemaining < 0 ? "text-red-600" : totalRemaining / totalAllocated < 0.25 ? "text-amber-600" : "text-emerald-600"}`} 
-            />
+            <span className={`text-2xl font-bold ${totalRemaining < 0 ? "text-red-600" : totalRemaining / totalAllocated < 0.25 ? "text-amber-600" : "text-emerald-600"}`}>
+              {formatFull(Math.abs(totalRemaining))}
+            </span>
           </div>
           <div className="h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
             <div
               className={`h-full rounded-full ${totalRemaining < 0 ? 'bg-red-500' : totalRemaining / totalAllocated < 0.25 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-              style={{ width: `${Math.max(0, Math.min((totalRemaining / totalAllocated) * 100, 100))}%` }}
+              style={{ width: `${Math.max(0, Math.min(totalAllocated > 0 ? (totalRemaining / totalAllocated) * 100 : 0, 100))}%` }}
             />
           </div>
           <p className={`text-xs mt-2 ${totalRemaining < 0 ? 'text-red-600 font-medium' : totalRemaining / totalAllocated < 0.25 ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
             {totalRemaining < 0 
-              ? <>Over budget by <Amount value={totalRemaining} className="font-semibold" /></>
-              : `${((totalRemaining / totalAllocated) * 100).toFixed(1)}% of budget remaining`}
+              ? <>Over budget by ₱{formatFull(Math.abs(totalRemaining))}</>
+              : totalAllocated > 0
+              ? `${((totalRemaining / totalAllocated) * 100).toFixed(1)}% of budget remaining`
+              : "0.0% of budget remaining"}
           </p>
-        </div>
-      </div>
-
-      {/* ─── Calculation Mode Toggle ─────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <RiCalculatorLine size={18} className="text-gray-500" />
-            <span className="text-sm font-semibold text-gray-700">
-              Utilization Calculation Mode
-            </span>
-            <div className="relative group">
-              <RiInformationLine size={16} className="text-gray-400 cursor-help" />
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                Select how budget utilization is calculated:
-                • ORS: Earmarked + Spent (obligation-based)
-                • PO: Spent only (actual disbursement)
-              </div>
-            </div>
-          </div>
-          <div className="flex bg-gray-100 rounded-xl p-1">
-            <button
-              onClick={() => setCalcMode("earmarked")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                calcMode === "earmarked"
-                  ? "bg-white text-emerald-700 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              ORS (Earmarked + Spent)
-            </button>
-            <button
-              onClick={() => setCalcMode("spent")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                calcMode === "spent"
-                  ? "bg-white text-emerald-700 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              PO (Spent Only)
-            </button>
-          </div>
         </div>
       </div>
 
@@ -587,10 +525,9 @@ export default function BudgetPage() {
                   <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                     {([
                       { label: "Division", field: "division_name" as const, align: "text-left", width: "flex-1 min-w-40" },
-                      { label: "Allocated", field: "allocated" as const, align: "text-right", width: "w-28" },
-                      { label: "Earmarked", field: null, align: "text-right", width: "w-28" },
-                      { label: "Spent", field: null, align: "text-right", width: "w-24" },
-                      { label: "Remaining", field: null, align: "text-right", width: "w-24" },
+                      { label: "Allocated", field: "allocated" as const, align: "text-right", width: "w-32" },
+                      { label: "Obligated (ORS)", field: null, align: "text-right", width: "w-32" },
+                      { label: "Remaining", field: null, align: "text-right", width: "w-28" },
                       { label: "Utilization", field: "utilizationPercent" as const, align: "text-center", width: "w-32" },
                       { label: "Status", field: null, align: "text-center", width: "w-28" },
                       { label: "Actions", field: null, align: "text-center", width: "w-20" },
@@ -624,11 +561,6 @@ export default function BudgetPage() {
                         <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
                           <span className="group relative cursor-help" title={formatFull(item.total_earmarked)}>
                             ₱{formatCompact(item.total_earmarked)}
-                          </span>
-                        </td>
-                        <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
-                          <span className="group relative cursor-help" title={formatFull(item.total_spent)}>
-                            ₱{formatCompact(item.total_spent)}
                           </span>
                         </td>
                         <td className={`mono px-2 py-2 text-right ${rowBg} ${item.total_remaining < 0 ? 'text-red-600 font-bold' : item.remainingPercent < 25 ? 'text-amber-600 font-medium' : 'text-gray-700'}`}>
