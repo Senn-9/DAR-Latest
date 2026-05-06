@@ -39,7 +39,7 @@ export async function printLivePreview(
 	}
 
 	const dealerCount = Math.max(3, supplierNames.length);
-	const colWidths = [4.5, 4.5, 5.5, 46];
+	const colWidths = [3.5, 3.5, 4.5, 40];
 	const remaining = 100 - colWidths.reduce((a, b) => a + b, 0);
 	const dealerWidth = (remaining / dealerCount).toFixed(4);
 
@@ -58,8 +58,8 @@ export async function printLivePreview(
 				
 				body {
 					font-family: Arial, Helvetica, sans-serif;
-					font-size: 9px;
-					line-height: 1.05;
+					font-size: 8px;
+					line-height: 1;
 					color: #000;
 				}
 				
@@ -81,7 +81,7 @@ export async function printLivePreview(
 					max-width: 210mm;
 					min-height: 297mm;
 					margin: 0 auto;
-					padding: 20px 30px;
+					padding: 15px 20px;
 					background: white;
 				}
 				
@@ -89,37 +89,37 @@ export async function printLivePreview(
 					display: flex;
 					align-items: flex-start;
 					justify-content: center;
-					gap: 12px;
-					padding-top: 4px;
+					gap: 8px;
+					padding-top: 2px;
 				}
 				
 				.header img {
-					height: 48px;
-					width: 48px;
+					height: 40px;
+					width: 40px;
 					object-fit: contain;
 				}
 				
 				.header-text {
-					padding-top: 4px;
+					padding-top: 2px;
 					text-align: center;
 				}
 				
 				.header-text > div {
 					font-weight: bold;
 					letter-spacing: 0.01em;
-					font-size: 9px;
-					line-height: 1.1;
+					font-size: 8px;
+					line-height: 1;
 				}
 				
 				.header-text .motto {
 					font-weight: normal;
-					font-size: 8px;
+					font-size: 7px;
 				}
 				
 				.metadata {
 					display: flex;
 					justify-content: flex-end;
-					margin-top: 20px;
+					margin-top: 0;
 					min-height: 42px;
 				}
 				
@@ -153,13 +153,20 @@ export async function printLivePreview(
 					text-transform: uppercase;
 					font-size: 10px;
 					line-height: 1.2;
-					margin-top: 36px;
+					margin-top: 24px;
+				}
+
+				.intro-box {
+					border: 1px solid #000;
+					border-bottom: none;
+					padding: 10px 12px 14px;
+					margin-top: 10px;
 				}
 				
 				table {
 					width: 100%;
 					border-collapse: collapse;
-					margin-top: 20px;
+					margin-top: 0;
 					font-size: 8px;
 					text-align: center;
 					table-layout: fixed;
@@ -363,31 +370,33 @@ export async function printLivePreview(
 					<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" />
 				</div>
 
-				<div class="metadata">
-					<div class="metadata-content">
-						<div class="metadata-row">
-							<span class="metadata-label">Ref. No.:</span>
-							<span class="metadata-value">${meta.refNo ? meta.refNo : '&nbsp;'}</span>
-						</div>
-						<div class="metadata-row">
-							<span class="metadata-label">Canvass No.:</span>
-							<span class="metadata-value">${meta.canvassNo ? meta.canvassNo : '&nbsp;'}</span>
-						</div>
-						<div class="metadata-row">
-							<span class="metadata-label">PR No.:</span>
-							<span class="metadata-value">${meta.prNo ? meta.prNo : '&nbsp;'}</span>
-						</div>
-						<div class="metadata-row">
-							<span class="metadata-label">Date:</span>
-							<span class="metadata-value">${meta.date ? meta.date : '&nbsp;'}</span>
+				<div class="intro-box">
+					<div class="metadata">
+						<div class="metadata-content">
+							<div class="metadata-row">
+								<span class="metadata-label">Ref. No.:</span>
+								<span class="metadata-value">${meta.refNo ? meta.refNo : '&nbsp;'}</span>
+							</div>
+							<div class="metadata-row">
+								<span class="metadata-label">Canvass No.:</span>
+								<span class="metadata-value">${meta.canvassNo ? meta.canvassNo : '&nbsp;'}</span>
+							</div>
+							<div class="metadata-row">
+								<span class="metadata-label">PR No.:</span>
+								<span class="metadata-value">${meta.prNo ? meta.prNo : '&nbsp;'}</span>
+							</div>
+							<div class="metadata-row">
+								<span class="metadata-label">Date:</span>
+								<span class="metadata-value">${meta.date ? meta.date : '&nbsp;'}</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div class="title">
-					<div>ABSTRACT OF PRICE QUOTATIONS OFFERED FOR VARIOUS OFFICE SUPPLIES</div>
-					<div>AND MATERIALS CALLED FOR ON REQUEST FROM DAR-CAMARINES SUR</div>
-					<div>PROVINCIAL OFFICE OFFERED BY DIFFERENT LEADING DEALERS</div>
+					<div class="title">
+						<div>ABSTRACT OF PRICE QUOTATIONS OFFERED FOR VARIOUS OFFICE SUPPLIES</div>
+						<div>AND MATERIALS CALLED FOR ON REQUEST FROM DAR-CAMARINES SUR</div>
+						<div>PROVINCIAL OFFICE OFFERED BY DIFFERENT LEADING DEALERS</div>
+					</div>
 				</div>
 
 					<table>

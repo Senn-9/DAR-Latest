@@ -239,30 +239,32 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="ml-1 h-12 w-12 rounded-md object-contain" />
 						</div>
 
-						<div className="mt-2 flex justify-end" style={{ minHeight: "42px" }}>
-							<div className="space-y-1 text-right" style={{ fontSize: "8px" }}>
-								<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Ref. No.:</span>
-									<input value={meta.refNo} onChange={(e) => setMetaField("refNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
+						<div className="mt-2 border border-black border-b-0 px-3 pb-2 pt-1">
+							<div className="flex justify-end" style={{ minHeight: "34px" }}>
+								<div className="space-y-1 text-right" style={{ fontSize: "8px" }}>
+									<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Ref. No.:</span>
+										<input value={meta.refNo} onChange={(e) => setMetaField("refNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
+									</div>
+									<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Canvass No.:</span>
+										<input value={meta.canvassNo} onChange={(e) => setMetaField("canvassNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
+									</div>
+									<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>PR No.:</span>
+										<input value={meta.prNo} onChange={(e) => setMetaField("prNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
+									</div>
+									<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Date:</span>
+										<input value={meta.date} onChange={(e) => setMetaField("date", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
+									</div>
 								</div>
-								<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Canvass No.:</span>
-									<input value={meta.canvassNo} onChange={(e) => setMetaField("canvassNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
-								</div>
-								<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>PR No.:</span>
-									<input value={meta.prNo} onChange={(e) => setMetaField("prNo", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
-								</div>
-								<div className="flex items-center justify-end gap-2"><span style={{ fontStyle: "italic" }}>Date:</span>
-									<input value={meta.date} onChange={(e) => setMetaField("date", e.target.value)} className="inline-block w-20 border-b border-black text-right text-[10px] bg-transparent outline-none" />
-								</div>
+							</div>
+
+							<div className="mt-4 text-center font-bold uppercase" style={{ fontSize: "10px", lineHeight: 1.2 }}>
+								<div>ABSTRACT OF PRICE QUOTATIONS OFFERED FOR VARIOUS OFFICE SUPPLIES</div>
+								<div>AND MATERIALS CALLED FOR ON REQUEST FROM DAR-CAMARINES SUR</div>
+								<div>PROVINCIAL OFFICE OFFERED BY DIFFERENT LEADING DEALERS</div>
 							</div>
 						</div>
 
-						<div className="mt-9 text-center font-bold uppercase" style={{ fontSize: "10px", lineHeight: 1.2 }}>
-							<div>ABSTRACT OF PRICE QUOTATIONS OFFERED FOR VARIOUS OFFICE SUPPLIES</div>
-							<div>AND MATERIALS CALLED FOR ON REQUEST FROM DAR-CAMARINES SUR</div>
-							<div>PROVINCIAL OFFICE OFFERED BY DIFFERENT LEADING DEALERS</div>
-						</div>
-
-						<table className="mt-5 w-full border-collapse table-fixed text-center" style={{ fontSize: "8px" }}>
+						<table className="w-full border-collapse table-fixed text-center" style={{ fontSize: "8px" }}>
 							<colgroup>
 								<col style={{ width: "4.5%" }} />
 								<col style={{ width: "4.5%" }} />
@@ -325,8 +327,10 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						<div className="text-center font-bold uppercase" style={{ fontSize: "8px", marginTop: "4px" }}>BY THE BIDS AND AWARDS COMMITTEE</div>
 
 						<div className="mt-3" style={{ fontSize: "8px", lineHeight: 1.15 }}>
-							<p className="text-center">Based on the above abstract of quotation of prices offered by different leading dealers on various materials called for as above,</p>
-							<p className="text-center">the Committee found that:</p>
+							<div className="mx-auto max-w-140 text-justify">
+								<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Based on the above abstract of quotation of prices offered by different leading dealers on various materials called for as above,</p>
+								<p className="mt-1">the Committee found that:</p>
+							</div>
 							<div className="mt-2 flex flex-col items-center space-y-2 text-center">
 								<div className="flex items-center gap-2 justify-center w-full">
 									<span>For item</span>
@@ -344,8 +348,10 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 									<span>offered the lowest price quotation.</span>
 								</div>
 							</div>
-							<p className="mt-2 text-justify">WHEREOF, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
-							<p className="mt-2 text-justify">RESOLVED at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ____ day of ______, 20___</p>
+							<div className="mx-auto max-w-140 text-justify mt-2">
+								<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="font-bold">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
+								<p className="mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="font-bold">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ____ day of ______, 20___</p>
+							</div>
 						</div>
 
 						<div className="mt-10 text-center" style={{ fontSize: "8px", lineHeight: 1.1 }}>
