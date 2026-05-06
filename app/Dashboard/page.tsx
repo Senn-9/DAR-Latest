@@ -169,8 +169,9 @@ export default function DashboardPage() {
         
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [26, 27, 28, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
+          const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
           const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
+          const isCompletedDelivery = delivery.status_id === 28; // Payment Pending = completed delivery phase
           
           let statusText = 'Unknown';
           let source: 'delivery' | 'payment' = 'delivery';
@@ -178,6 +179,9 @@ export default function DashboardPage() {
           if (isPaymentPhase) {
             statusText = 'Payment';
             source = 'payment';
+          } else if (isCompletedDelivery) {
+            statusText = 'Completed';
+            source = 'delivery'; // Keep as delivery source to show in delivery dashboard
           } else if (isDeliveryPhase) {
             statusText = 'Delivery';
             source = 'delivery';
@@ -328,6 +332,7 @@ export default function DashboardPage() {
     if (k.includes("po"))             return { name: status || "Unknown", color: "po" };
     if (k.includes("approve"))        return { name: status || "Unknown", color: "approved" };
     if (k.includes("reject"))         return { name: status || "Unknown", color: "rejected" };
+    if (k.includes("completed"))      return { name: status || "Unknown", color: "completed" };
     return { name: status || "Unknown", color: "default" };
   };
 
@@ -342,6 +347,7 @@ export default function DashboardPage() {
     po:         "bg-teal-50 text-teal-800 border border-teal-200",
     approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
     rejected:   "bg-red-50 text-red-800 border border-red-200",
+    completed:  "bg-green-50 text-green-800 border border-green-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
@@ -408,6 +414,7 @@ export default function DashboardPage() {
     { value: "bac",        label: "BAC Resolution" },
     { value: "aaa",        label: "AAA Issuance" },
     { value: "delivery",   label: "Delivery" },
+    { value: "completed",  label: "Completed" },
     { value: "payment",    label: "Payment" },
     { value: "po",         label: "PO" },
     { value: "approved",   label: "Approved" },

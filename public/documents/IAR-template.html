@@ -484,8 +484,9 @@
               >Property No. &nbsp;</span
             >
           </div>
-          <!-- PO Items Data -->
-          {{#each po_items}}
+          <!-- PO Items Data - Hide when missing units exist -->
+          <!-- {{#unless missing_units_items}}
+          {{#each po_items}} -->
           <div class="pdf24_01" style="left: 4.4333em; top:{{add @index 20.2}}em">
             <span class="pdf24_12 pdf24_08 pdf24_36">{{stock_no}}&nbsp;</span>
           </div>
@@ -504,7 +505,36 @@
           <div class="pdf24_01" style="left: 44.9808em; top:{{add @index 20.2}}em">
             <span class="pdf24_12 pdf24_08 pdf24_36">{{subtotal}}&nbsp;</span>
           </div>
+          <!-- {{/each}}
+          {{/unless}}
+           -->
+          <!-- Missing Units Section -->
+          <!-- {{#if missing_units_items}} -->
+          <!-- Missing Units Header -->
+          <div class="pdf24_01" style="left: 21.1892em; top:19.0em">
+          </div>
+          <!-- {{#each missing_units_items}} -->
+          <div class="pdf24_01" style="left: 4.4333em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{stock_no}}&nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 10.485em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{unit}}&nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 21.1892em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{description}}&nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 34.6125em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{quantity}}&nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 40.0292em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{unit_cost}}&nbsp;</span>
+          </div>
+          <div class="pdf24_01" style="left: 44.9808em; top:{{add @index 20.2}}em">
+            <span class="pdf24_12 pdf24_08 pdf24_36">{{total_cost}}&nbsp;</span>
+          </div>
           {{/each}}
+          {{/if}}
+          
           <div class="pdf24_01" style="left: 10.8525em; top: 35.323em">
             <span class="pdf24_33 pdf24_08 pdf24_34">INSPECTION &nbsp;</span>
           </div>
@@ -562,11 +592,11 @@
               >Partial (pls. specify quantity) &nbsp;</span>
           </div>
           <!-- Checkmark overlay for Partial -->
-          {{#unless items_complete}}
+          <!-- {{#unless items_complete}} -->
           <div style="position: absolute; left: 26.2em; top: 41.13em; z-index: 1000;">
             <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
           </div>
-          {{/unless}}
+          <!-- {{/unless}} -->
           <div class="pdf24_01" style="left: 6.2688em; top: 43.6422em">
             <span
               class="pdf24_17 pdf24_08 pdf24_36"

@@ -326,7 +326,7 @@ export type PaymentProcessDocType = "iar" | "loa" | "ors" | "dv";
 function documentsForStatus(statusId: number | undefined): PaymentProcessDocType[] {
   switch (statusId) {
     case 29:
-      return ["iar", "loa", "ors", "dv"];
+      return [];
     case 30:
       return ["ors", "dv", "iar", "loa"];
     case 32:
@@ -423,7 +423,6 @@ function DeliveryContextPanel({ active, poData }: { active: any; poData: any }) 
 }
 
 const PAYMENT_FLOW_STRIP: { id: number; label: string }[] = [
-  { id: 28, label: "Pending" },
   { id: 29, label: "Voucher" },
   { id: 30, label: "Accounting" },
   { id: 32, label: "PARPO" },
@@ -474,7 +473,6 @@ export default function ProcessPaymentModal({
   const [iarData, setIarData] = useState(iar || {});
   const [loaData, setLoaData] = useState(loa || {});
 
-  const [queueReady, setQueueReady] = useState(false);
   const [iarReviewed, setIarReviewed] = useState(false);
   const [loaReviewed, setLoaReviewed] = useState(false);
   const [acctReconciled, setAcctReconciled] = useState(false);
@@ -487,8 +485,6 @@ export default function ProcessPaymentModal({
   // Action label for the transition out of the current status (matches Payment page onSubmit)
   const getCurrentStepInfo = () => {
     switch (active?.status_id) {
-      case 28:
-        return { label: "Advance to Voucher Verification", nextStatus: 29 };
       case 29:
         return { label: "Complete Voucher Verification", nextStatus: 30 };
       case 30:
@@ -502,7 +498,7 @@ export default function ProcessPaymentModal({
       case 35:
         return { label: "Complete Tax processing handoff", nextStatus: 36 };
       default:
-        return { label: "Advance to Voucher Verification", nextStatus: 29 };
+        return { label: "Complete Voucher Verification", nextStatus: 30 };
     }
   };
 
@@ -510,8 +506,6 @@ export default function ProcessPaymentModal({
 
   const stepChecklistOk = (): boolean => {
     switch (active?.status_id) {
-      case 28:
-        return queueReady;
       case 29:
         return iarReviewed && loaReviewed;
       case 30:
@@ -532,7 +526,6 @@ export default function ProcessPaymentModal({
   const isFormValid = stepChecklistOk() && statusFlag !== null;
 
   const resetStepFields = () => {
-    setQueueReady(false);
     setIarReviewed(false);
     setLoaReviewed(false);
     setAcctReconciled(false);
@@ -570,22 +563,6 @@ export default function ProcessPaymentModal({
 
   const renderFormContent = () => {
     switch (active?.status_id) {
-      case 28:
-        return (
-          <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-yellow-800">Payment Pending</p>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              Confirm this delivery is ready to enter voucher verification. Use the checklist and status flag before advancing.
-            </p>
-            <ChecklistRow
-              checked={queueReady}
-              onChange={setQueueReady}
-              title="Ready for voucher verification"
-              subtitle="Delivery, PO, and section are correct; you will move the record to Voucher Verification."
-            />
-          </div>
-        );
-
       case 29:
         return (
           <div className="space-y-3">
@@ -653,7 +630,7 @@ export default function ProcessPaymentModal({
               checked={cashRouted}
               onChange={setCashRouted}
               title="Routed to Cash / classification logged"
-              subtitle="DV and ORS handed off for Cash processing."
+              subtitle="DV and ORS handed off for  Cash processing."
             />
           </div>
         );
@@ -706,76 +683,14 @@ export default function ProcessPaymentModal({
       return <DeliveryContextPanel active={active} poData={poData} />;
     }
     
-    // Voucher verification status: use tab-based navigation
+    // Voucher verification status: no document previews
     if (active?.status_id === 29) {
-      // Set default tab to IAR if no tab is selected
-      if (!previewTab) {
-        setPreviewTab("iar");
-      }
-      
-      // Use the same logic as other statuses but with tabs
-      if (!previewTab) {
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-500 text-sm">
-            <RiFileTextLine className="size-10 mb-2 opacity-40" aria-hidden />
-            Select a document to preview.
-          </div>
-        );
-      }
-      
-      switch (previewTab) {
-        case "iar":
-          return (
-            <div className="flex flex-col h-full">
-              <div className="px-4 py-3 border-b border-gray-100 bg-blue-50/80">
-                <p className="text-xs font-bold uppercase tracking-widest text-blue-700">IAR — template preview</p>
-              </div>
-              <div className="flex-1 overflow-auto bg-white">
-                <IARDocumentPreview delivery={active} iar={iarData} poData={poData} />
-              </div>
-            </div>
-          );
-        case "loa":
-          return (
-            <div className="flex flex-col h-full">
-              <div className="px-4 py-3 border-b border-gray-100 bg-green-50/80">
-                <p className="text-xs font-bold uppercase tracking-widest text-green-700">LOA — template preview</p>
-              </div>
-              <div className="flex-1 overflow-auto bg-white">
-                <LOADocumentPreview delivery={active} loa={loaData} poData={poData} />
-              </div>
-            </div>
-          );
-        case "ors":
-          return (
-            <div className="flex flex-col h-full">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">ORS</p>
-                <p className="text-lg font-mono font-semibold text-gray-900 mt-1">{orsData.ors_no || "—"}</p>
-              </div>
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
-                Open the full ORS document when your workflow provides a generated file.
-              </div>
-            </div>
-          );
-        case "dv":
-          return (
-            <div className="flex flex-col h-full">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">DV</p>
-                <p className="text-sm text-gray-700">
-                  <span className="text-gray-500">Payment type:</span>{" "}
-                  <span className="font-medium">{dvData.payment_type || "—"}</span>
-                </p>
-              </div>
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
-                Use <span className="font-semibold text-gray-700">View full document</span> when DV HTML/PDF preview is available.
-              </div>
-            </div>
-          );
-        default:
-          return null;
-      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-500 text-sm">
+          <RiFileTextLine className="size-10 mb-2 opacity-40" aria-hidden />
+          <p>No document previews available for this step.</p>
+        </div>
+      );
     }
     
     if (!previewTab) {
@@ -845,7 +760,6 @@ export default function ProcessPaymentModal({
 
   const docTabs = documentsForStatus(active?.status_id);
   const statusBadge =
-    active?.status_id === 28 ? "Payment Pending" :
     active?.status_id === 29 ? "Voucher Verification" :
     active?.status_id === 30 ? "Accounting Review" :
     active?.status_id === 32 ? "PARPO Approval" :
@@ -911,140 +825,79 @@ export default function ProcessPaymentModal({
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Left Panel - Form */}
-          <div className="flex-1 flex flex-col border-r border-gray-200 bg-gray-50">
-            <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-auto bg-gray-50 p-4">
+          <div className="flex min-h-full items-center justify-center">
+            <div className="w-full max-w-2xl">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Next Action */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Next Action</h3>
-                  <p className="text-sm text-gray-600">{currentStepInfo.label}</p>
-                </div>
-
-                {/* Form Content */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  {renderFormContent()}
-                </div>
-
-                {/* Status Flag */}
-                <div className={`bg-white rounded-lg border p-4 ${
-                  statusFlag ? "border-emerald-200 bg-emerald-50" : "border-gray-200"
-                }`}>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Status Flag {!statusFlag && <span className="text-red-500">*</span>}
-                  </label>
-                  <select
-                    value={statusFlag ?? ""}
-                    onChange={(e) => onSelectStatusFlag(e.target.value === "" ? null : e.target.value as StatusFlag)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select status flag</option>
-                    <option value="complete">Complete</option>
-                    <option value="incomplete_info">Incomplete info</option>
-                    <option value="wrong_information">Wrong information</option>
-                    <option value="needs_revision">Needs revision</option>
-                    <option value="on_hold">On hold</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                  {!statusFlag && (
-                    <p className="mt-2 text-xs text-gray-500">Required together with the step checklist.</p>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Notes</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Optional remarks for this step…"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <div className="pt-4">
-                  {!isFormValid && (
-                    <p className="text-xs text-amber-600 mb-3 text-center">
-                      Complete the step checklist and choose a status flag to enable submit.
-                    </p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={!isFormValid}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      isFormValid
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    }`}
-                  >
-                    <RiCheckLine size={18} />
-                    {currentStepInfo.label}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          {/* Right Panel - Document Preview */}
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-sm font-medium text-gray-900">
-                {active?.status_id === 28 ? "Record Details" : 
-                 active?.status_id === 29 ? "Voucher Documents" : "Documents"}
-              </h2>
-              {docTabs.length > 0 && (
-                <div className="flex gap-2">
-                  {docTabs.map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setPreviewTab(tab)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        previewTab === tab
-                          ? "bg-emerald-600 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {docTabLabel(tab)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-hidden bg-white">
-              {renderPreviewContent()}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button
-                type="button"
-                disabled={!previewTab || active?.status_id === 28}
-                onClick={() => previewTab && onPreviewDocument(previewTab)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  previewTab && active?.status_id !== 28
-                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
-                    : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                }`}
-              >
-                <RiEyeLine size={16} />
-                View Full {previewTab ? docTabLabel(previewTab) : "Document"}
-              </button>
-              
-              <div className="text-xs text-gray-500">
-                {canOpenFullTemplate && active?.status_id !== 28 ? (
-                  <span className="flex items-center gap-1">
-                    <RiFilePdf2Line size={14} />
-                    Opens as HTML template
-                  </span>
-                ) : previewTab && active?.status_id !== 28 ? (
-                  <span>Document preview available</span>
-                ) : null}
+              {/* Next Action */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Next Action</h3>
+                <p className="text-sm text-gray-600">{currentStepInfo.label}</p>
               </div>
+
+              {/* Form Content */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                {renderFormContent()}
+              </div>
+
+              {/* Status Flag */}
+              <div className={`bg-white rounded-lg border p-4 ${
+                statusFlag ? "border-emerald-200 bg-emerald-50" : "border-gray-200"
+              }`}>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Status Flag {!statusFlag && <span className="text-red-500">*</span>}
+                </label>
+                <select
+                  value={statusFlag ?? ""}
+                  onChange={(e) => onSelectStatusFlag(e.target.value === "" ? null : e.target.value as StatusFlag)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="">Select status flag</option>
+                  <option value="complete">Complete</option>
+                  <option value="incomplete_info">Incomplete info</option>
+                  <option value="wrong_information">Wrong information</option>
+                  <option value="needs_revision">Needs revision</option>
+                  <option value="on_hold">On hold</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+                {!statusFlag && (
+                  <p className="mt-2 text-xs text-gray-500">Required together with the step checklist.</p>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional remarks for this step…"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-4">
+                {!isFormValid && (
+                  <p className="text-xs text-amber-600 mb-3 text-center">
+                    Complete the step checklist and choose a status flag to enable submit.
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!isFormValid}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    isFormValid
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <RiCheckLine size={18} />
+                  {currentStepInfo.label}
+                </button>
+              </div>
+            </form>
             </div>
           </div>
         </div>

@@ -136,7 +136,6 @@ export default function PaymentPage() {
 
   const PAYMENT_STATUS_OPTIONS = [
     { value: "all", label: "All Statuses" },
-    { value: "loa-processing", label: "LOA Processing" },
     { value: "pending-review", label: "Pending Review" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
@@ -254,13 +253,12 @@ export default function PaymentPage() {
   }, [currentUser, isAdmin, isCashAccount]);
 
   const getPaymentStatusCategory = (statusId: number) => {
-    // Map status IDs to filter categories
-    if (statusId === 22) return "loa-processing"; // LOA Processing
-    if ([24, 25, 28, 29, 30, 32, 33, 34, 35].includes(statusId))
+    // Map status IDs to filter categories - only payment phase statuses (28+)
+    if ([28, 29, 30, 32, 33, 34, 35].includes(statusId))
       return "pending-review";
     if (statusId === 36) return "completed";
     if ([26, 27].includes(statusId)) return "cancelled"; // Cancelled
-    return "other"; // Other statuses
+    return "other"; // Other statuses (including delivery phase)
   };
 
   const handleSort = (field: typeof sortField) => {
@@ -429,15 +427,15 @@ export default function PaymentPage() {
 
     // Define the forward-only status sequence for accounting
     const statusSequence: Record<number, number> = {
-      28: 29,
+      28: 29, // Keep for backward compatibility
       29: 30,
       30: 32,
       32: 33,
       33: 34,
       34: 35,
       35: 36,
-      26: 28,
-      27: 28,
+      26: 29, // Cancelled statuses now go directly to voucher verification
+      27: 29, // Cancelled statuses now go directly to voucher verification
     };
 
     const nextStatusId = statusSequence[delivery.status_id];
@@ -477,7 +475,7 @@ export default function PaymentPage() {
     if (!confirmed) return;
 
     try {
-      await updateDeliveryStatusOnly(delivery.id, nextStatusId);
+      await updateDeliveryStatusOnly(delivery.id, nextStatusId, delivery.status_id);
       
       // Refresh the deliveries data to show the updated status
       const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
@@ -504,11 +502,12 @@ export default function PaymentPage() {
 
     // Define the backward status sequence for accounting
     const backStatusSequence: Record<number, number> = {
-      29: 28,
+      29: 25, // Voucher verification can go back to Division Chief
       30: 29,
       32: 30,
       33: 32,
       34: 33,
+      28: 25, // Payment pending can go back to Division Chief (backward compatibility)
       35: 34,
       36: 35,
     };
@@ -516,7 +515,7 @@ export default function PaymentPage() {
     const backStatusId = backStatusSequence[delivery.status_id];
     if (backStatusId === undefined) {
       alert(
-        delivery.status_id === 28
+        delivery.status_id === 29
           ? "Already at the first payment step."
           : `Cannot move back from status ID: ${delivery.status_id}`,
       );
@@ -549,7 +548,7 @@ export default function PaymentPage() {
     if (!confirmed) return;
 
     try {
-      await updateDeliveryStatusOnly(delivery.id, backStatusId);
+      await updateDeliveryStatusOnly(delivery.id, backStatusId, delivery.status_id);
       
       // Refresh the deliveries data to show the updated status
       const deliveriesData = await fetchDeliveriesForPaymentPhase(null);
@@ -804,20 +803,10 @@ async function buildLOAHtml(d: any): Promise<string> {
               iconColor: "text-emerald-700",
               numColor: "text-emerald-700",
             },
-            {
-              label: "LOA Processing",
-              value: deliveries.filter((d) => d.status_id === 22).length,
-              icon: <RiFileListLine />,
-              bg: "bg-blue-50",
-              border: "border-blue-200",
-              iconBg: "bg-blue-100",
-              iconColor: "text-blue-700",
-              numColor: "text-blue-700",
-            },
-                        {
+                                    {
               label: "Pending Review",
               value: deliveries.filter((d) =>
-                [24, 25, 28, 29, 30, 32, 33, 34, 35].includes(d.status_id),
+                [28, 29, 30, 32, 33, 34, 35].includes(d.status_id),
               ).length,
               icon: <RiTimeLine />,
               bg: "bg-yellow-50",
@@ -1045,25 +1034,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                                   Process
                                 </button>
                               )}
-                              {isAccountingAccount && (
-                                <>
-                                  <button
-                                    onClick={() => handleDebugBackStatus(delivery)}
-                                    className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
-                                  >
-                                    <RiArrowLeftLine size={14} />
-                                    Back
-                                  </button>
-                                  <button
-                                    onClick={() => handleDebugToggleStatus(delivery)}
-                                    className="px-2 py-1 text-xs font-semibold rounded border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
-                                  >
-                                    <RiArrowRightLine size={14} />
-                                    Forward
-                                  </button>
-                                </>
-                              )}
-                                                                                          {isAdmin && (
+                                                                                                                        {isAdmin && (
                                 <button
                                   onClick={() => handleDeletePayment(delivery)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
@@ -1234,7 +1205,7 @@ async function buildLOAHtml(d: any): Promise<string> {
               }
 
               // Update delivery status
-              await updateDeliveryStatusOnly(selectedDelivery.id, nextStatusId);
+              await updateDeliveryStatusOnly(selectedDelivery.id, nextStatusId, selectedDelivery.status_id);
 
               // Insert processing remark
               const stepLabel =

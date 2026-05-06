@@ -26,6 +26,8 @@ import {
 
   RiRefreshLine,
 
+  RiAddLine,
+
 } from "react-icons/ri";
 
 
@@ -103,6 +105,74 @@ function replacePlaceholders(template: string, data: any): string {
 
 
       return data.po_items
+
+        .map((item: any, index: number) => {
+
+          let itemBlock = templateBlock;
+
+
+
+          Object.keys(item).forEach((key) => {
+
+            const value = item[key] ?? "";
+
+
+
+            const placeholder = new RegExp(`{{${key}}}`, "g");
+
+
+
+            itemBlock = itemBlock.replace(placeholder, value);
+
+          });
+
+
+
+          // Handle {{add @index value}} for positioning
+
+
+
+          itemBlock = itemBlock.replace(
+
+            /{{add @index (\d+(?:\.\d+)?)}}/g,
+
+            (_match: string, value: string) => {
+
+              return (index + parseFloat(value)).toString();
+
+            },
+
+          );
+
+
+
+          return itemBlock;
+
+        })
+
+        .join("");
+
+    },
+
+  );
+
+
+
+  // Handle Handlebars-style loops for missing units items
+
+
+
+  result = result.replace(
+
+    /{{#each missing_units_items}}([\s\S]*?){{\/each}}/g,
+
+    (match, templateBlock) => {
+
+      if (!data.missing_units_items || !Array.isArray(data.missing_units_items)) return "";
+
+
+
+      return data.missing_units_items
 
         .map((item: any, index: number) => {
 
@@ -504,7 +574,14 @@ function IARPreview({
 
         if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
-
+        // Explicitly include missing units items for preview
+        if (iar?.missing_units_items) {
+          mergedData.missing_units_items = iar.missing_units_items;
+          console.log("Missing units items for preview:", iar.missing_units_items);
+        } else {
+          console.log("No missing units items found in iar data");
+        }
+        console.log("Merged data for IAR preview:", mergedData);
 
         const filled = replacePlaceholders(template, mergedData);
 
@@ -776,7 +853,7 @@ function LOAPreview({
 
             }
 
-          : {};
+            : {};
 
 
 
@@ -784,20 +861,19 @@ function LOAPreview({
 
 
 
-        // Explicitly preserve PO fields from transformedPoData
+          // Explicitly preserve PO fields from transformedPoData
 
 
 
-        mergedData.po_items = transformedPoData.po_items;
+          mergedData.po_items = transformedPoData.po_items;
 
-        if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
 
-        if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
 
 
-        const filled = replacePlaceholders(template, mergedData);
-
+          const filled = replacePlaceholders(template, mergedData);
 
 
         setHtml(filled);
@@ -3321,46 +3397,7 @@ export default function ProcessDeliveryModal({
 
 
 
-            {/* Status Flag Selection */}
-
-
-
-            <div className="mb-6">
-
-              <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">
-
-                Status Flag
-
-              </h3>
-
-
-
-              <div className="space-y-4">
-
-                <div>
-
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-
-                    Status Flag <span className="text-red-500">*</span>
-
-                  </label>
-
-
-
-                  <FlagButton
-
-                    selected={statusFlag}
-
-                    onPress={onPressStatusFlag}
-
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
+            
           </div>
 
         );
@@ -3478,28 +3515,6 @@ export default function ProcessDeliveryModal({
 
 
               <div className="space-y-4">
-
-                <div>
-
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-
-                    Status Flag
-
-                  </label>
-
-
-
-                  <FlagButton
-
-                    selected={statusFlag}
-
-                    onPress={onPressStatusFlag}
-
-                  />
-
-                </div>
-
-
 
                 <div>
 
@@ -4225,7 +4240,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={iar?.invoice_date ?? ""}
 
@@ -4242,6 +4257,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -4271,7 +4288,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={iar?.iar_date ?? ""}
 
@@ -4288,6 +4305,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -4321,7 +4340,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={iar?.inspected_at ?? ""}
 
@@ -4338,6 +4357,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -4367,7 +4388,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={iar?.received_at ?? ""}
 
@@ -4384,6 +4405,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -4719,6 +4742,244 @@ export default function ProcessDeliveryModal({
 
             </div>
 
+            {/* Missing Units - Optional Input Field */}
+            <div>
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700">
+                  Missing Units <span className="text-gray-400">(Optional)</span>
+                </h3>
+                <button 
+                  onClick={() => {
+                    const currentItems = iar?.missing_units_items || [];
+                    const poItems = poData?.purchase_order_items || [];
+                    
+                    // Add all PO items as missing unit rows
+                    const newItems = poItems.map((poItem: any) => ({
+                      id: Date.now().toString() + "_" + poItem.id,
+                      stock_no: poItem.stock_no || "",
+                      unit: poItem.unit || "",
+                      description: poItem.description || "",
+                      quantity: poItem.quantity?.toString() || "0",
+                      unit_cost: poItem.unit_price?.toString() || "0",
+                      total_cost: poItem.subtotal?.toString() || "0"
+                    }));
+                    
+                    setIar((p: any) => ({
+                      ...(p ?? {}),
+                      missing_units_items: [...currentItems, ...newItems]
+                    }));
+                  }}
+                  disabled={active?.status_id === 25}
+                  className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-emerald-300 rounded hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RiAddLine size={14} /> Add Missing Unit Row
+                </button>
+                <button 
+                  onClick={() => {
+                    setIar((p: any) => ({
+                      ...(p ?? {}),
+                      missing_units_items: []
+                    }));
+                  }}
+                  disabled={active?.status_id === 25 || !(iar?.missing_units_items?.length > 0)}
+                  className="flex items-center gap-1.5 text-red-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-red-300 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RiCloseLine size={14} /> Cancel Missing Units
+                </button>
+              </div>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-xs text-amber-800 mb-3">
+                  Use this section to add any missing units that were not included in the original Purchase Order but were supplied.
+                </p>
+                
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {(iar?.missing_units_items || []).map((item: any, index: number) => (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
+                      {(iar?.missing_units_items || []).length > 1 && (
+                        <button 
+                          onClick={() => {
+                            const currentItems = iar?.missing_units_items || [];
+                            const updatedItems = currentItems.filter((_: any, i: number) => i !== index);
+                            setIar((p: any) => ({
+                              ...(p ?? {}),
+                              missing_units_items: updatedItems
+                            }));
+                          }}
+                          disabled={active?.status_id === 25}
+                          className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ×
+                        </button>
+                      )}
+                      <div className="text-xs font-bold text-gray-500 mb-2 uppercase">MISSING UNIT {index + 1}</div>
+                      
+                      <div className="mb-2">
+                        <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
+                        <input 
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => {
+                            const currentItems = iar?.missing_units_items || [];
+                            const updatedItems = [...currentItems];
+                            updatedItems[index] = { ...updatedItems[index], description: e.target.value };
+                            setIar((p: any) => ({
+                              ...(p ?? {}),
+                              missing_units_items: updatedItems
+                            }));
+                          }}
+                          readOnly={active?.status_id === 25}
+                          placeholder="Describe the missing item"
+                          className={`w-full px-2 py-1.5 text-xs rounded border ${
+                            active?.status_id === 25
+                              ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                              : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                          }`}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
+                          <input 
+                            type="text"
+                            value={item.stock_no}
+                            onChange={(e) => {
+                              const currentItems = iar?.missing_units_items || [];
+                              const updatedItems = [...currentItems];
+                              updatedItems[index] = { ...updatedItems[index], stock_no: e.target.value };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                missing_units_items: updatedItems
+                              }));
+                            }}
+                            readOnly={active?.status_id === 25}
+                            placeholder="—"
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
+                          <select
+                            value={item.unit}
+                            onChange={(e) => {
+                              const currentItems = iar?.missing_units_items || [];
+                              const updatedItems = [...currentItems];
+                              updatedItems[index] = { ...updatedItems[index], unit: e.target.value };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                missing_units_items: updatedItems
+                              }));
+                            }}
+                            disabled={active?.status_id === 25}
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          >
+                            <option value="">Select Unit</option>
+                            <option value="pcs">pcs</option>
+                            <option value="sets">sets</option>
+                            <option value="boxes">boxes</option>
+                            <option value="kg">kg</option>
+                            <option value="liters">liters</option>
+                            <option value="meters">meters</option>
+                            <option value="units">units</option>
+                            <option value="dozens">dozens</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Qty</label>
+                          <input 
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const currentItems = iar?.missing_units_items || [];
+                              const updatedItems = [...currentItems];
+                              const quantity = e.target.value;
+                              const unitCost = parseFloat(item.unit_cost) || 0;
+                              const totalCost = (parseFloat(quantity) || 0) * unitCost;
+                              updatedItems[index] = { 
+                                ...updatedItems[index], 
+                                quantity: e.target.value,
+                                total_cost: totalCost.toFixed(2)
+                              };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                missing_units_items: updatedItems
+                              }));
+                            }}
+                            readOnly={active?.status_id === 25}
+                            placeholder="0"
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
+                          <input 
+                            type="number"
+                            value={item.unit_cost}
+                            onChange={(e) => {
+                              const currentItems = iar?.missing_units_items || [];
+                              const updatedItems = [...currentItems];
+                              const unitCost = e.target.value;
+                              const quantity = parseFloat(item.quantity) || 0;
+                              const totalCost = quantity * (parseFloat(unitCost) || 0);
+                              updatedItems[index] = { 
+                                ...updatedItems[index], 
+                                unit_cost: e.target.value,
+                                total_cost: totalCost.toFixed(2)
+                              };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                missing_units_items: updatedItems
+                              }));
+                            }}
+                            readOnly={active?.status_id === 25}
+                            placeholder="0.00"
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
+                          <input 
+                            type="text"
+                            value={item.total_cost}
+                            readOnly
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 text-xs rounded border font-mono bg-emerald-50 text-emerald-700 border-gray-200"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {(iar?.missing_units_items || []).length === 0 && (
+                    <div className="text-center text-gray-500 py-8">
+                      <p className="text-sm">No missing units added yet.</p>
+                      <p className="text-xs">Click "Add Missing Unit Row" to add items that were supplied but not in the original PO.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -4881,7 +5142,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={loa?.invoice_date ?? ""}
 
@@ -4898,6 +5159,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -4927,7 +5190,7 @@ export default function ProcessDeliveryModal({
 
                 <input
 
-                  type="date"
+                  type="text"
 
                   value={loa?.accepted_at ?? ""}
 
@@ -4944,6 +5207,8 @@ export default function ProcessDeliveryModal({
                   }
 
                   readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
@@ -5792,7 +6057,14 @@ export default function ProcessDeliveryModal({
 
         iarData.po_items = mergedData.po_items;
 
-
+        // Include missing units items for preview
+        if (iar?.missing_units_items) {
+          iarData.missing_units_items = iar.missing_units_items;
+          console.log("Missing units items for preview (second location):", iar.missing_units_items);
+        } else {
+          console.log("No missing units items found in iar data (second location)");
+        }
+        console.log("IAR data for preview:", iarData);
 
         html = await buildIARHtml(iarData);
 
@@ -5901,6 +6173,17 @@ export default function ProcessDeliveryModal({
               style={{ maxHeight: "calc(90vh - 200px)" }}
 
             >
+
+              {/* Status Flag - Always show at top */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">
+                  Status Flag
+                </h3>
+                <FlagButton
+                  selected={statusFlag}
+                  onPress={onPressStatusFlag}
+                />
+              </div>
 
               {/* Document Type Tabs - Hide for Delivery (Received), Delivery (Waiting), and IAR Processing since comprehensive content is shown */}
 
@@ -6138,40 +6421,7 @@ export default function ProcessDeliveryModal({
 
 
 
-              {/* Status Flag - For Delivery (Waiting), IAR Processing, Delivery (LOA), and Division Chief */}
-
-
-
-              {(active?.status_id === 18 ||
-
-                active?.status_id === 21 ||
-
-                active?.status_id === 22 ||
-
-                active?.status_id === 25) && (
-
-                <div>
-
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">
-
-                    Status Flag
-
-                  </h3>
-
-
-
-                  <FlagButton
-
-                    selected={statusFlag}
-
-                    onPress={onPressStatusFlag}
-
-                  />
-
-                </div>
-
-              )}
-
+              
 
 
               {/* Form Content */}

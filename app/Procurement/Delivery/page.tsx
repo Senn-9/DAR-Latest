@@ -560,16 +560,37 @@ export default function DeliveryPage() {
       // Handle special cases for Phase 3 to Phase 4 transition
 
       if (selectedDelivery.status_id === 25) {
-        nextStatus = 28; // Division Chief approval → Payment Pending (Phase 4)
+        nextStatus = 29; // Division Chief approval → Voucher Verification (Phase 4)
 
-        // Ensure LOA and IAR documents are available for payment phase
+        // Log delivery completion before moving to voucher verification
+        try {
+          const { error: logError } = await supabase
+            .from("delivery_logs")
+            .insert({
+              delivery_id: selectedDelivery.id,
+              action: "delivery_completed",
+              description: "Delivery phase completed and moved to voucher verification",
+              user_id: currentUser?.role_id || null,
+              created_at: new Date().toISOString()
+            });
+          
+          if (logError) {
+            console.warn("Failed to log delivery completion:", logError);
+          } else {
+            console.log("Delivery completion logged successfully");
+          }
+        } catch (logErr) {
+          console.warn("Error logging delivery completion:", logErr);
+        }
+
+        // Ensure LOA and IAR documents are available for voucher verification
         // These documents are required for Voucher Verification
 
         // Check if IAR document exists, if not, warn the user
         const iarData = await fetchIARByDelivery(selectedDelivery.id);
         if (!iarData || Object.keys(iarData).length === 0) {
           alert(
-            "Warning: No IAR document found. IAR is required for the payment phase.",
+            "Warning: No IAR document found. IAR is required for voucher verification.",
           );
         }
 
@@ -577,15 +598,15 @@ export default function DeliveryPage() {
         const loaData = await fetchLOAByDelivery(selectedDelivery.id);
         if (!loaData || Object.keys(loaData).length === 0) {
           alert(
-            "Warning: No LOA document found. LOA is required for the payment phase.",
+            "Warning: No LOA document found. LOA is required for voucher verification.",
           );
         }
       }
 
       // Normal sequential progression for all other statuses
 
-      // 18→19→20→21→22→25→28→(Phase 4) - DV (23) and End-User Forward (24) are skipped
-      // Phase 3: Delivery (18-25) → Phase 4: Payment (28–36, no budget step 31)
+      // 18→19→20→21→22→25→29→(Phase 4) - DV (23) and End-User Forward (24) are skipped
+      // Phase 3: Delivery (18-25) → Phase 4: Payment (29–36, no budget step 31)
 
       // Status validation for debugging
 
@@ -595,6 +616,7 @@ export default function DeliveryPage() {
         const result = await updateDeliveryStatusOnly(
           selectedDelivery.id,
           nextStatus,
+          selectedDelivery.status_id,
         );
 
         // Status update successful

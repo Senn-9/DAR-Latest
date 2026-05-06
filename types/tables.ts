@@ -2,6 +2,16 @@
 // tables.ts — TypeScript types for all public schema tables
 // ============================================================
 
+export type AaaDocument = {
+  id: number;
+  session_id: number | null;
+  aaa_no: string | null;
+  prepared_by: number | null;
+  prepared_at: string | null; // ISO timestamp
+  file_url: string | null;
+  particulars: string | null;
+};
+
 export type BacResolution = {
   id: number;
   session_id: number | null;
@@ -84,6 +94,14 @@ export type Delivery = {
   created_at: string; // ISO timestamp
   updated_at: string | null;
   expected_delivery_date: string | null; // date (YYYY-MM-DD)
+  // Payment completion timestamps
+  voucher_completed_at: string | null; // ISO timestamp
+  accounting_completed_at: string | null; // ISO timestamp
+  parpo_approval_completed_at: string | null; // ISO timestamp
+  cash_processing_completed_at: string | null; // ISO timestamp
+  parpo_signature_completed_at: string | null; // ISO timestamp
+  tax_processing_completed_at: string | null; // ISO timestamp
+  payment_completed_at: string | null; // ISO timestamp
 };
 
 export type DivisionBudget = {
@@ -100,14 +118,6 @@ export type DivisionBudget = {
 export type Division = {
   division_id: number;
   division_name: string | null;
-};
-
-export type Document = {
-  id: number;
-  pr_id: number | null;
-  pr_no: string | null;
-  bac_reso_link: string | null;
-  abstract_link: string | null;
 };
 
 export type DvDocument = {
@@ -189,16 +199,35 @@ export type OrsEntry = {
   approved_by_name: string | null;
   approved_by_desig: string | null;
   date_created: string | null;
-  // Appendix 11 ORS form fields
-  entity_name: string | null;
-  payee_address: string | null;
-  office: string | null;
-  reference_no: string | null; // ORS/JEV/Check/ADA/TRA No.
-  obligation_amount: number; // default 0
-  payable_amount: number; // default 0
-  payment_amount: number; // default 0
-  not_yet_due_balance: number; // default 0
-  due_demandable_balance: number; // default 0
+};
+
+export type PrForm = {
+  pr_id: number; // UNIQUE
+ entity_name: string | null;
+  fund_cluster: string | null;
+  office_section: string | null;
+  pr_num: string; // UNIQUE, default ''
+  responsibility_code: string | null;
+  created_at: string; // ISO timestamp
+  purpose: string | null;
+  req_by: string | null;
+  req_designation: string | null;
+  app_by: string | null;
+  app_designation: string | null;
+  status_id: number | null;
+  division: number | null;
+};
+
+export type PrItem = {
+  prItem_id: number;
+  created_at: string; // ISO timestamp
+  stock_num: string | null;
+  unit: string | null;
+  description: string | null;
+  quantity: string | null;
+  unit_cost: string | null;
+  total_cost: string | null;
+  pr_id: number | null;
 };
 
 export type Proposal = {
@@ -298,6 +327,7 @@ export type Remark = {
   user_id: number | null;
   pr_id: number | null;
   status_flag_id: number | null;
+  prform_id: number | null;
   po_id: number | null;
   delivery_id: number | null;
   phase: RemarkPhase | null;
@@ -336,6 +366,7 @@ export type User = {
 export type Database = {
   public: {
     Tables: {
+      aaa_documents: { Row: AaaDocument };
       bac_resolution: { Row: BacResolution };
       bac_resolution_prs: { Row: BacResolutionPr };
       canvass_entries: { Row: CanvassEntry };
@@ -344,11 +375,12 @@ export type Database = {
       deliveries: { Row: Delivery };
       division_budgets: { Row: DivisionBudget };
       divisions: { Row: Division };
-      documents: { Row: Document };
       dv_documents: { Row: DvDocument };
       iar_documents: { Row: IarDocument };
       loa_documents: { Row: LoaDocument };
       ors_entries: { Row: OrsEntry };
+      pr_form: { Row: PrForm };
+      pr_item: { Row: PrItem };
       proposals: { Row: Proposal };
       purchase_order_items: { Row: PurchaseOrderItem };
       purchase_orders: { Row: PurchaseOrder };

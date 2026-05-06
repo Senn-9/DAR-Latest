@@ -629,35 +629,86 @@ export async function updateDelivery(
 
 
 
-export async function updateDeliveryStatusOnly(id: number, statusId: number) {
+export async function updateDeliveryStatusOnly(id: number, statusId: number, previousStatusId?: number) {
 
   const supabase = createClient();
 
   
 
-  console.log(`Attempting to update delivery ${id} to status ${statusId}`);
+  console.log(`Attempting to update delivery ${id} to status ${statusId} from previous status ${previousStatusId}`);
 
   
 
-  // Try the most minimal update possible
+  // First try with timestamps (for when migration is applied)
+  const updateDataWithTimestamps: any = {
+    status_id: statusId,
+    updated_at: new Date().toISOString()
+  };
 
-  const { data, error } = await supabase
+  // Set the appropriate completion timestamp based on the step being completed (previous status)
+  const currentTimestamp = new Date().toISOString();
+  if (previousStatusId) {
+    switch (previousStatusId) {
+      case 29: // Voucher Verification completed
+        updateDataWithTimestamps.voucher_completed_at = currentTimestamp;
+        console.log("Setting voucher_completed_at timestamp for previous status 29");
+        break;
+      case 30: // Accounting Review completed
+        updateDataWithTimestamps.accounting_completed_at = currentTimestamp;
+        console.log("Setting accounting_completed_at timestamp for previous status 30");
+        break;
+      case 32: // PARPO Approval completed
+        updateDataWithTimestamps.parpo_approval_completed_at = currentTimestamp;
+        console.log("Setting parpo_approval_completed_at timestamp for previous status 32");
+        break;
+      case 33: // Forward to Cash completed
+        updateDataWithTimestamps.cash_processing_completed_at = currentTimestamp;
+        console.log("Setting cash_processing_completed_at timestamp for previous status 33");
+        break;
+      case 34: // PARPO office signature completed
+        updateDataWithTimestamps.parpo_signature_completed_at = currentTimestamp;
+        console.log("Setting parpo_signature_completed_at timestamp for previous status 34");
+        break;
+      case 35: // Tax processing completed
+        updateDataWithTimestamps.tax_processing_completed_at = currentTimestamp;
+        console.log("Setting tax_processing_completed_at timestamp for previous status 35");
+        break;
+    }
+  } else {
+    console.log("No previous status ID provided, cannot set completion timestamp");
+  }
 
+  console.log("Attempting to update with timestamp data:", updateDataWithTimestamps);
+
+  // Try update with timestamps first
+  let { data, error } = await supabase
     .from("deliveries")
-
-    .update({ 
-
-      status_id: statusId
-
-    })
-
+    .update(updateDataWithTimestamps)
     .eq("id", id)
-
     .select("*")
-
     .single();
 
+  // If timestamp columns don't exist yet, fall back to basic status update
+  if (error && (error.message?.includes('column') || error.message?.includes('does not exist'))) {
+    console.log("Timestamp columns not found, falling back to basic status update");
+    console.log("Error details:", error.message, error.details);
+    console.log("Please ensure the migration 20260504_add_payment_completion_timestamps.sql has been applied to the database");
     
+    const basicUpdateData = {
+      status_id: statusId,
+      updated_at: new Date().toISOString()
+    };
+
+    const result = await supabase
+      .from("deliveries")
+      .update(basicUpdateData)
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    data = result.data;
+    error = result.error;
+  }
 
   if (error) {
 
