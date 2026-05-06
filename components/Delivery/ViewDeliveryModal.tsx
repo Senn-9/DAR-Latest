@@ -288,44 +288,25 @@ function replacePlaceholders(template: string, data: any): string {
 
   // Handle Handlebars-style conditionals {{#if condition}}content{{/if}} - PROCESS LAST
 
-
-
   result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, condition, content) => {
-
-
-
     const value = getNestedValue(data, condition);
-
-
-
-    return value ? content : '';
-
-
-
+    const isTruthy = value && (!Array.isArray(value) || value.length > 0);
+    return isTruthy ? content : '';
   });
 
-
-
-  
-
-
+  // Handle Handlebars-style conditionals with negation {{#unless condition}}content{{\/unless}} - (Adding this just in case View uses it)
+  result = result.replace(/{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g, (match, condition, content) => {
+    const value = getNestedValue(data, condition);
+    const isFalsy = !value || (Array.isArray(value) && value.length === 0);
+    return isFalsy ? content : '';
+  });
 
   // Handle Handlebars-style conditionals with negation {{#if condition}}content{{else}}other{{/if}} - PROCESS LAST
 
-
-
   result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{else}}([\s\S]*?){{\/if}}/g, (match, condition, trueContent, falseContent) => {
-
-
-
     const value = getNestedValue(data, condition);
-
-
-
-    return value ? trueContent : falseContent;
-
-
-
+    const isTruthy = value && (!Array.isArray(value) || value.length > 0);
+    return isTruthy ? trueContent : falseContent;
   });
 
 

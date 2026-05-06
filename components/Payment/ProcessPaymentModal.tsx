@@ -65,8 +65,8 @@ function replacePlaceholders(template: string, data: any): string {
     /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
     (_match: string, condition: string, content: string) => {
       const value = data[condition];
-
-      return value ? content : "";
+      const isTruthy = value && (!Array.isArray(value) || value.length > 0);
+      return isTruthy ? content : "";
     },
   );
 
@@ -74,8 +74,8 @@ function replacePlaceholders(template: string, data: any): string {
     /{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g,
     (_match: string, condition: string, content: string) => {
       const value = data[condition];
-
-      return !value ? content : "";
+      const isFalsy = !value || (Array.isArray(value) && value.length === 0);
+      return isFalsy ? content : "";
     },
   );
 

@@ -779,6 +779,21 @@ export default function DeliveryPage() {
 
     setDv(dvDoc);
 
+    // Fetch PO data so the IAR/LOA preview has purchase_order_items available
+    // immediately when the modal opens (the background useEffect may not re-run
+    // if the same delivery id was previously selected).
+    if (delivery.po_id) {
+      try {
+        const po = await fetchPODataForDelivery(delivery.po_id);
+        setPoData(po ?? null);
+      } catch {
+        // Non-fatal – preview will simply have no item rows
+        setPoData(null);
+      }
+    } else {
+      setPoData(null);
+    }
+
     setProcessModalOpen(true);
   };
 

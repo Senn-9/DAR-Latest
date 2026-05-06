@@ -228,40 +228,22 @@ function replacePlaceholders(template: string, data: any): string {
 
   // Handle Handlebars conditionals
 
-
-
   result = result.replace(
-
     /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
-
     (_match: string, condition: string, content: string) => {
-
       const value = data[condition];
-
-
-
-      return value ? content : "";
-
+      const isTruthy = value && (!Array.isArray(value) || value.length > 0);
+      return isTruthy ? content : "";
     },
-
   );
 
-
-
   result = result.replace(
-
     /{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g,
-
     (_match: string, condition: string, content: string) => {
-
       const value = data[condition];
-
-
-
-      return !value ? content : "";
-
+      const isFalsy = !value || (Array.isArray(value) && value.length === 0);
+      return isFalsy ? content : "";
     },
-
   );
 
 
@@ -5092,49 +5074,99 @@ export default function ProcessDeliveryModal({
 
           <div className="space-y-4">
 
-            <div>
+            <div className="grid grid-cols-2 gap-4">
 
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              <div>
 
-                Invoice No. <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
 
-              </label>
+                  Invoice No. <span className="text-red-500">*</span>
+
+                </label>
 
 
 
-              <input
+                <input
 
-                type="text"
+                  type="text"
 
-                value={loa?.invoice_no ?? ""}
+                  value={loa?.invoice_no ?? ""}
 
-                onChange={(e) =>
+                  onChange={(e) =>
 
-                  setLoa((p: any) => ({
+                    setLoa((p: any) => ({
 
-                    ...(p ?? {}),
+                      ...(p ?? {}),
 
-                    invoice_no: e.target.value,
+                      invoice_no: e.target.value,
 
-                  }))
+                    }))
 
-                }
+                  }
 
-                readOnly={active?.status_id === 25}
+                  readOnly={active?.status_id === 25}
 
-                placeholder="e.g. INV-2026-0042"
+                  placeholder="e.g. INV-2026-0042"
 
-                className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
+                  className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
 
-                  active?.status_id === 25
+                    active?.status_id === 25
 
-                    ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                      ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
 
-                    : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                      : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
 
-                }`}
+                  }`}
 
-              />
+                />
+
+              </div>
+
+              <div>
+
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+
+                  PO Date <span className="text-red-500">*</span>
+
+                </label>
+
+
+
+                <input
+
+                  type="text"
+
+                  value={loa?.po_date ?? poData?.date ?? ""}
+
+                  onChange={(e) =>
+
+                    setLoa((p: any) => ({
+
+                      ...(p ?? {}),
+
+                      po_date: e.target.value,
+
+                    }))
+
+                  }
+
+                  readOnly={active?.status_id === 25}
+
+                  placeholder="e.g. 2024-01-15"
+
+                  className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
+
+                    active?.status_id === 25
+
+                      ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+
+                      : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+
+                  }`}
+
+                />
+
+              </div>
 
             </div>
 

@@ -905,6 +905,7 @@ export async function upsertIARByDelivery(
   delete filteredPayload.fund_cluster; // This comes from PO data
   delete filteredPayload.id; // Never update the id field
   delete filteredPayload.iar_date; // This doesn't exist in database, only used for templates
+  delete filteredPayload.po_date; // Remove po_date as it's not a column in iar_documents
 
   // Coerce checkbox states to boolean before saving
   if (filteredPayload.inspection_verified !== undefined) {
@@ -1041,12 +1042,9 @@ export async function upsertLOAByDelivery(
   
 
   // Filter out the id field to prevent constraint violations
-
   const filteredPayload = { ...payload };
-
   delete filteredPayload.id; // Never update the id field
-
-  
+  delete filteredPayload.po_date; // Remove po_date as it's not a column in loa_documents
 
   if (existing?.id) {
 
@@ -1163,12 +1161,9 @@ export async function upsertDVByDelivery(
   
 
   // Filter out the id field to prevent constraint violations
-
   const filteredPayload = { ...payload };
-
   delete filteredPayload.id; // Never update the id field
-
-  
+  delete filteredPayload.po_date; // Remove po_date as it's not a column in dv_documents
 
   if (existing?.id) {
 
@@ -1673,3 +1668,46 @@ export async function deleteDeliveryDeep(
 
 }
 
+export async function applyTimestampMigration() {
+  const supabase = createClient();
+  console.log('Applying timestamp columns migration...');
+  
+  try {
+    // Execute the SQL to add timestamp columns
+    const { error } = await supabase.rpc('exec_sql', {
+      sql: `
+        ALTER TABLE deliveries 
+        ADD COLUMN IF NOT EXISTS voucher_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS accounting_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS parpo_approval_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS cash_processing_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS parpo_signature_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS tax_processing_completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS payment_completed_at TIMESTAMP NULL;
+      `
+    });
+    
+    if (error) {
+      console.error('Error applying migration:', error);
+      
+      // Try alternative approach using direct SQL
+      console.log('Trying alternative approach...');
+      
+      const { data, error: altError } = await supabase
+        .from('deliveries')
+        .select('id')
+        .limit(1);
+      
+      if (altError) {
+        console.error('Database connection error:', altError);
+      } else {
+        console.log('Database connection successful, but migration failed');
+        console.log('Please manually run the SQL from 20260504_add_payment_completion_timestamps.sql');
+      }
+    } else {
+      console.log('Migration applied successfully!');
+    }
+  } catch (err) {
+    console.error('Unexpected error:', err);
+  }
+}
