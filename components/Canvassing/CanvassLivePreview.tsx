@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RiCloseLine, RiPrinterLine } from "react-icons/ri";
+import { RiCloseLine, RiPrinterLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiDraggable } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printRFQ } from "./printRFQ";
 
@@ -11,7 +11,7 @@ type CanvassLivePreviewProps = {
 	prNo?: string;
 };
 
-const ROW_COUNT = 12;
+const MIN_ROW_COUNT = 10;
 
 type ItemRow = {
 	stock_no: string;
@@ -51,6 +51,27 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 		setItems((prev) => {
 			const next = [...prev];
 			next[index] = { ...next[index], [field]: value };
+			return next;
+		});
+	};
+
+	const addRow = () => {
+		setItems((prev) => [
+			...prev,
+			{ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" },
+		]);
+	};
+
+	const removeRow = (index: number) => {
+		setItems((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const moveRow = (fromIndex: number, toIndex: number) => {
+		if (toIndex < 0 || toIndex >= items.length) return;
+		setItems((prev) => {
+			const next = [...prev];
+			const [moved] = next.splice(fromIndex, 1);
+			next.splice(toIndex, 0, moved);
 			return next;
 		});
 	};
@@ -124,9 +145,9 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						unit_price: "",
 					}));
 
-					// Ensure at least ROW_COUNT rows
+					// Ensure at least MIN_ROW_COUNT rows, or keep all items if more
 					const finalItems = [...formattedItems];
-					while (finalItems.length < ROW_COUNT) {
+					while (finalItems.length < MIN_ROW_COUNT) {
 						finalItems.push({ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" });
 					}
 					setItems(finalItems);
@@ -322,64 +343,109 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					</div>
 
 					{/* Items Table */}
-					<table className="w-full border-collapse border border-black mb-4 text-[9.5px]">
-						<thead>
-							<tr>
-								<th className="border border-black p-1 text-center w-[8%] font-bold">ITEM NO.</th>
-								<th className="border border-black p-1 text-center w-[58%] font-bold">ITEM(S) & DESCRIPTION(S)</th>
-								<th className="border border-black p-1 text-center w-[8%] font-bold">QTY</th>
-								<th className="border border-black p-1 text-center w-[10%] font-bold">UNIT</th>
-								<th className="border border-black p-1 text-center w-[16%] font-bold">UNIT PRICE</th>
-							</tr>
-						</thead>
-						<tbody>
-							{items.map((item, i) => (
+					<div className="mb-4">
+						<div className="flex justify-end gap-2 mb-2">
+							<button
+								type="button"
+								onClick={addRow}
+								className="inline-flex items-center gap-1 px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+							>
+								<RiAddLine size={14} /> Add Row
+							</button>
+						</div>
+						<table className="w-full border-collapse border border-black text-[9.5px]">
+							<thead>
+								<tr>
+									<th className="border border-black p-1 text-center w-[6%] font-bold">ITEM NO.</th>
+									<th className="border border-black p-1 text-center w-[54%] font-bold">ITEM(S) & DESCRIPTION(S)</th>
+									<th className="border border-black p-1 text-center w-[8%] font-bold">QTY</th>
+									<th className="border border-black p-1 text-center w-[10%] font-bold">UNIT</th>
+									<th className="border border-black p-1 text-center w-[14%] font-bold">UNIT PRICE</th>
+									<th className="border border-black p-1 text-center w-[8%] font-bold">ACTION</th>
+								</tr>
+							</thead>
+							<tbody>
+								{items.map((item, i) => (
 								<tr key={i} className="h-7">
 									<td className="border border-black p-0.5 text-center">
-										<input 
-											value={item.stock_no} 
+										<div className="flex items-center justify-center gap-0.5">
+											<button
+												type="button"
+												onClick={() => moveRow(i, i - 1)}
+												disabled={i === 0}
+												className="text-gray-500 hover:text-gray-700 disabled:text-gray-300 transition"
+												title="Move up"
+											>
+												<RiArrowUpLine size={12} />
+											</button>
+											<span className="text-[9px] text-gray-500">{i + 1}</span>
+											<button
+												type="button"
+												onClick={() => moveRow(i, i + 1)}
+												disabled={i === items.length - 1}
+												className="text-gray-500 hover:text-gray-700 disabled:text-gray-300 transition"
+												title="Move down"
+											>
+												<RiArrowDownLine size={12} />
+											</button>
+										</div>
+										<input
+											value={item.stock_no}
 											onChange={(e) => handleItemChange(i, "stock_no", e.target.value)}
-											className="w-full outline-none text-center bg-transparent"
+											className="w-full outline-none text-center bg-transparent mt-0.5"
 										/>
 									</td>
 									<td className="border border-black p-0.5">
-										<input 
-											value={item.description} 
+										<input
+											value={item.description}
 											onChange={(e) => handleItemChange(i, "description", e.target.value)}
 											className="w-full outline-none bg-transparent px-1"
 										/>
 									</td>
 									<td className="border border-black p-0.5 text-center">
-										<input 
-											value={item.quantity} 
+										<input
+											value={item.quantity}
 											onChange={(e) => handleItemChange(i, "quantity", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
 									<td className="border border-black p-0.5 text-center">
-										<input 
-											value={item.unit} 
+										<input
+											value={item.unit}
 											onChange={(e) => handleItemChange(i, "unit", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
 									<td className="border border-black p-0.5 text-center">
-										<input 
-											value={item.unit_price} 
+										<input
+											value={item.unit_price}
 											onChange={(e) => handleItemChange(i, "unit_price", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
+									<td className="border border-black p-0.5 text-center">
+										<button
+											type="button"
+											onClick={() => removeRow(i)}
+											className="text-red-600 hover:text-red-800 transition p-0.5"
+											title="Remove row"
+										>
+											<RiDeleteBinLine size={14} />
+										</button>
+									</td>
 								</tr>
 							))}
-							<tr className="font-bold h-7">
-								<td className="border border-black p-1"></td>
-								<td className="border border-black p-1 text-center">TOTAL</td>
-								<td className="border border-black p-1"></td>
-								<td className="border border-black p-1"></td>
-							</tr>
-						</tbody>
-					</table>
+								<tr className="font-bold h-7">
+									<td className="border border-black p-1"></td>
+									<td className="border border-black p-1 text-center">TOTAL</td>
+									<td className="border border-black p-1"></td>
+									<td className="border border-black p-1"></td>
+									<td className="border border-black p-1"></td>
+									<td className="border border-black p-1"></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
 
 					<div className="text-center font-bold italic mb-8 text-[10px]">
 						AFTER HAVING CAREFULLY READ AND ACCEPTED YOUR GENERAL CONDITIONS, I / WE QUOTE YOU ON THE ITEM AT PRICES NOTED ABOVE.

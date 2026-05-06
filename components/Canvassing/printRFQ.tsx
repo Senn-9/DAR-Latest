@@ -16,15 +16,16 @@ export type RFQItem = {
 };
 
 export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
-	const PRINT_ROW_COUNT = 10;
+	const MIN_PRINT_ROWS = 10;
 
 	function escapeHtml(str: string): string {
 		if (!str) return "";
 		return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 	}
 
-	const printableItems = [...items].slice(0, PRINT_ROW_COUNT);
-	while (printableItems.length < PRINT_ROW_COUNT) {
+	// Show all items, pad with empty rows to reach minimum
+	const printableItems = [...items];
+	while (printableItems.length < MIN_PRINT_ROWS) {
 		printableItems.push({ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" });
 	}
 

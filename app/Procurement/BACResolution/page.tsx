@@ -6,11 +6,13 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import PrepareBACResolutionModal from "@/components/BACResolution/PrepareBACResolutionModal";
+import BACRESO from "@/components/BACResolution/BACRESO";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
   RiEyeLine, RiPlayCircleLine,
+  RiFileTextLine,
 } from "react-icons/ri";
 
 export default function BACResolutionPage() {
@@ -64,6 +66,7 @@ export default function BACResolutionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewPrId, setViewPrId] = useState<number | null>(null);
   const [prepareResolutionOpen, setPrepareResolutionOpen] = useState(false);
+  const [resolutionPrNo, setResolutionPrNo] = useState<string | null>(null);
   const PAGE_SIZE = 10;
 
   const isBACAccount =
@@ -358,6 +361,14 @@ export default function BACResolutionPage() {
                                 <RiEyeLine size={14} />
                                 View
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => setResolutionPrNo(form.pr_no)}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiFileTextLine size={14} />
+                                Resolution
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -418,6 +429,14 @@ export default function BACResolutionPage() {
             setList((prev) => prev.filter((p) => !prIds.includes(p.id)));
             setPrepareResolutionOpen(false);
           }}
+        />
+      )}
+
+      {resolutionPrNo !== null && (
+        <BACRESO
+          prNo={resolutionPrNo}
+          open={true}
+          onClose={() => setResolutionPrNo(null)}
         />
       )}
 
