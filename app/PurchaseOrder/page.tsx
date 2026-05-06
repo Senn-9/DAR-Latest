@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
-import CreatePOModal from "../../components/CreatePOModal";
+import CreatePOModal from "../../components/PO/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
 import ORSProcessModal from "@/components/PO/ORSProcessModal";

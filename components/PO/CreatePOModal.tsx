@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine, RiSearchLine } from "react-icons/ri";
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 import { createClient } from "@/utils/supabase/client";
@@ -92,6 +92,465 @@ function toWords(amount: number): string {
   return `${pesoWords} PESOS${centWords}`;
 }
 
+// Editable input styles for live preview
+const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors min-w-[60px]";
+
+// Type for text-only lines in the PO (for printing only)
+// Each field corresponds to a column like regular PO items
+type TextOnlyLine = {
+  id: string; // unique identifier for React key
+  position: number; // position after which this line appears (1-based index after item)
+  stock_no: string;
+  unit: string;
+  description: string;
+  quantity: string;
+  unit_price: string;
+};
+
+// Editable PO Preview - allows manual input directly in the preview panel
+function POEditablePreview({
+  supplier,
+  setSupplier,
+  address,
+  setAddress,
+  tin,
+  setTin,
+  procurementMode,
+  setProcurementMode,
+  deliveryPlace,
+  setDeliveryPlace,
+  deliveryTerm,
+  setDeliveryTerm,
+  deliveryDate,
+  setDeliveryDate,
+  paymentTerm,
+  setPaymentTerm,
+  fundCluster,
+  setFundCluster,
+  items,
+  updateItem,
+  addItem,
+  removeItem,
+  textOnlyLines,
+  addTextOnlyLine,
+  updateTextOnlyLine,
+  removeTextOnlyLine,
+}: {
+  supplier: string;
+  setSupplier: (v: string) => void;
+  address: string;
+  setAddress: (v: string) => void;
+  tin: string;
+  setTin: (v: string) => void;
+  procurementMode: string;
+  setProcurementMode: (v: string) => void;
+  deliveryPlace: string;
+  setDeliveryPlace: (v: string) => void;
+  deliveryTerm: string;
+  setDeliveryTerm: (v: string) => void;
+  deliveryDate: string;
+  setDeliveryDate: (v: string) => void;
+  paymentTerm: string;
+  setPaymentTerm: (v: string) => void;
+  fundCluster: string;
+  setFundCluster: (v: string) => void;
+  items: PurchaseOrderItemRow[];
+  updateItem: (idx: number, patch: Partial<PurchaseOrderItemRow>) => void;
+  addItem: () => void;
+  removeItem: (idx: number) => void;
+  textOnlyLines: TextOnlyLine[];
+  addTextOnlyLine: (afterIndex: number) => void;
+  updateTextOnlyLine: (id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) => void;
+  removeTextOnlyLine: (id: string) => void;
+}) {
+  const grandTotal = getGrandTotal(items);
+  const amountWords = toWords(grandTotal);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", color: "#000", padding: 0, margin: 0 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "4px" }}>
+        <tbody>
+          <tr>
+            <td style={{ textAlign: "right", fontSize: "11pt", fontWeight: "bold", padding: 0 }}>Appendix 61</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #111", tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "34%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "10.5%" }} />
+          <col style={{ width: "14.5%" }} />
+        </colgroup>
+        <tbody>
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Supplier :{" "}
+              <input
+                type="text"
+                value={supplier}
+                onChange={(e) => setSupplier(e.target.value)}
+                placeholder="Enter supplier name"
+                style={{ fontWeight: "normal", width: "80%" }}
+                className={editableInputCls}
+              />
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              P.O. No. : <span style={{ fontWeight: "normal" }}></span>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Address :{" "}
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Enter address"
+                style={{ fontWeight: "normal", width: "80%" }}
+                className={editableInputCls}
+              />
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Date : <span style={{ fontWeight: "normal" }}>{today}</span>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              TIN :{" "}
+              <input
+                type="text"
+                value={tin}
+                onChange={(e) => setTin(e.target.value)}
+                placeholder="Enter TIN"
+                style={{ fontWeight: "normal", width: "60%" }}
+                className={editableInputCls}
+              />
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Mode of Procurement :{" "}
+              <input
+                type="text"
+                value={procurementMode}
+                onChange={(e) => setProcurementMode(e.target.value)}
+                placeholder="e.g. Public Bidding"
+                style={{ fontWeight: "normal", width: "50%" }}
+                className={editableInputCls}
+              />
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", verticalAlign: "top" }}>
+              Gentlemen:
+              <div style={{ fontWeight: "normal", marginLeft: "52px", fontSize: "9pt" }}>
+                Please furnish this Office the following articles subject to the terms and conditions contained herein:
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Place of Delivery:{" "}
+              <input
+                type="text"
+                value={deliveryPlace}
+                onChange={(e) => setDeliveryPlace(e.target.value)}
+                placeholder="Enter place"
+                style={{ fontWeight: "normal", width: "70%" }}
+                className={editableInputCls}
+              />
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Delivery Term:{" "}
+              <input
+                type="text"
+                value={deliveryTerm}
+                onChange={(e) => setDeliveryTerm(e.target.value)}
+                placeholder="e.g. FOB"
+                style={{ fontWeight: "normal", width: "40%" }}
+                className={editableInputCls}
+              />
+              <div style={{ fontWeight: "bold", marginTop: "2px" }}>
+                Payment Term:{" "}
+                <input
+                  type="text"
+                  value={paymentTerm}
+                  onChange={(e) => setPaymentTerm(e.target.value)}
+                  placeholder="e.g. Net 30"
+                  style={{ fontWeight: "normal", width: "40%" }}
+                  className={editableInputCls}
+                />
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
+              Date of Delivery:{" "}
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                style={{ fontWeight: "normal" }}
+                className={editableInputCls}
+              />
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt" }} />
+          </tr>
+
+          <tr>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Stock/ Property No.</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Description</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Quantity</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit Cost</td>
+            <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Amount</td>
+          </tr>
+
+          {items.map((item, index) => {
+            const total = getItemTotal(item);
+            const itemKey = `item-${index}`;
+            return (
+              <React.Fragment key={itemKey}>
+                <tr style={{ height: "auto" }}>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                    <input
+                      type="text"
+                      value={item.stock_no ?? ""}
+                      onChange={(e) => updateItem(index, { stock_no: e.target.value })}
+                      className={editableInputCls}
+                      style={{ width: "90%", textAlign: "center" }}
+                    />
+                  </td>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                    <input
+                      type="text"
+                      value={item.unit ?? ""}
+                      onChange={(e) => updateItem(index, { unit: e.target.value })}
+                      className={editableInputCls}
+                      style={{ width: "90%", textAlign: "center" }}
+                    />
+                  </td>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "left", fontSize: "9pt" }}>
+                    <input
+                      type="text"
+                      value={item.description ?? ""}
+                      onChange={(e) => updateItem(index, { description: e.target.value })}
+                      className={editableInputCls}
+                      style={{ width: "95%" }}
+                    />
+                  </td>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                    <input
+                      type="number"
+                      value={item.quantity ?? 0}
+                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+                      className={editableInputCls}
+                      style={{ width: "80%", textAlign: "center" }}
+                    />
+                  </td>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={item.unit_price ?? 0}
+                      onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })}
+                      className={editableInputCls}
+                      style={{ width: "80%", textAlign: "right" }}
+                    />
+                  </td>
+                  <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt" }}>
+                    {total ? formatMoney(total).replace("₱", "") : ""}
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      className="ml-1 text-red-500 hover:text-red-700 text-xs"
+                      title="Remove item"
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+                {/* Render text-only lines that belong after this item */}
+                {textOnlyLines
+                  .filter((line) => line.position === index + 1)
+                  .map((line) => (
+                    <tr key={`text-${line.id}`} style={{ height: "auto", backgroundColor: "#fefce8" }}>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                        <input
+                          type="text"
+                          value={line.stock_no}
+                          onChange={(e) => updateTextOnlyLine(line.id, 'stock_no', e.target.value)}
+                          placeholder="Stock No."
+                          className={editableInputCls}
+                          style={{ width: "90%", textAlign: "center", fontStyle: "italic", color: "#666" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                        <input
+                          type="text"
+                          value={line.unit}
+                          onChange={(e) => updateTextOnlyLine(line.id, 'unit', e.target.value)}
+                          placeholder="Unit"
+                          className={editableInputCls}
+                          style={{ width: "90%", textAlign: "center", fontStyle: "italic", color: "#666" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "left", fontSize: "9pt" }}>
+                        <input
+                          type="text"
+                          value={line.description}
+                          onChange={(e) => updateTextOnlyLine(line.id, 'description', e.target.value)}
+                          placeholder="Description"
+                          className={editableInputCls}
+                          style={{ width: "95%", fontStyle: "italic", color: "#666" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                        <input
+                          type="text"
+                          value={line.quantity}
+                          onChange={(e) => updateTextOnlyLine(line.id, 'quantity', e.target.value)}
+                          placeholder="Qty"
+                          className={editableInputCls}
+                          style={{ width: "80%", textAlign: "center", fontStyle: "italic", color: "#666" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
+                        <input
+                          type="text"
+                          value={line.unit_price}
+                          onChange={(e) => updateTextOnlyLine(line.id, 'unit_price', e.target.value)}
+                          placeholder="Unit Cost"
+                          className={editableInputCls}
+                          style={{ width: "80%", textAlign: "right", fontStyle: "italic", color: "#666" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt" }}>
+                        <button
+                          type="button"
+                          onClick={() => removeTextOnlyLine(line.id)}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                          title="Remove text line"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {/* Insert text-only line button */}
+                <tr style={{ height: "auto" }}>
+                  <td colSpan={6} style={{ border: "none", padding: "1px", textAlign: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => addTextOnlyLine(index + 1)}
+                      className="text-gray-400 hover:text-emerald-600 text-[10px] italic transition-colors"
+                      title="Insert text-only line after this item"
+                    >
+                      + insert text line
+                    </button>
+                  </td>
+                </tr>
+              </React.Fragment>
+            );
+          })}
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "4px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={addItem}
+                className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold"
+              >
+                + Add Item
+              </button>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt", fontWeight: "bold" }}>
+              (Total Amount in Words)
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
+              <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
+                In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
+              </div>
+
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt" }}>Conforme:</td>
+                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
+                    </td>
+                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
+                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    </td>
+                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Date</td>
+                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Designation</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}>
+                <b>Fund Cluster :</b>{" "}
+                <input
+                  type="text"
+                  value={fundCluster}
+                  onChange={(e) => setFundCluster(e.target.value)}
+                  placeholder="e.g. 01"
+                  className={editableInputCls}
+                  style={{ width: "60%" }}
+                />
+              </div>
+              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> </div>
+
+              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "36px auto 2px" }} />
+              <div style={{ textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+            </td>
+            <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> </div>
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> </div>
+              <div style={{ fontSize: "10pt" }}><b>Amount :</b> </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Original read-only POPreview component (kept for reference/backup)
 function POPreview({
   supplier,
   address,
@@ -176,7 +635,6 @@ function POPreview({
               P.O. No. : <span style={{ fontWeight: "normal" }}></span>
             </td>
           </tr>
-
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               Address : <span style={{ fontWeight: "normal" }}>{address}</span>
@@ -185,7 +643,6 @@ function POPreview({
               Date : <span style={{ fontWeight: "normal" }}>{today}</span>
             </td>
           </tr>
-
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               TIN : <span style={{ fontWeight: "normal" }}>{tin}</span>
@@ -194,7 +651,6 @@ function POPreview({
               Mode of Procurement : <span style={{ fontWeight: "normal" }}>{procurementMode}</span>
             </td>
           </tr>
-
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", verticalAlign: "top" }}>
               Gentlemen:
@@ -203,7 +659,6 @@ function POPreview({
               </div>
             </td>
           </tr>
-
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               Place of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryPlace}</span>
@@ -215,14 +670,12 @@ function POPreview({
               </div>
             </td>
           </tr>
-
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               Date of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryDate}</span>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt" }} />
           </tr>
-
           <tr>
             <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Stock/ Property No.</td>
             <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit</td>
@@ -231,68 +684,25 @@ function POPreview({
             <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Unit Cost</td>
             <td style={{ border: "1px solid #111", padding: "4px 2px", fontSize: "9pt", fontWeight: "bold", textAlign: "center" }}>Amount</td>
           </tr>
-
           {itemRows}
-
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt", fontWeight: "bold" }}>
               (Total Amount in Words)
             </td>
           </tr>
-
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
               <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
                 In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
               </div>
-
-              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-                <tbody>
-                  <tr>
-                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt" }}>Conforme:</td>
-                    <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
-                    <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
-                    </td>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Date</td>
-                    <td style={{ border: "none", padding: "2px 8px 10px", textAlign: "center", fontSize: "9pt" }}>Designation</td>
-                  </tr>
-                </tbody>
-              </table>
             </td>
           </tr>
-
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Fund Cluster :</b> {fundCluster}</div>
-              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> </div>
-
-              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "36px auto 2px" }} />
-              <div style={{ textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> </div>
-              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> </div>
-              <div style={{ fontSize: "10pt" }}><b>Amount :</b> </div>
             </td>
           </tr>
         </tbody>
@@ -312,6 +722,7 @@ function buildPurchaseOrderPrintHtml(data: {
   paymentTerm: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
+  textOnlyLines?: TextOnlyLine[];
 }) {
   const grandTotal = getGrandTotal(data.items);
   const amountWords = toWords(grandTotal);
@@ -325,14 +736,18 @@ function buildPurchaseOrderPrintHtml(data: {
       Number(item.unit_price ?? 0) > 0,
   );
 
-  const rowCount = Math.max(normalizedItems.length, 1);
-  const itemRows = Array.from({ length: rowCount })
-    .map((_, index) => {
-      const item = normalizedItems[index];
-      const qty = Number(item?.quantity ?? 0);
-      const unitCost = Number(item?.unit_price ?? 0);
-      const amount = item ? getItemTotal(item) : 0;
-      return `
+  // Build item rows with text-only lines inserted at correct positions
+  const textLines = data.textOnlyLines || [];
+  let itemRows = "";
+  
+  for (let i = 0; i < normalizedItems.length; i++) {
+    const item = normalizedItems[i];
+    const qty = Number(item?.quantity ?? 0);
+    const unitCost = Number(item?.unit_price ?? 0);
+    const amount = item ? getItemTotal(item) : 0;
+    
+    // Add the item row
+    itemRows += `
         <tr>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
@@ -341,8 +756,38 @@ function buildPurchaseOrderPrintHtml(data: {
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
         </tr>`;
-    })
-    .join("");
+    
+    // Add any text-only lines that should appear after this item (position is 1-based)
+    const linesAfterThisItem = textLines.filter(line => line.position === i + 1);
+    for (const line of linesAfterThisItem) {
+      // Only render if at least one field has content
+      const hasContent = line.stock_no.trim() || line.unit.trim() || line.description.trim() || line.quantity.trim() || line.unit_price.trim();
+      if (hasContent) {
+        itemRows += `
+        <tr style="background-color:#fefce8">
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center;font-style:italic;color:#666">${escapeHtml(line.stock_no)}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center;font-style:italic;color:#666">${escapeHtml(line.unit)}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;font-style:italic;color:#666">${escapeHtml(line.description)}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right;font-style:italic;color:#666">${escapeHtml(line.quantity)}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right;font-style:italic;color:#666">${escapeHtml(line.unit_price)}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right"></td>
+        </tr>`;
+      }
+    }
+  }
+  
+  // If no items, ensure at least one empty row
+  if (normalizedItems.length === 0) {
+    itemRows = `
+        <tr>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt"></td>
+        </tr>`;
+  }
 
   return `<!DOCTYPE html>
 <html>
@@ -491,6 +936,7 @@ function downloadPDF(data: {
   officeSection: string;
   fundCluster: string;
   items: PurchaseOrderItemRow[];
+  textOnlyLines?: TextOnlyLine[];
 }) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
@@ -534,6 +980,31 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [fundCluster, setFundCluster] = useState("");
   const [items, setItems] = useState<PurchaseOrderItemRow[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Text-only lines state (for printing only - descriptive lines between items)
+  const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
+
+  // Helper functions for text-only lines
+  function addTextOnlyLine(afterIndex: number) {
+    const newLine: TextOnlyLine = {
+      id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      position: afterIndex,
+      stock_no: "",
+      unit: "",
+      description: "",
+      quantity: "",
+      unit_price: "",
+    };
+    setTextOnlyLines((prev) => [...prev, newLine]);
+  }
+
+  function updateTextOnlyLine(id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) {
+    setTextOnlyLines((prev) => prev.map((line) => (line.id === id ? { ...line, [field]: value } : line)));
+  }
+
+  function removeTextOnlyLine(id: string) {
+    setTextOnlyLines((prev) => prev.filter((line) => line.id !== id));
+  }
 
   // Division dropdown state
   const [divisions, setDivisions] = useState<{ division_id: number; division_name: string }[]>([]);
@@ -711,6 +1182,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       const header: Partial<PurchaseOrderRow> = {
         po_no: poNo,
         pr_no: selectedPRNo || null,
+        pr_id: selectedPRId ? parseInt(selectedPRId, 10) : null,
         supplier,
         address,
         tin,
@@ -759,6 +1231,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               officeSection,
               fundCluster,
               items,
+              textOnlyLines,
             })
           }
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
@@ -1007,6 +1480,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     officeSection,
                     fundCluster,
                     items,
+                    textOnlyLines,
                   })
                 }
                 className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition-colors"
@@ -1022,18 +1496,33 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-4 text-black">
-                <POPreview
+                <POEditablePreview
                   supplier={supplier}
+                  setSupplier={setSupplier}
                   address={address}
+                  setAddress={setAddress}
                   tin={tin}
+                  setTin={setTin}
                   procurementMode={procurementMode}
+                  setProcurementMode={setProcurementMode}
                   deliveryPlace={deliveryPlace}
+                  setDeliveryPlace={setDeliveryPlace}
                   deliveryTerm={deliveryTerm}
+                  setDeliveryTerm={setDeliveryTerm}
                   deliveryDate={deliveryDate}
+                  setDeliveryDate={setDeliveryDate}
                   paymentTerm={paymentTerm}
-                  officeSection={officeSection}
+                  setPaymentTerm={setPaymentTerm}
                   fundCluster={fundCluster}
+                  setFundCluster={setFundCluster}
                   items={items}
+                  updateItem={updateItem}
+                  addItem={addItem}
+                  removeItem={removeItem}
+                  textOnlyLines={textOnlyLines}
+                  addTextOnlyLine={addTextOnlyLine}
+                  updateTextOnlyLine={updateTextOnlyLine}
+                  removeTextOnlyLine={removeTextOnlyLine}
                 />
               </div>
             </div>

@@ -63,6 +63,354 @@ function toWords(num: number): string {
   return result.trim() + " Pesos Only";
 }
 
+// Editable input styles for live preview
+const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors min-w-[60px] text-[8.5pt]";
+const editableInputNumberCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors min-w-[60px] text-[8.5pt] text-right";
+
+// Type for text-only lines in the ORS (for printing only)
+type TextOnlyLine = {
+  id: string;
+  text: string;
+};
+
+// ─── Editable ORS Preview — allows manual input directly in the preview panel ────────
+function ORSEditablePreview({
+  orsNo, setOrsNo,
+  orsDate, setOrsDate,
+  entityName, setEntityName,
+  payee, setPayee,
+  payeeAddress, setPayeeAddress,
+  office, setOffice,
+  fundCluster, setFundCluster,
+  responsibilityCenter, setResponsibilityCenter,
+  particulars, setParticulars,
+  mfoPap, setMfoPap,
+  uacsCode, setUacsCode,
+  referenceNo, setReferenceNo,
+  obligationAmount, setObligationAmount,
+  payableAmount, setPayableAmount,
+  paymentAmount, setPaymentAmount,
+  notYetDueBalance, setNotYetDueBalance,
+  dueDemandableBalance, setDueDemandableBalance,
+  preparedByName, setPreparedByName,
+  preparedByDesig, setPreparedByDesig,
+  textOnlyLines,
+  addTextOnlyLine,
+  updateTextOnlyLine,
+  removeTextOnlyLine,
+}: {
+  orsNo: string; setOrsNo: (v: string) => void;
+  orsDate: string; setOrsDate: (v: string) => void;
+  entityName: string; setEntityName: (v: string) => void;
+  payee: string; setPayee: (v: string) => void;
+  payeeAddress: string; setPayeeAddress: (v: string) => void;
+  office: string; setOffice: (v: string) => void;
+  fundCluster: string; setFundCluster: (v: string) => void;
+  responsibilityCenter: string; setResponsibilityCenter: (v: string) => void;
+  particulars: string; setParticulars: (v: string) => void;
+  mfoPap: string; setMfoPap: (v: string) => void;
+  uacsCode: string; setUacsCode: (v: string) => void;
+  referenceNo: string; setReferenceNo: (v: string) => void;
+  obligationAmount: number; setObligationAmount: (v: number) => void;
+  payableAmount: number; setPayableAmount: (v: number) => void;
+  paymentAmount: number; setPaymentAmount: (v: number) => void;
+  notYetDueBalance: number; setNotYetDueBalance: (v: number) => void;
+  dueDemandableBalance: number; setDueDemandableBalance: (v: number) => void;
+  preparedByName: string; setPreparedByName: (v: string) => void;
+  preparedByDesig: string; setPreparedByDesig: (v: string) => void;
+  textOnlyLines: TextOnlyLine[];
+  addTextOnlyLine: () => void;
+  updateTextOnlyLine: (id: string, text: string) => void;
+  removeTextOnlyLine: (id: string) => void;
+}) {
+  const fmt = (n: number) =>
+    n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+
+  const displayDate = orsDate
+    ? new Date(orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+
+  const amount = obligationAmount || 0;
+  const amountWords = useMemo(() => (amount > 0 ? toWords(amount) : ""), [amount]);
+
+  // Shared style tokens
+  const S = {
+    root: { fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000", lineHeight: "1.25" } as React.CSSProperties,
+    tbl: { width: "100%", borderCollapse: "collapse" as const, tableLayout: "fixed" as const } as React.CSSProperties,
+    td: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const } as React.CSSProperties,
+    tdC: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const, textAlign: "center" as const } as React.CSSProperties,
+    tdR: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const, textAlign: "right" as const } as React.CSSProperties,
+    b: { fontWeight: "bold" } as React.CSSProperties,
+    uline: { display: "inline-block", borderBottom: "1px solid #000", minWidth: "160px", marginLeft: "4px" } as React.CSSProperties,
+    sigLine: { borderBottom: "1px solid #000", minHeight: "18px", marginBottom: "1px", fontSize: "8.5pt" } as React.CSSProperties,
+    sigLabel: { fontSize: "7.5pt" } as React.CSSProperties,
+  };
+
+  return (
+    <div style={S.root}>
+      <div style={{ textAlign: "right", fontStyle: "italic", fontSize: "9pt", marginBottom: "4px" }}>Appendix 11</div>
+
+      <table style={{ ...S.tbl, borderCollapse: "collapse" }}>
+        <colgroup><col style={{ width: "62%" }} /><col style={{ width: "38%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, verticalAlign: "middle", padding: "6px 8px" }} rowSpan={3}>
+              <div style={{ fontWeight: "bold", fontSize: "11pt", textAlign: "center", marginBottom: "6px" }}>OBLIGATION REQUEST AND STATUS</div>
+              <div style={{ textAlign: "center" }}>
+                <input
+                  type="text"
+                  value={entityName}
+                  onChange={(e) => setEntityName(e.target.value)}
+                  placeholder="Entity Name"
+                  className={editableInputCls}
+                  style={{ ...S.uline, minWidth: "200px", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ textAlign: "center", fontSize: "8.5pt", fontWeight: "bold", marginTop: "2px" }}>Entity Name</div>
+            </td>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Serial No. : </span>
+              <input
+                type="text"
+                value={orsNo}
+                onChange={(e) => setOrsNo(e.target.value)}
+                placeholder="ORS-XXXX"
+                className={editableInputCls}
+                style={{ ...S.uline, minWidth: "100px" }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Date : </span>
+              <input
+                type="date"
+                value={orsDate}
+                onChange={(e) => setOrsDate(e.target.value)}
+                className={editableInputCls}
+                style={{ ...S.uline, minWidth: "100px" }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Fund Cluster : </span>
+              <input
+                type="text"
+                value={fundCluster}
+                onChange={(e) => setFundCluster(e.target.value)}
+                placeholder="01"
+                className={editableInputCls}
+                style={{ ...S.uline, minWidth: "80px" }}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "14%" }} /><col style={{ width: "86%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Payee</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>
+              <input
+                type="text"
+                value={payee}
+                onChange={(e) => setPayee(e.target.value)}
+                placeholder="Enter payee name"
+                className={editableInputCls}
+                style={{ width: "95%" }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Office</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>
+              <input
+                type="text"
+                value={office}
+                onChange={(e) => setOffice(e.target.value)}
+                placeholder="Enter office"
+                className={editableInputCls}
+                style={{ width: "95%" }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Address</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>
+              <input
+                type="text"
+                value={payeeAddress}
+                onChange={(e) => setPayeeAddress(e.target.value)}
+                placeholder="Enter address"
+                className={editableInputCls}
+                style={{ width: "95%" }}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "14%" }} /><col style={{ width: "36%" }} /><col style={{ width: "12%" }} /><col style={{ width: "15%" }} /><col style={{ width: "23%" }} /></colgroup>
+        <thead>
+          <tr>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Responsibility Center</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Particulars</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>MFO/PAP</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>UACS Object Code</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...S.tdC, height: "90px", verticalAlign: "top", paddingTop: "4px" }}>
+              <input
+                type="text"
+                value={responsibilityCenter}
+                onChange={(e) => setResponsibilityCenter(e.target.value)}
+                placeholder="Center"
+                className={editableInputCls}
+                style={{ width: "90%", textAlign: "center" }}
+              />
+            </td>
+            <td style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>
+              <textarea
+                value={particulars}
+                onChange={(e) => setParticulars(e.target.value)}
+                placeholder="Enter particulars"
+                className={editableInputCls}
+                style={{ width: "95%", minHeight: "70px", resize: "none" }}
+              />
+            </td>
+            <td style={{ ...S.tdC, verticalAlign: "top" }}>
+              <input
+                type="text"
+                value={mfoPap}
+                onChange={(e) => setMfoPap(e.target.value)}
+                placeholder="MFO"
+                className={editableInputCls}
+                style={{ width: "90%", textAlign: "center" }}
+              />
+            </td>
+            <td style={{ ...S.tdC, verticalAlign: "top" }}>
+              <input
+                type="text"
+                value={uacsCode}
+                onChange={(e) => setUacsCode(e.target.value)}
+                placeholder="UACS"
+                className={editableInputCls}
+                style={{ width: "90%", textAlign: "center" }}
+              />
+            </td>
+            <td style={{ ...S.tdR, verticalAlign: "top" }}>
+              <input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setObligationAmount(Number(e.target.value))}
+                className={editableInputNumberCls}
+                style={{ width: "90%" }}
+              />
+            </td>
+          </tr>
+          {/* Text-only lines for printing - descriptive lines without amounts */}
+          {textOnlyLines.map((line) => (
+            <tr key={line.id} style={{ backgroundColor: "#fefce8" }}>
+              <td style={{ ...S.tdC, verticalAlign: "top" }}></td>
+              <td colSpan={3} style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs italic">Text:</span>
+                  <input
+                    type="text"
+                    value={line.text}
+                    onChange={(e) => updateTextOnlyLine(line.id, e.target.value)}
+                    placeholder="Enter descriptive text (for printing only)..."
+                    className={`${editableInputCls} flex-1 bg-yellow-50/50`}
+                    style={{ fontStyle: "italic", color: "#666" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeTextOnlyLine(line.id)}
+                    className="text-red-500 hover:text-red-700 text-xs"
+                    title="Remove text line"
+                  >
+                    ×
+                  </button>
+                </div>
+              </td>
+              <td style={{ ...S.tdR, verticalAlign: "top" }}></td>
+            </tr>
+          ))}
+          {/* Add text-only line button */}
+          <tr>
+            <td colSpan={5} style={{ border: "none", padding: "2px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={addTextOnlyLine}
+                className="text-gray-400 hover:text-orange-600 text-[10px] italic transition-colors"
+                title="Insert text-only descriptive line"
+              >
+                + insert text-only line
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={4} style={{ ...S.tdR, ...S.b, fontSize: "8pt" }}>Total</td>
+            <td style={{ ...S.tdR, ...S.b }}>{amount > 0 ? fmt(amount) : ""}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "50%" }} /><col style={{ width: "50%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
+              <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
+                <span style={S.b}>A. Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Printed Name:</span>
+                <input
+                  type="text"
+                  value={preparedByName}
+                  onChange={(e) => setPreparedByName(e.target.value)}
+                  className={editableInputCls}
+                  style={{ ...S.sigLine, fontWeight: "normal", width: "70%" }}
+                />
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Position :</span>
+                <input
+                  type="text"
+                  value={preparedByDesig}
+                  onChange={(e) => setPreparedByDesig(e.target.value)}
+                  className={editableInputCls}
+                  style={{ ...S.sigLine, width: "70%" }}
+                />
+              </div>
+            </td>
+            <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
+              <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
+                <span style={S.b}>B. Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {amount > 0 && (
+        <div style={{ marginTop: "4px", fontSize: "7.5pt", fontStyle: "italic" }}>
+          Amount in Words: <strong>{amountWords}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ORS Preview — pixel-faithful replica of Appendix 11 PDF template ────────
 function ORSPreview({
   orsNo, orsDate, entityName, payee, payeeAddress, office,
@@ -461,6 +809,7 @@ function buildORSPrintHtml(data: {
   obligationAmount: number; payableAmount: number; paymentAmount: number;
   notYetDueBalance: number; dueDemandableBalance: number;
   preparedByName: string; preparedByDesig: string;
+  textOnlyLines?: TextOnlyLine[];
 }) {
   const fmt = (n: number) =>
     n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
@@ -468,6 +817,17 @@ function buildORSPrintHtml(data: {
     ? new Date(data.orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
     : "";
   const amountWords = data.amount > 0 ? toWords(data.amount) : "";
+
+  // Build text-only lines HTML for the particulars table
+  const textLinesHtml = (data.textOnlyLines || [])
+    .filter(line => line.text.trim())
+    .map(line => `
+      <tr style="background-color:#fefce8">
+        <td style="text-align:center;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
+        <td colspan="3" style="border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top;font-style:italic;color:#666">${escapeHtml(line.text)}</td>
+        <td style="text-align:right;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
+      </tr>`)
+    .join("");
 
   return `<!DOCTYPE html>
 <html>
@@ -537,6 +897,7 @@ function buildORSPrintHtml(data: {
         <td class="c">${escapeHtml(data.uacsCode)}</td>
         <td class="r">${data.amount > 0 ? fmt(data.amount) : ""}</td>
       </tr>
+      ${textLinesHtml}
       <tr>
         <td colspan="4" class="r b" style="font-size:8pt">Total</td>
         <td class="r b">${data.amount > 0 ? fmt(data.amount) : ""}</td>
@@ -686,6 +1047,26 @@ export default function ORSProcessModal({
   const [remarks, setRemarks] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<StatusFlag | null>(null);
+
+  // Text-only lines state (for printing only - descriptive lines in particulars)
+  const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
+
+  // Helper functions for text-only lines
+  function addTextOnlyLine() {
+    const newLine: TextOnlyLine = {
+      id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: "",
+    };
+    setTextOnlyLines((prev) => [...prev, newLine]);
+  }
+
+  function updateTextOnlyLine(id: string, text: string) {
+    setTextOnlyLines((prev) => prev.map((line) => (line.id === id ? { ...line, text } : line)));
+  }
+
+  function removeTextOnlyLine(id: string) {
+    setTextOnlyLines((prev) => prev.filter((line) => line.id !== id));
+  }
   const [showFlagPicker, setShowFlagPicker] = useState(false);
   
   // Division state for dropdown
@@ -834,6 +1215,7 @@ export default function ORSProcessModal({
             obligationAmount, payableAmount, paymentAmount,
             notYetDueBalance, dueDemandableBalance,
             preparedByName, preparedByDesig,
+            textOnlyLines,
           })}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
           aria-label="Print preview"
@@ -1182,27 +1564,30 @@ export default function ORSProcessModal({
                   boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
                 }}
               >
-                <ORSPreview
-                  orsNo={orsNo}
-                  orsDate={orsDate}
-                  entityName={entityName}
-                  payee={payee}
-                  payeeAddress={payeeAddress}
-                  office={office}
-                  fundCluster={fundCluster}
-                  responsibilityCenter={responsibilityCenter}
-                  particulars={particulars}
-                  mfoPap={mfoPap}
-                  uacsCode={uacsCode}
-                  amount={obligationAmount || 0}
-                  referenceNo={referenceNo}
-                  obligationAmount={obligationAmount}
-                  payableAmount={payableAmount}
-                  paymentAmount={paymentAmount}
-                  notYetDueBalance={notYetDueBalance}
-                  dueDemandableBalance={dueDemandableBalance}
-                  preparedByName={preparedByName}
-                  preparedByDesig={preparedByDesig}
+                <ORSEditablePreview
+                  orsNo={orsNo} setOrsNo={setOrsNo}
+                  orsDate={orsDate} setOrsDate={setOrsDate}
+                  entityName={entityName} setEntityName={setEntityName}
+                  payee={payee} setPayee={setPayee}
+                  payeeAddress={payeeAddress} setPayeeAddress={setPayeeAddress}
+                  office={office} setOffice={setOffice}
+                  fundCluster={fundCluster} setFundCluster={setFundCluster}
+                  responsibilityCenter={responsibilityCenter} setResponsibilityCenter={setResponsibilityCenter}
+                  particulars={particulars} setParticulars={setParticulars}
+                  mfoPap={mfoPap} setMfoPap={setMfoPap}
+                  uacsCode={uacsCode} setUacsCode={setUacsCode}
+                  referenceNo={referenceNo} setReferenceNo={setReferenceNo}
+                  obligationAmount={obligationAmount} setObligationAmount={setObligationAmount}
+                  payableAmount={payableAmount} setPayableAmount={setPayableAmount}
+                  paymentAmount={paymentAmount} setPaymentAmount={setPaymentAmount}
+                  notYetDueBalance={notYetDueBalance} setNotYetDueBalance={setNotYetDueBalance}
+                  dueDemandableBalance={dueDemandableBalance} setDueDemandableBalance={setDueDemandableBalance}
+                  preparedByName={preparedByName} setPreparedByName={setPreparedByName}
+                  preparedByDesig={preparedByDesig} setPreparedByDesig={setPreparedByDesig}
+                  textOnlyLines={textOnlyLines}
+                  addTextOnlyLine={addTextOnlyLine}
+                  updateTextOnlyLine={updateTextOnlyLine}
+                  removeTextOnlyLine={removeTextOnlyLine}
                 />
               </div>
             </div>
