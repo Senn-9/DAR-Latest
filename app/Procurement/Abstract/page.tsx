@@ -216,8 +216,12 @@ export default function AbstractPage() {
       );
 
       validDealers.forEach((dealer: any) => {
-        const unitPrice = dealer.unit_price ?? 0;
-        const quantity = item.quantity ?? 0;
+        const unitPrice = dealer.unit_price ?? "0";
+        const quantity = Number(item.quantity) || 0;
+        
+        // Calculate total price only if unitPrice is a valid number
+        const numericPrice = Number(unitPrice);
+        const totalPrice = !Number.isNaN(numericPrice) ? quantity * numericPrice : 0;
         
         payload.push({
           session_id: sessionId,
@@ -227,7 +231,7 @@ export default function AbstractPage() {
           quantity: quantity,
           supplier_name: dealer.supplier_name.trim() || null,
           unit_price: unitPrice,
-          total_price: quantity * unitPrice,
+          total_price: totalPrice,
           is_winning: Boolean(dealer.is_winning),
           created_at: new Date().toISOString(),
         });

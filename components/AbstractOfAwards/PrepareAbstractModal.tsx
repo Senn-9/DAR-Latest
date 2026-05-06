@@ -19,7 +19,7 @@ type PrepareAbstractModalProps = {
 
 export type Dealer = {
 	supplier_name: string;
-	unit_price: number | null;
+	unit_price: string | number | null;
 	is_winning: boolean;
 };
 
@@ -31,7 +31,7 @@ type SupplierBlock = {
 
 export type SupplierQuotePayload = {
 	supplier_name: string;
-	unit_price: number | null;
+	unit_price: string | number | null;
 	is_winning: boolean;
 };
 
@@ -223,14 +223,7 @@ export default function PrepareAbstractModal({
 			return;
 		}
 
-		const bad = validSuppliers.find((s) =>
-			Object.values(s.prices).some((v) => v !== "" && Number.isNaN(Number(v)))
-		);
 
-		if (bad) {
-			setFeedback({ ok: false, message: "Please ensure all entered quotation amounts are valid numbers." });
-			return;
-		}
 
 		if (!onSubmit) {
 			setFeedback({ ok: false, message: "No save handler configured yet." });
@@ -245,7 +238,7 @@ export default function PrepareAbstractModal({
 			const itemsWithDealers = items.map((item) => {
 				const dealers = supplierQuotes.map((s, supplierIndex) => ({
 					supplier_name: s.supplier_name,
-					unit_price: s.prices[item.id] && s.prices[item.id] !== "" ? Number(s.prices[item.id]) : null,
+					unit_price: s.prices[item.id] && s.prices[item.id] !== "" ? s.prices[item.id] : null,
 					is_winning: winningSupplierIndex === supplierIndex,
 				}));
 				return {
@@ -283,9 +276,12 @@ export default function PrepareAbstractModal({
 			Object.values(supplier.prices).forEach((rawValue) => {
 				if (rawValue == null || rawValue === "") return;
 				const parsedValue = Number(rawValue);
-				if (Number.isNaN(parsedValue)) return;
-				hasQuote = true;
-				supplierTotal += parsedValue;
+				
+				// Only sum up valid numbers. If it's a letter (NaN), we don't add it to total.
+				if (!Number.isNaN(parsedValue)) {
+					hasQuote = true;
+					supplierTotal += parsedValue;
+				}
 			});
 
 			if (!hasQuote) return;
@@ -477,12 +473,11 @@ export default function PrepareAbstractModal({
 																		<div className="relative">
 																			<RiMoneyDollarCircleLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
 																			<input
-																				type="number"
-																				step="any"
+																				type="text"
 																				value={(quote.prices && quote.prices[it.id]) ?? ""}
 																				onChange={(e) => updateSupplierQuote(quoteIndex, { priceForItem: it.id } as any, e.target.value)}
-																				placeholder="0.00"
-																				className={`${numberInputCls} pl-9`}
+																				placeholder="Enter price or quote"
+																				className={`${textInputCls} pl-9`}
 																			/>
 																		</div>
 																	</div>

@@ -99,8 +99,8 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 				const uniqueSupplierNames = Array.from(
 					new Set(canvassData.map((entry) => (entry.supplier_name || "").trim()).filter(Boolean))
 				);
-				const supplierPricesByItem = new Map<string, Map<number, number>>();
-				for (const name of uniqueSupplierNames) supplierPricesByItem.set(name, new Map<number, number>());
+				const supplierPricesByItem = new Map<string, Map<number, string | number>>();
+				for (const name of uniqueSupplierNames) supplierPricesByItem.set(name, new Map<number, string | number>());
 
 				if (!isActive) return;
 
@@ -125,17 +125,20 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						const itemId = entry.pr_items ?? null;
 						const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
 						if (itemRow == null) continue;
-						const unitPrice = entry.unit_price != null ? Number(entry.unit_price) : 0;
+						
+						const rawUnitPrice = entry.unit_price ?? "";
 						const supplierPrices = supplierPricesByItem.get(supplierName);
 						if (!supplierPrices) continue;
-						supplierPrices.set(itemId, unitPrice);
+						supplierPrices.set(itemId, rawUnitPrice);
 					}
 
 					const totalsBySupplier: Record<string, number> = {};
 					for (const supplierName of uniqueSupplierNames) {
 						let total = 0;
-						for (const [itemId, unitPrice] of supplierPricesByItem.get(supplierName) ?? []) {
+						for (const [itemId, rawValue] of supplierPricesByItem.get(supplierName) ?? []) {
 							const quantity = itemQuantityById.get(itemId) ?? 0;
+							const numericPrice = Number(rawValue);
+							const unitPrice = !Number.isNaN(numericPrice) ? numericPrice : 0;
 							total += unitPrice * quantity;
 						}
 						totalsBySupplier[supplierName] = total;
@@ -155,8 +158,15 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						const itemId = entry.pr_items ?? null;
 						const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
 						if (supplierIndex == null || itemRow == null) continue;
-						const unitPrice = entry.unit_price != null ? Number(entry.unit_price) : 0;
-						next[itemRow][4 + supplierIndex] = unitPrice ? formatMoney(unitPrice) : "";
+
+						const rawValue = entry.unit_price ?? "";
+						const numericPrice = Number(rawValue);
+						
+						if (!Number.isNaN(numericPrice) && rawValue !== "") {
+							next[itemRow][4 + supplierIndex] = numericPrice > 0 ? formatMoney(numericPrice) : "0.00";
+						} else {
+							next[itemRow][4 + supplierIndex] = String(rawValue);
+						}
 					}
 
 					setSupplierNames(sortedSupplierNames);
@@ -349,7 +359,7 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 								</div>
 							</div>
 							<div className="mx-auto max-w-140 text-justify mt-2">
-								<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="font-bold">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
+								<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="font-bold">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br />Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
 								<p className="mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="font-bold">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ____ day of ______, 20___</p>
 							</div>
 						</div>
