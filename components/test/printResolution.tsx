@@ -132,6 +132,8 @@ export function printLivePreview(
 			<div style="font-size:8px;font-weight:400;">Tunay na Pagbabago sa Repormang Agraryo</div>
 		</div>
 		<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" style="height:48px;width:48px;object-fit:contain;border-radius:6px;margin-left:4px;"/>
+		<!-- Invisible spacer to balance the two logos on the left -->
+		<div style="height:48px;width:48px;margin-left:12px;"></div>
 	</div>
 
 	<!-- Meta fields + title: mt-2(8px) px-3(12px) pb-2(8px) pt-1(4px) -->

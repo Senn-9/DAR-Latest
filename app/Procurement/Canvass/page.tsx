@@ -7,6 +7,7 @@ import SignoutModal from "@/components/SignOutModal";
 import ViewPRModal from "@/components/Viewprmodal";
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
 import ReleaseAndRecieveModal from "@/components/CanvassingModals/ReleaseAndRecieveModal";
+import CanvassLivePreview from "@/components/Canvassing/CanvassLivePreview";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -67,6 +68,7 @@ export default function CanvassPage() {
 
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
   const [releaseAndRecieveTarget, setReleaseAndRecieveTarget] = useState<PRListRow | null>(null);
+  const [previewPrNo, setPreviewPrNo] = useState<string | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -493,6 +495,15 @@ export default function CanvassPage() {
                                 View
                               </button>
 
+                              <button
+                                type="button"
+                                onClick={() => setPreviewPrNo(form.pr_no)}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiFileListLine size={14} />
+                                RFQ Preview
+                              </button>
+
                               {/* Reception — BAC account, status_id is Canvassing (Reception) */}
                               {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
                                 <button
@@ -582,6 +593,15 @@ export default function CanvassPage() {
       {/* ── VIEW PR MODAL ── */}
       {viewPrId !== null && (
         <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
+      )}
+
+      {/* ── RFQ PREVIEW MODAL ── */}
+      {previewPrNo !== null && (
+        <CanvassLivePreview
+          open={previewPrNo !== null}
+          prNo={previewPrNo}
+          onClose={() => setPreviewPrNo(null)}
+        />
       )}
 
       {receptionTarget && (

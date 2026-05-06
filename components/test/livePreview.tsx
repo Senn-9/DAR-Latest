@@ -247,6 +247,8 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 								<div style={{ fontSize: "8px", fontWeight: 400 }}>Tunay na Pagbabago sa Repormang Agraryo</div>
 							</div>
 							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="ml-1 h-12 w-12 rounded-md object-contain" />
+							{/* Invisible spacer to balance the two logos on the left */}
+							<div className="w-12 h-12 ml-1" aria-hidden="true" />
 						</div>
 
 						<div className="mt-2 border border-black border-b-0 px-3 pb-2 pt-1">
