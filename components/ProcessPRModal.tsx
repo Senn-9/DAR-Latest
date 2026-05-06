@@ -142,7 +142,7 @@ export default function ProcessPRModal({
         return;
       }
     }
-    const { error: updateErr } = await supabase.from("purchase_requests").update({ status_id: targetStatus, status: statusMap[targetStatus] }).eq("id", prId);
+    const { error: updateErr } = await supabase.from("purchase_requests").update({ status_id: targetStatus, status: statusMap[targetStatus], updated_at: new Date().toISOString() }).eq("id", prId);
     if (updateErr) {
       setProcessing(false);
       alert("Error updating PR status: " + updateErr.message);

@@ -7,6 +7,7 @@ import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import CreatePOModal from "../../components/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
+import ORSProcessModal from "@/components/PO/ORSProcessModal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
@@ -754,7 +755,7 @@ export default function PurchaseOrderPage() {
           </div>
           {/* Create PO button in header (like Create PR) */}
           <div className="ml-auto">
-            {isSupply && (
+            {(isSupply || isAdmin) && (
               <button
                 onClick={() => setCreateOpen(true)}
                 className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
@@ -793,14 +794,15 @@ export default function PurchaseOrderPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {[
             { label: "Total", value: statusCounts.total, icon: <RiFileListLine size={20} />, cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
             { label: "PO", value: statusCounts.po, icon: <RiTimeLine size={20} />, cardBg: "bg-teal-50", border: "border-teal-100", iconBg: "bg-teal-100", iconColor: "text-teal-600", numColor: "text-teal-600" },
             { label: "ORS", value: statusCounts.ors, icon: <RiPlayCircleLine size={20} />, cardBg: "bg-orange-50", border: "border-orange-100", iconBg: "bg-orange-100", iconColor: "text-orange-600", numColor: "text-orange-600" },
             { label: "Accounting", value: statusCounts.accounting, icon: <RiMoneyDollarCircleLine size={20} />, cardBg: "bg-yellow-50", border: "border-yellow-100", iconBg: "bg-yellow-100", iconColor: "text-yellow-600", numColor: "text-yellow-600" },
             { label: "PARPO", value: statusCounts.parpo, icon: <RiCheckboxCircleLine size={20} />, cardBg: "bg-fuchsia-50", border: "border-fuchsia-100", iconBg: "bg-fuchsia-100", iconColor: "text-fuchsia-600", numColor: "text-fuchsia-600" },
-            { label: "Completed", value: statusCounts.completed, icon: <RiCloseCircleLine size={20} />, cardBg: "bg-green-50", border: "border-green-100", iconBg: "bg-green-100", iconColor: "text-green-600", numColor: "text-green-600" },
+            { label: "Serving", value: statusCounts.serving, icon: <RiPlayCircleLine size={20} />, cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
+            { label: "Completed", value: statusCounts.completed, icon: <RiCheckboxCircleLine size={20} />, cardBg: "bg-green-50", border: "border-green-100", iconBg: "bg-green-100", iconColor: "text-green-600", numColor: "text-green-600" },
           ].map((card) => (
             <div key={card.label} className={`${card.cardBg} border ${card.border} rounded-2xl p-4 flex items-center gap-3 shadow-sm`}>
               <div className={`${card.iconBg} ${card.iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>{card.icon}</div>
@@ -980,7 +982,19 @@ export default function PurchaseOrderPage() {
         canProcess={selectedPo ? canProcessPO(currentUser, selectedPo.status_id, selectedPoDivisionName) : false}
       />
 
-      {selectedPo?.status_id === 16 ? (
+      {selectedPo?.status_id === 13 ? (
+        <ORSProcessModal
+          visible={processOpen}
+          po={selectedPo}
+          currentUser={currentUser}
+          onClose={() => {
+            setProcessOpen(false);
+            setSelectedPo(null);
+            loadData();
+          }}
+          onSubmit={processPO}
+        />
+      ) : selectedPo?.status_id === 16 ? (
         <POPARPOProcessModal
           visible={processOpen}
           po={selectedPo}

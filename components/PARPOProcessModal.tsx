@@ -65,12 +65,13 @@ export default function PARPOProcessModal({
         if (data && typeof (data as { id?: number }).id === "number") userId = (data as { id: number }).id;
       }
 
-      // Update purchase_requests status to 3 (Processing BAC)
+      // Update purchase_requests status to 6 (Canvassing Reception)
       const { error: updateErr } = await supabase
         .from("purchase_requests")
         .update({
           status_id: 6,
           status: "Canvassing (Reception)",
+          updated_at: new Date().toISOString(),
         })
         .eq("id", prId);
 

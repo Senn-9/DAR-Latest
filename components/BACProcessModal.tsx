@@ -147,10 +147,11 @@ export default function BACProcessModal({
       // Update purchase_requests with new pr_no and new status to 4 (Processing Budget)
       const { error: updateErr } = await supabase
         .from("purchase_requests")
-        .update({ 
+        .update({
           pr_no: formData.prNo,
           status_id: 4,
           status: "Processing (Budget)",
+          updated_at: new Date().toISOString(),
         })
         .eq("id", prId);
 

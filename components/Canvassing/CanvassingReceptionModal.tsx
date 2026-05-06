@@ -223,6 +223,7 @@ export default function CanvassingReceptionModal({
         .update({
           status_id: nextStatusId,
           status: nextStatusText,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", prId);
 

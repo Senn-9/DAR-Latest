@@ -177,12 +177,13 @@ export default function BudgetModal({
       // ── Get status flag ID ─────────────────────────────────────────────────
       const statusFlagId = selectedFlag.id;
 
-      // ── Update purchase_requests → status_id: 4 (Processing Budget) ───────
+      // ── Update purchase_requests → status_id: 5 (Processing PARPO) ───────
       const { error: updateErr } = await supabase
         .from("purchase_requests")
         .update({
           status_id: 5,
           status: "Processing (PARPO)",
+          updated_at: new Date().toISOString(),
         })
         .eq("id", prId);
 

@@ -24,6 +24,7 @@ export default function DashboardPage() {
     status: string;
     status_id: number | null;
     created_at?: string;
+    updated_at?: string;
     total_cost: number;
     req_name?: string;
     purchase_request_items?: PRItem[];
@@ -93,7 +94,7 @@ export default function DashboardPage() {
         // Fetch purchase requests (PR data)
         const { data: prData, error: prError } = await supabase
           .from("purchase_requests")
-          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, total_cost, req_name, purchase_request_items (*)")
+          .select("id, entity_name, pr_no, office_section, status, status_id, created_at, updated_at, total_cost, req_name, purchase_request_items (*)")
           .order("created_at", { ascending: false });
         
         console.log('PR fetch result:', { prData: prData?.length, prError });
@@ -113,7 +114,7 @@ export default function DashboardPage() {
         try {
           const { data: pos, error: poError } = await supabase
             .from("purchase_orders")
-            .select("id, po_no, pr_no, supplier, office_section, status_id, created_at, total_amount")
+            .select("id, po_no, pr_no, supplier, office_section, status_id, created_at, updated_at, total_amount")
             .order("created_at", { ascending: false });
 
           if (poError) {
@@ -131,7 +132,7 @@ export default function DashboardPage() {
         try {
           const { data: deliveries, error: deliveryError } = await supabase
             .from("deliveries")
-            .select("id, delivery_no, po_no, supplier, office_section, division_id, status_id, created_at")
+            .select("id, delivery_no, po_no, supplier, office_section, division_id, status_id, created_at, updated_at")
             .order("created_at", { ascending: false });
           
           if (deliveryError) {
@@ -161,6 +162,7 @@ export default function DashboardPage() {
           status: 'PO',
           status_id: po.status_id,
           created_at: po.created_at,
+          updated_at: po.updated_at,
           total_cost: Number(po.total_amount ?? 0),
           purchase_request_items: [],
           source: 'po' as const,
@@ -198,6 +200,7 @@ export default function DashboardPage() {
             status: statusText,
             status_id: delivery.status_id,
             created_at: delivery.created_at,
+            updated_at: delivery.updated_at,
             total_cost: 0, // deliveries table doesn't have total_cost column
             purchase_request_items: [],
             source,
@@ -349,6 +352,23 @@ export default function DashboardPage() {
     rejected:   "bg-red-50 text-red-800 border border-red-200",
     completed:  "bg-green-50 text-green-800 border border-green-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
+  };
+
+  // Calculate aging in days based on updated_at or created_at
+  const getAgingDays = (item: PRListRow): number => {
+    const referenceDate = item.updated_at || item.created_at;
+    if (!referenceDate) return 0;
+    const date = new Date(referenceDate);
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Get aging badge style based on days (default threshold: 7 days)
+  const getAgingStyle = (days: number): { text: string; className: string } => {
+    if (days >= 14) return { text: `${days}d`, className: "bg-red-100 text-red-700 border border-red-200" };
+    if (days >= 7) return { text: `${days}d`, className: "bg-amber-100 text-amber-700 border border-amber-200" };
+    return { text: `${days}d`, className: "bg-emerald-100 text-emerald-700 border border-emerald-200" };
   };
 
   const totalBudget = list.reduce((s, pr) => s + (pr.total_cost || 0), 0);
@@ -583,6 +603,7 @@ export default function DashboardPage() {
                       { label: "Section",          field: "office_section" as const, align: "text-left",   width: "w-24" },
                       { label: "Description",      field: null,                       align: "text-left",   width: "flex-1 min-w-40" },
                       { label: "Date",             field: "created_at" as const,     align: "text-left",   width: "w-24" },
+                      { label: "Status Age",            field: null,                       align: "text-center", width: "w-16" },
                       { label: "Status",           field: null,                       align: "text-center", width: "w-32" },
                       { label: "Cost",             field: "total_cost" as const,     align: "text-right",  width: "w-24" },
                       { label: "Actions",          field: null,                       align: "text-center", width: "w-56" },
@@ -607,6 +628,8 @@ export default function DashboardPage() {
                     const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                     const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || 
                                 (form.source === 'delivery' || form.source === 'payment' || form.source === 'po' ? `Supplier: ${form.supplier || form.entity_name || 'N/A'}` : '');
+                    const agingDays = getAgingDays(form);
+                    const agingStyle = getAgingStyle(agingDays);
                       return (
                         <tr key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
                           <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
@@ -624,6 +647,19 @@ export default function DashboardPage() {
                             {form.created_at
                               ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
                               : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${agingStyle.className}`}
+                              title={form.updated_at
+                                ? `Updated: ${new Date(form.updated_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                                : form.created_at
+                                  ? `Created: ${new Date(form.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} (no updates yet)`
+                                  : "No timestamp available"
+                              }
+                            >
+                              {agingStyle.text}
+                            </span>
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>

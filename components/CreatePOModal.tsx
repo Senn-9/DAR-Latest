@@ -14,6 +14,7 @@ type PurchaseRequest = {
   fund_cluster: string | null;
   entity_name: string | null;
   total_cost: number;
+  division_id?: number | null;
 };
 
 type CanvassEntry = {
@@ -332,13 +333,13 @@ function buildPurchaseOrderPrintHtml(data: {
       const unitCost = Number(item?.unit_price ?? 0);
       const amount = item ? getItemTotal(item) : 0;
       return `
-        <tr style="height:18px">
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.stock_no ?? "")}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.unit ?? "")}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.description ?? "")}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
+        <tr>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.description ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
         </tr>`;
     })
     .join("");
@@ -350,16 +351,17 @@ function buildPurchaseOrderPrintHtml(data: {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Purchase Order</title>
   <style>
-    @page { size: A4; margin: 0; }
+    @page { size: A4; margin: 12mm 10mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: 'Times New Roman', Times, serif; color: #000; padding: 8px; }
+    body { font-family: 'Times New Roman', Times, serif; color: #000; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     td, th { border: 1px solid #111; }
     .right { text-align: right; }
     .center { text-align: center; }
     .bold { font-weight: bold; }
     .small { font-size: 9pt; }
+    .po-footer { page-break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -408,52 +410,71 @@ function buildPurchaseOrderPrintHtml(data: {
         <td class="center bold small" style="padding:4px 2px">Unit Cost</td>
         <td class="center bold small" style="padding:4px 2px">Amount</td>
       </tr>
-      ${itemRows || `<tr style="height:18px"><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td></tr>`}
+      ${itemRows || `<tr><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td><td style="border:1px solid #111;padding:4px">&nbsp;</td></tr>`}
       <tr>
-        <td colSpan="6" style="padding:2px 6px;font-size:9pt;font-weight:bold">(Total Amount in Words)</td>
+        <td colSpan="5" style="padding:3px 6px;font-size:9pt;font-weight:bold;text-align:right">TOTAL :</td>
+        <td style="padding:3px 4px;font-size:9pt;font-weight:bold;text-align:right">${grandTotal ? formatMoney(grandTotal).replace("₱", "") : ""}</td>
       </tr>
       <tr>
-        <td colSpan="6" style="padding:0">
-          <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
-          <table style="border:none">
-            <tr>
-              <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
-              <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
-            </tr>
-            <tr>
-              <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-              <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-            </tr>
-            <tr>
-              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
-              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
-            </tr>
-            <tr>
-              <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-              <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-            </tr>
-            <tr>
-              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
-              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Designation</td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      <tr>
-        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
-          <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
-          <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> </div>
-          <div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
-          <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-        </td>
-        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
-          <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> </div>
-          <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> </div>
-          <div style="font-size:10pt"><b>Amount :</b> ${grandTotal ? formatMoney(grandTotal) : ""}</div>
-        </td>
+        <td colSpan="6" style="padding:3px 6px;font-size:9pt"><span style="font-weight:bold">(Total Amount in Words) </span>${amountWords}</td>
       </tr>
     </tbody>
   </table>
+
+  <div class="po-footer">
+    <table>
+      <colgroup>
+        <col style="width:14%" />
+        <col style="width:11%" />
+        <col style="width:34%" />
+        <col style="width:16%" />
+        <col style="width:10.5%" />
+        <col style="width:14.5%" />
+      </colgroup>
+      <tbody>
+        <tr>
+          <td colSpan="6" style="padding:0">
+            <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+            <table style="border:none">
+              <tr>
+                <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
+                <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
+              </tr>
+              <tr>
+                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
+                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
+              </tr>
+              <tr>
+                <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
+                <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
+              </tr>
+              <tr>
+                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+              </tr>
+              <tr>
+                <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
+                <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Designation</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+            <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
+            <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> </div>
+            <div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
+            <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+          </td>
+          <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+            <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> </div>
+            <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> </div>
+            <div style="font-size:10pt"><b>Amount :</b> ${grandTotal ? formatMoney(grandTotal) : ""}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>`;
 }
@@ -471,14 +492,22 @@ function downloadPDF(data: {
   fundCluster: string;
   items: PurchaseOrderItemRow[];
 }) {
-  const printWindow = window.open("", "", "height=900,width=1200");
+  const printWindow = window.open("", "_blank");
   if (!printWindow) return;
-
-  printWindow.document.open();
   printWindow.document.write(buildPurchaseOrderPrintHtml(data));
   printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => printWindow.print(), 250);
+  // Wait for content to load before printing
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+  };
+  // Fallback if onload doesn't fire
+  setTimeout(() => {
+    if (printWindow.document.readyState === "complete") {
+      printWindow.focus();
+      printWindow.print();
+    }
+  }, 300);
 }
 
 export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOModalProps) {
@@ -506,6 +535,10 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [items, setItems] = useState<PurchaseOrderItemRow[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Division dropdown state
+  const [divisions, setDivisions] = useState<{ division_id: number; division_name: string }[]>([]);
+  const [selectedDivisionId, setSelectedDivisionId] = useState<number | null>(null);
+
   useEffect(() => {
     if (visible) {
       document.body.style.overflow = "hidden";
@@ -519,6 +552,14 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   useEffect(() => {
     if (visible) {
       fetchAvailablePRs();
+      // Fetch divisions for dropdown
+      (async () => {
+        const { data } = await supabase
+          .from("divisions")
+          .select("division_id, division_name")
+          .order("division_name");
+        if (data) setDivisions(data);
+      })();
     }
   }, [visible]);
 
@@ -527,7 +568,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     try {
       const { data, error } = await supabase
         .from("purchase_requests")
-        .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost")
+        .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost, division_id")
         .eq("status_id", 33) // Completed (PR Phase) status
         .order("created_at", { ascending: false });
 
@@ -560,6 +601,12 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
     // Pre-fill office info from PR
     setOfficeSection(selectedPR.office_section || "");
+    let divId = selectedPR.division_id || null;
+    if (!divId && selectedPR.office_section) {
+      const match = divisions.find(d => d.division_name.trim().toLowerCase() === selectedPR.office_section?.trim().toLowerCase());
+      if (match) divId = match.division_id;
+    }
+    setSelectedDivisionId(divId);
     setFundCluster(selectedPR.fund_cluster || "");
     setDeliveryPlace(selectedPR.entity_name || "");
 
@@ -587,7 +634,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         setDeliveryTerm(firstEntry.delivery_days ? `${firstEntry.delivery_days} days` : "");
 
         // Build line items from all winning entries
-        const poItems = winningEntries
+        const poItems: PurchaseOrderItemRow[] = winningEntries
           .filter((entry) => entry.unit || entry.unit_price || entry.quantity)
           .map((entry) => ({
             stock_no: null,
@@ -622,13 +669,14 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     setDeliveryDate("");
     setPaymentTerm("");
     setOfficeSection("");
+    setSelectedDivisionId(null);
     setFundCluster("");
     setItems([]);
     setSaving(false);
   }
 
   function addItem() {
-    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: 1, unit_price: 0, subtotal: 0 }]);
+    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: 1, unit_price: 0, subtotal: 0 } as PurchaseOrderItemRow]);
   }
 
   function updateItem(idx: number, patch: Partial<PurchaseOrderItemRow>) {
@@ -675,6 +723,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         fund_cluster: fundCluster,
         total_amount: grandTotal,
         status_id: 11,
+        division_id: selectedDivisionId,
       };
       await onCreate(header, items);
       resetForm();
@@ -692,15 +741,49 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Floating action buttons - like livePreview.tsx */}
+      <div className="absolute right-4 top-4 z-20 flex gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            downloadPDF({
+              supplier,
+              address,
+              tin,
+              procurementMode,
+              deliveryPlace,
+              deliveryTerm,
+              deliveryDate,
+              paymentTerm,
+              officeSection,
+              fundCluster,
+              items,
+            })
+          }
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+          aria-label="Print preview"
+          title="Print"
+        >
+          <RiFilePdf2Line size={20} />
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+          aria-label="Close preview"
+          title="Close"
+        >
+          <RiCloseLine size={20} />
+        </button>
+      </div>
+
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
           <div>
             <h2 className="text-xl font-bold">Create Purchase Order</h2>
             <p className="text-emerald-100 text-sm mt-1">Appendix 61 · Official Government Form</p>
           </div>
-          <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
-            <RiCloseLine size={24} />
-          </button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
@@ -812,8 +895,25 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Office Information</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
-                    <input className={inputCls} placeholder="e.g., Procurement" value={officeSection} onChange={(e) => setOfficeSection(e.target.value)} />
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section *</label>
+                    <select
+                      className={inputCls}
+                      value={selectedDivisionId ?? ""}
+                      onChange={(e) => {
+                        const divId = e.target.value ? Number(e.target.value) : null;
+                        setSelectedDivisionId(divId);
+                        const div = divisions.find(d => d.division_id === divId);
+                        setOfficeSection(div ? div.division_name : "");
+                      }}
+                      required
+                    >
+                      <option value="">Select Division...</option>
+                      {divisions.map((div) => (
+                        <option key={div.division_id} value={div.division_id}>
+                          {div.division_name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Fund Cluster</label>
@@ -920,26 +1020,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                <button
-                  onClick={() =>
-                    downloadPDF({
-                      supplier,
-                      address,
-                      tin,
-                      procurementMode,
-                      deliveryPlace,
-                      deliveryTerm,
-                      deliveryDate,
-                      paymentTerm,
-                      officeSection,
-                      fundCluster,
-                      items,
-                    })
-                  }
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
-                >
-                  <RiFilePdf2Line size={16} /> PDF
-                </button>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-4 text-black">
                 <POPreview

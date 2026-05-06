@@ -6,6 +6,7 @@ import {
   RiCloseLine,
   RiSaveLine,
   RiFlagLine,
+  RiFilePdf2Line,
 } from "react-icons/ri";
 import type { PurchaseOrderRow, PurchaseOrderItemRow } from "@/utils/supabase/po";
 import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
@@ -442,6 +443,202 @@ function ORSPreview({
   );
 }
 
+// ─── ORS Print HTML builder ───────────────────────────────────────────────────
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildORSPrintHtml(data: {
+  orsNo: string; orsDate: string; entityName: string; payee: string;
+  payeeAddress: string; office: string; fundCluster: string;
+  responsibilityCenter: string; particulars: string; mfoPap: string;
+  uacsCode: string; amount: number; referenceNo: string;
+  obligationAmount: number; payableAmount: number; paymentAmount: number;
+  notYetDueBalance: number; dueDemandableBalance: number;
+  preparedByName: string; preparedByDesig: string;
+}) {
+  const fmt = (n: number) =>
+    n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const displayDate = data.orsDate
+    ? new Date(data.orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+  const amountWords = data.amount > 0 ? toWords(data.amount) : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Obligation Request and Status</title>
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000; line-height: 1.25; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th { border: 1px solid #000; padding: 2px 5px; font-size: 8.5pt; vertical-align: top; }
+    .cert-block { page-break-inside: avoid; }
+    .b { font-weight: bold; }
+    .c { text-align: center; }
+    .r { text-align: right; }
+    .sig-line { border-bottom: 1px solid #000; min-height: 18px; margin-bottom: 1px; font-size: 8.5pt; }
+    .sig-label { font-size: 7.5pt; }
+    .uline { display: inline-block; border-bottom: 1px solid #000; min-width: 160px; margin-left: 4px; }
+  </style>
+</head>
+<body>
+  <div style="text-align:right;font-style:italic;font-size:9pt;margin-bottom:4px">Appendix 11</div>
+
+  <table>
+    <colgroup><col style="width:62%"/><col style="width:38%"/></colgroup>
+    <tbody>
+      <tr>
+        <td style="vertical-align:middle;padding:6px 8px" rowspan="3">
+          <div class="b" style="font-size:11pt;text-align:center;margin-bottom:6px">OBLIGATION REQUEST AND STATUS</div>
+          <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
+          <div class="b" style="text-align:center;font-size:8.5pt;margin-top:2px">Entity Name</div>
+        </td>
+        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">Serial No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
+      </tr>
+      <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Date : </span><span class="uline" style="min-width:100px">${displayDate}</span></td></tr>
+      <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Fund Cluster : </span><span class="uline" style="min-width:80px">${escapeHtml(data.fundCluster)}</span></td></tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:14%"/><col style="width:86%"/></colgroup>
+    <tbody>
+      <tr><td class="b" style="padding:3px 6px">Payee</td><td style="padding:3px 6px">${escapeHtml(data.payee)}</td></tr>
+      <tr><td class="b" style="padding:3px 6px">Office</td><td style="padding:3px 6px">${escapeHtml(data.office)}</td></tr>
+      <tr><td class="b" style="padding:3px 6px">Address</td><td style="padding:3px 6px">${escapeHtml(data.payeeAddress)}</td></tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:14%"/><col style="width:36%"/><col style="width:12%"/><col style="width:15%"/><col style="width:23%"/></colgroup>
+    <thead>
+      <tr>
+        <td class="c b" style="font-size:7.5pt">Responsibility Center</td>
+        <td class="c b" style="font-size:7.5pt">Particulars</td>
+        <td class="c b" style="font-size:7.5pt">MFO/PAP</td>
+        <td class="c b" style="font-size:7.5pt">UACS Object Code</td>
+        <td class="c b" style="font-size:7.5pt">Amount</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="c" style="height:90px;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
+        <td style="word-break:break-word">${escapeHtml(data.particulars)}</td>
+        <td class="c">${escapeHtml(data.mfoPap)}</td>
+        <td class="c">${escapeHtml(data.uacsCode)}</td>
+        <td class="r">${data.amount > 0 ? fmt(data.amount) : ""}</td>
+      </tr>
+      <tr>
+        <td colspan="4" class="r b" style="font-size:8pt">Total</td>
+        <td class="r b">${data.amount > 0 ? fmt(data.amount) : ""}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cert-block">
+    <table style="margin-top:-1px">
+      <colgroup><col style="width:50%"/><col style="width:50%"/></colgroup>
+      <tbody>
+        <tr>
+          <td style="padding:5px 7px">
+            <div style="font-size:8pt;margin-bottom:6px"><span class="b">A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal</div>
+            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line">${escapeHtml(data.preparedByName)}</div></div>
+            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line">${escapeHtml(data.preparedByDesig)}</div></div>
+            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Requesting Office/Authorized Representative</div>
+            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+          </td>
+          <td style="padding:5px 7px">
+            <div style="font-size:8pt;margin-bottom:6px"><span class="b">B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above</div>
+            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line"></div></div>
+            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Budget Division/Unit/Authorized Representative</div>
+            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table style="margin-top:-1px">
+      <tbody>
+        <tr><td class="b" style="font-size:8pt;padding:3px 6px">C.</td><td colspan="6" class="c b" style="font-size:9pt;letter-spacing:1px">STATUS OF OBLIGATION</td></tr>
+      </tbody>
+    </table>
+
+    <table style="margin-top:-1px">
+      <colgroup><col style="width:10%"/><col style="width:22%"/><col style="width:16%"/><col style="width:13%"/><col style="width:13%"/><col style="width:13%"/><col style="width:13%"/></colgroup>
+      <thead>
+        <tr><td colspan="3" class="c b" style="font-size:7.5pt">Reference</td><td colspan="4" class="c b" style="font-size:7.5pt">Amount</td></tr>
+        <tr>
+          <td class="c b" style="font-size:7pt">Date</td>
+          <td class="c b" style="font-size:7pt">Particulars</td>
+          <td class="c b" style="font-size:7pt">ORS/JEV/Check/<br/>ADA/TRA No.</td>
+          <td class="c b" style="font-size:7pt">Obligation</td>
+          <td class="c b" style="font-size:7pt">Payable</td>
+          <td class="c b" style="font-size:7pt">Payment</td>
+          <td class="c b" style="font-size:7pt">Balance</td>
+        </tr>
+        <tr><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt">(a)</td><td class="c" style="font-size:7pt">(b)</td><td class="c" style="font-size:7pt">(c)</td><td class="c" style="font-size:7pt"></td></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="height:28px;font-size:7.5pt">${displayDate}</td>
+          <td style="font-size:7.5pt;word-break:break-word">${escapeHtml(data.particulars)}</td>
+          <td class="c" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
+          <td class="r" style="font-size:7.5pt">${data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
+          <td class="r" style="font-size:7.5pt">${data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
+          <td class="r" style="font-size:7.5pt">${data.paymentAmount > 0 ? fmt(data.paymentAmount) : ""}</td>
+          <td class="r" style="font-size:7.5pt"></td>
+        </tr>
+        <tr><td style="height:18px"></td><td></td><td></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
+        <tr>
+          <td colspan="3"></td>
+          <td colspan="2" class="c b" style="font-size:7pt">Not Yet Due<br/>(a-b)</td>
+          <td colspan="2" class="c b" style="font-size:7pt">Due and Demandable<br/>(b-c)</td>
+        </tr>
+        <tr>
+          <td colspan="3" class="r b" style="font-size:7.5pt">Balance</td>
+          <td colspan="2" class="r" style="font-size:7.5pt">${data.notYetDueBalance > 0 ? fmt(data.notYetDueBalance) : ""}</td>
+          <td colspan="2" class="r" style="font-size:7.5pt">${data.dueDemandableBalance > 0 ? fmt(data.dueDemandableBalance) : ""}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  ${data.amount > 0 ? `<div style="margin-top:4px;font-size:7.5pt;font-style:italic">Amount in Words: <strong>${amountWords}</strong></div>` : ""}
+</body>
+</html>`;
+}
+
+function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0]) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+  printWindow.document.write(buildORSPrintHtml(data));
+  printWindow.document.close();
+  // Wait for content to load before printing
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+  };
+  // Fallback if onload doesn't fire
+  setTimeout(() => {
+    if (printWindow.document.readyState === "complete") {
+      printWindow.focus();
+      printWindow.print();
+    }
+  }, 300);
+}
+
 // ─── Input styling ────────────────────────────────────────────────────────────
 const inputCls =
   "w-full px-3 py-1.5 text-sm text-gray-900 border border-gray-200 rounded bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition placeholder:text-gray-300";
@@ -516,7 +713,14 @@ export default function ORSProcessModal({
       setPayeeAddress("");
       // Set office from PO and try to match division
       setOffice(po.office_section || "");
-      setSelectedDivisionId(po.division_id ?? null);
+
+      let divId = po.division_id ?? null;
+      if (!divId && po.office_section && divisions.length > 0) {
+        const match = divisions.find(d => d.division_name.trim().toLowerCase() === po.office_section?.trim().toLowerCase());
+        if (match) divId = match.division_id;
+      }
+      setSelectedDivisionId(divId);
+
       setFundCluster(po.fund_cluster || "");
       setResponsibilityCenter("");
       setParticulars(`Payment for ${po.supplier || "supplier"} - ${po.pr_no || ""}`);
@@ -527,7 +731,7 @@ export default function ORSProcessModal({
       setReferenceNo("ORS");
       fetchBudgetInfo(po.pr_no);
     }
-  }, [po, visible, currentUser]);
+  }, [po, visible, currentUser, divisions]);
 
   async function fetchBudgetInfo(prNo: string | null) {
     if (!prNo) return;
@@ -619,6 +823,35 @@ export default function ORSProcessModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
+      {/* Floating action buttons - like livePreview.tsx */}
+      <div className="absolute right-4 top-4 z-20 flex gap-2">
+        <button
+          type="button"
+          onClick={() => downloadORSPdf({
+            orsNo, orsDate, entityName, payee, payeeAddress, office,
+            fundCluster, responsibilityCenter, particulars, mfoPap,
+            uacsCode, amount: obligationAmount || 0, referenceNo,
+            obligationAmount, payableAmount, paymentAmount,
+            notYetDueBalance, dueDemandableBalance,
+            preparedByName, preparedByDesig,
+          })}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+          aria-label="Print preview"
+          title="Print"
+        >
+          <RiFilePdf2Line size={20} />
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+          aria-label="Close preview"
+          title="Close"
+        >
+          <RiCloseLine size={20} />
+        </button>
+      </div>
+
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* ── Modal Header ── */}
@@ -627,9 +860,6 @@ export default function ORSProcessModal({
             <h2 className="text-lg font-bold leading-tight">Obligation Request and Status (ORS)</h2>
             <p className="text-orange-100 text-xs mt-0.5">PO: {po.po_no} · Supplier: {po.supplier}</p>
           </div>
-          <button onClick={onClose} className="hover:bg-orange-500/50 p-1.5 rounded-lg transition-colors">
-            <RiCloseLine size={22} />
-          </button>
         </div>
 
         <div className="flex flex-1 overflow-hidden min-h-0">
@@ -940,7 +1170,6 @@ export default function ORSProcessModal({
           <div className="flex flex-[3] flex-col overflow-y-auto bg-gray-100">
             <div className="p-4 pb-2 flex items-center justify-between shrink-0">
               <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Live Preview — Appendix 11</span>
-              <span className="text-[10px] text-gray-400">Updates as you type</span>
             </div>
             <div className="flex-1 overflow-y-auto px-4 pb-6">
               {/* Paper sheet */}

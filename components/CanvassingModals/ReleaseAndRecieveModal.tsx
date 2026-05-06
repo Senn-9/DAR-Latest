@@ -146,7 +146,8 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
       if (patch.released_at) {
         const { error: prError } = await supabase.from("purchase_requests").update({
           status_id: 9,
-          status: "Canvassing (Collection)"
+          status: "Canvassing (Collection)",
+          updated_at: new Date().toISOString(),
         }).eq("id", prId);
         if (prError) throw prError;
         onProcessed?.(prId);
@@ -202,9 +203,10 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
     try {
       const { error: prError } = await supabase.from("purchase_requests").update({
         status_id: 10,
-        status: "Abstract of Awards"
+        status: "Abstract of Awards",
+        updated_at: new Date().toISOString(),
       }).eq("id", prId);
-      
+
       if (prError) throw prError;
       onProcessed?.(prId);
       onClose();
