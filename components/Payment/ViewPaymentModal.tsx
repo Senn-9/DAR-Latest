@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RiCloseLine, RiFileListLine, RiMoneyDollarCircleLine, RiUserLine, RiCalendarLine, RiCheckLine, RiTimeLine, RiArrowRightLine } from "react-icons/ri";
+import { fetchRemarksThread } from "@/utils/supabase/logs";
 
 interface ViewPaymentModalProps {
   visible: boolean;
@@ -24,6 +25,7 @@ export default function ViewPaymentModal({
 }: ViewPaymentModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "voucher" | "ors" | "dv" | "timeline">("overview");
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const [remarks, setRemarks] = useState<any[]>([]);
   
   // Cache for completion timestamps to prevent them from changing
   const [cachedTimestamps, setCachedTimestamps] = useState<Record<number, string>>({});
@@ -58,6 +60,19 @@ export default function ViewPaymentModal({
 
   // Helper function to get the best available timestamp for a step
   const getStepTimestamp = (stepTimestamp: string | null, stepStatusId: number, currentStatusId: number) => {
+    // Look for remark timestamp first
+    const statusObj = paymentStatuses.find(s => s.id === stepStatusId);
+    if (statusObj) {
+      // remarks are ordered descending (newest first), so reversing gives oldest first
+      const matchingRemark = [...remarks].reverse().find(r => {
+        const text = r.remark || "";
+        return text.includes(statusObj.label);
+      });
+      if (matchingRemark) {
+        return formatDate(matchingRemark.created_at);
+      }
+    }
+
     // First try the specific step timestamp
     if (stepTimestamp) {
       return formatDate(stepTimestamp);
@@ -165,7 +180,12 @@ export default function ViewPaymentModal({
     if (visible) {
       contentRef.current?.focus();
     }
-  }, [visible, activeTab]);
+    if (visible && delivery?.id) {
+      fetchRemarksThread({ deliveryId: delivery.id })
+        .then(setRemarks)
+        .catch(console.error);
+    }
+  }, [visible, activeTab, delivery?.id]);
 
   if (!visible) return null;
 

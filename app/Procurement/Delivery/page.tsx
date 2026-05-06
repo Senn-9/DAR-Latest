@@ -122,6 +122,8 @@ export default function DeliveryPage() {
   };
 
   type CurrentUser = {
+    id: number;
+
     fullname: string;
 
     username: string;
@@ -217,18 +219,10 @@ export default function DeliveryPage() {
 
   const PAGE_SIZE = 10;
 
-  // Helper function to filter out Phase 4 payment statuses
+  // Helper function to filter delivery data
 
   const filterDeliveryData = (data: any[]) => {
-    const paymentStatuses = [28, 29, 30, 32, 33, 34, 35];
-
     return data.filter((delivery) => {
-      // Exclude Phase 4 payment statuses except completed (36) - they belong to Payment page
-
-      if (paymentStatuses.includes(delivery.status_id)) {
-        return false;
-      }
-
       // STOD roles (BAC, Supply, Budget, PARPO, Accounting) and Admin can view all deliveries
 
       if (
@@ -456,6 +450,9 @@ export default function DeliveryPage() {
   }, [selectedDelivery?.id, supabase]);
 
   const canRoleProcess = (roleId: number, statusId: number) => {
+    // Deliveries in the payment phase (>= 28) should not be processed from the delivery dashboard
+    if (statusId >= 28) return false;
+
     if (roleId === 1) return true;
 
     if (roleId === 8 && [18, 19, 20, 21, 22].includes(statusId)) return true; // Supply role - removed 23
@@ -495,7 +492,7 @@ export default function DeliveryPage() {
 
       const selectedPo = poCandidates.find((p) => p.id === selectedPoId);
 
-      await insertDelivery({
+      const newDelivery = await insertDelivery({
         po_id: selectedPoId,
 
         po_no: selectedPo?.po_no || "",
@@ -506,8 +503,21 @@ export default function DeliveryPage() {
 
         division_id: selectedPo?.division_id || null,
 
-        created_by: currentUser?.role_id || null,
+        created_by: currentUser?.id || null,
       });
+
+      try {
+        const initialStatusName = statuses.find(s => s.id === 18)?.status_name || "Delivery (Waiting)";
+        await insertDeliveryProcessRemark(
+          newDelivery.id,
+          currentUser?.id || null,
+          `Delivery created with status: ${initialStatusName}`,
+          null,
+          "delivery",
+        );
+      } catch (remarkError: any) {
+        // Continue even if remark fails
+      }
 
       setCreateModalOpen(false);
 
@@ -570,7 +580,7 @@ export default function DeliveryPage() {
               delivery_id: selectedDelivery.id,
               action: "delivery_completed",
               description: "Delivery phase completed and moved to voucher verification",
-              user_id: currentUser?.role_id || null,
+              user_id: currentUser?.id || null,
               created_at: new Date().toISOString()
             });
           
@@ -651,24 +661,23 @@ export default function DeliveryPage() {
         return;
       }
 
-      // Insert remark if notes are provided
+      // Always log status transition in remarks
 
-      if (notes) {
-        try {
-          await insertDeliveryProcessRemark(
-            selectedDelivery.id,
+      const oldStatusName = statuses.find(s => s.id === selectedDelivery.status_id)?.status_name || `Status ${selectedDelivery.status_id}`;
+      const newStatusName = statuses.find(s => s.id === nextStatus)?.status_name || `Status ${nextStatus}`;
+      const transitionMessage = `Status changed from ${oldStatusName} to ${newStatusName}`;
+      const finalRemark = notes ? `${transitionMessage}\n\nRemarks: ${notes}` : transitionMessage;
 
-            currentUser?.role_id || null,
-
-            notes,
-
-            statusFlag ? getFlagId(statusFlag) : null,
-
-            "delivery",
-          );
-        } catch (remarkError: any) {
-          // Continue even if remark fails
-        }
+      try {
+        await insertDeliveryProcessRemark(
+          selectedDelivery.id,
+          currentUser?.id || null,
+          finalRemark,
+          statusFlag ? getFlagId(statusFlag) : null,
+          "delivery",
+        );
+      } catch (remarkError: any) {
+        // Continue even if remark fails
       }
 
       // Save document data whenever it's provided

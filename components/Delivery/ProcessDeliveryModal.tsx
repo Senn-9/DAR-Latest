@@ -1574,6 +1574,12 @@ export default function ProcessDeliveryModal({
 
 
 
+  // Confirmation dialog state
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+
+
   const [selectedDocument, setSelectedDocument] = useState<
 
     "delivery" | "iar" | "loa" | "dv"
@@ -4161,33 +4167,45 @@ export default function ProcessDeliveryModal({
                   placeholder="e.g. IAR-2026-0015"
 
                   className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
-
                     active?.status_id === 25
-
                       ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
-
                       : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-
                   }`}
-
                 />
-
               </div>
 
-
-
               <div>
-
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-
-                  Invoice No. <span className="text-red-500">*</span>
-
+                  Responsibility Center Code
                 </label>
 
+                <input
+                  type="text"
+                  value={iar?.responsibility_center_code ?? ""}
+                  onChange={(e) =>
+                    setIar((p: any) => ({
+                      ...(p ?? {}),
+                      responsibility_center_code: e.target.value,
+                    }))
+                  }
+                  readOnly={active?.status_id === 25}
+                  placeholder="e.g. 100000"
+                  className={`w-full px-3.5 py-2.5 text-sm rounded-lg border font-mono ${
+                    active?.status_id === 25
+                      ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                      : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  }`}
+                />
+              </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Invoice No. <span className="text-red-500">*</span>
+                </label>
 
                 <input
-
                   type="text"
 
                   value={iar?.invoice_no ?? ""}
@@ -4526,6 +4544,7 @@ export default function ProcessDeliveryModal({
 
             </div>
 
+            
 
 
             {/* Inspection Verification */}
@@ -4682,61 +4701,66 @@ export default function ProcessDeliveryModal({
 
 
 
-                <label
+                {/* Partial row — only shown when Complete is NOT checked */}
+                {!iar?.items_complete && (
 
-                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
+                  <label
 
-                    active?.status_id === 25
-
-                      ? "cursor-not-allowed"
-
-                      : "cursor-pointer hover:bg-white"
-
-                  }`}
-
-                >
-
-                  <input
-
-                    type="checkbox"
-
-                    checked={!iar?.items_complete}
-
-                    onChange={(e) =>
-
-                      setIar((p: any) => ({
-
-                        ...(p ?? {}),
-
-                        items_complete: !e.target.checked,
-
-                      }))
-
-                    }
-
-                    disabled={active?.status_id === 25}
-
-                    className={`w-4 h-4 rounded focus:ring-2 ${
+                    className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
 
                       active?.status_id === 25
 
-                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                        ? "cursor-not-allowed"
 
-                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                        : "cursor-pointer hover:bg-white"
 
                     }`}
 
-                  />
+                  >
+
+                    <input
+
+                      type="checkbox"
+
+                      checked={!iar?.items_complete}
+
+                      onChange={(e) =>
+
+                        setIar((p: any) => ({
+
+                          ...(p ?? {}),
+
+                          items_complete: !e.target.checked,
+
+                        }))
+
+                      }
+
+                      disabled={active?.status_id === 25}
+
+                      className={`w-4 h-4 rounded focus:ring-2 ${
+
+                        active?.status_id === 25
+
+                          ? "text-gray-400 border-gray-300 cursor-not-allowed"
+
+                          : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
+
+                      }`}
+
+                    />
 
 
 
-                  <span className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-700">
 
-                    Partial (please specify quantity)
+                      Partial (please specify quantity)
 
-                  </span>
+                    </span>
 
-                </label>
+                  </label>
+
+                )}
 
               </div>
 
@@ -4754,8 +4778,8 @@ export default function ProcessDeliveryModal({
                     const poItems = poData?.purchase_order_items || [];
                     
                     // Add all PO items as missing unit rows
-                    const newItems = poItems.map((poItem: any) => ({
-                      id: Date.now().toString() + "_" + poItem.id,
+                    const newItems = poItems.map((poItem: any, index: number) => ({
+                      id: Date.now().toString() + "_" + index + "_" + Math.random().toString(36).substr(2, 9),
                       stock_no: poItem.stock_no || "",
                       unit: poItem.unit || "",
                       description: poItem.description || "",
@@ -4774,19 +4798,7 @@ export default function ProcessDeliveryModal({
                 >
                   <RiAddLine size={14} /> Add Missing Unit Row
                 </button>
-                <button 
-                  onClick={() => {
-                    setIar((p: any) => ({
-                      ...(p ?? {}),
-                      missing_units_items: []
-                    }));
-                  }}
-                  disabled={active?.status_id === 25 || !(iar?.missing_units_items?.length > 0)}
-                  className="flex items-center gap-1.5 text-red-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-red-300 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RiCloseLine size={14} /> Cancel Missing Units
-                </button>
-              </div>
+                              </div>
               
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-xs text-amber-800 mb-3">
@@ -6582,7 +6594,7 @@ export default function ProcessDeliveryModal({
 
             <button
 
-              onClick={handleSubmit}
+              onClick={() => setConfirmOpen(true)}
 
               disabled={!isFormValid()}
 
@@ -6599,6 +6611,78 @@ export default function ProcessDeliveryModal({
         </div>
 
       </div>
+
+
+
+      {/* ── Confirmation Modal ── */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+            style={{ animation: "fadeScaleIn 0.18s ease" }}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <RiCheckLine className="text-white" size={22} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-base leading-tight">Confirm Action</p>
+                <p className="text-emerald-100 text-xs mt-0.5">Please review before proceeding</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                You are about to{" "}
+                <span className="font-semibold text-emerald-700">
+                  {getSubmitButtonText()}
+                </span>{" "}
+                for delivery{" "}
+                <span className="font-semibold text-gray-900">{deliveryNo}</span>.
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                This action will advance the record to the next status. Make sure all
+                required information has been filled in correctly before confirming.
+              </p>
+
+              {/* Current status pill */}
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <p className="text-xs font-semibold text-emerald-700">{statusLabel}</p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-5 flex gap-3">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors text-sm"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmOpen(false);
+                  handleSubmit();
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 text-white font-bold hover:bg-emerald-800 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <RiCheckLine size={16} />
+                Confirm
+              </button>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes fadeScaleIn {
+              from { opacity: 0; transform: scale(0.92); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
 
 
 

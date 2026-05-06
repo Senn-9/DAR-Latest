@@ -555,14 +555,7 @@
               >Date Received : {{received_at}}&nbsp;</span
             >
           </div>
-          <div class="pdf24_01" style="left: 5.0167em; top: 39.0255em">
-            <span
-              class="pdf24_38 pdf24_08 pdf24_37"
-              style="word-spacing: 0.0116em"
-              >Inspected, verified and found in order as to quantity
-              &nbsp;</span
-            >
-          </div>
+      
           <!-- Checkmark overlay for Inspection Verification -->
           {{#if inspection_verified}}
           <div style="position: absolute; left: 3.2em; top: 39.3em; z-index: 1000;">
@@ -579,6 +572,14 @@
             <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
           </div>
           {{/if}}
+              <div class="pdf24_01" style="left: 5.0167em; top: 39.0255em">
+            <span
+              class="pdf24_38 pdf24_08 pdf24_37"
+              style="word-spacing: 0.0116em"
+              >Inspected, verified and found in order as to quantity
+              &nbsp;</span
+            >
+          </div>
           <div class="pdf24_01" style="left: 5.0167em; top: 40.158em">
             <span
               class="pdf24_38 pdf24_08 pdf24_40"
@@ -592,11 +593,11 @@
               >Partial (pls. specify quantity) &nbsp;</span>
           </div>
           <!-- Checkmark overlay for Partial -->
-          <!-- {{#unless items_complete}} -->
+          {{#unless items_complete}}
           <div style="position: absolute; left: 26.2em; top: 41.13em; z-index: 1000;">
             <span style="font-size: 1.2em; color: #000; font-weight: bold;">✓</span>
           </div>
-          <!-- {{/unless}} -->
+          {{/unless}}
           <div class="pdf24_01" style="left: 6.2688em; top: 43.6422em">
             <span
               class="pdf24_17 pdf24_08 pdf24_36"

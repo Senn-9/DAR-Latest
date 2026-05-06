@@ -33,6 +33,7 @@ const FLAG_CONFIG: Record<number, { label: string; color: string; bg: string }> 
 export default function RemarksModal({ visible, deliveryId, onClose }: RemarksModalProps) {
   const [remarks, setRemarks] = useState<Remark[]>([]);
   const [loading, setLoading] = useState(false);
+  const [contextNumbers, setContextNumbers] = useState({ pr_no: "", po_no: "", delivery_no: "" });
   const supabase = createClient();
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function RemarksModal({ visible, deliveryId, onClose }: RemarksMo
     try {
       const { data: delivery } = await supabase
         .from("deliveries")
-        .select("po_id")
+        .select("po_id, delivery_no")
         .eq("id", deliveryId)
         .single();
 
@@ -57,9 +58,15 @@ export default function RemarksModal({ visible, deliveryId, onClose }: RemarksMo
 
       const { data: po } = await supabase
         .from("purchase_orders")
-        .select("pr_id")
+        .select("pr_id, pr_no, po_no")
         .eq("id", delivery.po_id)
         .single();
+
+      setContextNumbers({
+        pr_no: po?.pr_no || "",
+        po_no: po?.po_no || "",
+        delivery_no: delivery?.delivery_no || ""
+      });
 
       const { data: remarksData, error } = await supabase
         .from("remarks")
@@ -134,19 +141,33 @@ export default function RemarksModal({ visible, deliveryId, onClose }: RemarksMo
                 const phase = phaseMatch ? phaseMatch[1] : null;
                 const cleanRemark = remark.remark.replace(/\[(PR|PO|DELIVERY|PAYMENT)\]\s*/, "");
 
+                let referenceNumber = "";
+                if (phase === "PR" && contextNumbers.pr_no) referenceNumber = `PR No. ${contextNumbers.pr_no}`;
+                else if (phase === "PO" && contextNumbers.po_no) referenceNumber = `PO No. ${contextNumbers.po_no}`;
+                else if ((phase === "DELIVERY" || phase === "PAYMENT") && contextNumbers.delivery_no) {
+                  referenceNumber = `Del No. ${contextNumbers.delivery_no}`;
+                }
+
                 return (
                   <div key={remark.id} className="bg-gray-50 rounded-xl border border-gray-200 p-4">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex items-center gap-2">
                         {phase && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                            phase === "PR" ? "bg-blue-100 text-blue-700" :
-                            phase === "PO" ? "bg-purple-100 text-purple-700" :
-                            phase === "DELIVERY" ? "bg-teal-100 text-teal-700" :
-                            "bg-orange-100 text-orange-700"
-                          }`}>
-                            {phase}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                              phase === "PR" ? "bg-blue-100 text-blue-700" :
+                              phase === "PO" ? "bg-purple-100 text-purple-700" :
+                              phase === "DELIVERY" ? "bg-teal-100 text-teal-700" :
+                              "bg-orange-100 text-orange-700"
+                            }`}>
+                              {phase}
+                            </span>
+                            {referenceNumber && (
+                              <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                                {referenceNumber}
+                              </span>
+                            )}
+                          </div>
                         )}
                         <span className="text-xs text-gray-500 font-semibold">
                           {remark.fullname}

@@ -609,11 +609,38 @@ export async function updateDelivery(
   });
   
   // If dr_no is being updated and delivery_no is not explicitly provided, update delivery_no to use dr_no
+  // with uniqueness check to prevent constraint violations
   if (patch.dr_no && !patch.delivery_no) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const deliverySuffix = patch.dr_no.trim();
-    updateData.delivery_no = `DEL-${year}-${deliverySuffix}`;
+    // First check if the dr_no is actually different from the current one
+    const { data: currentDelivery, error: fetchError } = await supabase
+      .from("deliveries")
+      .select("dr_no")
+      .eq("id", id)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    // Only update delivery_no if dr_no is actually changing
+    if (currentDelivery.dr_no !== patch.dr_no) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const deliveryNo = `DEL-${year}-${patch.dr_no.trim()}`;
+      
+      // Check if this delivery_no already exists
+      const { data: existing, error: checkError } = await supabase
+        .from("deliveries")
+        .select("id")
+        .eq("delivery_no", deliveryNo)
+        .neq("id", id) // Exclude current delivery from check
+        .maybeSingle();
+      
+      if (checkError) throw checkError;
+      if (existing) {
+        throw new Error(`Delivery number ${deliveryNo} already exists. Please use a different DR number or manually specify delivery_no.`);
+      }
+      
+      updateData.delivery_no = deliveryNo;
+    }
   }
   
   const { data, error } = await supabase
@@ -824,16 +851,33 @@ export async function fetchIARByDelivery(deliveryId: number) {
       mappedData.supply_officer = mappedData.supply_officer_name;
       delete mappedData.supply_officer_name;
     }
+    if (mappedData.responsibility_center !== undefined && mappedData.responsibility_center !== null) {
+      mappedData.responsibility_center_code = mappedData.responsibility_center;
+      delete mappedData.responsibility_center;
+    }
     // Add iar_date for template usage (format created_at as date)
     if (mappedData.created_at) {
       const createdDate = new Date(mappedData.created_at);
       mappedData.iar_date = createdDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
     }
     
-    // Add default checkbox states for template usage (these don't exist in database but are needed for templates)
-    mappedData.inspection_verified = mappedData.inspection_verified ?? false;
-    mappedData.items_complete = mappedData.items_complete ?? false;
-    
+    // Coerce checkbox states to boolean (DB returns boolean, but default them to false if null)
+    mappedData.inspection_verified = mappedData.inspection_verified === true;
+    mappedData.items_complete = mappedData.items_complete === true;
+
+    // Parse missing_units_items from JSON string back to array
+    if (mappedData.missing_units_items) {
+      if (typeof mappedData.missing_units_items === 'string') {
+        try {
+          mappedData.missing_units_items = JSON.parse(mappedData.missing_units_items);
+        } catch {
+          mappedData.missing_units_items = [];
+        }
+      }
+    } else {
+      mappedData.missing_units_items = [];
+    }
+
     return mappedData;
   }
 
@@ -859,19 +903,25 @@ export async function upsertIARByDelivery(
   const filteredPayload = { ...payload };
 
   delete filteredPayload.fund_cluster; // This comes from PO data
-  delete filteredPayload.responsibility_center_code; // This comes from PO data
   delete filteredPayload.id; // Never update the id field
   delete filteredPayload.iar_date; // This doesn't exist in database, only used for templates
 
-  // Preserve checkbox states for template usage (they don't exist in database but are needed for templates)
-  const checkboxStates = {
-    inspection_verified: filteredPayload.inspection_verified,
-    items_complete: filteredPayload.items_complete,
-  };
-  
-  // Remove checkbox states from database payload
-  delete filteredPayload.inspection_verified;
-  delete filteredPayload.items_complete;
+  // Coerce checkbox states to boolean before saving
+  if (filteredPayload.inspection_verified !== undefined) {
+    filteredPayload.inspection_verified = filteredPayload.inspection_verified === true;
+  }
+  if (filteredPayload.items_complete !== undefined) {
+    filteredPayload.items_complete = filteredPayload.items_complete === true;
+  }
+
+  // Serialize missing_units_items array to JSON string for DB storage (column is text)
+  if (filteredPayload.missing_units_items !== undefined) {
+    if (Array.isArray(filteredPayload.missing_units_items)) {
+      filteredPayload.missing_units_items = JSON.stringify(filteredPayload.missing_units_items);
+    } else if (filteredPayload.missing_units_items === null) {
+      filteredPayload.missing_units_items = null;
+    }
+  }
 
   // Map frontend field names to database field names for consistency
   if (filteredPayload.inspection_officer) {
@@ -884,6 +934,11 @@ export async function upsertIARByDelivery(
     delete filteredPayload.supply_officer;
   }
 
+  if (filteredPayload.responsibility_center_code !== undefined) {
+    filteredPayload.responsibility_center = filteredPayload.responsibility_center_code;
+    delete filteredPayload.responsibility_center_code;
+  }
+
   if (existing?.id) {
     const { data, error } = await supabase
       .from("iar_documents")
@@ -894,10 +949,16 @@ export async function upsertIARByDelivery(
 
     if (error) throw error;
 
-    // Add iar_date and checkbox states back to the result for template usage
+    // Add iar_date back for template usage, coerce checkbox booleans, and parse missing_units_items
+    let parsedMissingItems: any[] = [];
+    if (data.missing_units_items) {
+      try { parsedMissingItems = typeof data.missing_units_items === 'string' ? JSON.parse(data.missing_units_items) : data.missing_units_items; } catch { parsedMissingItems = []; }
+    }
     const result = { 
-      ...data, 
-      ...checkboxStates,
+      ...data,
+      inspection_verified: data.inspection_verified === true,
+      items_complete: data.items_complete === true,
+      missing_units_items: parsedMissingItems,
       iar_date: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : undefined
     };
     return result;
@@ -916,10 +977,16 @@ export async function upsertIARByDelivery(
 
   if (error) throw error;
 
-  // Add iar_date and checkbox states back to the result for template usage
+  // Add iar_date back for template usage, coerce checkbox booleans, and parse missing_units_items
+  let parsedMissingItemsInsert: any[] = [];
+  if (data.missing_units_items) {
+    try { parsedMissingItemsInsert = typeof data.missing_units_items === 'string' ? JSON.parse(data.missing_units_items) : data.missing_units_items; } catch { parsedMissingItemsInsert = []; }
+  }
   const result = { 
-    ...data, 
-    ...checkboxStates,
+    ...data,
+    inspection_verified: data.inspection_verified === true,
+    items_complete: data.items_complete === true,
+    missing_units_items: parsedMissingItemsInsert,
     iar_date: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : undefined
   };
   return result;
