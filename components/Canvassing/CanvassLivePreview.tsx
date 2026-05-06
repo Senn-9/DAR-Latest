@@ -11,7 +11,7 @@ type CanvassLivePreviewProps = {
 	prNo?: string;
 };
 
-const ROW_COUNT = 10;
+const ROW_COUNT = 12;
 
 type ItemRow = {
 	stock_no: string;
@@ -195,7 +195,7 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 				</button>
 			</div>
 
-			<div className="relative mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 px-7 py-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
+			<div className="relative mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 p-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
 				<div className="text-black" style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}>
 					
 					{/* Top Section */}
@@ -204,16 +204,16 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						
 						{/* Center Logos and Text */}
 						<div className="flex items-start justify-center gap-3">
-							<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" className="h-14 w-14 object-contain" />
-							<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" className="h-14 w-14 object-contain" />
+							<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" className="h-12 w-12 object-contain" />
+							<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" className="h-12 w-12 object-contain" />
 							<div className="pt-1 text-center" style={{ marginLeft: "2px", marginRight: "2px" }}>
-								<div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.01em" }}>REPUBLIC OF THE PHILIPPINES</div>
-								<div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.01em" }}>DEPARTMENT OF AGRARIAN REFORM</div>
-								<div className="whitespace-nowrap" style={{ fontSize: "10px", fontWeight: 400 }}>Tunay na Pagbabago sa Repormang Agraryo</div>
+								<div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.01em" }}>REPUBLIC OF THE PHILIPPINES</div>
+								<div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.01em" }}>DEPARTMENT OF AGRARIAN REFORM</div>
+								<div style={{ fontSize: "8px", fontWeight: 400 }}>Tunay na Pagbabago sa Repormang Agraryo</div>
 							</div>
-							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="ml-1 h-14 w-14 rounded-md object-contain" />
+							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="ml-1 h-12 w-12 rounded-md object-contain" />
 							{/* Invisible spacer to balance the two logos on the left */}
-							<div className="w-14 h-14 ml-3" aria-hidden="true" />
+							<div className="w-12 h-12 ml-3" aria-hidden="true" />
 						</div>
 
 						<div />
@@ -224,39 +224,39 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						<div className="text-[10px] whitespace-nowrap">Revised on May 24, 2004</div>
 						<div className="text-right">
 							<div className="flex items-end justify-end gap-2 mb-1">
-								<span className="text-[10px]">Date:</span>
+								<span className="text-[10px] italic">Date:</span>
 								<input 
 									value={meta.date} 
 									onChange={(e) => handleMetaChange("date", e.target.value)}
-									className="border-b border-black outline-none w-25 text-left px-1 text-[10px] bg-transparent"
+									className="border-b border-black outline-none w-27 text-left px-1 text-[10px] bg-transparent"
 								/>
 							</div>
 							<div className="flex items-end justify-end gap-2">
-								<span className="text-[10px]">Canvass No.:</span>
+								<span className="text-[10px] italic">Canvass No.:</span>
 								<input 
 									value={meta.canvassNo} 
 									onChange={(e) => handleMetaChange("canvassNo", e.target.value)}
-									className="border-b border-black outline-none w-25 text-left px-1 text-[10px] bg-transparent"
+									className="border-b border-black outline-none w-27 text-left px-1 text-[10px] bg-transparent"
 								/>
 							</div>
 						</div>
 					</div>
 
 					{/* Agency Header */}
-					<div className="text-center mb-2">
-						<div className="font-bold text-[11px] uppercase">Department of Agrarian Reform</div>
-						<div className="text-[11px]">Agency/Procuring Entity</div>
+					<div className="text-center mb-8">
+						<div className="font-bold text-[10px] uppercase">Department of Agrarian Reform</div>
+						<div className="text-[10px]">Agency/Procuring Entity</div>
 					</div>
 
 					{/* Company Info */}
-					<div className="w-[25%] mb-2">
-						<div className="mb-2">
+					<div className="w-[25%] mb-6">
+						<div className="mb-4">
 							<input 
 								value={meta.companyName} 
 								onChange={(e) => handleMetaChange("companyName", e.target.value)}
 								className="border-b border-black outline-none w-full text-center py-0.5"
 							/>
-							<div className="text-[11px] text-center mt-0.5">(Company Name)</div>
+							<div className="text-[9px] text-center mt-0.5">(Company Name)</div>
 						</div>
 						<div>
 							<input 
@@ -264,21 +264,22 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 								onChange={(e) => handleMetaChange("address", e.target.value)}
 								className="border-b border-black outline-none w-full text-center py-0.5"
 							/>
-							<div className="text-[11px] text-center mt-0.5">(Address)</div>
+							<div className="text-[9px] text-center mt-0.5">(Address)</div>
 						</div>
 					</div>
 
 					{/* Instructions */}
-					<div className="mb-6 text-[11px]">
-						<div className="relative leading-relaxed text-justify text-[11px]" style={{ textIndent: "0" }}>
+					<div className="mb-6 text-[10px]">
+						<div className="relative leading-relaxed text-justify text-[10px]" style={{ textIndent: "24px" }}>
 							<span>
-								Please quote your lowest price on the item/s listed below, subject to the General Conditions indicated below, stating the shortest time of delivery
-								<br />and submit your quotation duly signed by you or your duly authorized representative not later than
+								Please quote your lowest price on the item/s listed below, subject to the General Conditions indicated below, stating the shortest time of
+								<br />
+								delivery and submit your quotation duly signed by you or your duly authorized representative not later than
 							</span>
 							<input 
 								value={meta.deadline} 
 								onChange={(e) => handleMetaChange("deadline", e.target.value)}
-								className="absolute bottom-0 right-0 w-27 border-b border-black outline-none text-center bg-transparent text-[11px]"
+								className="absolute bottom-0 right-0 w-35 border-b border-black outline-none text-center bg-transparent text-[10px]"
 								placeholder=""
 							/>
 						</div>
@@ -295,13 +296,13 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 				{/* Signature Block */}
 					<div className="flex justify-end mb-4">
 						<div className="text-center mr-2">
-							<div className="font-bold border-b border-black px-4 text-[11px]">ATTY. JAIME G. RESOCO, JR.</div>
-							<div className="text-[11px]">BAC Chairperson</div>
+							<div className="font-bold border-b border-black px-4 text-[10px]">ATTY. JAIME G. RESOCO, JR.</div>
+							<div className="text-[10px]">BAC Chairperson</div>
 						</div>
 					</div>
 
 					{/* Notes */}
-					<div className="grid grid-cols-2 gap-x-1 text-[8px] mb-2 leading-tight">
+					<div className="grid grid-cols-2 gap-x-1 text-[8px] mb-6 leading-tight">
 						<div className="space-y-1">
 							<div className="flex gap-2">
 								<span className="font-bold">NOTE:</span> 
@@ -321,24 +322,19 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					</div>
 
 					{/* Items Table */}
-					<table className="w-full border-collapse border border-black mb-4 text-[11px]">
+					<table className="w-full border-collapse border border-black mb-4 text-[9.5px]">
 						<thead>
 							<tr>
 								<th className="border border-black p-1 text-center w-[8%] font-bold">ITEM NO.</th>
 								<th className="border border-black p-1 text-center w-[58%] font-bold">ITEM(S) & DESCRIPTION(S)</th>
 								<th className="border border-black p-1 text-center w-[8%] font-bold">QTY</th>
 								<th className="border border-black p-1 text-center w-[10%] font-bold">UNIT</th>
-								<th className="border border-black p-0 text-center w-[16%] font-bold align-middle">
-									<div className="flex h-full min-h-[30px] flex-col">
-										<span className="flex-1 content-center px-1">UNIT</span>
-										<span className="border-t border-black px-1">PRICE</span>
-									</div>
-								</th>
+								<th className="border border-black p-1 text-center w-[16%] font-bold">UNIT PRICE</th>
 							</tr>
 						</thead>
 						<tbody>
 							{items.map((item, i) => (
-								<tr key={i} className="h-5">
+								<tr key={i} className="h-7">
 									<td className="border border-black p-0.5 text-center">
 										<input 
 											value={item.stock_no} 
@@ -376,7 +372,7 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 									</td>
 								</tr>
 							))}
-							<tr className="font-bold h-5">
+							<tr className="font-bold h-7">
 								<td className="border border-black p-1"></td>
 								<td className="border border-black p-1 text-center">TOTAL</td>
 								<td className="border border-black p-1"></td>
@@ -385,7 +381,7 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						</tbody>
 					</table>
 
-					<div className="text-center font-bold italic mb-4 text-[10px]">
+					<div className="text-center font-bold italic mb-8 text-[10px]">
 						AFTER HAVING CAREFULLY READ AND ACCEPTED YOUR GENERAL CONDITIONS, I / WE QUOTE YOU ON THE ITEM AT PRICES NOTED ABOVE.
 					</div>
 
@@ -393,17 +389,17 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					<div className="flex justify-between items-start">
 						{/* Left Footer */}
 						<div className="w-[60%]">
-							<div className="mb-4 text-[11px]">Served by:</div>
+							<div className="mb-4">Served by:</div>
 							<div className="space-y-4">
-								<div className="font-bold underline text-[11px] leading-tight whitespace-nowrap">
+								<div className="font-bold underline text-[9px] leading-tight whitespace-nowrap">
 									IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III
 								</div>
-								<div className="font-bold underline text-[11px] leading-tight">
+								<div className="font-bold underline text-[9px] leading-tight">
 									SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA
 								</div>
 							</div>
-							<div className="mt-8 space-y-1 text-[11px]">
-								<div className="">CANVASSER</div>
+							<div className="mt-8 space-y-1 text-[10px]">
+								<div className="font-bold">CANVASSER</div>
 								<div>ECT/asa</div>
 								<div>{prNo}</div>
 							</div>

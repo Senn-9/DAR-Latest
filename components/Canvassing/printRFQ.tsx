@@ -1,11 +1,21 @@
-/**
- * Opens a new browser window and prints the RFQ document.
- * The printed markup mirrors CanvassLivePreview as closely as possible.
- */
-export function printRFQ(
-	meta: { date: string; canvassNo: string; companyName: string; address: string; deadline: string; prNo: string },
-	items: { stock_no: string; description: string; quantity: string; unit: string; unit_price: string }[],
-) {
+export type RFQMeta = {
+	date: string;
+	canvassNo: string;
+	companyName: string;
+	address: string;
+	deadline: string;
+	prNo: string;
+};
+
+export type RFQItem = {
+	stock_no: string;
+	description: string;
+	quantity: string;
+	unit: string;
+	unit_price: string;
+};
+
+export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 	const PRINT_ROW_COUNT = 10;
 
 	function escapeHtml(str: string): string {
@@ -31,7 +41,7 @@ export function printRFQ(
 		)
 		.join("");
 
-	const html = `<!DOCTYPE html>
+	return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -334,7 +344,13 @@ export function printRFQ(
 </div>
 </body>
 </html>`;
+}
 
+/**
+ * Opens a new browser window and prints the RFQ document.
+ */
+export function printRFQ(meta: RFQMeta, items: RFQItem[]) {
+	const html = buildRFQHtml(meta, items);
 	const printWindow = window.open("", "_blank");
 	if (!printWindow) return;
 	printWindow.document.write(html);
