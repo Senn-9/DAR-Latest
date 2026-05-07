@@ -185,12 +185,183 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
   );
 }
 
-function downloadPDF(formData: any, items: ItemDataType[]) {
+// Helper function to escape HTML special characters
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?: string) {
+  // Post remark if currentUser is available
+  if (currentUserFullname) {
+    postPrintRemark(currentUserFullname, 'PR');
+  }
+
   const printWindow = window.open("", "", "height=800,width=1200");
-  if (printWindow) {
-    printWindow.document.write("<div>Appendix 60</div>");
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
+  if (!printWindow) return;
+
+  // Build item rows HTML
+  const itemRows: string[] = [];
+  items.forEach((item) => {
+    const total = getItemTotal(item);
+    itemRows.push(`
+      <tr style="height: 16px;">
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.stock_no)}</td>
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.unit)}</td>
+        <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px;">${escapeHtml(item.description)}</td>
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.quantity)}</td>
+        <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""}</td>
+        <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${total > 0 ? total.toFixed(2) : ""}</td>
+      </tr>
+    `);
+  });
+
+  // Pad to 30 rows
+  while (itemRows.length < 30) {
+    itemRows.push(`
+      <tr style="height: 16px;">
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+      </tr>
+    `);
+  }
+
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Purchase Request - ${escapeHtml(formData.pr_no || 'View')}</title>
+      <style>
+        body { font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid black; font-size: 8pt; padding: 1px 3px; font-family: 'Times New Roman', Times, serif; }
+      </style>
+    </head>
+    <body>
+      <div style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000;">
+        <table style="width: 100%; border-collapse: collapse; color: #000; table-layout: fixed;">
+          <colgroup>
+            <col style="width: 12%" />
+            <col style="width: 8%" />
+            <col style="width: 40%" />
+            <col style="width: 10%" />
+            <col style="width: 15%" />
+            <col style="width: 15%" />
+          </colgroup>
+          <tbody>
+            <tr style="height: 27px;">
+              <td colspan="6" style="text-align: right; font-size: 10pt; padding-right: 4px; color: #000;">Appendix 60</td>
+            </tr>
+            <tr style="height: 34px;">
+              <td colspan="6" style="text-align: center; font-weight: bold; font-size: 12pt; color: #000;">PURCHASE REQUEST</td>
+            </tr>
+            <tr style="height: 21px;">
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
+                Entity Name: <span style="font-weight: normal;">${escapeHtml(formData.entity_name)}</span>
+              </td>
+              <td style="border-bottom: 1px solid black;"></td>
+              <td colspan="3" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
+                Fund Cluster: <span style="font-weight: normal;">${escapeHtml(formData.fund_cluster)}</span>
+              </td>
+            </tr>
+            <tr style="height: 14px;">
+              <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; vertical-align: top; padding: 2px 4px; color: #000;">
+                Office/Section:<br/>${escapeHtml(formData.office_section)}
+              </td>
+              <td colspan="2" style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
+                PR No.: <span style="font-weight: normal;">${escapeHtml(formData.pr_no)}</span>
+              </td>
+              <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; font-weight: bold; vertical-align: top; padding: 2px 4px; color: #000;">
+                Date:<br/><span style="font-weight: normal;">${formData.created_at || new Date().toISOString().slice(0, 10)}</span>
+              </td>
+            </tr>
+            <tr style="height: 15px;">
+              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
+                Responsibility Center Code: <span style="font-weight: normal;">${escapeHtml(formData.resp_code)}</span>
+              </td>
+            </tr>
+            <tr style="height: 22.5px;">
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Stock/<br/>Property No.</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Unit</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Item Description</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Quantity</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Unit Cost</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Total Cost</th>
+            </tr>
+            ${itemRows.join('')}
+            <tr style="height: 17px;">
+              <td colspan="6" style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; font-size: 8.5pt; padding: 2px 4px; color: #000;">
+                <b>Purpose:</b> ${escapeHtml(formData.purpose)}
+              </td>
+            </tr>
+            <tr style="height: 30px;">
+              <td colspan="6" style="border-bottom: 1px solid black; border-left: 1px solid black; border-right: 1px solid black;"></td>
+            </tr>
+            <tr style="height: 12px;">
+              <td style="border-top: 1px solid black; border-left: 1px solid black;"></td>
+              <td colspan="2" style="border-top: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">
+                <i>Requested by:</i>
+              </td>
+              <td colspan="2" style="border-top: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">
+                <i>Approved by:</i>
+              </td>
+              <td style="border-top: 1px solid black; border-right: 1px solid black;"></td>
+            </tr>
+            <tr style="height: 12px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Signature :</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td style="border-right: 1px solid black;"></td>
+            </tr>
+            <tr style="height: 12px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Printed Name :</td>
+              <td style="font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.req_name)}</td>
+              <td colspan="2" style="font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.app_name)}</td>
+              <td style="border-right: 1px solid black;"></td>
+            </tr>
+            <tr style="height: 14.75px;">
+              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Designation :</td>
+              <td style="border-bottom: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.req_desig)}</td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.app_desig)}</td>
+              <td style="border-bottom: 1px solid black; border-right: 1px solid black;"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 250);
+}
+
+// Helper function to post print remark
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+  try {
+    const supabase = createClient();
+    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+
+    // Insert into activity_logs table
+    await supabase.from('activity_logs').insert({
+      action: 'PRINT',
+      description: remarkText,
+      user_name: fullname,
+      created_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to post print remark:', error);
   }
 }
 
@@ -219,6 +390,22 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
   const [items, setItems] = useState<ItemDataType[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"form" | "preview">("form");
+  const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
+
+  // Load current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user?.fullname) {
+          setCurrentUserFullname(user.fullname);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, []);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -235,10 +422,16 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
           .from("purchase_requests")
           .select("*")
           .eq("id", prId)
-          .single();
+          .maybeSingle();
 
-      if (formErr || !form) {
+      if (formErr) {
         console.error("Error fetching PR:", formErr?.message || formErr);
+        setLoading(false);
+        return;
+      }
+
+      if (!form) {
+        console.error("PR not found with ID:", prId);
         setLoading(false);
         return;
       }
@@ -473,7 +666,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                 {/* Footer — PDF only, no Save */}
                 <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
                   <button
-                    onClick={() => downloadPDF(formData, items)}
+                    onClick={() => downloadPDF(formData, items, currentUserFullname)}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
                   >
                     <RiFilePdf2Line size={18} /> Download PDF
@@ -495,7 +688,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
                 <button
-                  onClick={() => downloadPDF(formData, items)}
+                  onClick={() => downloadPDF(formData, items, currentUserFullname)}
                   className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
                 >
                   <RiFilePdf2Line size={16} /> PDF

@@ -64,8 +64,15 @@ function toWords(num: number): string {
 }
 
 // Editable input styles for live preview
-const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors min-w-[60px] text-[8.5pt]";
-const editableInputNumberCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors min-w-[60px] text-[8.5pt] text-right";
+const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+const editableInputNumberCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-orange-500 focus:bg-orange-50/30 transition-colors w-[90%] text-[8.5pt] text-right whitespace-pre-wrap break-words resize-none overflow-hidden";
+
+// Auto-resize handler for textareas
+const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+  const target = e.currentTarget;
+  target.style.height = 'auto';
+  target.style.height = target.scrollHeight + 'px';
+};
 
 // Type for text-only lines in the ORS (for printing only)
 type TextOnlyLine = {
@@ -277,13 +284,7 @@ function ORSEditablePreview({
               />
             </td>
             <td style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>
-              <textarea
-                value={particulars}
-                onChange={(e) => setParticulars(e.target.value)}
-                placeholder="Enter particulars"
-                className={editableInputCls}
-                style={{ width: "95%", minHeight: "70px", resize: "none" }}
-              />
+              <textarea value={particulars} onChange={(e) => setParticulars(e.target.value)} onInput={autoResize} placeholder="Enter particulars" className={editableInputCls} style={{ width: "95%", minHeight: "70px" }} rows={1} />
             </td>
             <td style={{ ...S.tdC, verticalAlign: "top" }}>
               <input
@@ -318,19 +319,12 @@ function ORSEditablePreview({
           </tr>
           {/* Text-only lines for printing - descriptive lines without amounts */}
           {textOnlyLines.map((line) => (
-            <tr key={line.id} style={{ backgroundColor: "#fefce8" }}>
+            <tr key={line.id}>
               <td style={{ ...S.tdC, verticalAlign: "top" }}></td>
               <td colSpan={3} style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-xs italic">Text:</span>
-                  <input
-                    type="text"
-                    value={line.text}
-                    onChange={(e) => updateTextOnlyLine(line.id, e.target.value)}
-                    placeholder="Enter descriptive text (for printing only)..."
-                    className={`${editableInputCls} flex-1 bg-yellow-50/50`}
-                    style={{ fontStyle: "italic", color: "#666" }}
-                  />
+                  <span className="text-gray-500 text-xs font-bold uppercase">Text:</span>
+                  <textarea value={line.text} onChange={(e) => updateTextOnlyLine(line.id, e.target.value)} onInput={autoResize} placeholder="Enter descriptive text (for printing only)..." className={`${editableInputCls} flex-1`} style={{ minHeight: "20px" }} rows={1} />
                   <button
                     type="button"
                     onClick={() => removeTextOnlyLine(line.id)}
@@ -822,9 +816,9 @@ function buildORSPrintHtml(data: {
   const textLinesHtml = (data.textOnlyLines || [])
     .filter(line => line.text.trim())
     .map(line => `
-      <tr style="background-color:#fefce8">
+      <tr>
         <td style="text-align:center;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
-        <td colspan="3" style="border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top;font-style:italic;color:#666">${escapeHtml(line.text)}</td>
+        <td colspan="3" style="border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top;word-break:break-word;white-space:pre-wrap;">${escapeHtml(line.text)}</td>
         <td style="text-align:right;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
       </tr>`)
     .join("");
@@ -892,7 +886,7 @@ function buildORSPrintHtml(data: {
     <tbody>
       <tr>
         <td class="c" style="height:90px;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
-        <td style="word-break:break-word">${escapeHtml(data.particulars)}</td>
+        <td style="word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.particulars)}</td>
         <td class="c">${escapeHtml(data.mfoPap)}</td>
         <td class="c">${escapeHtml(data.uacsCode)}</td>
         <td class="r">${data.amount > 0 ? fmt(data.amount) : ""}</td>
@@ -954,7 +948,7 @@ function buildORSPrintHtml(data: {
       <tbody>
         <tr>
           <td style="height:28px;font-size:7.5pt">${displayDate}</td>
-          <td style="font-size:7.5pt;word-break:break-word">${escapeHtml(data.particulars)}</td>
+          <td style="font-size:7.5pt;word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.particulars)}</td>
           <td class="c" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
           <td class="r" style="font-size:7.5pt">${data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
           <td class="r" style="font-size:7.5pt">${data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
@@ -981,7 +975,12 @@ function buildORSPrintHtml(data: {
 </html>`;
 }
 
-function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0]) {
+function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0] & { currentUserFullname?: string }) {
+  // Post remark if currentUser is available
+  if (data.currentUserFullname) {
+    postPrintRemark(data.currentUserFullname, 'ORS');
+  }
+
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
   printWindow.document.write(buildORSPrintHtml(data));
@@ -998,6 +997,24 @@ function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0]) {
       printWindow.print();
     }
   }, 300);
+}
+
+// Helper function to post print remark
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+  try {
+    const supabase = createClient();
+    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+
+    // Insert into activity_logs or remarks table
+    await supabase.from('activity_logs').insert({
+      action: 'PRINT',
+      description: remarkText,
+      user_name: fullname,
+      created_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to post print remark:', error);
+  }
 }
 
 // ─── Input styling ────────────────────────────────────────────────────────────
@@ -1050,6 +1067,24 @@ export default function ORSProcessModal({
 
   // Text-only lines state (for printing only - descriptive lines in particulars)
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
+
+  // Current user for print remarks
+  const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
+
+  // Load current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user?.fullname) {
+          setCurrentUserFullname(user.fullname);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, []);
 
   // Helper functions for text-only lines
   function addTextOnlyLine() {
@@ -1216,6 +1251,7 @@ export default function ORSProcessModal({
             notYetDueBalance, dueDemandableBalance,
             preparedByName, preparedByDesig,
             textOnlyLines,
+            currentUserFullname,
           })}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
           aria-label="Print preview"

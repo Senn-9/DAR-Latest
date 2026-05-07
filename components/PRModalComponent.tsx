@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
@@ -19,6 +19,18 @@ type ItemDataType = {
   total_cost: string;
   created_at: string;
   division: string;
+};
+
+// Type for text-only lines in the PR (for printing only)
+// Each field corresponds to a column like regular PR items
+type TextOnlyLine = {
+  id: string; // unique identifier for React key
+  position: number; // position after which this line appears (1-based index after item)
+  stock_num: string;
+  unit: string;
+  description: string;
+  quantity: string;
+  unit_cost: string;
 };
 
 type CurrentUser = {
@@ -71,10 +83,51 @@ function getGrandTotal(items: ItemDataType[]): number {
   return items.reduce((sum, item) => sum + getItemTotal(item), 0);
 }
 
-function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
-  const itemRows = [...items];
-  while (itemRows.length < 30) {
-    itemRows.push(emptyItem());
+function PREditablePreview({
+  formData,
+  setFormData,
+  items,
+  addItem,
+  updateItem,
+  removeItem,
+  textOnlyLines = [],
+  addTextOnlyLine,
+  updateTextOnlyLine,
+  removeTextOnlyLine
+}: {
+  formData: any;
+  setFormData: (data: any) => void;
+  items: ItemDataType[];
+  addItem: () => void;
+  updateItem: (index: number, field: keyof ItemDataType, value: string) => void;
+  removeItem: (index: number) => void;
+  textOnlyLines?: TextOnlyLine[];
+  addTextOnlyLine: (afterIndex: number) => void;
+  updateTextOnlyLine: (id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) => void;
+  removeTextOnlyLine: (id: string) => void;
+}) {
+  const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+  const editableInputCenterCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-center whitespace-pre-wrap break-words resize-none overflow-hidden";
+  const editableInputRightCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-right whitespace-pre-wrap break-words resize-none overflow-hidden";
+
+  // Auto-resize handler for textareas
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = 'auto';
+    target.style.height = target.scrollHeight + 'px';
+  };
+
+  const rows: (ItemDataType | TextOnlyLine & { isTextLine?: boolean })[] = [];
+  items.forEach((item, index) => {
+    rows.push(item);
+    const linesAfterThisItem = textOnlyLines.filter(line => line.position === index + 1);
+    linesAfterThisItem.forEach(line => {
+      rows.push({ ...line, isTextLine: true });
+    });
+  });
+  
+  while (rows.length < 30) {
+    rows.push(emptyItem());
   }
 
   return (
@@ -108,39 +161,11 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "21px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", flexWrap: "nowrap" }}>
-                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>Entity Name:</span>
-                <span
-                  style={{
-                    fontWeight: "normal",
-                    borderBottom: "1px solid #000",
-                    paddingBottom: "1px",
-                    whiteSpace: "nowrap",
-                    minWidth: "140px",
-                    flexShrink: 0,
-                  }}
-                >
-                  {formData.entity_name}
-                </span>
-              </div>
+              Entity Name: <input type="text" value={formData.entity_name} onChange={e => setFormData({ ...formData, entity_name: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "60%" }} />
             </td>
             <td style={{ borderBottom: "1px solid black" }}></td>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", flexWrap: "nowrap" }}>
-                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>Fund Cluster:</span>
-                <span
-                  style={{
-                    fontWeight: "normal",
-                    borderBottom: "1px solid #000",
-                    paddingBottom: "1px",
-                    whiteSpace: "nowrap",
-                    minWidth: "100px",
-                    flexShrink: 0,
-                  }}
-                >
-                  {formData.fund_cluster}
-                </span>
-              </div>
+              Fund Cluster: <input type="text" value={formData.fund_cluster} onChange={e => setFormData({ ...formData, fund_cluster: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "60%" }} />
             </td>
           </tr>
           <tr style={{ height: "14px" }}>
@@ -154,12 +179,12 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
               Date:
               <br />
-              <span style={{ fontWeight: "normal" }}>{formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
+              <input type="date" value={formData.created_at} onChange={e => setFormData({ ...formData, created_at: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "90%" }} />
             </td>
           </tr>
           <tr style={{ height: "15px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              Responsibility Center Code : <span style={{ fontWeight: "normal" }}>{formData.resp_code}</span>
+              Responsibility Center Code: <input type="text" value={formData.resp_code} onChange={e => setFormData({ ...formData, resp_code: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "40%" }} />
             </td>
           </tr>
           <tr style={{ height: "22.5px" }}>
@@ -171,22 +196,105 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {itemRows.map((item, idx) => {
+          {rows.map((row, idx) => {
+            if ('isTextLine' in row && row.isTextLine) {
+              const textRow = row as TextOnlyLine;
+              return (
+                <tr key={`text-${textRow.id}`}>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={textRow.stock_num} onChange={e => updateTextOnlyLine(textRow.id, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Stock No." rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={textRow.unit} onChange={e => updateTextOnlyLine(textRow.id, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Unit" rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px", verticalAlign: "top" }}>
+                    <textarea value={textRow.description} onChange={e => updateTextOnlyLine(textRow.id, 'description', e.target.value)} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Description" rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={textRow.quantity} onChange={e => updateTextOnlyLine(textRow.id, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Qty" rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
+                    <textarea value={textRow.unit_cost} onChange={e => updateTextOnlyLine(textRow.id, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Unit Cost" rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <button type="button" onClick={() => removeTextOnlyLine(textRow.id)} className="text-red-500 hover:text-red-700 text-xs font-bold" title="Remove text line">×</button>
+                  </td>
+                </tr>
+              );
+            }
+            
+            const item = row as ItemDataType;
+            const originalItemIndex = items.indexOf(item);
+            const isPadding = originalItemIndex === -1 || originalItemIndex >= items.length;
+            
+            if (isPadding) {
+              return (
+                <tr key={`item-pad-${idx}`}>
+                  <td style={{ ...tdStyle }}></td>
+                  <td style={{ ...tdStyle }}></td>
+                  <td style={{ ...tdStyle }}></td>
+                  <td style={{ ...tdStyle }}></td>
+                  <td style={{ ...tdStyle }}></td>
+                  <td style={{ ...tdStyle }}></td>
+                </tr>
+              );
+            }
+
             const total = getItemTotal(item);
             return (
-              <tr key={idx} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_num}</td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-                <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px" }}>{item.description}</td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{total > 0 ? total.toFixed(2) : ""}</td>
-              </tr>
+              <React.Fragment key={`item-frag-${originalItemIndex}`}>
+                <tr>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.stock_num} onChange={e => updateItem(originalItemIndex, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.unit} onChange={e => updateItem(originalItemIndex, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px", verticalAlign: "top" }}>
+                    <textarea value={item.description} onChange={e => updateItem(originalItemIndex, 'description', e.target.value)} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.quantity} onChange={e => updateItem(originalItemIndex, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
+                    <textarea value={item.unit_cost} onChange={e => updateItem(originalItemIndex, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
+                    {total > 0 ? total.toFixed(2) : ""}
+                    {items.length > 1 && (
+                      <button type="button" onClick={() => removeItem(originalItemIndex)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove item">×</button>
+                    )}
+                  </td>
+                </tr>
+                <tr style={{ height: "auto" }}>
+                  <td colSpan={6} style={{ border: "none", padding: "1px", textAlign: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => addTextOnlyLine(originalItemIndex + 1)}
+                      className="text-gray-400 hover:text-emerald-600 text-[10px] italic transition-colors"
+                      title="Insert text-only line after this item"
+                    >
+                      + insert text line
+                    </button>
+                  </td>
+                </tr>
+              </React.Fragment>
             );
           })}
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "4px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={addItem}
+                className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold"
+              >
+                + Add Item
+              </button>
+            </td>
+          </tr>
           <tr style={{ height: "17px" }}>
             <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
-              <b>Purpose:</b> {formData.purpose}
+              <b>Purpose:</b> <textarea value={formData.purpose} onChange={e => setFormData({ ...formData, purpose: e.target.value })} onInput={e => { e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'; }} className={editableInputCls} style={{ width: "90%", resize: "none", overflow: "hidden", minHeight: "20px", verticalAlign: "middle" }} placeholder="State the purpose of this request..." rows={1} />
             </td>
           </tr>
           <tr style={{ height: "30px" }}>
@@ -215,16 +323,24 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
               Printed Name :
             </td>
-            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_name}</td>
-            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_name}</td>
+            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.req_name} onChange={e => setFormData({ ...formData, req_name: e.target.value })} className={editableInputCls} placeholder="Full name" />
+            </td>
+            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.app_name} onChange={e => setFormData({ ...formData, app_name: e.target.value })} className={editableInputCls} placeholder="Full name" />
+            </td>
             <td style={{ borderRight: "1px solid black" }}></td>
           </tr>
           <tr style={{ height: "14.75px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
               Designation :
             </td>
-            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_desig}</td>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_desig}</td>
+            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.req_desig} onChange={e => setFormData({ ...formData, req_desig: e.target.value })} className={editableInputCls} placeholder="Designation" />
+            </td>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.app_desig} onChange={e => setFormData({ ...formData, app_desig: e.target.value })} className={editableInputCls} placeholder="Designation" />
+            </td>
             <td style={{ borderBottom: "1px solid black", borderRight: "1px solid black" }}></td>
           </tr>
         </tbody>
@@ -232,19 +348,209 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
     </div>
   );
 }
-
-function downloadPDF(formData: any, items: ItemDataType[]) {
-  const element = document.createElement("div");
-  element.innerHTML = `
-    <div style="font-family:'Times New Roman',serif;font-size:10pt;padding:20px">
-      <div style="text-align:right;font-weight:bold;margin-bottom:10px">Appendix 60</div>
-    </div>
-  `;
+function downloadPDF(formData: any, items: ItemDataType[], textOnlyLines: TextOnlyLine[] = [], currentUser?: CurrentUser | null) {
+  // Post remark if currentUser is available
+  if (currentUser?.fullname) {
+    postPrintRemark(currentUser.fullname, 'PR');
+  }
+  
   const printWindow = window.open("", "", "height=800,width=1200");
   if (printWindow) {
-    printWindow.document.write(element.innerHTML);
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Purchase Request - ${formData.pr_no || 'Draft'}</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 10pt; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          th, td { border: 1px solid black; padding: 2px 4px; font-size: 8pt; }
+          .text-line { background-color: #fefce8; font-style: italic; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div id="print-content"></div>
+      </body>
+      </html>
+    `);
+    // Use PRPreview component structure for print
+    const itemRows: string[] = [];
+    items.forEach((item, index) => {
+      const total = getItemTotal(item);
+      itemRows.push(`
+        <tr style="height: 16px;">
+          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.stock_num)}</td>
+          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.unit)}</td>
+          <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px; word-wrap: break-word; white-space: pre-wrap;">${escapeHtml(item.description)}</td>
+          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.quantity)}</td>
+          <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""}</td>
+          <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${total > 0 ? total.toFixed(2) : ""}</td>
+        </tr>
+      `);
+      
+      // Add text-only lines after this item
+      const linesAfterThisItem = textOnlyLines.filter(line => line.position === index + 1);
+      linesAfterThisItem.forEach(line => {
+        const hasContent = line.stock_num.trim() || line.unit.trim() || line.description.trim() || line.quantity.trim() || line.unit_cost.trim();
+        if (hasContent) {
+          itemRows.push(`
+            <tr style="height: 16px;">
+              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.stock_num)}</td>
+              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.unit)}</td>
+              <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px; word-wrap: break-word; white-space: pre-wrap;">${escapeHtml(line.description)}</td>
+              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.quantity)}</td>
+              <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${escapeHtml(line.unit_cost)}</td>
+              <td style="border: 1px solid black; text-align: right; font-size: 8pt;"></td>
+            </tr>
+          `);
+        }
+      });
+    });
+    
+    // Pad to 30 rows
+    while (itemRows.length < 30) {
+      itemRows.push(`
+        <tr style="height: 16px;">
+          <td style="border: 1px solid black;"></td>
+          <td style="border: 1px solid black;"></td>
+          <td style="border: 1px solid black;"></td>
+          <td style="border: 1px solid black;"></td>
+          <td style="border: 1px solid black;"></td>
+          <td style="border: 1px solid black;"></td>
+        </tr>
+      `);
+    }
+    
+    const printContent = `
+      <div style="font-family:'Times New Roman',serif;font-size:10pt;padding:20px">
+        <div style="text-align:right;font-weight:bold;margin-bottom:10px">Appendix 60</div>
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <colgroup>
+            <col style="width:12%" />
+            <col style="width:8%" />
+            <col style="width:40%" />
+            <col style="width:10%" />
+            <col style="width:15%" />
+            <col style="width:15%" />
+          </colgroup>
+          <tbody>
+            <tr style="height:27px">
+              <td colspan="6" style="text-align:right;font-size:10pt;padding-right:4px">Appendix 60</td>
+            </tr>
+            <tr style="height:34px">
+              <td colspan="6" style="text-align:center;font-weight:bold;font-size:12pt">PURCHASE REQUEST</td>
+            </tr>
+            <tr style="height:21px">
+              <td colspan="2" style="border-bottom:1px solid black;font-size:8pt;padding:2px 4px;font-weight:bold">
+                <div style="display:flex;align-items:baseline;gap:6px">
+                  <span>Entity Name:</span>
+                  <span style="font-weight:normal;border-bottom:1px solid #000;padding-bottom:1px;min-width:140px">${escapeHtml(formData.entity_name)}</span>
+                </div>
+              </td>
+              <td style="border-bottom:1px solid black"></td>
+              <td colspan="3" style="border-bottom:1px solid black;font-size:8pt;padding:2px 4px;font-weight:bold">
+                <div style="display:flex;align-items:baseline;gap:6px">
+                  <span>Fund Cluster:</span>
+                  <span style="font-weight:normal;border-bottom:1px solid #000;padding-bottom:1px;min-width:100px">${escapeHtml(formData.fund_cluster)}</span>
+                </div>
+              </td>
+            </tr>
+            <tr style="height:14px">
+              <td rowspan="2" colspan="2" style="border:1px solid black;font-size:8pt;vertical-align:top;padding:2px 4px">
+                Office/Section:<br/>${escapeHtml(formData.office_section)}
+              </td>
+              <td colspan="2" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;font-size:8pt;font-weight:bold;padding:2px 4px">
+                PR No.: <span style="font-weight:normal">${escapeHtml(formData.pr_no)}</span>
+              </td>
+              <td rowspan="2" colspan="2" style="border:1px solid black;font-size:8pt;font-weight:bold;vertical-align:top;padding:2px 4px">
+                Date:<br/><span style="font-weight:normal">${formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
+              </td>
+            </tr>
+            <tr style="height:15px">
+              <td colspan="2" style="border-bottom:1px solid black;border-left:1px solid black;font-size:8pt;font-weight:bold;padding:2px 4px">
+                Responsibility Center Code: <span style="font-weight:normal">${escapeHtml(formData.resp_code)}</span>
+              </td>
+            </tr>
+            <tr style="height:22.5px">
+              <th style="${thStyle};text-align:center;font-weight:bold">Stock/<br/>Property No.</th>
+              <th style="${thStyle};text-align:center;font-weight:bold">Unit</th>
+              <th style="${thStyle};text-align:center;font-weight:bold">Item Description</th>
+              <th style="${thStyle};text-align:center;font-weight:bold">Quantity</th>
+              <th style="${thStyle};text-align:center;font-weight:bold">Unit Cost</th>
+              <th style="${thStyle};text-align:center;font-weight:bold">Total Cost</th>
+            </tr>
+            ${itemRows.join('')}
+            <tr style="height:17px">
+              <td colspan="6" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;font-size:8.5pt;padding:2px 4px">
+                <b>Purpose:</b> ${escapeHtml(formData.purpose)}
+              </td>
+            </tr>
+            <tr style="height:30px">
+              <td colspan="6" style="border-bottom:1px solid black;border-left:1px solid black;border-right:1px solid black"></td>
+            </tr>
+            <tr style="height:12px">
+              <td style="border-top:1px solid black;border-left:1px solid black"></td>
+              <td colspan="2" style="border-top:1px solid black;font-size:8.5pt;padding:2px 4px"><i>Requested by:</i></td>
+              <td colspan="2" style="border-top:1px solid black;font-size:8.5pt;padding:2px 4px"><i>Approved by:</i></td>
+              <td style="border-top:1px solid black;border-right:1px solid black"></td>
+            </tr>
+            <tr style="height:12px">
+              <td colspan="2" style="border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Signature :</td>
+              <td></td><td></td><td></td>
+              <td style="border-right:1px solid black"></td>
+            </tr>
+            <tr style="height:12px">
+              <td colspan="2" style="border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Printed Name :</td>
+              <td style="font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.req_name)}</td>
+              <td colspan="2" style="font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.app_name)}</td>
+              <td style="border-right:1px solid black"></td>
+            </tr>
+            <tr style="height:14.75px">
+              <td colspan="2" style="border-bottom:1px solid black;border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Designation :</td>
+              <td style="border-bottom:1px solid black;font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.req_desig)}</td>
+              <td colspan="2" style="border-bottom:1px solid black;font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.app_desig)}</td>
+              <td style="border-bottom:1px solid black;border-right:1px solid black"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    const contentDiv = printWindow.document.getElementById('print-content');
+    if (contentDiv) {
+      contentDiv.innerHTML = printContent;
+    }
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 250);
+  }
+}
+
+// Helper function to escape HTML special characters
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Helper function to post print remark
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+  try {
+    const supabase = createClient();
+    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+    
+    // Insert into activity_logs or remarks table
+    await supabase.from('activity_logs').insert({
+      action: 'PRINT',
+      description: remarkText,
+      user_name: fullname,
+      created_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to post print remark:', error);
   }
 }
 
@@ -291,9 +597,32 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   });
 
   const [items, setItems] = useState<ItemDataType[]>([emptyItem()]);
+  const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  // Helper functions for text-only lines
+  function addTextOnlyLine(afterIndex: number) {
+    const newLine: TextOnlyLine = {
+      id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      position: afterIndex,
+      stock_num: "",
+      unit: "",
+      description: "",
+      quantity: "",
+      unit_cost: "",
+    };
+    setTextOnlyLines((prev) => [...prev, newLine]);
+  }
+
+  function updateTextOnlyLine(id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) {
+    setTextOnlyLines((prev) => prev.map((line) => (line.id === id ? { ...line, [field]: value } : line)));
+  }
+
+  function removeTextOnlyLine(id: string) {
+    setTextOnlyLines((prev) => prev.filter((line) => line.id !== id));
+  }
 
   // Check if current user is an end user
   const isEndUser = checkIsEndUser(currentUser);
@@ -546,42 +875,120 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                     </div>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {items.map((item, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
-                          {items.length > 1 && (
-                            <button onClick={() => removeItem(index)} className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold">
-                              ×
+                        <React.Fragment key={`item-frag-${index}`}>
+                          {/* Regular Item */}
+                          <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
+                            {items.length > 1 && (
+                              <button onClick={() => removeItem(index)} className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold">
+                                ×
+                              </button>
+                            )}
+                            <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
+                            <div className="mb-2">
+                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
+                              <input className={inputCls} placeholder="Describe the item" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
+                                <input className={inputCls} placeholder="—" value={item.stock_num} onChange={(e) => updateItem(index, "stock_num", e.target.value)} />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
+                                <input className={inputCls} placeholder="pcs" value={item.unit} onChange={(e) => updateItem(index, "unit", e.target.value)} />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Qty</label>
+                                <input className={inputCls} placeholder="0" value={item.quantity} onChange={(e) => updateItem(index, "quantity", e.target.value)} />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
+                                <input className={inputCls} placeholder="0.00" value={item.unit_cost} onChange={(e) => updateItem(index, "unit_cost", e.target.value)} />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
+                                <input className={`${inputCls} bg-emerald-50 font-bold text-emerald-700`} value={getItemTotal(item).toFixed(2)} readOnly />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Text-only lines that belong after this item */}
+                          {textOnlyLines
+                            .filter((line) => line.position === index + 1)
+                            .map((line) => (
+                              <div key={`text-${line.id}`} className="border border-gray-200 rounded-lg p-3 bg-yellow-50/50 relative">
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                  <button
+                                    onClick={() => removeTextOnlyLine(line.id)}
+                                    className="text-red-600 hover:text-red-800 text-lg font-bold"
+                                    title="Remove text line"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                                <div className="text-xs font-bold text-gray-500 mb-2 uppercase italic">Text Line</div>
+                                <div className="grid grid-cols-3 gap-2 mb-2">
+                                  <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
+                                    <input
+                                      className={`${inputCls} italic text-gray-600`}
+                                      placeholder="Stock No."
+                                      value={line.stock_num}
+                                      onChange={(e) => updateTextOnlyLine(line.id, 'stock_num', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
+                                    <input
+                                      className={`${inputCls} italic text-gray-600`}
+                                      placeholder="Unit"
+                                      value={line.unit}
+                                      onChange={(e) => updateTextOnlyLine(line.id, 'unit', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Qty</label>
+                                    <input
+                                      className={`${inputCls} italic text-gray-600`}
+                                      placeholder="Qty"
+                                      value={line.quantity}
+                                      onChange={(e) => updateTextOnlyLine(line.id, 'quantity', e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="mb-2">
+                                  <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description</label>
+                                  <input
+                                    className={`${inputCls} italic text-gray-600`}
+                                    placeholder="Description (for printing only)"
+                                    value={line.description}
+                                    onChange={(e) => updateTextOnlyLine(line.id, 'description', e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
+                                  <input
+                                    className={`${inputCls} italic text-gray-600`}
+                                    placeholder="Unit Cost"
+                                    value={line.unit_cost}
+                                    onChange={(e) => updateTextOnlyLine(line.id, 'unit_cost', e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+
+                          {/* Add text-only line button */}
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => addTextOnlyLine(index + 1)}
+                              className="text-xs text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-full transition-colors flex items-center gap-1"
+                            >
+                              <RiAddLine size={12} /> + Add text-only line
                             </button>
-                          )}
-                          <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
-                          <div className="mb-2">
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
-                            <input className={inputCls} placeholder="Describe the item" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} />
                           </div>
-                          <div className="grid grid-cols-3 gap-2 mb-2">
-                            <div>
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
-                              <input className={inputCls} placeholder="—" value={item.stock_num} onChange={(e) => updateItem(index, "stock_num", e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
-                              <input className={inputCls} placeholder="pcs" value={item.unit} onChange={(e) => updateItem(index, "unit", e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Qty</label>
-                              <input className={inputCls} placeholder="0" value={item.quantity} onChange={(e) => updateItem(index, "quantity", e.target.value)} />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
-                              <input className={inputCls} placeholder="0.00" value={item.unit_cost} onChange={(e) => updateItem(index, "unit_cost", e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
-                              <input className={`${inputCls} bg-emerald-50 font-bold text-emerald-700`} value={getItemTotal(item).toFixed(2)} readOnly />
-                            </div>
-                          </div>
-                        </div>
+                        </React.Fragment>
                       ))}
                     </div>
                   </div>
@@ -623,7 +1030,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                   <button onClick={handleSubmit} disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
                     <RiSaveLine size={18} /> {loading ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={() => downloadPDF(formData, items)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
+                  <button onClick={() => downloadPDF(formData, items, textOnlyLines, currentUser)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
                     <RiFilePdf2Line size={18} /> PDF
                   </button>
                 </div>
@@ -634,12 +1041,23 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                    <button onClick={() => downloadPDF(formData, items)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors">
+                    <button onClick={() => downloadPDF(formData, items, textOnlyLines, currentUser)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors">
                       <RiFilePdf2Line size={16} /> PDF
                     </button>
                   </div>
                   <div className="bg-white rounded-lg shadow-lg p-8 text-black">
-                    <PRPreview formData={formData} items={items} />
+                    <PREditablePreview
+                      formData={formData}
+                      setFormData={setFormData}
+                      items={items}
+                      addItem={addItem}
+                      updateItem={updateItem}
+                      removeItem={removeItem}
+                      textOnlyLines={textOnlyLines}
+                      addTextOnlyLine={addTextOnlyLine}
+                      updateTextOnlyLine={updateTextOnlyLine}
+                      removeTextOnlyLine={removeTextOnlyLine}
+                    />
                   </div>
                 </div>
               </div>
