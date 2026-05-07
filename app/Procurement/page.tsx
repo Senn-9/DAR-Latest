@@ -10,7 +10,6 @@ import BACProcessModal from "@/components/BACProcessModal";
 import PARPOProcessModal from "@/components/PARPOProcessModal";
 import BudgetProcessModal from "@/components/BudgetProcessModal";
 import { useRouter } from "next/navigation";
-import { fetchDeliveriesForPaymentPhase } from "@/utils/supabase/delivery";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
@@ -180,57 +179,13 @@ export default function ProcurementPage() {
           return;
         }
         
-        // Fetch deliveries for payment phase (same logic as Payment tab)
-        let deliveryData: any[] = [];
-        try {
-          deliveryData = await fetchDeliveriesForPaymentPhase(null);
-        } catch (err) {
-          console.warn('Payment phase delivery fetch exception:', err);
-        }
-        
-        // Process purchase requests
+        // Process purchase requests only (no delivery/payment data in PR view)
         const processedPRs = (prData || []).map(pr => ({
           ...pr,
           source: 'pr' as const
         }));
         
-        // Process deliveries - convert to dashboard format
-        const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [26, 27, 28, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
-          
-          let source: 'delivery' | 'payment' = 'delivery';
-          
-          if (isPaymentPhase) {
-            source = 'payment';
-          } else if (isDeliveryPhase) {
-            source = 'delivery';
-          }
-          
-          return {
-            id: delivery.id,
-            entity_name: delivery.supplier || 'Unknown Supplier',
-            pr_no: delivery.po_no || delivery.delivery_no || 'Unknown',
-            office_section: delivery.office_section || 'Unassigned',
-            resp_code: '',
-            purpose: `Delivery - ${delivery.supplier || 'Unknown Supplier'}`,
-            total_cost: 0, // deliveries table doesn't have total_cost column
-            is_high_value: false,
-            status_id: delivery.status_id,
-            fund_cluster: '',
-            req_name: '',
-            app_name: '',
-            app_no: '',
-            created_at: delivery.created_at,
-            purchase_request_items: [],
-            source,
-            delivery_no: delivery.delivery_no,
-            supplier: delivery.supplier
-          };
-        });
-        
-        // Combine and filter data
-        const allData = [...processedPRs, ...processedDeliveries];
+        const allData = processedPRs;
         
         const filteredData = allData.filter((item) => {
           // Admin and specialized roles see all procurement data
@@ -348,8 +303,6 @@ export default function ProcurementPage() {
   const pendingCount    = countByColor("pending");
   const processingCount = countByColor("processing");
   const canvassingCount = countByColor("canvassing");
-  const deliveryCount   = countByColor("delivery");
-  const paymentCount    = countByColor("payment");
   const approvedCount   = countByColor("approved");
   const rejectedCount   = countByColor("rejected");
 
@@ -402,8 +355,6 @@ export default function ProcurementPage() {
     { value: "canvassing", label: "Canvassing" },
     { value: "bac",        label: "BAC Resolution" },
     { value: "po",         label: "PO" },
-    { value: "delivery",   label: "Delivery" },
-    { value: "payment",    label: "Payment" },
     { value: "approved",   label: "Approved" },
     { value: "rejected",   label: "Rejected" },
   ];
@@ -413,8 +364,6 @@ export default function ProcurementPage() {
     { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
     { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
     { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
-    { label: "Delivery",   value: deliveryCount,   icon: <RiTruckLine size={20} />,           iconBg: "bg-cyan-100",   iconColor: "text-cyan-600",    numColor: "text-cyan-600",    cardBg: "bg-cyan-50",    border: "border-cyan-100"    },
-    { label: "Payment",    value: paymentCount,    icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-orange-100",  iconColor: "text-orange-600",  numColor: "text-orange-600",  cardBg: "bg-orange-50",  border: "border-orange-100"  },
   ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)

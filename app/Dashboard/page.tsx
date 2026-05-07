@@ -51,7 +51,15 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage]   = useState(1);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
+  const [fiscalYearFilter, setFiscalYearFilter] = useState<number | "all">("all");
   const PAGE_SIZE = 10;
+
+  // Helper function to get fiscal year from date (Philippines: Jan 1 - Dec 31)
+  const getFiscalYear = (dateString?: string): number => {
+    if (!dateString) return new Date().getFullYear();
+    const date = new Date(dateString);
+    return date.getFullYear();
+  };
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -376,11 +384,27 @@ export default function DashboardPage() {
   const countByColor = (color: string) =>
     list.reduce((n, i) => (getStatusInfo(i.status, i.status_id, i.source).color === color ? n + 1 : n), 0);
 
+  // Filter list by fiscal year
+  const listByFiscalYear = fiscalYearFilter === "all" 
+    ? list 
+    : list.filter(item => getFiscalYear(item.created_at) === fiscalYearFilter);
+
+  // Count by source type (filtered by fiscal year)
+  const allCount = listByFiscalYear.length;
+  const purchaseRequestsCount = listByFiscalYear.filter(i => i.source === 'pr').length;
+  const purchaseOrdersCount = listByFiscalYear.filter(i => i.source === 'po').length;
+  const deliveriesCount = listByFiscalYear.filter(i => i.source === 'delivery').length;
+  const paymentsCount = listByFiscalYear.filter(i => i.source === 'payment').length;
+
+  // Legacy counts (for reference if needed)
   const pendingCount    = countByColor("pending");
   const processingCount = countByColor("processing");
   const canvassingCount = countByColor("canvassing");
   const approvedCount   = countByColor("approved");
   const rejectedCount   = countByColor("rejected");
+
+  // Generate available fiscal years from data
+  const availableFiscalYears = Array.from(new Set(list.map(item => getFiscalYear(item.created_at)))).sort((a, b) => b - a);
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -442,12 +466,11 @@ export default function DashboardPage() {
   ];
 
   const STAT_CARDS = [
-    { label: "Total",      value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
-    { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
-    { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
-    { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
-    { label: "Approved",   value: approvedCount,   icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
-    { label: "Rejected",   value: rejectedCount,   icon: <RiCloseCircleLine size={20} />,    iconBg: "bg-red-100",     iconColor: "text-red-500",     numColor: "text-red-500",     cardBg: "bg-red-50",     border: "border-red-100"     },
+    { label: "All",               value: allCount,               icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Purchase Requests", value: purchaseRequestsCount,  icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
+    { label: "Purchase Orders",   value: purchaseOrdersCount,    icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
+    { label: "Deliveries",        value: deliveriesCount,        icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
+    { label: "Payments",          value: paymentsCount,          icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
   ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -571,6 +594,18 @@ export default function DashboardPage() {
                   {label}
                 </button>
               ))}
+              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+              {/* Fiscal Year Filter */}
+              <select
+                value={fiscalYearFilter}
+                onChange={(e) => { setFiscalYearFilter(e.target.value === "all" ? "all" : Number(e.target.value)); setCurrentPage(1); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                <option value="all">All Fiscal Years</option>
+                {availableFiscalYears.map(year => (
+                  <option key={year} value={year}>FY {year}</option>
+                ))}
+              </select>
               <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
