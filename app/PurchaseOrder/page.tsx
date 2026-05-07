@@ -8,6 +8,7 @@ import CreatePOModal from "../../components/PO/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
 import ORSProcessModal from "@/components/PO/ORSProcessModal";
+import Viewpomodal from "@/components/Viewpomodal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
@@ -28,6 +29,7 @@ import {
   RiCloseCircleLine,
   RiEyeLine,
   RiFileListLine,
+  RiFilePdf2Line,
   RiMoneyDollarCircleLine,
   RiSearchLine,
   RiTimeLine,
@@ -529,6 +531,8 @@ export default function PurchaseOrderPage() {
   const [remarksOpen, setRemarksOpen] = useState(false);
   const [processOpen, setProcessOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [viewPoModalVisible, setViewPoModalVisible] = useState(false);
+  const [selectedViewPoId, setSelectedViewPoId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [divisionNames, setDivisionNames] = useState<Record<number, string>>({});
 
@@ -897,8 +901,8 @@ export default function PurchaseOrderPage() {
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
                               <button
-                                onClick={() => openDetails(po)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                                onClick={() => { setSelectedViewPoId(po.id); setViewPoModalVisible(true); }}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
                               >
                                 <RiEyeLine size={14} />
                                 View
@@ -980,6 +984,13 @@ export default function PurchaseOrderPage() {
         onOpenRemarks={() => setRemarksOpen(true)}
         onOpenProcess={() => setProcessOpen(true)}
         canProcess={selectedPo ? canProcessPO(currentUser, selectedPo.status_id, selectedPoDivisionName) : false}
+      />
+
+      <Viewpomodal
+        visible={viewPoModalVisible}
+        poId={selectedViewPoId}
+        onClose={() => setViewPoModalVisible(false)}
+        currentUser={currentUser}
       />
 
       {selectedPo?.status_id === 13 ? (

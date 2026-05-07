@@ -756,7 +756,7 @@ function buildPurchaseOrderPrintHtml(data: {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Purchase Order</title>
   <style>
-    @page { size: A4; margin: 12mm 10mm; }
+    @page { size: A4; margin: 12mm 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body { font-family: 'Times New Roman', Times, serif; color: #000; }
@@ -899,10 +899,12 @@ function downloadPDF(data: {
   items: PurchaseOrderItemRow[];
   textOnlyLines?: TextOnlyLine[];
   currentUserFullname?: string;
+  currentUserId?: number | null;
+  prId?: number | null;
 }) {
   // Post remark if currentUser is available
   if (data.currentUserFullname) {
-    postPrintRemark(data.currentUserFullname, 'PO');
+    postPrintRemark(data.currentUserFullname, 'PO', data.currentUserId, data.prId);
   }
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
@@ -923,16 +925,17 @@ function downloadPDF(data: {
 }
 
 // Helper function to post print remark
-async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS', userId?: number | null, prId?: number | null) {
   try {
     const supabase = createClient();
-    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+    const remarkText = `[PRINT] ${fullname} downloaded/printed a ${documentType} document`;
     
-    // Insert into activity_logs or remarks table
-    await supabase.from('activity_logs').insert({
-      action: 'PRINT',
-      description: remarkText,
-      user_name: fullname,
+    // Insert into remarks table
+    await supabase.from('remarks').insert({
+      remark: remarkText,
+      user_id: userId || null,
+      pr_id: prId || null,
+      phase: 'po',
       created_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -970,6 +973,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
   // Current user for print remarks
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Load current user from localStorage
   useEffect(() => {
@@ -979,6 +983,9 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         const user = JSON.parse(storedUser);
         if (user?.fullname) {
           setCurrentUserFullname(user.fullname);
+        }
+        if (user?.id) {
+          setCurrentUserId(user.id);
         }
       } catch {
         // ignore parse errors
@@ -1069,6 +1076,9 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     const selectedPR = availablePRs.find((pr) => pr.id.toString() === prId);
     if (!selectedPR) return;
 
+    // Reset text-only lines first (critical for preview reset)
+    setTextOnlyLines([]);
+
     // Store PR number for PO creation
     setSelectedPRNo(selectedPR.pr_no);
 
@@ -1096,6 +1106,16 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         return;
       }
 
+      // Fetch the purchase request items for descriptions
+      const { data: prItemsData, error: prItemsError } = await supabase
+        .from("purchase_request_items")
+        .select("*")
+        .eq("pr_id", selectedPR.id);
+
+      if (prItemsError) {
+        console.error("Error fetching PR items:", prItemsError);
+      }
+
       console.log("Found winning entries:", winningEntries);
 
       if (winningEntries && winningEntries.length > 0) {
@@ -1109,20 +1129,27 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         // Build line items from all winning entries
         const poItems: PurchaseOrderItemRow[] = winningEntries
           .filter((entry) => entry.unit || entry.unit_price || entry.quantity)
-          .map((entry) => ({
-            stock_no: null,
-            unit: entry.unit || null,
-            description: entry.description || null,
-            quantity: Number(entry.quantity) || 1,
-            unit_price: Number(entry.unit_price) || 0,
-            subtotal: Number(entry.total_price) || 0,
-          }));
+          .map((entry) => {
+            // Find the corresponding PR item to get the description
+            const prItem = prItemsData?.find((item) => item.id === entry.pr_items);
+            return {
+              stock_no: prItem?.stock_no || null,
+              unit: entry.unit || null,
+              description: prItem?.description || null,
+              quantity: Number(entry.quantity) || 1,
+              unit_price: Number(entry.unit_price) || 0,
+              subtotal: Number(entry.total_price) || 0,
+            };
+          });
 
-        if (poItems.length > 0) {
-          setItems(poItems);
-        }
+        setItems(poItems);
       } else {
         console.log("No winning entries found for PR:", selectedPR.pr_no);
+        setItems([]);
+        setSupplier("");
+        setAddress("");
+        setTin("");
+        setDeliveryTerm("");
       }
     } catch (err) {
       console.error("Error fetching winning canvass:", err);
@@ -1487,6 +1514,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     items,
                     textOnlyLines,
                     currentUserFullname,
+                    currentUserId,
+                    prId: selectedPRId ? Number(selectedPRId) : null,
                   })
                 }
                 className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition-colors"

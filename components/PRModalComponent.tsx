@@ -34,6 +34,7 @@ type TextOnlyLine = {
 };
 
 type CurrentUser = {
+  id: number | null | undefined;
   fullname: string;
   username: string;
   role_id: number;
@@ -351,7 +352,7 @@ function PREditablePreview({
 function downloadPDF(formData: any, items: ItemDataType[], textOnlyLines: TextOnlyLine[] = [], currentUser?: CurrentUser | null) {
   // Post remark if currentUser is available
   if (currentUser?.fullname) {
-    postPrintRemark(currentUser.fullname, 'PR');
+    postPrintRemark(currentUser.fullname, 'PR', currentUser.id);
   }
   
   const printWindow = window.open("", "", "height=800,width=1200");
@@ -537,16 +538,16 @@ function escapeHtml(text: string): string {
 }
 
 // Helper function to post print remark
-async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS', userId?: number | null) {
   try {
     const supabase = createClient();
-    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+    const remarkText = `[PRINT] ${fullname} downloaded/printed a draft ${documentType} document`;
     
-    // Insert into activity_logs or remarks table
-    await supabase.from('activity_logs').insert({
-      action: 'PRINT',
-      description: remarkText,
-      user_name: fullname,
+    // Insert into remarks table
+    await supabase.from('remarks').insert({
+      remark: remarkText,
+      user_id: userId || null,
+      phase: 'pr',
       created_at: new Date().toISOString(),
     });
   } catch (error) {

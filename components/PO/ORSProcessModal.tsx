@@ -975,10 +975,10 @@ function buildORSPrintHtml(data: {
 </html>`;
 }
 
-function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0] & { currentUserFullname?: string }) {
+function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0] & { currentUserFullname?: string; currentUserId?: number | null; poId?: number }) {
   // Post remark if currentUser is available
   if (data.currentUserFullname) {
-    postPrintRemark(data.currentUserFullname, 'ORS');
+    postPrintRemark(data.currentUserFullname, 'ORS', data.currentUserId, data.poId);
   }
 
   const printWindow = window.open("", "_blank");
@@ -1000,16 +1000,17 @@ function downloadORSPdf(data: Parameters<typeof buildORSPrintHtml>[0] & { curren
 }
 
 // Helper function to post print remark
-async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS', userId?: number | null, poId?: number) {
   try {
     const supabase = createClient();
-    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+    const remarkText = `[PRINT] ${fullname} downloaded/printed a ${documentType} document`;
 
-    // Insert into activity_logs or remarks table
-    await supabase.from('activity_logs').insert({
-      action: 'PRINT',
-      description: remarkText,
-      user_name: fullname,
+    // Insert into remarks table
+    await supabase.from('remarks').insert({
+      remark: remarkText,
+      user_id: userId || null,
+      po_id: poId || null,
+      phase: 'ors',
       created_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -1252,6 +1253,8 @@ export default function ORSProcessModal({
             preparedByName, preparedByDesig,
             textOnlyLines,
             currentUserFullname,
+            currentUserId: currentUser?.id,
+            poId: Number(po.id)
           })}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
           aria-label="Print preview"

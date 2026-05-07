@@ -196,10 +196,10 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
-function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?: string) {
+function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?: string, currentUserId?: number | null, prId?: number) {
   // Post remark if currentUser is available
   if (currentUserFullname) {
-    postPrintRemark(currentUserFullname, 'PR');
+    postPrintRemark(currentUserFullname, 'PR', currentUserId, prId);
   }
 
   const printWindow = window.open("", "", "height=800,width=1200");
@@ -348,16 +348,17 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
 }
 
 // Helper function to post print remark
-async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS') {
+async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'ORS', userId?: number | null, prId?: number) {
   try {
     const supabase = createClient();
-    const remarkText = `${fullname} downloaded/printed a ${documentType} document`;
+    const remarkText = `[PRINT] ${fullname} downloaded/printed a ${documentType} document`;
 
-    // Insert into activity_logs table
-    await supabase.from('activity_logs').insert({
-      action: 'PRINT',
-      description: remarkText,
-      user_name: fullname,
+    // Insert into remarks table
+    await supabase.from('remarks').insert({
+      remark: remarkText,
+      user_id: userId || null,
+      pr_id: prId || null,
+      phase: 'pr',
       created_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -391,6 +392,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Load current user from localStorage
   useEffect(() => {
@@ -400,6 +402,9 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
         const user = JSON.parse(storedUser);
         if (user?.fullname) {
           setCurrentUserFullname(user.fullname);
+        }
+        if (user?.id) {
+          setCurrentUserId(user.id);
         }
       } catch {
         // ignore parse errors
@@ -666,7 +671,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                 {/* Footer — PDF only, no Save */}
                 <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
                   <button
-                    onClick={() => downloadPDF(formData, items, currentUserFullname)}
+                    onClick={() => downloadPDF(formData, items, currentUserFullname, currentUserId, prId)}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
                   >
                     <RiFilePdf2Line size={18} /> Download PDF
@@ -688,7 +693,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
                 <button
-                  onClick={() => downloadPDF(formData, items, currentUserFullname)}
+                  onClick={() => downloadPDF(formData, items, currentUserFullname, currentUserId, prId)}
                   className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
                 >
                   <RiFilePdf2Line size={16} /> PDF
