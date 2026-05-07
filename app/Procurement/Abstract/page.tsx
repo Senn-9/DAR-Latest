@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
-import ViewPRModal from "@/components/Viewprmodal";
 import PrepareAbstractModal, { type SupplierQuotePayload } from "@/components/AbstractOfAwards/PrepareAbstractModal";
+import LivePreview from "@/components/test/livePreview";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
@@ -60,8 +60,11 @@ export default function AbstractPage() {
   const [sortField, setSortField]     = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewPrId, setViewPrId]       = useState<number | null>(null);
+  const [previewPrNo, setPreviewPrNo] = useState<string | null>(null);
   const [prepareAwardingTarget, setPrepareAwardingTarget] = useState<PRListRow | null>(null);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submitTarget, setSubmitTarget] = useState<PRListRow | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const PAGE_SIZE = 10;
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
@@ -267,6 +270,37 @@ export default function AbstractPage() {
     };
   };
 
+  const handleSubmitAbstract = async () => {
+    if (!submitTarget?.id) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const { error } = await supabase
+        .from("purchase_requests")
+        .update({ status_id: 33 })
+        .eq("id", submitTarget.id);
+
+      if (error) {
+        alert(`Error: ${error.message}`);
+        return;
+      }
+
+      alert("Abstract submitted successfully! Page will refresh now.");
+      setSubmitConfirmOpen(false);
+      setSubmitTarget(null);
+
+      window.location.reload();
+    } catch (err) {
+      console.error("Error submitting abstract:", err);
+      alert("An unexpected error occurred while submitting the abstract.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   /* ── SKELETON LOADING ── */
   if (loading) {
     return (
@@ -465,6 +499,7 @@ export default function AbstractPage() {
                         { label: "Status",           field: null,                      align: "text-center" },
                         { label: "Total Cost",       field: "total_cost" as const,     align: "text-right"  },
                         { label: "Actions",          field: null,                      align: "text-center" },
+                                              { label: "Submit",           field: null,                      align: "text-center" },
                       ] as const).map(({ label, field, align }) => (
                         <th
                           key={label}
@@ -524,11 +559,11 @@ export default function AbstractPage() {
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                                onClick={() => setPreviewPrNo(form.pr_no)}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
                               >
                                 <RiEyeLine size={14} />
-                                View
+                                Preview
                               </button>
                               {currentUser?.role_id === 3 && (
                                 <button
@@ -537,10 +572,24 @@ export default function AbstractPage() {
                                   className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
                                 >
                                   <RiPlayCircleLine size={14} />
-                                  Prepare Awarding
+                                  Awarding
                                 </button>
                               )}
                             </div>
+                          </td>
+                          <td className={`px-2 py-2 text-center ${rowBg}`}>
+                            {currentUser?.role_id === 3 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSubmitTarget(form);
+                                  setSubmitConfirmOpen(true);
+                                }}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                Submit
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -603,9 +652,9 @@ export default function AbstractPage() {
         </div>
       </div>
 
-      {/* ── VIEW PR MODAL ── */}
-      {viewPrId !== null && (
-        <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
+      {/* ── LIVE PREVIEW MODAL ── */}
+      {previewPrNo !== null && (
+        <LivePreview open={true} prNo={previewPrNo} onClose={() => setPreviewPrNo(null)} />
       )}
 
       {prepareAwardingTarget && (
@@ -620,6 +669,39 @@ export default function AbstractPage() {
 
       {/* ── SIGNOUT MODAL ── */}
       <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
+          {/* ── SUBMIT CONFIRMATION MODAL ── */}
+          {submitConfirmOpen && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6 space-y-4">
+                <h2 className="text-lg font-bold text-gray-900">Confirm Abstract Submission</h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to submit the abstract for PR <span className="font-semibold text-gray-900">{submitTarget?.pr_no}</span>? 
+                  This will change the status to "Completed (PR Phase)" and cannot be easily undone.
+                </p>
+                <div className="flex items-center gap-3 justify-end pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubmitConfirmOpen(false);
+                      setSubmitTarget(null);
+                    }}
+                    disabled={submitting}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitAbstract}
+                    disabled={submitting}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg border border-orange-600 bg-orange-600 text-white hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? "Submitting..." : "Submit"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
     </div>
   );
 }

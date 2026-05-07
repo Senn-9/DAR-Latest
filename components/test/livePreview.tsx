@@ -78,7 +78,7 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 				const prId = prRow?.id ?? null;
 				if (!prId) return;
 
-				const [itemsResult, canvassResult] = await Promise.all([
+				const [itemsResult, canvassResult, assignmentsResult] = await Promise.all([
 					supabase
 						.from("purchase_request_items")
 						.select("id, stock_no, unit, quantity, description")
@@ -89,18 +89,34 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						.select("supplier_name, pr_items, unit_price")
 						.eq("pr_no", prNo)
 						.order("created_at", { ascending: true }),
+					supabase
+						.from("canvasser_assignments")
+						.select("quotation_no, pr_no")
+						.eq("pr_no", prNo),
 				]);
 
 				if (itemsResult.error) throw itemsResult.error;
 				if (canvassResult.error) throw canvassResult.error;
+				if (assignmentsResult.error) throw assignmentsResult.error;
 
 				const itemsData = itemsResult.data || [];
 				const canvassData = canvassResult.data || [];
+				const assignmentsData = assignmentsResult.data || [];
+				
+				// Get the first quotation_no to display as Canvass No
+				const firstQuotationNo = assignmentsData[0]?.quotation_no;
+				if (firstQuotationNo && !isActive) return;
+				
+				if (isActive && firstQuotationNo) {
+					setMeta((m) => ({ ...m, canvassNo: String(firstQuotationNo) }));
+				}
 				const uniqueSupplierNames = Array.from(
 					new Set(canvassData.map((entry) => (entry.supplier_name || "").trim()).filter(Boolean))
 				);
 				const supplierPricesByItem = new Map<string, Map<number, string | number>>();
-				for (const name of uniqueSupplierNames) supplierPricesByItem.set(name, new Map<number, string | number>());
+				for (const name of uniqueSupplierNames) {
+					supplierPricesByItem.set(name, new Map<number, string | number>());
+				}
 
 				if (!isActive) return;
 

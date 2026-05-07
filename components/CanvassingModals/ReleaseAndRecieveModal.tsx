@@ -41,6 +41,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [modalQuotationNo, setModalQuotationNo] = useState<string>("");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -86,6 +87,10 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
 
         if (asgErr) throw asgErr;
         setAssignments(asgs || []);
+        // Set the quotation number from the first assignment if available
+        if (asgs && asgs.length > 0 && asgs[0].quotation_no) {
+          setModalQuotationNo(asgs[0].quotation_no);
+        }
       } catch (err: any) {
         console.error("Fetch error in ReleaseAndRecieveModal:", err);
         setError(err.message || "Failed to load data");
@@ -97,14 +102,18 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
   }, [prId, supabase]);
 
   const handleAddAssignment = async () => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      setError("Session not ready. Please try again.");
+      return;
+    }
     setProcessing(true);
+    setError(null);
     try {
       const newAsg: AssignmentRow = {
         session_id: sessionId,
         pr_no: prNo,
         name_of_canvasser: "",
-        quotation_no: "",
+        quotation_no: modalQuotationNo,
         rfq_index: 0,
         released_at: null,
         returned_at: null,
@@ -116,10 +125,15 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Insert error:", error);
+        throw error;
+      }
       setAssignments([...assignments, data]);
+      setError(null);
     } catch (err: any) {
-      setError(err.message || "Failed to add assignment");
+      console.error("Add assignment error:", err);
+      setError(err.message || "Failed to add supplier name");
     } finally {
       setProcessing(false);
     }
@@ -209,6 +223,14 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
 
       if (prError) throw prError;
       onProcessed?.(prId);
+      
+      // Refresh the page after successful submission
+      try {
+        if (typeof window !== "undefined") window.location.reload();
+      } catch (e) {
+        // Fallback: just close the modal
+      }
+      
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to submit to Abstract of Awards");
@@ -218,6 +240,20 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
   };
 
   const allReturned = assignments.length > 0 && assignments.every(a => !!a.returned_at);
+
+  // Find existing canvasser by name
+  const findExistingCanvasser = (name: string, excludeIndex?: number) => {
+    return assignments.findIndex((a, idx) => 
+      (excludeIndex === undefined || idx !== excludeIndex) && 
+      a.name_of_canvasser?.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+  };
+
+  // Get the quotation for an existing canvasser
+  const getExistingQuotation = (name: string, excludeIndex?: number) => {
+    const idx = findExistingCanvasser(name, excludeIndex);
+    return idx >= 0 ? assignments[idx].quotation_no : null;
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -247,6 +283,17 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
             <div className="py-10 text-center text-gray-500">Loading assignments...</div>
           ) : (
             <div className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-2 ml-1">Quotation No.</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300"
+                  placeholder="e.g. QTN-2026-001"
+                  value={modalQuotationNo}
+                  onChange={(e) => setModalQuotationNo(e.target.value.trim())}
+                />
+              </div>
+
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                   <RiUserLine className="text-emerald-600" /> Canvasser Assignments
@@ -256,7 +303,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                   disabled={processing}
                   className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
                 >
-                  <RiAddLine size={16} /> Add Assignment
+                  <RiAddLine size={16} /> Add Supplier Name
                 </button>
               </div>
 
@@ -277,39 +324,28 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
                         <RiDeleteBinLine size={18} />
                       </button>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Canvasser Name</label>
-                          <input
-                            type="text"
-                            className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                            placeholder="Full Name"
-                            value={asg.name_of_canvasser || ""}
-                            disabled={!!asg.released_at}
-                            onBlur={(e) => handleUpdateAssignment(idx, { name_of_canvasser: e.target.value })}
-                            onChange={(e) => {
-                              const newAsgs = [...assignments];
-                              newAsgs[idx].name_of_canvasser = e.target.value;
-                              setAssignments(newAsgs);
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Quotation No.</label>
-                          <input
-                            type="text"
-                            className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                            placeholder="e.g. QTN-2026-001"
-                            value={asg.quotation_no || ""}
-                            disabled={!!asg.released_at}
-                            onBlur={(e) => handleUpdateAssignment(idx, { quotation_no: e.target.value.trim() || null })}
-                            onChange={(e) => {
-                              const newAsgs = [...assignments];
-                              newAsgs[idx].quotation_no = e.target.value;
-                              setAssignments(newAsgs);
-                            }}
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Supplier Name</label>
+                        <input
+                          type="text"
+                          className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          placeholder="Full Name"
+                          value={asg.name_of_canvasser || ""}
+                          disabled={!!asg.released_at}
+                          onBlur={(e) => {
+                            const name = e.target.value.trim();
+                            const existingQuotation = getExistingQuotation(name, idx);
+                            handleUpdateAssignment(idx, { 
+                              name_of_canvasser: name,
+                              ...(existingQuotation ? { quotation_no: existingQuotation } : {})
+                            });
+                          }}
+                          onChange={(e) => {
+                            const newAsgs = [...assignments];
+                            newAsgs[idx].name_of_canvasser = e.target.value;
+                            setAssignments(newAsgs);
+                          }}
+                        />
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3">

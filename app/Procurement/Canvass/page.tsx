@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
+import ConfirmModal from "@/components/ConfirmModal";
 
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
 import ReleaseAndRecieveModal from "@/components/CanvassingModals/ReleaseAndRecieveModal";
@@ -68,6 +69,39 @@ export default function CanvassPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const PAGE_SIZE = 10;
+
+  const [processingIds, setProcessingIds] = useState<number[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
+
+  const requestSubmit = (prId: number) => {
+    setConfirmTargetId(prId);
+    setConfirmOpen(true);
+  };
+
+  const handleSubmitPR = async (prId: number) => {
+    setProcessingIds((p) => [...p, prId]);
+    setConfirmOpen(false);
+    try {
+      const { data, error } = await supabase
+        .from("purchase_requests")
+        .update({ status_id: 8 })
+        .eq("id", prId);
+      if (error) throw error;
+      setList((prev) => prev.filter((p) => p.id !== prId));
+      try {
+        if (typeof window !== "undefined") window.location.reload();
+        else router.refresh();
+      } catch (e) {
+        router.refresh();
+      }
+    } catch (err: any) {
+      alert("Failed to submit PR: " + (err?.message || err));
+    } finally {
+      setProcessingIds((p) => p.filter((id) => id !== prId));
+      setConfirmTargetId(null);
+    }
+  };
 
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
   const [releaseAndRecieveTarget, setReleaseAndRecieveTarget] = useState<PRListRow | null>(null);
@@ -540,6 +574,17 @@ export default function CanvassPage() {
                                 </button>
                               )}
 
+                              {isBACAccount && form.status_id === 7 && (
+                                <button
+                                  type="button"
+                                  onClick={() => requestSubmit(form.id)}
+                                  disabled={processingIds.includes(form.id)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  {processingIds.includes(form.id) ? "Submitting..." : "Submit"}
+                                </button>
+                              )}
+
                               {/* Release and Recieve — Another button for quick release/return */}
                               {isBACAccount && [8, 9].includes(form.status_id ?? 0) && (
                                 <button
@@ -690,6 +735,16 @@ export default function CanvassPage() {
           onClose={() => setResolutionPrNo(null)}
         />
       )}
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Submit PR"
+        message="Submit this PR for processing? This will advance its workflow."
+        confirmLabel="Submit"
+        loading={confirmTargetId ? processingIds.includes(confirmTargetId) : false}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => confirmTargetId && handleSubmitPR(confirmTargetId)}
+      />
 
       {/* ── SIGNOUT MODAL ── */}
       <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
