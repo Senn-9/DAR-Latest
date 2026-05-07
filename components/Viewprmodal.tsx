@@ -205,7 +205,46 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
   const printWindow = window.open("", "", "height=800,width=1200");
   if (!printWindow) return;
 
-  // Build item rows HTML
+  // If the live preview DOM exists, clone its HTML so print matches preview exactly
+  try {
+    const previewEl = document.getElementById('pr-preview-content');
+    if (previewEl && previewEl.innerHTML) {
+      // copy stylesheet and style tags from current document
+      const head = printWindow.document.head;
+      const nodes = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
+      nodes.forEach((n) => {
+        try {
+          head.appendChild(n.cloneNode(true));
+        } catch (e) {
+          // ignore clone errors
+        }
+      });
+
+      // add print adjustments
+      const adjust = printWindow.document.createElement('style');
+      adjust.innerHTML = `
+        html, body { background: #fff; color: #000; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { size: auto; margin: 20mm; }
+      `;
+      head.appendChild(adjust);
+
+      const container = printWindow.document.createElement('div');
+      container.style.fontFamily = "'Times New Roman', Times, serif";
+      container.style.color = '#000';
+      container.appendChild(previewEl.cloneNode(true));
+
+      printWindow.document.body.appendChild(container);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 250);
+      return;
+    }
+  } catch (err) {
+    console.error('Error cloning preview for print:', err);
+    // fall through to fallback builder
+  }
+
+  // Fallback: build HTML from data (kept for compatibility when preview DOM isn't available)
   const itemRows: string[] = [];
   items.forEach((item) => {
     const total = getItemTotal(item);
@@ -221,7 +260,6 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
     `);
   });
 
-  // Pad to 30 rows
   while (itemRows.length < 30) {
     itemRows.push(`
       <tr style="height: 16px;">
@@ -688,7 +726,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
                   <RiFilePdf2Line size={16} /> PDF
                 </button>
               </div>
-              <div className="bg-white rounded-lg shadow-lg p-8 text-black">
+              <div id="pr-preview-content" className="bg-white rounded-lg shadow-lg p-8 text-black">
                 <PRPreview formData={formData} items={items} />
               </div>
             </div>
