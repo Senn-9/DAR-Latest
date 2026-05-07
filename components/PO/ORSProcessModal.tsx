@@ -317,8 +317,8 @@ function ORSEditablePreview({
               />
             </td>
           </tr>
-          {/* Text-only lines for printing - descriptive lines without amounts */}
-          {textOnlyLines.map((line) => (
+          {/* Text-only lines feature commented out */}
+          {/* {textOnlyLines.map((line) => (
             <tr key={line.id}>
               <td style={{ ...S.tdC, verticalAlign: "top" }}></td>
               <td colSpan={3} style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>
@@ -338,7 +338,6 @@ function ORSEditablePreview({
               <td style={{ ...S.tdR, verticalAlign: "top" }}></td>
             </tr>
           ))}
-          {/* Add text-only line button */}
           <tr>
             <td colSpan={5} style={{ border: "none", padding: "2px", textAlign: "center" }}>
               <button
@@ -350,7 +349,7 @@ function ORSEditablePreview({
                 + insert text-only line
               </button>
             </td>
-          </tr>
+          </tr> */}
           <tr>
             <td colSpan={4} style={{ ...S.tdR, ...S.b, fontSize: "8pt" }}>Total</td>
             <td style={{ ...S.tdR, ...S.b }}>{amount > 0 ? fmt(amount) : ""}</td>
@@ -812,16 +811,17 @@ function buildORSPrintHtml(data: {
     : "";
   const amountWords = data.amount > 0 ? toWords(data.amount) : "";
 
-  // Build text-only lines HTML for the particulars table
-  const textLinesHtml = (data.textOnlyLines || [])
-    .filter(line => line.text.trim())
-    .map(line => `
-      <tr>
-        <td style="text-align:center;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
-        <td colspan="3" style="border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top;word-break:break-word;white-space:pre-wrap;">${escapeHtml(line.text)}</td>
-        <td style="text-align:right;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
-      </tr>`)
-    .join("");
+  // Text-only lines feature commented out
+  // const textLinesHtml = (data.textOnlyLines || [])
+  //   .filter(line => line.text.trim())
+  //   .map(line => `
+  //     <tr>
+  //       <td style="text-align:center;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
+  //       <td colspan="3" style="border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top;word-break:break-word;white-space:pre-wrap;">${escapeHtml(line.text)}</td>
+  //       <td style="text-align:right;border:1px solid #000;padding:2px 5px;font-size:8.5pt;vertical-align:top"></td>
+  //     </tr>`)
+  //   .join("");
+  const textLinesHtml = "";
 
   return `<!DOCTYPE html>
 <html>
@@ -1251,7 +1251,7 @@ export default function ORSProcessModal({
             obligationAmount, payableAmount, paymentAmount,
             notYetDueBalance, dueDemandableBalance,
             preparedByName, preparedByDesig,
-            textOnlyLines,
+            // textOnlyLines, // commented out
             currentUserFullname,
             currentUserId: currentUser?.id,
             poId: Number(po.id)
@@ -1623,10 +1623,11 @@ export default function ORSProcessModal({
                   dueDemandableBalance={dueDemandableBalance} setDueDemandableBalance={setDueDemandableBalance}
                   preparedByName={preparedByName} setPreparedByName={setPreparedByName}
                   preparedByDesig={preparedByDesig} setPreparedByDesig={setPreparedByDesig}
-                  textOnlyLines={textOnlyLines}
-                  addTextOnlyLine={addTextOnlyLine}
-                  updateTextOnlyLine={updateTextOnlyLine}
-                  removeTextOnlyLine={removeTextOnlyLine}
+                  // text-only lines commented out
+                  textOnlyLines={[]}
+                  addTextOnlyLine={() => {}}
+                  updateTextOnlyLine={() => {}}
+                  removeTextOnlyLine={() => {}}
                 />
               </div>
             </div>

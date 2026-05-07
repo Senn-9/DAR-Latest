@@ -298,42 +298,31 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
               <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Total Cost</th>
             </tr>
             ${itemRows.join('')}
-            <tr style="height: 17px;">
-              <td colspan="6" style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; font-size: 8.5pt; padding: 2px 4px; color: #000;">
+            <tr style="height: 40px;">
+              <td colspan="6" style="border: 1px solid black; font-size: 8.5pt; padding: 4px; color: #000; vertical-align: top;">
                 <b>Purpose:</b> ${escapeHtml(formData.purpose)}
               </td>
             </tr>
-            <tr style="height: 30px;">
-              <td colspan="6" style="border-bottom: 1px solid black; border-left: 1px solid black; border-right: 1px solid black;"></td>
-            </tr>
-            <tr style="height: 12px;">
-              <td style="border-top: 1px solid black; border-left: 1px solid black;"></td>
-              <td colspan="2" style="border-top: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">
-                <i>Requested by:</i>
-              </td>
-              <td colspan="2" style="border-top: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">
-                <i>Approved by:</i>
-              </td>
-              <td style="border-top: 1px solid black; border-right: 1px solid black;"></td>
-            </tr>
-            <tr style="height: 12px;">
-              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Signature :</td>
-              <td></td>
-              <td></td>
-              <td></td>
+            <tr style="height: 25px;">
+              <td style="border-left: 1px solid black;"></td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Requested by:</i></td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Approved by:</i></td>
               <td style="border-right: 1px solid black;"></td>
             </tr>
-            <tr style="height: 12px;">
-              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Printed Name :</td>
-              <td style="font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.req_name)}</td>
-              <td colspan="2" style="font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.app_name)}</td>
-              <td style="border-right: 1px solid black;"></td>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Signature :</td>
+              <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
+              <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
             </tr>
-            <tr style="height: 14.75px;">
-              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">Designation :</td>
-              <td style="border-bottom: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.req_desig)}</td>
-              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; padding: 2px 4px;">${escapeHtml(formData.app_desig)}</td>
-              <td style="border-bottom: 1px solid black; border-right: 1px solid black;"></td>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Printed Name :</td>
+              <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_name)}</td>
+              <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_name)}</td>
+            </tr>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Designation :</td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_desig)}</td>
+              <td colspan="2" style="border-bottom: 1px solid black; border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_desig)}</td>
             </tr>
           </tbody>
         </table>

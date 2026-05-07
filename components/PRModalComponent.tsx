@@ -118,14 +118,16 @@ function PREditablePreview({
     target.style.height = target.scrollHeight + 'px';
   };
 
-  const rows: (ItemDataType | TextOnlyLine & { isTextLine?: boolean })[] = [];
-  items.forEach((item, index) => {
-    rows.push(item);
-    const linesAfterThisItem = textOnlyLines.filter(line => line.position === index + 1);
-    linesAfterThisItem.forEach(line => {
-      rows.push({ ...line, isTextLine: true });
-    });
-  });
+  // Text-only lines feature commented out
+  // const rows: (ItemDataType | TextOnlyLine & { isTextLine?: boolean })[] = [];
+  // items.forEach((item, index) => {
+  //   rows.push(item);
+  //   const linesAfterThisItem = textOnlyLines.filter(line => line.position === index + 1);
+  //   linesAfterThisItem.forEach(line => {
+  //     rows.push({ ...line, isTextLine: true });
+  //   });
+  // });
+  const rows = items;
   
   while (rows.length < 30) {
     rows.push(emptyItem());
@@ -197,34 +199,8 @@ function PREditablePreview({
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {rows.map((row, idx) => {
-            if ('isTextLine' in row && row.isTextLine) {
-              const textRow = row as TextOnlyLine;
-              return (
-                <tr key={`text-${textRow.id}`}>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={textRow.stock_num} onChange={e => updateTextOnlyLine(textRow.id, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Stock No." rows={1} />
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={textRow.unit} onChange={e => updateTextOnlyLine(textRow.id, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Unit" rows={1} />
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px", verticalAlign: "top" }}>
-                    <textarea value={textRow.description} onChange={e => updateTextOnlyLine(textRow.id, 'description', e.target.value)} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Description" rows={1} />
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={textRow.quantity} onChange={e => updateTextOnlyLine(textRow.id, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Qty" rows={1} />
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
-                    <textarea value={textRow.unit_cost} onChange={e => updateTextOnlyLine(textRow.id, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} placeholder="Unit Cost" rows={1} />
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <button type="button" onClick={() => removeTextOnlyLine(textRow.id)} className="text-red-500 hover:text-red-700 text-xs font-bold" title="Remove text line">×</button>
-                  </td>
-                </tr>
-              );
-            }
-            
-            const item = row as ItemDataType;
+          {/* Text-only lines feature commented out */}
+          {rows.map((item, idx) => {
             const originalItemIndex = items.indexOf(item);
             const isPadding = originalItemIndex === -1 || originalItemIndex >= items.length;
             
@@ -267,7 +243,7 @@ function PREditablePreview({
                     )}
                   </td>
                 </tr>
-                <tr style={{ height: "auto" }}>
+                {/* <tr style={{ height: "auto" }}>
                   <td colSpan={6} style={{ border: "none", padding: "1px", textAlign: "center" }}>
                     <button
                       type="button"
@@ -278,7 +254,7 @@ function PREditablePreview({
                       + insert text line
                     </button>
                   </td>
-                </tr>
+                </tr> */}
               </React.Fragment>
             );
           })}
@@ -349,181 +325,144 @@ function PREditablePreview({
     </div>
   );
 }
-function downloadPDF(formData: any, items: ItemDataType[], textOnlyLines: TextOnlyLine[] = [], currentUser?: CurrentUser | null) {
+function downloadPDF(formData: any, items: ItemDataType[], currentUser?: CurrentUser | null) {
   // Post remark if currentUser is available
   if (currentUser?.fullname) {
     postPrintRemark(currentUser.fullname, 'PR', currentUser.id);
   }
   
   const printWindow = window.open("", "", "height=800,width=1200");
-  if (printWindow) {
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Purchase Request - ${formData.pr_no || 'Draft'}</title>
-        <style>
-          body { font-family: 'Times New Roman', serif; font-size: 10pt; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          th, td { border: 1px solid black; padding: 2px 4px; font-size: 8pt; }
-          .text-line { background-color: #fefce8; font-style: italic; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div id="print-content"></div>
-      </body>
-      </html>
+  if (!printWindow) return;
+
+  // Build item rows HTML
+  const itemRows: string[] = [];
+  items.forEach((item) => {
+    const total = getItemTotal(item);
+    itemRows.push(`
+      <tr style="height: 16px;">
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.stock_num)}</td>
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.unit)}</td>
+        <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px;">${escapeHtml(item.description)}</td>
+        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.quantity)}</td>
+        <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""}</td>
+        <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${total > 0 ? total.toFixed(2) : ""}</td>
+      </tr>
     `);
-    // Use PRPreview component structure for print
-    const itemRows: string[] = [];
-    items.forEach((item, index) => {
-      const total = getItemTotal(item);
-      itemRows.push(`
-        <tr style="height: 16px;">
-          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.stock_num)}</td>
-          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.unit)}</td>
-          <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px; word-wrap: break-word; white-space: pre-wrap;">${escapeHtml(item.description)}</td>
-          <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.quantity)}</td>
-          <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${item.unit_cost ? parseFloat(item.unit_cost).toFixed(2) : ""}</td>
-          <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${total > 0 ? total.toFixed(2) : ""}</td>
-        </tr>
-      `);
-      
-      // Add text-only lines after this item
-      const linesAfterThisItem = textOnlyLines.filter(line => line.position === index + 1);
-      linesAfterThisItem.forEach(line => {
-        const hasContent = line.stock_num.trim() || line.unit.trim() || line.description.trim() || line.quantity.trim() || line.unit_cost.trim();
-        if (hasContent) {
-          itemRows.push(`
-            <tr style="height: 16px;">
-              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.stock_num)}</td>
-              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.unit)}</td>
-              <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding: 1px 4px; word-wrap: break-word; white-space: pre-wrap;">${escapeHtml(line.description)}</td>
-              <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(line.quantity)}</td>
-              <td style="border: 1px solid black; text-align: right; font-size: 8pt;">${escapeHtml(line.unit_cost)}</td>
-              <td style="border: 1px solid black; text-align: right; font-size: 8pt;"></td>
-            </tr>
-          `);
-        }
-      });
-    });
-    
-    // Pad to 30 rows
-    while (itemRows.length < 30) {
-      itemRows.push(`
-        <tr style="height: 16px;">
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-          <td style="border: 1px solid black;"></td>
-        </tr>
-      `);
-    }
-    
-    const printContent = `
-      <div style="font-family:'Times New Roman',serif;font-size:10pt;padding:20px">
-        <div style="text-align:right;font-weight:bold;margin-bottom:10px">Appendix 60</div>
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+  });
+
+  // Pad to 30 rows
+  while (itemRows.length < 30) {
+    itemRows.push(`
+      <tr style="height: 16px;">
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+        <td style="border: 1px solid black;"></td>
+      </tr>
+    `);
+  }
+
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Purchase Request - ${escapeHtml(formData.pr_no || 'Draft')}</title>
+      <style>
+        body { font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid black; font-size: 8pt; padding: 1px 3px; font-family: 'Times New Roman', Times, serif; }
+      </style>
+    </head>
+    <body>
+      <div style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000;">
+        <table style="width: 100%; border-collapse: collapse; color: #000; table-layout: fixed;">
           <colgroup>
-            <col style="width:12%" />
-            <col style="width:8%" />
-            <col style="width:40%" />
-            <col style="width:10%" />
-            <col style="width:15%" />
-            <col style="width:15%" />
+            <col style="width: 12%" />
+            <col style="width: 8%" />
+            <col style="width: 40%" />
+            <col style="width: 10%" />
+            <col style="width: 15%" />
+            <col style="width: 15%" />
           </colgroup>
           <tbody>
-            <tr style="height:27px">
-              <td colspan="6" style="text-align:right;font-size:10pt;padding-right:4px">Appendix 60</td>
+            <tr style="height: 27px;">
+              <td colspan="6" style="text-align: right; font-size: 10pt; padding-right: 4px; color: #000;">Appendix 60</td>
             </tr>
-            <tr style="height:34px">
-              <td colspan="6" style="text-align:center;font-weight:bold;font-size:12pt">PURCHASE REQUEST</td>
+            <tr style="height: 34px;">
+              <td colspan="6" style="text-align: center; font-weight: bold; font-size: 12pt; color: #000;">PURCHASE REQUEST</td>
             </tr>
-            <tr style="height:21px">
-              <td colspan="2" style="border-bottom:1px solid black;font-size:8pt;padding:2px 4px;font-weight:bold">
-                <div style="display:flex;align-items:baseline;gap:6px">
-                  <span>Entity Name:</span>
-                  <span style="font-weight:normal;border-bottom:1px solid #000;padding-bottom:1px;min-width:140px">${escapeHtml(formData.entity_name)}</span>
-                </div>
+            <tr style="height: 21px;">
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
+                Entity Name: <span style="font-weight: normal;">${escapeHtml(formData.entity_name)}</span>
               </td>
-              <td style="border-bottom:1px solid black"></td>
-              <td colspan="3" style="border-bottom:1px solid black;font-size:8pt;padding:2px 4px;font-weight:bold">
-                <div style="display:flex;align-items:baseline;gap:6px">
-                  <span>Fund Cluster:</span>
-                  <span style="font-weight:normal;border-bottom:1px solid #000;padding-bottom:1px;min-width:100px">${escapeHtml(formData.fund_cluster)}</span>
-                </div>
+              <td style="border-bottom: 1px solid black;"></td>
+              <td colspan="3" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
+                Fund Cluster: <span style="font-weight: normal;">${escapeHtml(formData.fund_cluster)}</span>
               </td>
             </tr>
-            <tr style="height:14px">
-              <td rowspan="2" colspan="2" style="border:1px solid black;font-size:8pt;vertical-align:top;padding:2px 4px">
+            <tr style="height: 14px;">
+              <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; vertical-align: top; padding: 2px 4px; color: #000;">
                 Office/Section:<br/>${escapeHtml(formData.office_section)}
               </td>
-              <td colspan="2" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;font-size:8pt;font-weight:bold;padding:2px 4px">
-                PR No.: <span style="font-weight:normal">${escapeHtml(formData.pr_no)}</span>
+              <td colspan="2" style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
+                PR No.: <span style="font-weight: normal;">${escapeHtml(formData.pr_no)}</span>
               </td>
-              <td rowspan="2" colspan="2" style="border:1px solid black;font-size:8pt;font-weight:bold;vertical-align:top;padding:2px 4px">
-                Date:<br/><span style="font-weight:normal">${formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
-              </td>
-            </tr>
-            <tr style="height:15px">
-              <td colspan="2" style="border-bottom:1px solid black;border-left:1px solid black;font-size:8pt;font-weight:bold;padding:2px 4px">
-                Responsibility Center Code: <span style="font-weight:normal">${escapeHtml(formData.resp_code)}</span>
+              <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; font-weight: bold; vertical-align: top; padding: 2px 4px; color: #000;">
+                Date:<br/><span style="font-weight: normal;">${formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
               </td>
             </tr>
-            <tr style="height:22.5px">
-              <th style="${thStyle};text-align:center;font-weight:bold">Stock/<br/>Property No.</th>
-              <th style="${thStyle};text-align:center;font-weight:bold">Unit</th>
-              <th style="${thStyle};text-align:center;font-weight:bold">Item Description</th>
-              <th style="${thStyle};text-align:center;font-weight:bold">Quantity</th>
-              <th style="${thStyle};text-align:center;font-weight:bold">Unit Cost</th>
-              <th style="${thStyle};text-align:center;font-weight:bold">Total Cost</th>
+            <tr style="height: 15px;">
+              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
+                Responsibility Center Code: <span style="font-weight: normal;">${escapeHtml(formData.resp_code)}</span>
+              </td>
+            </tr>
+            <tr style="height: 22.5px;">
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Stock/<br/>Property No.</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Unit</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Item Description</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Quantity</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Unit Cost</th>
+              <th style="border: 1px solid black; text-align: center; font-weight: bold; font-size: 8pt; padding: 1px 3px;">Total Cost</th>
             </tr>
             ${itemRows.join('')}
-            <tr style="height:17px">
-              <td colspan="6" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;font-size:8.5pt;padding:2px 4px">
+            <tr style="height: 40px;">
+              <td colspan="6" style="border: 1px solid black; font-size: 8.5pt; padding: 4px; color: #000; vertical-align: top;">
                 <b>Purpose:</b> ${escapeHtml(formData.purpose)}
               </td>
             </tr>
-            <tr style="height:30px">
-              <td colspan="6" style="border-bottom:1px solid black;border-left:1px solid black;border-right:1px solid black"></td>
+            <tr style="height: 25px;">
+              <td style="border-left: 1px solid black;"></td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Requested by:</i></td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Approved by:</i></td>
+              <td style="border-right: 1px solid black;"></td>
             </tr>
-            <tr style="height:12px">
-              <td style="border-top:1px solid black;border-left:1px solid black"></td>
-              <td colspan="2" style="border-top:1px solid black;font-size:8.5pt;padding:2px 4px"><i>Requested by:</i></td>
-              <td colspan="2" style="border-top:1px solid black;font-size:8.5pt;padding:2px 4px"><i>Approved by:</i></td>
-              <td style="border-top:1px solid black;border-right:1px solid black"></td>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Signature :</td>
+              <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
+              <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
             </tr>
-            <tr style="height:12px">
-              <td colspan="2" style="border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Signature :</td>
-              <td></td><td></td><td></td>
-              <td style="border-right:1px solid black"></td>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Printed Name :</td>
+              <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_name)}</td>
+              <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_name)}</td>
             </tr>
-            <tr style="height:12px">
-              <td colspan="2" style="border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Printed Name :</td>
-              <td style="font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.req_name)}</td>
-              <td colspan="2" style="font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.app_name)}</td>
-              <td style="border-right:1px solid black"></td>
-            </tr>
-            <tr style="height:14.75px">
-              <td colspan="2" style="border-bottom:1px solid black;border-left:1px solid black;font-size:8.5pt;padding:2px 4px">Designation :</td>
-              <td style="border-bottom:1px solid black;font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.req_desig)}</td>
-              <td colspan="2" style="border-bottom:1px solid black;font-size:8.5pt;padding:2px 4px">${escapeHtml(formData.app_desig)}</td>
-              <td style="border-bottom:1px solid black;border-right:1px solid black"></td>
+            <tr style="height: 20px;">
+              <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Designation :</td>
+              <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_desig)}</td>
+              <td colspan="2" style="border-bottom: 1px solid black; border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_desig)}</td>
             </tr>
           </tbody>
         </table>
       </div>
-    `;
-    
-    const contentDiv = printWindow.document.getElementById('print-content');
-    if (contentDiv) {
-      contentDiv.innerHTML = printContent;
-    }
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
-  }
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 250);
 }
 
 // Helper function to escape HTML special characters
@@ -672,6 +611,18 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     setItems(updatedItems);
   };
 
+  const moveItem = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index > 0) {
+      const updatedItems = [...items];
+      [updatedItems[index - 1], updatedItems[index]] = [updatedItems[index], updatedItems[index - 1]];
+      setItems(updatedItems);
+    } else if (direction === 'down' && index < items.length - 1) {
+      const updatedItems = [...items];
+      [updatedItems[index], updatedItems[index + 1]] = [updatedItems[index + 1], updatedItems[index]];
+      setItems(updatedItems);
+    }
+  };
+
   const grandTotal = getGrandTotal(items);
 
   const handleSubmit = async () => {
@@ -718,8 +669,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
           stock_no: item.stock_num || "",
           unit: item.unit || "",
           description: item.description,
-          quantity: parseInt(item.quantity) || 0,
-          unit_price: parseInt(item.unit_cost) || 0,
+          quantity: item.quantity.trim() === "" ? null : parseInt(item.quantity),
+          unit_price: item.unit_cost.trim() === "" ? null : parseInt(item.unit_cost),
           subtotal: Math.round(getItemTotal(item)),
         }));
 
@@ -879,11 +830,31 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                         <React.Fragment key={`item-frag-${index}`}>
                           {/* Regular Item */}
                           <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
-                            {items.length > 1 && (
-                              <button onClick={() => removeItem(index)} className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold">
-                                ×
-                              </button>
-                            )}
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              {index > 0 && (
+                                <button
+                                  onClick={() => moveItem(index, 'up')}
+                                  className="text-gray-400 hover:text-emerald-600 text-sm p-1"
+                                  title="Move up"
+                                >
+                                  ↑
+                                </button>
+                              )}
+                              {index < items.length - 1 && (
+                                <button
+                                  onClick={() => moveItem(index, 'down')}
+                                  className="text-gray-400 hover:text-emerald-600 text-sm p-1"
+                                  title="Move down"
+                                >
+                                  ↓
+                                </button>
+                              )}
+                              {items.length > 1 && (
+                                <button onClick={() => removeItem(index)} className="text-red-600 hover:text-red-800 text-lg font-bold ml-1">
+                                  ×
+                                </button>
+                              )}
+                            </div>
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
                               <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
@@ -915,8 +886,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                             </div>
                           </div>
 
-                          {/* Text-only lines that belong after this item */}
-                          {textOnlyLines
+                          {/* Text-only lines feature commented out */}
+                          {/* {textOnlyLines
                             .filter((line) => line.position === index + 1)
                             .map((line) => (
                               <div key={`text-${line.id}`} className="border border-gray-200 rounded-lg p-3 bg-yellow-50/50 relative">
@@ -980,7 +951,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                               </div>
                             ))}
 
-                          {/* Add text-only line button */}
                           <div className="flex justify-center">
                             <button
                               onClick={() => addTextOnlyLine(index + 1)}
@@ -988,7 +958,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                             >
                               <RiAddLine size={12} /> + Add text-only line
                             </button>
-                          </div>
+                          </div> */}
                         </React.Fragment>
                       ))}
                     </div>
@@ -1031,7 +1001,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                   <button onClick={handleSubmit} disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
                     <RiSaveLine size={18} /> {loading ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={() => downloadPDF(formData, items, textOnlyLines, currentUser)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
+                  <button onClick={() => downloadPDF(formData, items, currentUser)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
                     <RiFilePdf2Line size={18} /> PDF
                   </button>
                 </div>
@@ -1042,7 +1012,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                    <button onClick={() => downloadPDF(formData, items, textOnlyLines, currentUser)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors">
+                    <button onClick={() => downloadPDF(formData, items, currentUser)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors">
                       <RiFilePdf2Line size={16} /> PDF
                     </button>
                   </div>

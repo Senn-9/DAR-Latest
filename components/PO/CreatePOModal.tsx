@@ -351,10 +351,10 @@ function POEditablePreview({
                     <textarea value={item.description ?? ""} onChange={(e) => updateItem(index, { description: e.target.value })} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
-                    <textarea value={item.quantity ?? 0} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 0 })} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.quantity ?? ""} onChange={(e) => updateItem(index, { quantity: e.target.value ? Number(e.target.value) : null })} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
-                    <textarea value={item.unit_price ?? 0} onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) || 0 })} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.unit_price ?? ""} onChange={(e) => updateItem(index, { unit_price: e.target.value ? Number(e.target.value) : null })} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt" }}>
                     {total ? formatMoney(total).replace("₱", "") : ""}
@@ -368,8 +368,8 @@ function POEditablePreview({
                     </button>
                   </td>
                 </tr>
-                {/* Render text-only lines that belong after this item */}
-                {textOnlyLines
+                {/* Text-only lines feature commented out */}
+                {/* {textOnlyLines
                   .filter((line) => line.position === index + 1)
                   .map((line) => (
                     <tr key={`text-${line.id}`} style={{ backgroundColor: "#fefce8" }}>
@@ -400,7 +400,6 @@ function POEditablePreview({
                       </td>
                     </tr>
                   ))}
-                {/* Insert text-only line button */}
                 <tr style={{ height: "auto" }}>
                   <td colSpan={6} style={{ border: "none", padding: "1px", textAlign: "center" }}>
                     <button
@@ -412,7 +411,7 @@ function POEditablePreview({
                       + insert text line
                     </button>
                   </td>
-                </tr>
+                </tr> */}
               </React.Fragment>
             );
           })}
@@ -696,8 +695,8 @@ function buildPurchaseOrderPrintHtml(data: {
       Number(item.unit_price ?? 0) > 0,
   );
 
-  // Build item rows with text-only lines inserted at correct positions
-  const textLines = data.textOnlyLines || [];
+  // Build item rows (text-only lines feature commented out)
+  // const textLines = data.textOnlyLines || [];
   let itemRows = "";
   
   for (let i = 0; i < normalizedItems.length; i++) {
@@ -717,23 +716,22 @@ function buildPurchaseOrderPrintHtml(data: {
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
         </tr>`;
     
-    // Add any text-only lines that should appear after this item (position is 1-based)
-    const linesAfterThisItem = textLines.filter(line => line.position === i + 1);
-    for (const line of linesAfterThisItem) {
-      // Only render if at least one field has content
-      const hasContent = line.stock_no.trim() || line.unit.trim() || line.description.trim() || line.quantity.trim() || line.unit_price.trim();
-      if (hasContent) {
-        itemRows += `
-        <tr style="background-color:#fefce8">
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(line.stock_no)}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(line.unit)}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(line.description)}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${escapeHtml(line.quantity)}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${escapeHtml(line.unit_price)}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right"></td>
-        </tr>`;
-      }
-    }
+    // Text-only lines feature commented out
+    // const linesAfterThisItem = textLines.filter(line => line.position === i + 1);
+    // for (const line of linesAfterThisItem) {
+    //   const hasContent = line.stock_no.trim() || line.unit.trim() || line.description.trim() || line.quantity.trim() || line.unit_price.trim();
+    //   if (hasContent) {
+    //     itemRows += `
+    //     <tr style="background-color:#fefce8">
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(line.stock_no)}</td>
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(line.unit)}</td>
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(line.description)}</td>
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${escapeHtml(line.quantity)}</td>
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${escapeHtml(line.unit_price)}</td>
+    //       <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right"></td>
+    //     </tr>`;
+    //   }
+    // }
   }
   
   // If no items, ensure at least one empty row
@@ -1176,28 +1174,39 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   }
 
   function addItem() {
-    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: 1, unit_price: 0, subtotal: 0 } as PurchaseOrderItemRow]);
+    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: null, unit_price: null, subtotal: 0 } as PurchaseOrderItemRow]);
   }
 
   function updateItem(idx: number, patch: Partial<PurchaseOrderItemRow>) {
     setItems((s) =>
-      s.map((it, i) =>
-        i === idx
-          ? {
-              ...it,
-              ...patch,
-              subtotal:
-                Number.isFinite(Number(patch.quantity ?? it.quantity)) && Number.isFinite(Number(patch.unit_price ?? it.unit_price))
-                  ? Number(patch.quantity ?? it.quantity) * Number(patch.unit_price ?? it.unit_price)
-                  : it.subtotal,
-            }
-          : it,
-      ),
+      s.map((it, i) => {
+        if (i !== idx) return it;
+        const updated = { ...it, ...patch };
+        const qty = updated.quantity ? Number(updated.quantity) : 0;
+        const price = updated.unit_price ? Number(updated.unit_price) : 0;
+        updated.subtotal = Number.isFinite(qty) && Number.isFinite(price) ? qty * price : 0;
+        return updated;
+      }),
     );
   }
 
   function removeItem(idx: number) {
     setItems((s) => s.filter((_, i) => i !== idx));
+  }
+
+  function moveItem(idx: number, direction: 'up' | 'down') {
+    setItems((s) => {
+      if (direction === 'up' && idx > 0) {
+        const updated = [...s];
+        [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+        return updated;
+      } else if (direction === 'down' && idx < s.length - 1) {
+        const updated = [...s];
+        [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+        return updated;
+      }
+      return s;
+    });
   }
 
   const grandTotal = getGrandTotal(items);
@@ -1447,9 +1456,31 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   ) : (
                     items.map((item, index) => (
                       <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
-                        {items.length > 1 && (
-                          <button type="button" onClick={() => removeItem(index)} className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold">×</button>
-                        )}
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => moveItem(index, 'up')}
+                              className="text-gray-400 hover:text-emerald-600 text-sm p-1"
+                              title="Move up"
+                            >
+                              ↑
+                            </button>
+                          )}
+                          {index < items.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => moveItem(index, 'down')}
+                              className="text-gray-400 hover:text-emerald-600 text-sm p-1"
+                              title="Move down"
+                            >
+                              ↓
+                            </button>
+                          )}
+                          {items.length > 1 && (
+                            <button type="button" onClick={() => removeItem(index)} className="text-red-600 hover:text-red-800 text-lg font-bold ml-1">×</button>
+                          )}
+                        </div>
                         <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                         <div className="mb-2">
                           <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description</label>
@@ -1466,13 +1497,13 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Quantity</label>
-                            <input type="number" className={inputCls} placeholder="0" value={item.quantity ?? 0} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} />
+                            <input className={inputCls} placeholder="0" value={item.quantity ?? ""} onChange={(e) => updateItem(index, { quantity: e.target.value ? Number(e.target.value) : null })} />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
-                            <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={item.unit_price ?? 0} onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })} />
+                            <input className={inputCls} placeholder="0.00" value={item.unit_price ?? ""} onChange={(e) => updateItem(index, { unit_price: e.target.value ? Number(e.target.value) : null })} />
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Subtotal</label>
@@ -1512,7 +1543,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     officeSection,
                     fundCluster,
                     items,
-                    textOnlyLines,
+                    // textOnlyLines, // commented out
                     currentUserFullname,
                     currentUserId,
                     prId: selectedPRId ? Number(selectedPRId) : null,
@@ -1556,10 +1587,11 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   updateItem={updateItem}
                   addItem={addItem}
                   removeItem={removeItem}
-                  textOnlyLines={textOnlyLines}
-                  addTextOnlyLine={addTextOnlyLine}
-                  updateTextOnlyLine={updateTextOnlyLine}
-                  removeTextOnlyLine={removeTextOnlyLine}
+                  // text-only lines commented out
+                  textOnlyLines={[]}
+                  addTextOnlyLine={() => {}}
+                  updateTextOnlyLine={() => {}}
+                  removeTextOnlyLine={() => {}}
                 />
               </div>
             </div>

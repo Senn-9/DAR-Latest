@@ -361,7 +361,7 @@ function buildPurchaseOrderPrintHtml(data: {
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.description ?? "")}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:center">${qty ? String(qty) : ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
         </tr>`;
@@ -404,7 +404,7 @@ function buildPurchaseOrderPrintHtml(data: {
     <tr><td style="border:none;text-align:right;font-size:11pt;font-weight:bold;padding:0">Appendix 61</td></tr>
   </table>
 
-  <table>
+  <table style="border:2px solid #111;">
     <colgroup>
       <col style="width:14%" />
       <col style="width:11%" />
