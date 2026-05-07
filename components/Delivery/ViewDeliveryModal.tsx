@@ -95,199 +95,98 @@ function getNestedValue(obj: any, path: string): any {
 
 
 function replacePlaceholders(template: string, data: any): string {
-
-
-
   let result = template;
 
-
-
-  
-
-
-
   // Handle Handlebars-style loops for PO items
-
-
-
   result = result.replace(/{{#each po_items}}([\s\S]*?){{\/each}}/g, (match, templateBlock) => {
-
-
-
     if (!data.po_items || !Array.isArray(data.po_items)) return '';
-
-
-
     
-
-
-
     return data.po_items.map((item: any, index: number) => {
-
-
-
       let itemBlock = templateBlock;
-
-
-
       Object.keys(item).forEach(key => {
-
-
-
         const value = item[key] ?? "";
-
-
-
         const placeholder = new RegExp(`{{${key}}}`, 'g');
-
-
-
         itemBlock = itemBlock.replace(placeholder, value);
-
-
-
       });
-
-
-
       
-
-
-
       // Handle {{add @index value}} for positioning
-
-
-
       itemBlock = itemBlock.replace(/{{add @index (\d+(?:\.\d+)?)}}/g, (_match: string, value: string) => {
-
-
-
         return (index + parseFloat(value)).toString();
-
-
-
       });
-
-
-
       
-
-
-
       return itemBlock;
-
-
-
     }).join('');
-
-
-
   });
 
+  // Handle Handlebars-style loops for missing units items
+  result = result.replace(
+    /{{#each missing_units_items}}([\s\S]*?){{\/each}}/g,
+    (match, templateBlock) => {
+      if (!data.missing_units_items || !Array.isArray(data.missing_units_items)) return "";
 
+      return data.missing_units_items
+        .map((item: any, index: number) => {
+          let itemBlock = templateBlock;
 
-  
+          Object.keys(item).forEach((key) => {
+            const value = item[key] ?? "";
+            const placeholder = new RegExp(`{{${key}}}`, "g");
+            itemBlock = itemBlock.replace(placeholder, value);
+          });
 
+          // Handle {{add @index value}} for positioning
+          itemBlock = itemBlock.replace(
+            /{{add @index (\d+(?:\.\d+)?)}}/g,
+            (_match: string, value: string) => {
+              return (index + parseFloat(value)).toString();
+            },
+          );
 
+          return itemBlock;
+        })
+        .join("");
+    },
+  );
 
   // Handle nested property access like {{po_items.length}}
-
-
-
   result = result.replace(/{{([^}]+\.([^}]+))}}/g, (match: string, fullExpression: string, _property: string) => {
-
-
-
     const parts = fullExpression.split('.');
-
-
-
     let value = data;
-
-
-
     
-
-
-
     for (const part of parts) {
-
-
-
       if (value && typeof value === 'object' && part in value) {
-
-
-
         value = value[part];
-
-
-
       } else {
-
-
-
         return match; // Return original if not found
-
-
-
       }
-
-
-
     }
-
-
-
     
-
-
-
     return value !== undefined && value !== null ? String(value) : '';
-
-
-
   });
-
-
-
-  
-
-
 
   // Handle simple placeholders
-
-
-
   Object.keys(data).forEach(key => {
-
-
-
     if (key === 'po_items') return; // Skip arrays, handled above
+    
+    let value = data[key] ?? "";
 
-
-
-    const value = data[key] ?? "";
-
-
+    // Format date fields
+    if (key === "created_at" && value) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        value = date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+      }
+    }
 
     const placeholder = new RegExp(`{{${key}}}`, 'g');
-
-
-
     result = result.replace(placeholder, value);
-
-
-
   });
 
-
-
-  
-
-
-
   // Handle Handlebars-style conditionals {{#if condition}}content{{/if}} - PROCESS LAST
-
   result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, condition, content) => {
     const value = getNestedValue(data, condition);
     const isTruthy = value && (!Array.isArray(value) || value.length > 0);
@@ -302,23 +201,13 @@ function replacePlaceholders(template: string, data: any): string {
   });
 
   // Handle Handlebars-style conditionals with negation {{#if condition}}content{{else}}other{{/if}} - PROCESS LAST
-
   result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{else}}([\s\S]*?){{\/if}}/g, (match, condition, trueContent, falseContent) => {
     const value = getNestedValue(data, condition);
     const isTruthy = value && (!Array.isArray(value) || value.length > 0);
     return isTruthy ? trueContent : falseContent;
   });
 
-
-
-  
-
-
-
   return result;
-
-
-
 }
 
 
@@ -924,61 +813,31 @@ async function handlePrintPDF(tab: "iar" | "loa", delivery: any, iar: any, loa: 
 
 
     const transformedPoData = poData ? {
-
-
-
       ...poData,
-
-
-
-      po_items: poData.purchase_order_items || []
-
-
-
+      po_items: poData.purchase_order_items || [],
+      po_date: poData.date // Map PO date to template's po_date placeholder
     } : {};
 
-
-
     const mergedData = { ...delivery, ...transformedPoData };
-
-
-
     
-
-
+    // Explicitly preserve PO fields from transformedPoData
+    if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+    if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
     if (tab === "iar") {
-
-
-
       const iarData = { ...mergedData, ...iar };
-
-
-
       iarData.po_items = mergedData.po_items;
-
-
+      if (mergedData.po_no) iarData.po_no = mergedData.po_no;
+      if (mergedData.po_date) iarData.po_date = mergedData.po_date;
 
       html = await buildIARHtml(iarData);
-
-
-
     } else if (tab === "loa") {
-
-
-
       const loaData = { ...mergedData, ...loa };
-
-
-
       loaData.po_items = mergedData.po_items;
-
-
+      if (mergedData.po_no) loaData.po_no = mergedData.po_no;
+      if (mergedData.po_date) loaData.po_date = mergedData.po_date;
 
       html = await buildLOAHtml(loaData);
-
-
-
     }
 
 

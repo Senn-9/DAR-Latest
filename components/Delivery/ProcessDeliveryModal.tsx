@@ -6074,32 +6074,24 @@ export default function ProcessDeliveryModal({
 
 
       const transformedPoData = poData
-
         ? {
-
             ...poData,
-
-
-
             po_items: poData.purchase_order_items || [],
-
+            po_date: poData.date, // Map PO date to template's po_date placeholder
           }
-
         : {};
-
-
 
       const mergedData = { ...active, ...transformedPoData };
 
-
+      // Explicitly preserve PO fields from transformedPoData
+      if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+      if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
       if (selectedDocument === "iar") {
-
         const iarData = { ...mergedData, ...iar };
-
-
-
         iarData.po_items = mergedData.po_items;
+        if (mergedData.po_no) iarData.po_no = mergedData.po_no;
+        if (mergedData.po_date) iarData.po_date = mergedData.po_date;
 
         // Include missing units items for preview
         if (iar?.missing_units_items) {
@@ -6111,31 +6103,20 @@ export default function ProcessDeliveryModal({
         console.log("IAR data for preview:", iarData);
 
         html = await buildIARHtml(iarData);
-
       } else if (selectedDocument === "loa") {
-
         const loaData = { ...mergedData, ...loa };
-
-
-
         loaData.po_items = mergedData.po_items;
-
-
+        if (mergedData.po_no) loaData.po_no = mergedData.po_no;
+        if (mergedData.po_date) loaData.po_date = mergedData.po_date;
 
         html = await buildLOAHtml(loaData);
-
       } else if (selectedDocument === "dv") {
-
         const dvData = { ...mergedData, ...dv };
-
-
-
         dvData.po_items = mergedData.po_items;
-
-
+        if (mergedData.po_no) dvData.po_no = mergedData.po_no;
+        if (mergedData.po_date) dvData.po_date = mergedData.po_date;
 
         html = await buildDVHtml(dvData);
-
       }
 
 

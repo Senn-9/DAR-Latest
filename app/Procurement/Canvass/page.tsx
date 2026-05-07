@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
-import ViewPRModal from "@/components/Viewprmodal";
+
 import CanvassingReceptionModal from "@/components/CanvassingModals/ReceptionModal";
 import ReleaseAndRecieveModal from "@/components/CanvassingModals/ReleaseAndRecieveModal";
 import CanvassLivePreview from "@/components/Canvassing/CanvassLivePreview";
+import PrepareBACResolutionModal from "@/components/BACResolution/PrepareBACResolutionModal";
+import BACRESO from "@/components/BACResolution/BACRESO";
 import {
   RiFileListLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine,
-  RiEyeLine, RiPlayCircleLine, RiCheckboxCircleLine,
+  RiPlayCircleLine, RiCheckboxCircleLine,
+  RiFileTextLine,
 } from "react-icons/ri";
 
 export default function CanvassPage() {
@@ -63,12 +66,14 @@ export default function CanvassPage() {
   const [sortField, setSortField]     = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewPrId, setViewPrId]       = useState<number | null>(null);
+
   const PAGE_SIZE = 10;
 
   const [receptionTarget, setReceptionTarget] = useState<PRListRow | null>(null);
   const [releaseAndRecieveTarget, setReleaseAndRecieveTarget] = useState<PRListRow | null>(null);
   const [previewPrNo, setPreviewPrNo] = useState<string | null>(null);
+  const [prepareResolutionOpen, setPrepareResolutionOpen] = useState(false);
+  const [resolutionPrNo, setResolutionPrNo] = useState<string | null>(null);
 
   const isDivisionHead = currentUser?.roles?.role_name?.toLowerCase().includes("division head") ?? false;
   const isBACAccount =
@@ -110,7 +115,7 @@ export default function CanvassPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .in("status_id", [6, 8, 9]) // tig hali ko si 7 ta 7 = bac resolution
+          .in("status_id", [6, 7, 8, 9]) // included 7 for bac resolution
           .order("created_at", { ascending: false });
 
         if (!error) {
@@ -130,7 +135,7 @@ export default function CanvassPage() {
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
       6: { name: "Canvassing (Reception)", color: "reception" },
-      // 7: { name: "Canvassing (Releasing)", color: "releasing" }, ang 7 is bac resolution
+      7: { name: "BAC Resolution", color: "bac" },
       8: { name: "Canvassing (Waiting to Release)", color: "releasing" },
       9: { name: "Canvassing (Waiting to Collect)", color: "collection" },
     };
@@ -139,6 +144,7 @@ export default function CanvassPage() {
 
   const BADGE_CLASS: Record<string, string> = {
     reception: "bg-violet-50 text-violet-800 border border-violet-200",
+    bac: "bg-pink-50 text-pink-800 border border-pink-200",
     releasing: "bg-purple-50 text-purple-800 border border-purple-200",
     collection: "bg-blue-50 text-blue-800 border border-blue-200",
     default: "bg-gray-100 text-gray-700 border border-gray-200",
@@ -147,6 +153,7 @@ export default function CanvassPage() {
   const STATUS_OPTIONS = [
     { value: "all", label: "All" },
     { value: "reception", label: "Canvassing (Reception)" },
+    { value: "bac", label: "BAC Resolution" },
     { value: "releasing", label: "Canvassing (Releasing)" },
     { value: "collection", label: "Canvassing (Collection)" },
   ];
@@ -157,6 +164,7 @@ export default function CanvassPage() {
   const STAT_CARDS = [
     { label: "Total",          value: list.length,               cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
     { label: "Canvassing (Reception)", value: countByColor("reception"), cardBg: "bg-violet-50", border: "border-violet-100", iconBg: "bg-violet-100", iconColor: "text-violet-600", numColor: "text-violet-600" },
+    { label: "BAC Resolution", value: countByColor("bac"), cardBg: "bg-pink-50", border: "border-pink-100", iconBg: "bg-pink-100", iconColor: "text-pink-600", numColor: "text-pink-600" },
     { label: "Canvassing (Releasing)", value: countByColor("releasing"), cardBg: "bg-purple-50", border: "border-purple-100", iconBg: "bg-purple-100", iconColor: "text-purple-600", numColor: "text-purple-600" },
     { label: "Canvassing (Collection)", value: countByColor("collection"), cardBg: "bg-blue-50", border: "border-blue-100", iconBg: "bg-blue-100", iconColor: "text-blue-600", numColor: "text-blue-600" },
   ];
@@ -331,6 +339,16 @@ export default function CanvassPage() {
               </p>
             )}
           </div>
+          {isBACAccount && (
+            <button
+              type="button"
+              onClick={() => setPrepareResolutionOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-pink-700"
+            >
+              <RiPlayCircleLine size={16} />
+              Prepare BAC Resolution
+            </button>
+          )}
         </div>
 
         {/* ── TABS ── */}
@@ -338,7 +356,7 @@ export default function CanvassPage() {
           {([
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
-            { key: "bac",      label: "BAC Resolution",     href: "/Procurement/BACResolution" },
+
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
@@ -360,7 +378,7 @@ export default function CanvassPage() {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {STAT_CARDS.map(({ label, value, cardBg, border, iconBg, iconColor, numColor }) => (
             <div
               key={label}
@@ -486,23 +504,18 @@ export default function CanvassPage() {
 
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                View
-                              </button>
 
-                              <button
-                                type="button"
-                                onClick={() => setPreviewPrNo(form.pr_no)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiFileListLine size={14} />
-                                RFQ Preview
-                              </button>
+
+                              {[8, 9].includes(form.status_id ?? 0) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewPrNo(form.pr_no)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiFileListLine size={14} />
+                                  RFQ Preview
+                                </button>
+                              )}
 
                               {/* Reception — BAC account, status_id is Canvassing (Reception) */}
                               {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
@@ -515,8 +528,20 @@ export default function CanvassPage() {
                                 </button>
                               )}
 
+                              {/* Resolution Button */}
+                              {isBACAccount && form.status_id === 7 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setResolutionPrNo(form.pr_no)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiFileTextLine size={14} />
+                                  Resolution
+                                </button>
+                              )}
+
                               {/* Release and Recieve — Another button for quick release/return */}
-                              {isBACAccount && [7, 8, 9].includes(form.status_id ?? 0) && (
+                              {isBACAccount && [8, 9].includes(form.status_id ?? 0) && (
                                 <button
                                   onClick={() => setReleaseAndRecieveTarget(form)}
                                   className="px-2 py-1 text-xs font-semibold rounded border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-1"
@@ -590,10 +615,7 @@ export default function CanvassPage() {
         </div>
       </div>
 
-      {/* ── VIEW PR MODAL ── */}
-      {viewPrId !== null && (
-        <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
-      )}
+
 
       {/* ── RFQ PREVIEW MODAL ── */}
       {previewPrNo !== null && (
@@ -644,6 +666,28 @@ export default function CanvassPage() {
               )
             );
           }}
+        />
+      )}
+
+      {prepareResolutionOpen && (
+        <PrepareBACResolutionModal
+          onClose={() => setPrepareResolutionOpen(false)}
+          onProcessed={(prIds: number[]) => {
+            setList((prev) =>
+              prev.map((p) =>
+                prIds.includes(p.id) ? { ...p, status_id: 7, status: "BAC Resolution" } : p
+              )
+            );
+            setPrepareResolutionOpen(false);
+          }}
+        />
+      )}
+
+      {resolutionPrNo !== null && (
+        <BACRESO
+          prNo={resolutionPrNo}
+          open={true}
+          onClose={() => setResolutionPrNo(null)}
         />
       )}
 

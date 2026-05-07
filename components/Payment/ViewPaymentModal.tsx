@@ -7,9 +7,6 @@ import { fetchRemarksThread } from "@/utils/supabase/logs";
 interface ViewPaymentModalProps {
   visible: boolean;
   delivery: any;
-  voucher?: any;
-  ors?: any;
-  dv?: any;
   poData?: any;
   onClose: () => void;
 }
@@ -17,13 +14,10 @@ interface ViewPaymentModalProps {
 export default function ViewPaymentModal({
   visible,
   delivery,
-  voucher,
-  ors,
-  dv,
   poData,
   onClose,
 }: ViewPaymentModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "voucher" | "ors" | "dv" | "timeline">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "timeline">("overview");
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [remarks, setRemarks] = useState<any[]>([]);
   
@@ -215,9 +209,6 @@ export default function ViewPaymentModal({
           <div className="flex gap-4 min-w-max">
             {[
               { id: "overview", label: "Overview", icon: RiFileListLine },
-              { id: "voucher", label: "Voucher", icon: RiMoneyDollarCircleLine },
-              { id: "ors", label: "ORS", icon: RiFileListLine },
-              { id: "dv", label: "DV", icon: RiFileListLine },
               { id: "timeline", label: "Timeline", icon: RiTimeLine },
             ].map((tab) => (
               <button
@@ -270,9 +261,6 @@ export default function ViewPaymentModal({
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Payment Information</h4>
                   <div className="space-y-1">
                     <p className="text-sm"><strong>Total Amount:</strong> ₱{poData?.total_amount || "0.00"}</p>
-                    <p className="text-sm"><strong>Payment Type:</strong> {dv?.payment_type || "Not Set"}</p>
-                    <p className="text-sm"><strong>Check No:</strong> {dv?.check_no || "N/A"}</p>
-                    <p className="text-sm"><strong>Release Date:</strong> {dv?.release_date || "Not Set"}</p>
                   </div>
                 </div>
               </div>
@@ -305,128 +293,6 @@ export default function ViewPaymentModal({
             </div>
           )}
 
-          {activeTab === "voucher" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Voucher Details</h3>
-              {voucher ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Voucher Number</label>
-                      <p className="text-sm text-gray-900 mt-1">{voucher.voucher_no || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Amount</label>
-                      <p className="text-sm text-gray-900 mt-1">₱{voucher.amount || "0.00"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Verification Status</label>
-                      <p className="text-sm text-gray-900 mt-1">{voucher.verification_status || "Not Set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Verification Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{voucher.verification_date || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Accountant Name</label>
-                      <p className="text-sm text-gray-900 mt-1">{voucher.accountant_name || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Account Review Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{voucher.account_review_date || "N/A"}</p>
-                    </div>
-                  </div>
-                  {voucher.account_review_notes && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Account Review Notes</label>
-                      <p className="text-sm text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg">{voucher.account_review_notes}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <RiMoneyDollarCircleLine size={48} className="mx-auto mb-2 opacity-50" />
-                  <p>No voucher information available</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "ors" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Obligation Request (ORS)</h3>
-              {ors ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">ORS Number</label>
-                      <p className="text-sm text-gray-900 mt-1">{ors.ors_no || "N/A"}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <RiFileListLine size={48} className="mx-auto mb-2 opacity-50" />
-                  <p>No ORS information available</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "dv" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Disbursement Voucher (DV)</h3>
-              {dv ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">PARPO Name</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.parpo_name || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">PARPO Approval Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.parpo_approval_date || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Payment Type</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.payment_type || "Not Set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Check Number</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.check_no || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Release Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.release_date || "Not Set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Final Approver</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.final_approver_name || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Final Approval Date</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.final_approval_date || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">EMDS Status</label>
-                      <p className="text-sm text-gray-900 mt-1">{dv.emds_status || "Not Set"}</p>
-                    </div>
-                  </div>
-                  {dv.parpo_remarks && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">PARPO Remarks</label>
-                      <p className="text-sm text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg">{dv.parpo_remarks}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <RiFileListLine size={48} className="mx-auto mb-2 opacity-50" />
-                  <p>No DV information available</p>
-                </div>
-              )}
-            </div>
-          )}
 
           {activeTab === "timeline" && (
             <div className="space-y-6">

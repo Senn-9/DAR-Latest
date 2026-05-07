@@ -388,7 +388,7 @@ export default function AbstractPage() {
           {([
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
-            { key: "bac",      label: "BAC Resolution",     href: "/Procurement/BACResolution" },
+
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
