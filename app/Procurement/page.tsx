@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
+import EditPRModal from "@/components/EditPRModal";
 import ProcessPRModal from "@/components/ProcessPRModal";
 import BACProcessModal from "@/components/BACProcessModal";
 import PARPOProcessModal from "@/components/PARPOProcessModal";
@@ -78,6 +79,7 @@ export default function ProcurementPage() {
   const [sortDir, setSortDir]             = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage]     = useState(1);
   const [viewPrId, setViewPrId]           = useState<number | null>(null);
+  const [editPrId, setEditPrId]           = useState<number | null>(null);
   const [processTarget, setProcessTarget] = useState<{ prId: number; prNo: string; statusId: number | null } | null>(null);
   const [submitConfirm, setSubmitConfirm] = useState<{ prId: number; prNo: string } | null>(null);
   const [bacProcessTarget, setBACProcessTarget]     = useState<{ prId: number; prNo: string } | null>(null);
@@ -734,10 +736,10 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Edit — not for Division Head / BAC / Budget / Accounting (unless admin), Pending only, and only their own PRs */}
-                              {!isBudgetAccount && !isAccountingAccount && (isAdmin || (!isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount)) && form.status_id === 1 && (isAdmin || form.req_name === currentUser?.fullname) && (
+                              {/* Edit — End Users only (or admin), Pending only, and only their own PRs */}
+                              {(isEndUser || isAdmin) && form.status_id === 1 && (isAdmin || form.req_name === currentUser?.fullname) && (
                                 <button
-                                  onClick={() => console.log("Edit", form.pr_no)}
+                                  onClick={() => setEditPrId(form.id)}
                                   className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
                                 >
                                   Edit
@@ -963,7 +965,26 @@ export default function ProcurementPage() {
 
       {/* ── VIEW PR MODAL ── */}
       {viewPrId !== null && (
-        <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
+        <ViewPRModal
+          prId={viewPrId}
+          onClose={() => setViewPrId(null)}
+          onEdit={() => {
+            setViewPrId(null);
+            setEditPrId(viewPrId);
+          }}
+        />
+      )}
+
+      {/* ── EDIT PR MODAL ── */}
+      {editPrId !== null && (
+        <EditPRModal
+          prId={editPrId}
+          onClose={() => setEditPrId(null)}
+          onSave={() => {
+            setEditPrId(null);
+            setTimeout(() => window.location.reload(), 500);
+          }}
+        />
       )}
 
       {/* ── SIGNOUT MODAL ── */}

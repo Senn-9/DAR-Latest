@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
   RiFilePdf2Line,
+  RiEditLine,
 } from "react-icons/ri";
 
 type ItemDataType = {
@@ -396,9 +397,10 @@ async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'OR
 interface ViewPRModalProps {
   prId: number;
   onClose: () => void;
+  onEdit?: () => void;
 }
 
-export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
+export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps) {
   const supabase = createClient();
 
   const [formData, setFormData] = useState({
@@ -417,9 +419,9 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
 
   const [items, setItems] = useState<ItemDataType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [status, setStatus] = useState<string>("");
 
   // Load current user from localStorage
   useEffect(() => {
@@ -468,6 +470,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
         return;
       }
 
+      setStatus(form.status || "");
       setFormData({
         entity_name:  form.entity_name   || "",
         fund_cluster: form.fund_cluster  || "",
@@ -527,25 +530,15 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
             <p className="text-emerald-100 text-sm mt-1">Appendix 60 · Official Government Form</p>
           </div>
           <div className="flex items-center gap-4">
-            {/* Tab Toggle */}
-            <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
+            {/* Edit Button - only for Pending status */}
+            {status === "Pending" && onEdit && (
               <button
-                onClick={() => setTab("form")}
-                className={`px-5 py-2 text-sm font-semibold transition-all ${
-                  tab === "form" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
-                }`}
+                onClick={onEdit}
+                className="flex items-center justify-center gap-2 bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-lg transition-colors text-sm font-semibold border border-white/50 shadow-sm"
               >
-                Form
+                <RiEditLine size={16} /> Edit
               </button>
-              <button
-                onClick={() => setTab("preview")}
-                className={`px-5 py-2 text-sm font-semibold transition-all ${
-                  tab === "preview" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
-                }`}
-              >
-                Preview
-              </button>
-            </div>
+            )}
             <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
               <RiCloseLine size={24} />
             </button>
@@ -555,8 +548,8 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
         {/* ── BODY ── */}
         <div className="flex flex-1 overflow-hidden">
 
-          {/* Form Side — read-only */}
-          <div className={`${tab === "form" ? "flex" : "hidden"} md:flex flex-[2] flex-col overflow-hidden border-r border-gray-200`}>
+          {/* View Mode — read-only */}
+          <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="space-y-3 w-full px-8">
@@ -571,7 +564,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
 
                   {/* View-only notice */}
                   <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
-                    <span>👁</span> This is a read-only view. No changes can be made.
+                    <span>👁</span> This PR is in <b>{status || "Unknown"}</b> status. {status === "Pending" ? "Click 'Edit PR' to make changes." : "Editing is disabled."}
                   </div>
 
                   {/* Header Information */}
@@ -715,7 +708,7 @@ export default function ViewPRModal({ prId, onClose }: ViewPRModalProps) {
           </div>
 
           {/* Preview Side */}
-          <div className={`${tab === "preview" ? "flex" : "hidden"} md:flex flex-[3] overflow-y-auto bg-gray-100 flex-col`}>
+          <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>

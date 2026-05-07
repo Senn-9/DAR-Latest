@@ -748,24 +748,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 <p className="text-emerald-100 text-sm mt-1">Appendix 60 · Official Government Form</p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
-                  <button
-                    onClick={() => setTab("form")}
-                    className={`px-5 py-2 text-sm font-semibold transition-all ${
-                      tab === "form" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
-                    }`}
-                  >
-                    Form
-                  </button>
-                  <button
-                    onClick={() => setTab("preview")}
-                    className={`px-5 py-2 text-sm font-semibold transition-all ${
-                      tab === "preview" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
-                    }`}
-                  >
-                    Preview
-                  </button>
-                </div>
                 <button onClick={handleClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
                   <RiCloseLine size={24} />
                 </button>
@@ -775,7 +757,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
             {/* Body */}
             <div className="flex flex-1 overflow-hidden">
               {/* Form Side */}
-              <div className={`${tab === "form" ? "flex" : "hidden"} md:flex flex-[2] flex-col overflow-hidden border-r border-gray-200`}>
+              <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
                 <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
                   {/* Header Information */}
                   <div>
@@ -1008,7 +990,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
               </div>
 
               {/* Preview Side */}
-              <div className={`${tab === "preview" ? "flex" : "hidden"} md:flex flex-[3] overflow-y-auto bg-gray-100 flex-col`}>
+              <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>

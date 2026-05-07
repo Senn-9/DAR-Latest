@@ -68,6 +68,250 @@ function toWords(amount: number): string {
   return `${pesoWords} PESOS${centWords}`;
 }
 
+// ORS Preview - read-only display for ORS document
+function ORSPreview({
+  orsNo, orsDate, entityName, payee, payeeAddress, office,
+  fundCluster, responsibilityCenter, particulars, mfoPap, uacsCode,
+  amount, preparedByName, preparedByDesig,
+}: {
+  orsNo: string | null;
+  orsDate: string | null;
+  entityName: string | null;
+  payee: string | null;
+  payeeAddress: string | null;
+  office: string | null;
+  fundCluster: string | null;
+  responsibilityCenter: string | null;
+  particulars: string | null;
+  mfoPap: string | null;
+  uacsCode: string | null;
+  amount: number | null;
+  preparedByName: string | null;
+  preparedByDesig: string | null;
+}) {
+  const fmt = (n: number) => n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const displayDate = orsDate ? new Date(orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "";
+  const amountWords = useMemo(() => (amount && amount > 0 ? toWords(amount) : ""), [amount]);
+  const amt = amount || 0;
+
+  const S = {
+    root: { fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000", lineHeight: "1.25" } as React.CSSProperties,
+    tbl: { width: "100%", borderCollapse: "collapse" as const, tableLayout: "fixed" as const } as React.CSSProperties,
+    td: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const } as React.CSSProperties,
+    tdC: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const, textAlign: "center" as const } as React.CSSProperties,
+    tdR: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5pt", verticalAlign: "top" as const, textAlign: "right" as const } as React.CSSProperties,
+    b: { fontWeight: "bold" } as React.CSSProperties,
+    uline: { display: "inline-block", borderBottom: "1px solid #000", minWidth: "100px", marginLeft: "4px" } as React.CSSProperties,
+    sigLine: { borderBottom: "1px solid #000", minHeight: "18px", marginBottom: "1px", fontSize: "8.5pt" } as React.CSSProperties,
+    sigLabel: { fontSize: "7.5pt" } as React.CSSProperties,
+  };
+
+  return (
+    <div style={S.root}>
+      <div style={{ textAlign: "right", fontStyle: "italic", fontSize: "9pt", marginBottom: "4px" }}>Appendix 11</div>
+      <table style={{ ...S.tbl, borderCollapse: "collapse" }}>
+        <colgroup><col style={{ width: "62%" }} /><col style={{ width: "38%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, verticalAlign: "middle", padding: "6px 8px" }} rowSpan={3}>
+              <div style={{ fontWeight: "bold", fontSize: "11pt", textAlign: "center", marginBottom: "6px" }}>OBLIGATION REQUEST AND STATUS</div>
+              <div style={{ textAlign: "center" }}><span style={S.uline}>{entityName || ""}</span></div>
+              <div style={{ textAlign: "center", fontSize: "8.5pt", fontWeight: "bold", marginTop: "2px" }}>Entity Name</div>
+            </td>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Serial No. : </span><span style={{ ...S.uline, minWidth: "100px" }}>{orsNo || ""}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Date : </span><span style={{ ...S.uline, minWidth: "100px" }}>{displayDate}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
+              <span style={S.b}>Fund Cluster : </span><span style={{ ...S.uline, minWidth: "80px" }}>{fundCluster || ""}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "14%" }} /><col style={{ width: "86%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Payee</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>{payee || ""}</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Office</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>{office || ""}</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Address</td>
+            <td style={{ ...S.td, padding: "3px 6px" }}>{payeeAddress || ""}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "14%" }} /><col style={{ width: "36%" }} /><col style={{ width: "12%" }} /><col style={{ width: "15%" }} /><col style={{ width: "23%" }} /></colgroup>
+        <thead>
+          <tr>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Responsibility Center</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Particulars</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>MFO/PAP</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>UACS Object Code</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...S.tdC, height: "90px", verticalAlign: "top", paddingTop: "4px" }}>{responsibilityCenter || ""}</td>
+            <td style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>{particulars || ""}</td>
+            <td style={{ ...S.tdC, verticalAlign: "top" }}>{mfoPap || ""}</td>
+            <td style={{ ...S.tdC, verticalAlign: "top" }}>{uacsCode || ""}</td>
+            <td style={{ ...S.tdR, verticalAlign: "top" }}>{amt > 0 ? fmt(amt) : ""}</td>
+          </tr>
+          <tr>
+            <td colSpan={4} style={{ ...S.tdR, ...S.b, fontSize: "8pt" }}>Total</td>
+            <td style={{ ...S.tdR, ...S.b }}>{amt > 0 ? fmt(amt) : ""}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup><col style={{ width: "50%" }} /><col style={{ width: "50%" }} /></colgroup>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
+              <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
+                <span style={S.b}>A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Printed Name:</span>
+                <div style={{ ...S.sigLine, fontWeight: "normal" }}>{preparedByName || ""}</div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={{ ...S.sigLine }}>{preparedByDesig || ""}</div>
+              </div>
+              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>Head, Requesting Office/Authorized Representative</div>
+              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
+                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+            </td>
+            <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
+              <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
+                <span style={S.b}>B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Printed Name:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>Head, Budget Division/Unit/Authorized Representative</div>
+              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
+                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, ...S.b, fontSize: "8pt", padding: "3px 6px" }}>C.</td>
+            <td colSpan={7} style={{ ...S.tdC, ...S.b, fontSize: "9pt", letterSpacing: "1px" }}>STATUS OF OBLIGATION</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup>
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "22%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "9%" }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <td colSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Reference</td>
+            <td colSpan={5} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Date</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Particulars</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>ORS/JEV/Check/<br />ADA/TRA No.</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Obligation</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payable</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payment</td>
+            <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Balance</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(a)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(b)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(c)</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due<br />(a-b)</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and Demandable<br />(b-c)</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, height: "28px", fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.td, fontSize: "7.5pt", wordBreak: "break-word" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, height: "18px" }}></td>
+            <td style={S.td}></td>
+            <td style={S.td}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+          </tr>
+          <tr>
+            <td colSpan={6} style={{ ...S.tdR, ...S.b, fontSize: "7.5pt" }}>Balance</td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Amount in words note */}
+      {amt > 0 && (
+        <div style={{ marginTop: "4px", fontSize: "7.5pt", fontStyle: "italic" }}>
+          Amount in Words: <strong>{amountWords}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Static PO Preview - read-only display for print
 function POPreview({
   poNo,
@@ -538,6 +782,233 @@ async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'OR
   }
 }
 
+// ORS Print HTML builder - matches ORSPreview exactly
+function buildORSPrintHtml(data: {
+  orsNo: string | null;
+  orsDate: string | null;
+  entityName: string | null;
+  payee: string | null;
+  payeeAddress: string | null;
+  office: string | null;
+  fundCluster: string | null;
+  responsibilityCenter: string | null;
+  particulars: string | null;
+  mfoPap: string | null;
+  uacsCode: string | null;
+  amount: number | null;
+  preparedByName: string | null;
+  preparedByDesig: string | null;
+}) {
+  const fmt = (n: number) => n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const displayDate = data.orsDate
+    ? new Date(data.orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+  const amt = data.amount || 0;
+  const amountWords = amt > 0 ? toWords(amt) : "";
+
+  const escapeHtml = (value: string | null) => {
+    if (!value) return "";
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OBLIGATION REQUEST AND STATUS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px; font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000; line-height: 1.25; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th { border: 1px solid #000; }
+    .b { font-weight: bold; }
+    .c { text-align: center; }
+    .r { text-align: right; }
+    .uline { display: inline-block; border-bottom: 1px solid #000; min-width: 100px; margin-left: 4px; }
+    .sig-line { border-bottom: 1px solid #000; min-height: 18px; margin-bottom: 1px; font-size: 8.5pt; }
+    .sig-label { font-size: 7.5pt; }
+  </style>
+</head>
+<body>
+  <div style="text-align:right;font-style:italic;font-size:9pt;margin-bottom:4px">Appendix 11</div>
+  
+  <table>
+    <colgroup><col style="width:62%"/><col style="width:38%"/></colgroup>
+    <tbody>
+      <tr>
+        <td style="vertical-align:middle;padding:6px 8px" rowspan="3">
+          <div style="font-weight:bold;font-size:11pt;text-align:center;margin-bottom:6px">OBLIGATION REQUEST AND STATUS</div>
+          <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
+          <div style="text-align:center;font-size:8.5pt;font-weight:bold;margin-top:2px">Entity Name</div>
+        </td>
+        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">Serial No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
+      </tr>
+      <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Date : </span><span class="uline" style="min-width:100px">${escapeHtml(displayDate)}</span></td></tr>
+      <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Fund Cluster : </span><span class="uline" style="min-width:80px">${escapeHtml(data.fundCluster)}</span></td></tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:14%"/><col style="width:86%"/></colgroup>
+    <tbody>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Payee</td><td style="padding:3px 6px">${escapeHtml(data.payee)}</td></tr>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Office</td><td style="padding:3px 6px">${escapeHtml(data.office)}</td></tr>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Address</td><td style="padding:3px 6px">${escapeHtml(data.payeeAddress)}</td></tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:14%"/><col style="width:36%"/><col style="width:12%"/><col style="width:15%"/><col style="width:23%"/></colgroup>
+    <thead>
+      <tr>
+        <td class="c b" style="font-size:7.5pt">Responsibility Center</td>
+        <td class="c b" style="font-size:7.5pt">Particulars</td>
+        <td class="c b" style="font-size:7.5pt">MFO/PAP</td>
+        <td class="c b" style="font-size:7.5pt">UACS Object Code</td>
+        <td class="c b" style="font-size:7.5pt">Amount</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="c" style="height:90px;vertical-align:top;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
+        <td style="vertical-align:top;word-break:break-word">${escapeHtml(data.particulars)}</td>
+        <td class="c" style="vertical-align:top">${escapeHtml(data.mfoPap)}</td>
+        <td class="c" style="vertical-align:top">${escapeHtml(data.uacsCode)}</td>
+        <td class="r" style="vertical-align:top">${amt > 0 ? fmt(amt) : ""}</td>
+      </tr>
+      <tr>
+        <td colspan="4" class="r b" style="font-size:8pt">Total</td>
+        <td class="r b">${amt > 0 ? fmt(amt) : ""}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:50%"/><col style="width:50%"/></colgroup>
+    <tbody>
+      <tr>
+        <td style="padding:5px 7px;vertical-align:top">
+          <div style="font-size:8pt;margin-bottom:6px"><span class="b">A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal</div>
+          <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+          <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line" style="font-weight:normal">${escapeHtml(data.preparedByName)}</div></div>
+          <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line">${escapeHtml(data.preparedByDesig)}</div></div>
+          <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Requesting Office/Authorized Representative</div>
+          <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+        </td>
+        <td style="padding:5px 7px;vertical-align:top">
+          <div style="font-size:8pt;margin-bottom:6px"><span class="b">B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above</div>
+          <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+          <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line"></div></div>
+          <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+          <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Budget Division/Unit/Authorized Representative</div>
+          <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <tbody>
+      <tr>
+        <td class="b" style="font-size:8pt;padding:3px 6px">C.</td>
+        <td colspan="7" class="c b" style="font-size:9pt;letter-spacing:1px">STATUS OF OBLIGATION</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:-1px">
+    <colgroup><col style="width:10%"/><col style="width:22%"/><col style="width:16%"/><col style="width:13%"/><col style="width:10%"/><col style="width:10%"/><col style="width:10%"/><col style="width:9%"/></colgroup>
+    <thead>
+      <tr><td colspan="3" class="c b" style="font-size:7.5pt">Reference</td><td colspan="5" class="c b" style="font-size:7.5pt">Amount</td></tr>
+      <tr>
+        <td class="c b" style="font-size:7pt">Date</td>
+        <td class="c b" style="font-size:7pt">Particulars</td>
+        <td class="c b" style="font-size:7pt">ORS/JEV/Check/<br/>ADA/TRA No.</td>
+        <td class="c b" style="font-size:7pt">Obligation</td>
+        <td class="c b" style="font-size:7pt">Payable</td>
+        <td class="c b" style="font-size:7pt">Payment</td>
+        <td colspan="2" class="c b" style="font-size:7pt">Balance</td>
+      </tr>
+      <tr>
+        <td class="c" style="font-size:7pt"></td>
+        <td class="c" style="font-size:7pt"></td>
+        <td class="c" style="font-size:7pt"></td>
+        <td class="c" style="font-size:7pt">(a)</td>
+        <td class="c" style="font-size:7pt">(b)</td>
+        <td class="c" style="font-size:7pt">(c)</td>
+        <td class="c b" style="font-size:7pt">Not Yet Due<br/>(a-b)</td>
+        <td class="c b" style="font-size:7pt">Due and Demandable<br/>(b-c)</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="height:28px;font-size:7.5pt"></td>
+        <td style="font-size:7.5pt;word-break:break-word"></td>
+        <td class="c" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+      </tr>
+      <tr><td style="height:18px"></td><td></td><td></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
+      <tr>
+        <td colspan="6" class="r b" style="font-size:7.5pt">Balance</td>
+        <td class="r" style="font-size:7.5pt"></td>
+        <td class="r" style="font-size:7.5pt"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  ${amt > 0 ? `<div style="margin-top:4px;font-size:7.5pt;font-style:italic">Amount in Words: <strong>${amountWords}</strong></div>` : ""}
+</body>
+</html>`;
+}
+
+function downloadORS(data: {
+  orsNo: string | null;
+  orsDate: string | null;
+  entityName: string | null;
+  payee: string | null;
+  payeeAddress: string | null;
+  office: string | null;
+  fundCluster: string | null;
+  responsibilityCenter: string | null;
+  particulars: string | null;
+  mfoPap: string | null;
+  uacsCode: string | null;
+  amount: number | null;
+  preparedByName: string | null;
+  preparedByDesig: string | null;
+  currentUserFullname?: string;
+  currentUserId?: number | null;
+  poId?: number | null;
+}) {
+  if (data.currentUserFullname) {
+    postPrintRemark(data.currentUserFullname, 'ORS', data.currentUserId, data.poId);
+  }
+  
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+  printWindow.document.write(buildORSPrintHtml(data));
+  printWindow.document.close();
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+  };
+  setTimeout(() => {
+    if (printWindow.document.readyState === "complete") {
+      printWindow.focus();
+      printWindow.print();
+    }
+  }, 300);
+}
+
 function downloadPDF(data: {
   poNo: string;
   poId: number | null;
@@ -586,7 +1057,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
   const [loading, setLoading] = useState(true);
   const [poHeader, setPoHeader] = useState<PurchaseOrderRow | null>(null);
   const [poItems, setPoItems] = useState<PurchaseOrderItemRow[]>([]);
-  const [tab, setTab] = useState<"form" | "preview">("form");
+  const [tab, setTab] = useState<"po" | "ors">("po");
+  const hasORS = (poHeader?.status_id ?? 0) >= 13; // ORS Creation or beyond
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
@@ -641,24 +1113,26 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
             <p className="text-emerald-100 text-sm mt-1">Appendix 61 · Official Government Form</p>
           </div>
           <div className="flex items-center gap-4">
-            {/* Tab Toggle */}
+            {/* Tab Toggle — PO / ORS */}
             <div className="flex bg-white/20 rounded-lg overflow-hidden border border-white/30 backdrop-blur">
               <button
-                onClick={() => setTab("form")}
+                onClick={() => setTab("po")}
                 className={`px-5 py-2 text-sm font-semibold transition-all ${
-                  tab === "form" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
+                  tab === "po" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
                 }`}
               >
-                Form
+                PO
               </button>
-              <button
-                onClick={() => setTab("preview")}
-                className={`px-5 py-2 text-sm font-semibold transition-all ${
-                  tab === "preview" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
-                }`}
-              >
-                Preview
-              </button>
+              {hasORS && (
+                <button
+                  onClick={() => setTab("ors")}
+                  className={`px-5 py-2 text-sm font-semibold transition-all ${
+                    tab === "ors" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  ORS
+                </button>
+              )}
             </div>
             <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
               <RiCloseLine size={24} />
@@ -669,28 +1143,31 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
 
-          {/* Form Side — read-only */}
-          <div className={`${tab === "form" ? "flex" : "hidden"} md:flex flex-[2] flex-col overflow-hidden border-r border-gray-200`}>
-            {loading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="space-y-3 w-full px-8">
-                  {[...Array(8)].map((_, i) => (
-                    <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              </div>
-            ) : !poHeader ? (
-              <div className="flex-1 flex items-center justify-center text-red-500 font-semibold">
-                Failed to load Purchase Order.
-              </div>
-            ) : (
-              <>
-                <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
-
-                  {/* View-only notice */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
-                    <span>👁</span> This is a read-only view. No changes can be made.
+          {/* PO Tab — Two columns: Form fields (left) + Preview (right) */}
+          {tab === "po" && (
+            <>
+              {/* PO Form Fields — Left */}
+              <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
+                {loading ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="space-y-3 w-full px-8">
+                      {[...Array(8)].map((_, i) => (
+                        <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
                   </div>
+                ) : !poHeader ? (
+                  <div className="flex-1 flex items-center justify-center text-red-500 font-semibold">
+                    Failed to load Purchase Order.
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
+
+                      {/* View-only notice */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
+                        <span>👁</span> Viewing PO details. {hasORS ? "Switch to ORS tab for ORS information." : "ORS not yet created."}
+                      </div>
 
                   {/* Header Information */}
                   <div>
@@ -891,11 +1368,11 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
             )}
           </div>
 
-          {/* Preview Side */}
-          <div className={`${tab === "preview" ? "flex" : "hidden"} md:flex flex-[3] overflow-y-auto bg-gray-100 flex-col`}>
+          {/* PO Preview — Right */}
+          <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">PO PREVIEW</h3>
                 {poHeader && (
                   <button
                     onClick={() =>
@@ -957,6 +1434,224 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
               )}
             </div>
           </div>
+        </>
+      )}
+
+      {/* ORS Tab — Two column: ORS Form fields (left) + ORS Preview (right) */}
+          {tab === "ors" && (
+            <>
+              {/* ORS Form Fields */}
+              <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
+                {loading ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="space-y-3 w-full px-8">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  </div>
+                ) : !poHeader ? (
+                  <div className="flex-1 flex items-center justify-center text-red-500 font-semibold">
+                    Failed to load ORS data.
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
+                      {/* ORS Notice */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700 font-medium">
+                        <span>📄</span> Viewing ORS details for PO #{poHeader.po_no}
+                      </div>
+
+                      {/* ORS Header Info */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">ORS Information</h3>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Number</label>
+                              <input className={readonlyCls} value={poHeader.ors_no || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Date</label>
+                              <input className={readonlyCls} value={poHeader.ors_date || ""} readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name</label>
+                            <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Fund Cluster</label>
+                              <input className={readonlyCls} value={poHeader.fund_cluster || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center</label>
+                              <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payee Info */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Payee Information</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Payee Name</label>
+                            <input className={readonlyCls} value={poHeader.supplier || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office</label>
+                            <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address</label>
+                            <input className={readonlyCls} value={poHeader.address || ""} readOnly tabIndex={-1} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ORS Details */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Obligation Details</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Particulars</label>
+                            <textarea className={`${readonlyCls} min-h-[80px]`} value={poHeader.procurement_mode || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">MFO/PAP</label>
+                              <input className={readonlyCls} value={poHeader.fund_cluster || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">UACS Code</label>
+                              <input className={readonlyCls} value="5010101000" readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Amount</label>
+                            <input className={`${readonlyCls} bg-emerald-50 font-bold text-emerald-700`} value={poHeader.ors_amount != null ? formatMoney(poHeader.ors_amount) : ""} readOnly tabIndex={-1} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Signatories */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Signatories</h3>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Certified By (Head)</label>
+                              <input className={readonlyCls} value={poHeader.official_name || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Designation</label>
+                              <input className={readonlyCls} value={poHeader.official_desig || ""} readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+                      <button
+                        onClick={() =>
+                          downloadORS({
+                            orsNo: poHeader.ors_no,
+                            orsDate: poHeader.ors_date,
+                            entityName: poHeader.office_section,
+                            payee: poHeader.supplier,
+                            payeeAddress: poHeader.address,
+                            office: poHeader.office_section,
+                            fundCluster: poHeader.fund_cluster,
+                            responsibilityCenter: poHeader.office_section,
+                            particulars: poHeader.procurement_mode,
+                            mfoPap: poHeader.fund_cluster,
+                            uacsCode: "5010101000",
+                            amount: poHeader.ors_amount,
+                            preparedByName: poHeader.official_name,
+                            preparedByDesig: poHeader.official_desig,
+                            currentUserFullname,
+                            currentUserId,
+                            poId: poHeader.id,
+                          })
+                        }
+                        className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
+                      >
+                        <RiFilePdf2Line size={18} /> Download PDF
+                      </button>
+                      <button
+                        onClick={onClose}
+                        className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg transition-colors"
+                      >
+                        <RiCloseLine size={18} /> Close
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* ORS Preview */}
+              <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
+                <div className="flex-1 overflow-y-auto p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">ORS PREVIEW</h3>
+                    {poHeader && (
+                      <button
+                        onClick={() =>
+                          downloadORS({
+                            orsNo: poHeader.ors_no,
+                            orsDate: poHeader.ors_date,
+                            entityName: poHeader.office_section,
+                            payee: poHeader.supplier,
+                            payeeAddress: poHeader.address,
+                            office: poHeader.office_section,
+                            fundCluster: poHeader.fund_cluster,
+                            responsibilityCenter: poHeader.office_section,
+                            particulars: poHeader.procurement_mode,
+                            mfoPap: poHeader.fund_cluster,
+                            uacsCode: "5010101000",
+                            amount: poHeader.ors_amount,
+                            preparedByName: poHeader.official_name,
+                            preparedByDesig: poHeader.official_desig,
+                            currentUserFullname,
+                            currentUserId,
+                            poId: poHeader.id,
+                          })
+                        }
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <RiFilePdf2Line size={16} /> PDF
+                      </button>
+                    )}
+                  </div>
+                  {poHeader && (
+                    <div className="bg-white rounded-lg shadow-lg p-8 text-black">
+                      <ORSPreview
+                        orsNo={poHeader.ors_no}
+                        orsDate={poHeader.ors_date}
+                        entityName={poHeader.office_section}
+                        payee={poHeader.supplier}
+                        payeeAddress={poHeader.address}
+                        office={poHeader.office_section}
+                        fundCluster={poHeader.fund_cluster}
+                        responsibilityCenter={poHeader.office_section}
+                        particulars={poHeader.procurement_mode}
+                        mfoPap={poHeader.fund_cluster}
+                        uacsCode="5010101000"
+                        amount={poHeader.ors_amount}
+                        preparedByName={poHeader.official_name}
+                        preparedByDesig={poHeader.official_desig}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

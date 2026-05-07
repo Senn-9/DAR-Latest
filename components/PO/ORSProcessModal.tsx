@@ -363,7 +363,11 @@ function ORSEditablePreview({
           <tr>
             <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
               <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
-                <span style={S.b}>A. Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal
+                <span style={S.b}>A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
               </div>
               <div style={{ marginBottom: "3px" }}>
                 <span style={S.sigLabel}>Printed Name:</span>
@@ -376,7 +380,7 @@ function ORSEditablePreview({
                 />
               </div>
               <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Position :</span>
+                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
                 <input
                   type="text"
                   value={preparedByDesig}
@@ -385,12 +389,112 @@ function ORSEditablePreview({
                   style={{ ...S.sigLine, width: "70%" }}
                 />
               </div>
+              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
+                Head, Requesting Office/Authorized Representative
+              </div>
+              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
+                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
             </td>
             <td style={{ ...S.td, padding: "5px 7px", verticalAlign: "top" }}>
               <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
-                <span style={S.b}>B. Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above
+                <span style={S.b}>B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Printed Name:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ marginBottom: "3px" }}>
+                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
+              </div>
+              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
+                Head, Budget Division/Unit/Authorized Representative
+              </div>
+              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
+                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                <div style={S.sigLine}></div>
               </div>
             </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, ...S.b, fontSize: "8pt", padding: "3px 6px" }}>C.</td>
+            <td colSpan={7} style={{ ...S.tdC, ...S.b, fontSize: "9pt", letterSpacing: "1px" }}>STATUS OF OBLIGATION</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+        <colgroup>
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "22%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "9%" }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <td colSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Reference</td>
+            <td colSpan={5} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Date</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Particulars</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>ORS/JEV/Check/<br />ADA/TRA No.</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Obligation</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payable</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payment</td>
+            <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Balance</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(a)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(b)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(c)</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due<br />(a-b)</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and Demandable<br />(b-c)</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...S.td, height: "28px", fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.td, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdC, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+          </tr>
+          <tr>
+            <td style={{ ...S.td, height: "18px" }}></td>
+            <td style={S.td}></td>
+            <td style={S.td}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
+          </tr>
+          <tr>
+            <td colSpan={6} style={{ ...S.tdR, ...S.b, fontSize: "7.5pt" }}>Balance</td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
           </tr>
         </tbody>
       </table>
@@ -675,44 +779,35 @@ function ORSPreview({
         </tbody>
       </table>
 
-      {/* ══════════════════════════════════════════════════════
-          C. STATUS OF OBLIGATION — header row
-      ══════════════════════════════════════════════════════ */}
       <table style={{ ...S.tbl, marginTop: "-1px" }}>
         <tbody>
           <tr>
             <td style={{ ...S.td, ...S.b, fontSize: "8pt", padding: "3px 6px" }}>
               C.
             </td>
-            <td colSpan={6} style={{ ...S.tdC, ...S.b, fontSize: "9pt", letterSpacing: "1px" }}>
+            <td colSpan={7} style={{ ...S.tdC, ...S.b, fontSize: "9pt", letterSpacing: "1px" }}>
               STATUS OF OBLIGATION
             </td>
           </tr>
         </tbody>
       </table>
 
-      {/* ══════════════════════════════════════════════════════
-          Status of Obligation detail table — 7 columns:
-          Date | Particulars | ORS/JEV/Check/ADA/TRA No. |
-          Obligation(a) | Payable(b) | Payment(c) | Balance [Not Yet Due(a-b) | Due&Demandable(b-c)]
-      ══════════════════════════════════════════════════════ */}
       <table style={{ ...S.tbl, marginTop: "-1px" }}>
         <colgroup>
           <col style={{ width: "10%" }} />
           <col style={{ width: "22%" }} />
           <col style={{ width: "16%" }} />
           <col style={{ width: "13%" }} />
-          <col style={{ width: "13%" }} />
-          <col style={{ width: "13%" }} />
-          <col style={{ width: "13%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "9%" }} />
         </colgroup>
         <thead>
-          {/* Top sub-header: Reference | Amount */}
           <tr>
             <td colSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Reference</td>
-            <td colSpan={4} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
+            <td colSpan={5} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
           </tr>
-          {/* Column labels */}
           <tr>
             <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Date</td>
             <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Particulars</td>
@@ -720,10 +815,8 @@ function ORSPreview({
             <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Obligation</td>
             <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payable</td>
             <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payment</td>
-            {/* Balance splits into two sub-cols */}
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Balance</td>
+            <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Balance</td>
           </tr>
-          {/* (a) (b) (c) row + Balance sub-labels */}
           <tr>
             <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
             <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
@@ -731,11 +824,11 @@ function ORSPreview({
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(a)</td>
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(b)</td>
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(c)</td>
-            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due<br />(a-b)</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and Demandable<br />(b-c)</td>
           </tr>
         </thead>
         <tbody>
-          {/* Data row */}
           <tr>
             <td style={{ ...S.td, height: "28px", fontSize: "7.5pt" }}>{displayDate}</td>
             <td style={{ ...S.td, fontSize: "7.5pt", wordBreak: "break-word" }}>{particulars}</td>
@@ -744,8 +837,8 @@ function ORSPreview({
             <td style={{ ...S.tdR, fontSize: "7.5pt" }}>{payableAmount > 0 ? fmt(payableAmount) : ""}</td>
             <td style={{ ...S.tdR, fontSize: "7.5pt" }}>{paymentAmount > 0 ? fmt(paymentAmount) : ""}</td>
             <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
           </tr>
-          {/* Empty filler row */}
           <tr>
             <td style={{ ...S.td, height: "18px" }}></td>
             <td style={S.td}></td>
@@ -754,20 +847,14 @@ function ORSPreview({
             <td style={S.tdR}></td>
             <td style={S.tdR}></td>
             <td style={S.tdR}></td>
+            <td style={S.tdR}></td>
           </tr>
-          {/* Not Yet Due / Due and Demandable sub-header */}
           <tr>
-            <td colSpan={3} style={{ ...S.td }}></td>
-            <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due<br />(a-b)</td>
-            <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and Demandable<br />(b-c)</td>
-          </tr>
-          {/* Balance values */}
-          <tr>
-            <td colSpan={3} style={{ ...S.tdR, ...S.b, fontSize: "7.5pt" }}>Balance</td>
-            <td colSpan={2} style={{ ...S.tdR, fontSize: "7.5pt" }}>
+            <td colSpan={6} style={{ ...S.tdR, ...S.b, fontSize: "7.5pt" }}>Balance</td>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}>
               {notYetDueBalance > 0 ? fmt(notYetDueBalance) : ""}
             </td>
-            <td colSpan={2} style={{ ...S.tdR, fontSize: "7.5pt" }}>
+            <td style={{ ...S.tdR, fontSize: "7.5pt" }}>
               {dueDemandableBalance > 0 ? fmt(dueDemandableBalance) : ""}
             </td>
           </tr>
@@ -926,14 +1013,14 @@ function buildORSPrintHtml(data: {
 
     <table style="margin-top:-1px">
       <tbody>
-        <tr><td class="b" style="font-size:8pt;padding:3px 6px">C.</td><td colspan="6" class="c b" style="font-size:9pt;letter-spacing:1px">STATUS OF OBLIGATION</td></tr>
+        <tr><td class="b" style="font-size:8pt;padding:3px 6px">C.</td><td colspan="7" class="c b" style="font-size:9pt;letter-spacing:1px">STATUS OF OBLIGATION</td></tr>
       </tbody>
     </table>
 
     <table style="margin-top:-1px">
-      <colgroup><col style="width:10%"/><col style="width:22%"/><col style="width:16%"/><col style="width:13%"/><col style="width:13%"/><col style="width:13%"/><col style="width:13%"/></colgroup>
+      <colgroup><col style="width:10%"/><col style="width:22%"/><col style="width:16%"/><col style="width:13%"/><col style="width:10%"/><col style="width:10%"/><col style="width:10%"/><col style="width:9%"/></colgroup>
       <thead>
-        <tr><td colspan="3" class="c b" style="font-size:7.5pt">Reference</td><td colspan="4" class="c b" style="font-size:7.5pt">Amount</td></tr>
+        <tr><td colspan="3" class="c b" style="font-size:7.5pt">Reference</td><td colspan="5" class="c b" style="font-size:7.5pt">Amount</td></tr>
         <tr>
           <td class="c b" style="font-size:7pt">Date</td>
           <td class="c b" style="font-size:7pt">Particulars</td>
@@ -941,9 +1028,9 @@ function buildORSPrintHtml(data: {
           <td class="c b" style="font-size:7pt">Obligation</td>
           <td class="c b" style="font-size:7pt">Payable</td>
           <td class="c b" style="font-size:7pt">Payment</td>
-          <td class="c b" style="font-size:7pt">Balance</td>
+          <td colspan="2" class="c b" style="font-size:7pt">Balance</td>
         </tr>
-        <tr><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt">(a)</td><td class="c" style="font-size:7pt">(b)</td><td class="c" style="font-size:7pt">(c)</td><td class="c" style="font-size:7pt"></td></tr>
+        <tr><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt"></td><td class="c" style="font-size:7pt">(a)</td><td class="c" style="font-size:7pt">(b)</td><td class="c" style="font-size:7pt">(c)</td><td class="c b" style="font-size:7pt">Not Yet Due<br/>(a-b)</td><td class="c b" style="font-size:7pt">Due and Demandable<br/>(b-c)</td></tr>
       </thead>
       <tbody>
         <tr>
@@ -954,17 +1041,13 @@ function buildORSPrintHtml(data: {
           <td class="r" style="font-size:7.5pt">${data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
           <td class="r" style="font-size:7.5pt">${data.paymentAmount > 0 ? fmt(data.paymentAmount) : ""}</td>
           <td class="r" style="font-size:7.5pt"></td>
+          <td class="r" style="font-size:7.5pt"></td>
         </tr>
-        <tr><td style="height:18px"></td><td></td><td></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
+        <tr><td style="height:18px"></td><td></td><td></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
         <tr>
-          <td colspan="3"></td>
-          <td colspan="2" class="c b" style="font-size:7pt">Not Yet Due<br/>(a-b)</td>
-          <td colspan="2" class="c b" style="font-size:7pt">Due and Demandable<br/>(b-c)</td>
-        </tr>
-        <tr>
-          <td colspan="3" class="r b" style="font-size:7.5pt">Balance</td>
-          <td colspan="2" class="r" style="font-size:7.5pt">${data.notYetDueBalance > 0 ? fmt(data.notYetDueBalance) : ""}</td>
-          <td colspan="2" class="r" style="font-size:7.5pt">${data.dueDemandableBalance > 0 ? fmt(data.dueDemandableBalance) : ""}</td>
+          <td colspan="6" class="r b" style="font-size:7.5pt">Balance</td>
+          <td class="r" style="font-size:7.5pt">${data.notYetDueBalance > 0 ? fmt(data.notYetDueBalance) : ""}</td>
+          <td class="r" style="font-size:7.5pt">${data.dueDemandableBalance > 0 ? fmt(data.dueDemandableBalance) : ""}</td>
         </tr>
       </tbody>
     </table>

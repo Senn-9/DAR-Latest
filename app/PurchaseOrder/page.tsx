@@ -8,7 +8,7 @@ import CreatePOModal from "../../components/PO/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
 import ORSProcessModal from "@/components/PO/ORSProcessModal";
-import Viewpomodal from "@/components/Viewpomodal";
+import Viewpomodal from "@/components/PO/Viewpomodal";
 import {
   fetchPOWithItemsById,
   fetchPurchaseOrders,
