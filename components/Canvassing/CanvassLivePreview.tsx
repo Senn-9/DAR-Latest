@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { RiCloseLine, RiPrinterLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiDraggable } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printRFQ } from "./printRFQ";
@@ -42,6 +42,20 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	});
 
 	const [items, setItems] = useState<ItemRow[]>([]);
+	const [columnWidths, setColumnWidths] = useState({
+		itemNo: 60,
+		description: 380,
+		qty: 60,
+		unit: 70,
+		unitPrice: 100,
+		action: 60,
+	});
+	const [rowHeights, setRowHeights] = useState<{ [key: number]: number }>({});
+	const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+	const [resizingRow, setResizingRow] = useState<number | null>(null);
+	const [startX, setStartX] = useState(0);
+	const [startY, setStartY] = useState(0);
+	const tableRef = useRef<HTMLTableElement>(null);
 
 	const handleMetaChange = (k: keyof typeof meta, v: string) => {
 		setMeta((prev) => ({ ...prev, [k]: v }));
@@ -75,6 +89,51 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 			return next;
 		});
 	};
+
+	const handleMouseDownColumn = (e: React.MouseEvent, column: string) => {
+		setResizingColumn(column);
+		setStartX(e.clientX);
+	};
+
+	const handleMouseDownRow = (e: React.MouseEvent, index: number) => {
+		setResizingRow(index);
+		setStartY(e.clientY);
+	};
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			if (resizingColumn) {
+				const diff = e.clientX - startX;
+				setColumnWidths((prev) => ({
+					...prev,
+					[resizingColumn]: Math.max(50, prev[resizingColumn as keyof typeof prev] + diff),
+				}));
+				setStartX(e.clientX);
+			}
+			if (resizingRow !== null) {
+				const diff = e.clientY - startY;
+				setRowHeights((prev) => ({
+					...prev,
+					[resizingRow]: Math.max(28, (prev[resizingRow] || 28) + diff),
+				}));
+				setStartY(e.clientY);
+			}
+		};
+
+		const handleMouseUp = () => {
+			setResizingColumn(null);
+			setResizingRow(null);
+		};
+
+		if (resizingColumn || resizingRow !== null) {
+			document.addEventListener("mousemove", handleMouseMove);
+			document.addEventListener("mouseup", handleMouseUp);
+			return () => {
+				document.removeEventListener("mousemove", handleMouseMove);
+				document.removeEventListener("mouseup", handleMouseUp);
+			};
+		}
+	}, [resizingColumn, resizingRow, startX, startY]);
 
 	const handlePrint = () => {
 		printRFQ({ ...meta, prNo }, items);
@@ -353,21 +412,76 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 								<RiAddLine size={14} /> Add Row
 							</button>
 						</div>
-						<table className="w-full border-collapse border border-black text-[9.5px]">
+						<table ref={tableRef} className="w-full border-collapse border border-black text-[9.5px]">
 							<thead>
 								<tr>
-									<th className="border border-black p-1 text-center w-[6%] font-bold">ITEM NO.</th>
-									<th className="border border-black p-1 text-center w-[54%] font-bold">ITEM(S) & DESCRIPTION(S)</th>
-									<th className="border border-black p-1 text-center w-[8%] font-bold">QTY</th>
-									<th className="border border-black p-1 text-center w-[10%] font-bold">UNIT</th>
-									<th className="border border-black p-1 text-center w-[14%] font-bold">UNIT PRICE</th>
-									<th className="border border-black p-1 text-center w-[8%] font-bold">ACTION</th>
+									<th
+										style={{ width: columnWidths.itemNo }}
+										className="border border-black p-1 text-center font-bold relative"
+									>
+										ITEM NO.
+										<div
+											onMouseDown={(e) => handleMouseDownColumn(e, "itemNo")}
+											className="absolute right-0 top-0 h-full w-1 bg-gray-400 hover:bg-blue-600 cursor-col-resize transition-colors"
+											title="Drag to resize"
+										/>
+									</th>
+									<th
+										style={{ width: columnWidths.description }}
+										className="border border-black p-1 text-center font-bold relative"
+									>
+										ITEM(S) & DESCRIPTION(S)
+										<div
+											onMouseDown={(e) => handleMouseDownColumn(e, "description")}
+											className="absolute right-0 top-0 h-full w-1 bg-gray-400 hover:bg-blue-600 cursor-col-resize transition-colors"
+											title="Drag to resize"
+										/>
+									</th>
+									<th
+										style={{ width: columnWidths.qty }}
+										className="border border-black p-1 text-center font-bold relative"
+									>
+										QTY
+										<div
+											onMouseDown={(e) => handleMouseDownColumn(e, "qty")}
+											className="absolute right-0 top-0 h-full w-1 bg-gray-400 hover:bg-blue-600 cursor-col-resize transition-colors"
+											title="Drag to resize"
+										/>
+									</th>
+									<th
+										style={{ width: columnWidths.unit }}
+										className="border border-black p-1 text-center font-bold relative"
+									>
+										UNIT
+										<div
+											onMouseDown={(e) => handleMouseDownColumn(e, "unit")}
+											className="absolute right-0 top-0 h-full w-1 bg-gray-400 hover:bg-blue-600 cursor-col-resize transition-colors"
+											title="Drag to resize"
+										/>
+									</th>
+									<th
+										style={{ width: columnWidths.unitPrice }}
+										className="border border-black p-1 text-center font-bold relative"
+									>
+										UNIT PRICE
+										<div
+											onMouseDown={(e) => handleMouseDownColumn(e, "unitPrice")}
+											className="absolute right-0 top-0 h-full w-1 bg-gray-400 hover:bg-blue-600 cursor-col-resize transition-colors"
+											title="Drag to resize"
+										/>
+									</th>
+									<th
+										style={{ width: columnWidths.action }}
+										className="border border-black p-1 text-center font-bold"
+									>
+										ACTION
+									</th>
 								</tr>
 							</thead>
 							<tbody>
 								{items.map((item, i) => (
-								<tr key={i} className="h-7">
-									<td className="border border-black p-0.5 text-center">
+								<tr key={i} style={{ height: rowHeights[i] || "auto" }} className="relative">
+									<td style={{ width: columnWidths.itemNo }} className="border border-black p-0.5 text-center">
 										<div className="flex items-center justify-center gap-0.5">
 											<button
 												type="button"
@@ -395,35 +509,35 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 											className="w-full outline-none text-center bg-transparent mt-0.5"
 										/>
 									</td>
-									<td className="border border-black p-0.5">
+									<td style={{ width: columnWidths.description }} className="border border-black p-0.5">
 										<input
 											value={item.description}
 											onChange={(e) => handleItemChange(i, "description", e.target.value)}
 											className="w-full outline-none bg-transparent px-1"
 										/>
 									</td>
-									<td className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.qty }} className="border border-black p-0.5 text-center">
 										<input
 											value={item.quantity}
 											onChange={(e) => handleItemChange(i, "quantity", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.unit }} className="border border-black p-0.5 text-center">
 										<input
 											value={item.unit}
 											onChange={(e) => handleItemChange(i, "unit", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.unitPrice }} className="border border-black p-0.5 text-center">
 										<input
 											value={item.unit_price}
 											onChange={(e) => handleItemChange(i, "unit_price", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.action }} className="border border-black p-0.5 text-center">
 										<button
 											type="button"
 											onClick={() => removeRow(i)}
@@ -433,6 +547,11 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 											<RiDeleteBinLine size={14} />
 										</button>
 									</td>
+									<div
+										onMouseDown={(e) => handleMouseDownRow(e, i)}
+										className="absolute bottom-0 left-0 right-0 h-1 bg-gray-400 hover:bg-blue-500 cursor-row-resize transition-colors"
+										title="Drag to resize row height"
+									/>
 								</tr>
 							))}
 								<tr className="font-bold h-7">
