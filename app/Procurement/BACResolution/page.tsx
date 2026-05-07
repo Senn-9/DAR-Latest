@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
-import ViewPRModal from "@/components/Viewprmodal";
 import PrepareBACResolutionModal from "@/components/BACResolution/PrepareBACResolutionModal";
 import BACRESO from "@/components/BACResolution/BACRESO";
 import {
@@ -64,7 +63,7 @@ export default function BACResolutionPage() {
   const [sortField, setSortField] = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewPrId, setViewPrId] = useState<number | null>(null);
+  
   const [prepareResolutionOpen, setPrepareResolutionOpen] = useState(false);
   const [resolutionPrNo, setResolutionPrNo] = useState<string | null>(null);
   const PAGE_SIZE = 10;
@@ -351,26 +350,18 @@ export default function BACResolutionPage() {
                           <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : <span className="text-gray-300 font-normal">—</span>}
                           </td>
-                          <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setViewPrId(form.id)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                View
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setResolutionPrNo(form.pr_no)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiFileTextLine size={14} />
-                                Resolution
-                              </button>
-                            </div>
-                          </td>
+                                              <td className={`px-2 py-2 text-center ${rowBg}`}>
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setResolutionPrNo(form.pr_no)}
+                                                    className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                                                  >
+                                                    <RiFileTextLine size={14} />
+                                                    Resolution
+                                                  </button>
+                                                </div>
+                                              </td>
                         </tr>
                       );
                     })}
@@ -418,9 +409,7 @@ export default function BACResolutionPage() {
         </div>
       </div>
 
-      {viewPrId !== null && (
-        <ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} />
-      )}
+      {/* View modal removed per request */}
 
       {prepareResolutionOpen && (
         <PrepareBACResolutionModal

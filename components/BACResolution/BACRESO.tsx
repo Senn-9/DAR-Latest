@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RiCloseLine, RiPrinterLine, RiAddLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
+import { printBACReso } from "./BACRESOPRINT";
 
 type BACRESOProps = {
 	open: boolean;
@@ -305,7 +306,16 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 	}, [open, onClose]);
 
 	const handlePrint = () => {
-		window.print();
+		printBACReso(
+			{
+				resoYear,
+				resoSequence,
+				alternativeMode,
+				dateResolved,
+			},
+			whereasClauses,
+			tableRows
+		);
 	};
 
 	if (!open) return null;
@@ -345,18 +355,21 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 						
 						{/* Header with Logos */}
 						<div className="flex items-start justify-between mb-2">
-							<div className="flex gap-2">
+							<div />
+							<div className="flex items-start justify-center gap-3 flex-1">
 								<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" className="h-14 w-14 object-contain" />
 								<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" className="h-14 w-14 object-contain" />
-							</div>
-							
-							<div className="text-center flex-1 pt-1">
-								<div style={{ fontSize: "11px", fontWeight: 700 }}>REPUBLIC OF THE PHILIPPINES</div>
-								<div style={{ fontSize: "11px", fontWeight: 700 }}>DEPARTMENT OF AGRARIAN REFORM</div>
-								<div style={{ fontSize: "10px", fontWeight: 400, fontStyle: "italic" }}>Tunay na Pagbabago sa Repormang Agraryo</div>
-							</div>
 
-							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO Certified" className="h-14 w-14 object-contain rounded" />
+								<div className="text-center pt-1">
+									<div style={{ fontSize: "11px", fontWeight: 700 }}>REPUBLIC OF THE PHILIPPINES</div>
+									<div style={{ fontSize: "11px", fontWeight: 700 }}>DEPARTMENT OF AGRARIAN REFORM</div>
+									<div style={{ fontSize: "10px", fontWeight: 400, fontStyle: "italic" }}>Tunay na Pagbabago sa Repormang Agraryo</div>
+								</div>
+
+								<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO Certified" className="h-14 w-14 object-contain rounded" />
+								<div className="invisible h-14 w-14 shrink-0" aria-hidden="true" />
+							</div>
+							<div />
 						</div>
 
 						{/* Committee Info */}
@@ -427,7 +440,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 												<textarea 
 													value={line} 
 													onChange={(e) => updateWhereasLine(clause.id, lIdx, e.target.value)}
-													className="border-b border-black outline-none bg-transparent flex-1 resize-none overflow-hidden min-h-[18px]"
+													className="border-b border-black outline-none bg-transparent flex-1 resize-none overflow-hidden min-h-4.5"
 													style={{ 
 														fontSize: "11px",
 														textIndent: lIdx === 0 ? "65px" : "0px",
