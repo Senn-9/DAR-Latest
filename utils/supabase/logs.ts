@@ -20,6 +20,8 @@ export interface PurchaseRequestRef {
   id: number;
   pr_no: string;
   office_section: string | null;
+  division_id?: number | null;
+  status_id?: number | null;
 }
 
 export interface PurchaseOrderRef {
@@ -27,6 +29,8 @@ export interface PurchaseOrderRef {
   po_no: string | null;
   pr_no: string | null;
   supplier: string | null;
+  division_id?: number | null;
+  status_id?: number | null;
 }
 
 export interface DeliveryRef {
@@ -34,6 +38,13 @@ export interface DeliveryRef {
   delivery_no: string;
   po_no: string;
   supplier: string | null;
+  division_id?: number | null;
+  status_id?: number | null;
+}
+
+export interface StatusRef {
+  id: number;
+  status_name: string;
 }
 
 export async function fetchRecentRemarks(limit = 500): Promise<RemarkLogRow[]> {
@@ -126,13 +137,15 @@ export async function fetchPurchaseRequestsByIds(
   if (uniq.length === 0) return [];
   const { data, error } = await supabase
     .from("purchase_requests")
-    .select("id, pr_no, office_section")
+    .select("id, pr_no, office_section, division_id, status_id")
     .in("id", uniq);
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
     id: Number(r.id),
     pr_no: String(r.pr_no ?? ""),
     office_section: r.office_section != null ? String(r.office_section) : null,
+    division_id: r.division_id != null ? Number(r.division_id) : null,
+    status_id: r.status_id != null ? Number(r.status_id) : null,
   }));
 }
 
@@ -144,7 +157,7 @@ export async function fetchPurchaseOrdersByIds(
   if (uniq.length === 0) return [];
   const { data, error } = await supabase
     .from("purchase_orders")
-    .select("id, po_no, pr_no, supplier")
+    .select("id, po_no, pr_no, supplier, division_id, status_id")
     .in("id", uniq);
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
@@ -152,6 +165,8 @@ export async function fetchPurchaseOrdersByIds(
     po_no: r.po_no != null ? String(r.po_no) : null,
     pr_no: r.pr_no != null ? String(r.pr_no) : null,
     supplier: r.supplier != null ? String(r.supplier) : null,
+    division_id: r.division_id != null ? Number(r.division_id) : null,
+    status_id: r.status_id != null ? Number(r.status_id) : null,
   }));
 }
 
@@ -163,7 +178,7 @@ export async function fetchDeliveriesByIds(
   if (uniq.length === 0) return [];
   const { data, error } = await supabase
     .from("deliveries")
-    .select("id, delivery_no, po_no, supplier")
+    .select("id, delivery_no, po_no, supplier, division_id, status_id")
     .in("id", uniq);
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
@@ -171,6 +186,21 @@ export async function fetchDeliveriesByIds(
     delivery_no: String(r.delivery_no ?? ""),
     po_no: String(r.po_no ?? ""),
     supplier: r.supplier != null ? String(r.supplier) : null,
+    division_id: r.division_id != null ? Number(r.division_id) : null,
+    status_id: r.status_id != null ? Number(r.status_id) : null,
+  }));
+}
+
+export async function fetchStatuses(): Promise<StatusRef[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("status")
+    .select("id, status_name")
+    .order("id");
+  if (error) throw error;
+  return (data ?? []).map((s: any) => ({
+    id: Number(s.id),
+    status_name: String(s.status_name ?? ""),
   }));
 }
 

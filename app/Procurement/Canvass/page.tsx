@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
@@ -17,6 +17,7 @@ import {
   RiArrowLeftLine, RiArrowRightLine,
   RiPlayCircleLine, RiCheckboxCircleLine,
   RiFileTextLine,
+  RiCalendarLine, RiCheckLine, RiCloseLine, RiFilter3Line,
 } from "react-icons/ri";
 
 export default function CanvassPage() {
@@ -69,6 +70,16 @@ export default function CanvassPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const PAGE_SIZE = 10;
+  const CURRENT_YEAR = new Date().getFullYear();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sectionFilter, setSectionFilter] = useState<string | null>(null);
+  const [fiscalYear, setFiscalYear] = useState(CURRENT_YEAR);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const yearOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
+    return years;
+  }, []);
 
   const [processingIds, setProcessingIds] = useState<number[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -216,7 +227,9 @@ export default function CanvassPage() {
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const { color } = getStatusInfo(pr.status_id);
-      return matchSearch && (statusFilter === "all" || color === statusFilter);
+      const matchSection = sectionFilter === null || pr.office_section === sectionFilter;
+      const matchYear = pr.created_at ? new Date(pr.created_at).getFullYear() === fiscalYear : true;
+      return matchSearch && (statusFilter === "all" || color === statusFilter) && matchSection && matchYear;
     })
     .sort((a, b) => {
       let aVal: number | string = "";
@@ -373,16 +386,25 @@ export default function CanvassPage() {
               </p>
             )}
           </div>
-          {isBACAccount && (
+          <div className="flex items-center gap-3">
             <button
-              type="button"
-              onClick={() => setPrepareResolutionOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-pink-700"
+              onClick={() => setShowYearPicker(true)}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
             >
-              <RiPlayCircleLine size={16} />
-              Prepare BAC Resolution
+              <RiCalendarLine size={16} className="text-emerald-600" />
+              <span className="font-semibold text-gray-700 text-sm">FY {fiscalYear}</span>
             </button>
-          )}
+            {isBACAccount && (
+              <button
+                type="button"
+                onClick={() => setPrepareResolutionOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-pink-700"
+              >
+                <RiPlayCircleLine size={16} />
+                Prepare BAC Resolution
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── TABS ── */}
@@ -434,20 +456,6 @@ export default function CanvassPage() {
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Canvass Records</h2>
             <div className="flex flex-wrap items-center gap-2">
-              {STATUS_OPTIONS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
-                    statusFilter === value
-                      ? "bg-emerald-700 text-white border-emerald-700"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
                 <input
@@ -458,8 +466,74 @@ export default function CanvassPage() {
                   className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
                 />
               </div>
+              <button
+                onClick={() => setFilterOpen((v) => !v)}
+                className={`px-3 py-1.5 rounded-lg border text-sm font-semibold flex items-center gap-1.5 transition-colors ${
+                  filterOpen ? "bg-emerald-700 text-white border-emerald-700" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                <RiFilter3Line size={14} />
+                Filters
+              </button>
             </div>
           </div>
+
+          {/* Status sub-tabs */}
+          <div className="px-6 py-2 flex flex-wrap items-center gap-1 border-b border-gray-100">
+            {STATUS_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                  statusFilter === value
+                    ? "bg-emerald-700 text-white border-emerald-700"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filter panel */}
+          {filterOpen && (
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-4">
+              <div className="flex-1 min-w-40">
+                <label className="block text-xs font-bold text-gray-500 mb-2">SECTION</label>
+                <select
+                  value={sectionFilter ?? ""}
+                  onChange={(e) => { setSectionFilter(e.target.value || null); setCurrentPage(1); }}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <option value="">All Sections</option>
+                  {Array.from(new Set(list.map((p) => p.office_section).filter(Boolean))).map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-40">
+                <label className="block text-xs font-bold text-gray-500 mb-2">SORT BY</label>
+                <select
+                  value={sortField}
+                  onChange={(e) => handleSort(e.target.value as typeof sortField)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <option value="created_at">Date Created</option>
+                  <option value="pr_no">PR Number</option>
+                  <option value="office_section">Section</option>
+                  <option value="total_cost">Total Cost</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => { setSectionFilter(null); setCurrentPage(1); }}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
 
           {filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -661,6 +735,35 @@ export default function CanvassPage() {
       </div>
 
 
+
+      {/* ── YEAR PICKER MODAL ── */}
+      {showYearPicker && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+              </div>
+              <button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <RiCloseLine size={22} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="max-h-72 overflow-y-auto py-2">
+              {yearOptions.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => { setFiscalYear(year); setShowYearPicker(false); setCurrentPage(1); }}
+                  className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${fiscalYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+                >
+                  <span className={`font-semibold ${fiscalYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
+                  {fiscalYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── RFQ PREVIEW MODAL ── */}
       {previewPrNo !== null && (

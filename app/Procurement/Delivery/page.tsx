@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -25,6 +25,8 @@ import {
   RiMore2Line,
   RiChat3Line,
   RiPlayCircleLine,
+  RiCalendarLine,
+  RiCloseLine,
 } from "react-icons/ri";
 
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
@@ -218,6 +220,14 @@ export default function DeliveryPage() {
   const [poData, setPoData] = useState<any>(null);
 
   const PAGE_SIZE = 10;
+  const CURRENT_YEAR = new Date().getFullYear();
+  const [fiscalYear, setFiscalYear] = useState(CURRENT_YEAR);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const yearOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
+    return years;
+  }, []);
 
   // Helper function to filter delivery data
 
@@ -1000,7 +1010,9 @@ export default function DeliveryPage() {
       const matchSection =
         sectionFilter === null || delivery.office_section === sectionFilter;
 
-      return matchSearch && matchTab && matchStatus && matchSection;
+      const matchYear = delivery.created_at ? new Date(delivery.created_at).getFullYear() === fiscalYear : true;
+
+      return matchSearch && matchTab && matchStatus && matchSection && matchYear;
     })
 
     .sort((a, b) => {
@@ -1270,15 +1282,24 @@ export default function DeliveryPage() {
             )}
           </div>
 
-          {(isAdmin || isSupplyAccount) && (
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setCreateModalOpen(true)}
-              className="px-4 py-2 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2"
+              onClick={() => setShowYearPicker(true)}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
             >
-              <RiAddLine size={20} />
-              New Delivery
+              <RiCalendarLine size={16} className="text-emerald-600" />
+              <span className="font-semibold text-gray-700 text-sm">FY {fiscalYear}</span>
             </button>
-          )}
+            {(isAdmin || isSupplyAccount) && (
+              <button
+                onClick={() => setCreateModalOpen(true)}
+                className="px-4 py-2 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2"
+              >
+                <RiAddLine size={20} />
+                New Delivery
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── TABS ── */}
@@ -1328,108 +1349,6 @@ export default function DeliveryPage() {
             </button>
           ))}
         </div>
-
-        {/* Filter Panel */}
-
-        {filterOpen && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-50">
-                <label className="block text-xs font-bold text-gray-500 mb-2">
-                  STATUS
-                </label>
-
-                <select
-                  value={statusFilter ?? ""}
-                  onChange={(e) =>
-                    setStatusFilter(
-                      e.target.value ? Number(e.target.value) : null,
-                    )
-                  }
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                >
-                  <option value="">All Statuses</option>
-
-                  {statuses
-
-                    .filter((s) => {
-                      // Only show Phase 3 delivery statuses (18-25) plus system statuses
-
-                      const deliveryStatuses = [18, 19, 20, 21, 22, 23, 24, 25];
-
-                      const systemStatuses = [27]; // Cancelled
-
-                      return (
-                        deliveryStatuses.includes(s.id) ||
-                        systemStatuses.includes(s.id)
-                      );
-                    })
-
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.status_name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="flex-1 min-w-50">
-                <label className="block text-xs font-bold text-gray-500 mb-2">
-                  SECTION
-                </label>
-
-                <select
-                  value={sectionFilter ?? ""}
-                  onChange={(e) => setSectionFilter(e.target.value || null)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                >
-                  <option value="">All Sections</option>
-
-                  {Array.from(
-                    new Set(
-                      deliveries.map((d) => d.office_section).filter(Boolean),
-                    ),
-                  ).map((section) => (
-                    <option key={section} value={section ?? ""}>
-                      {section}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex-1 min-w-50">
-                <label className="block text-xs font-bold text-gray-500 mb-2">
-                  SORT BY
-                </label>
-
-                <select
-                  value={sortBy}
-                  onChange={(e) =>
-                    setSortBy(e.target.value as "created_at" | "updated_at")
-                  }
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                >
-                  <option value="created_at">Date Created</option>
-
-                  <option value="updated_at">Last Updated</option>
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  onClick={() => {
-                    setStatusFilter(null);
-                    setSectionFilter(null);
-                    setSortBy("created_at");
-                  }}
-                  className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Stat Cards */}
 
@@ -1507,6 +1426,61 @@ export default function DeliveryPage() {
                 </button>
               </div>
             </div>
+
+            {/* Filter panel - inside table panel */}
+            {filterOpen && (
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-wrap gap-4">
+                <div className="flex-1 min-w-40">
+                  <label className="block text-xs font-bold text-gray-500 mb-2">STATUS</label>
+                  <select
+                    value={statusFilter ?? ""}
+                    onChange={(e) => setStatusFilter(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  >
+                    <option value="">All Statuses</option>
+                    {statuses.filter((s) => {
+                      const deliveryStatuses = [18, 19, 20, 21, 22, 23, 24, 25];
+                      const systemStatuses = [27];
+                      return deliveryStatuses.includes(s.id) || systemStatuses.includes(s.id);
+                    }).map((s) => (
+                      <option key={s.id} value={s.id}>{s.status_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-40">
+                  <label className="block text-xs font-bold text-gray-500 mb-2">SECTION</label>
+                  <select
+                    value={sectionFilter ?? ""}
+                    onChange={(e) => setSectionFilter(e.target.value || null)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  >
+                    <option value="">All Sections</option>
+                    {Array.from(new Set(deliveries.map((d) => d.office_section).filter(Boolean))).map((section) => (
+                      <option key={section} value={section ?? ""}>{section}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-40">
+                  <label className="block text-xs font-bold text-gray-500 mb-2">SORT BY</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "created_at" | "updated_at")}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  >
+                    <option value="created_at">Date Created</option>
+                    <option value="updated_at">Last Updated</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => { setStatusFilter(null); setSectionFilter(null); setSortBy("created_at"); }}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2">
               {SUB_TAB_OPTIONS.map(({ value, label }) => (
@@ -1806,6 +1780,35 @@ export default function DeliveryPage() {
           )}
         </div>
       </div>
+
+      {/* ── YEAR PICKER MODAL ── */}
+      {showYearPicker && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+              </div>
+              <button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <RiCloseLine size={22} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="max-h-72 overflow-y-auto py-2">
+              {yearOptions.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => { setFiscalYear(year); setShowYearPicker(false); setCurrentPage(1); }}
+                  className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${fiscalYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+                >
+                  <span className={`font-semibold ${fiscalYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
+                  {fiscalYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View Modal */}
 

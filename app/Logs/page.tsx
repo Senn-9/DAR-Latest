@@ -4,17 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import {
   RiArrowDownLine,
   RiArrowUpLine,
+  RiCalendarLine,
+  RiCheckLine,
+  RiCloseLine,
   RiEyeLine,
   RiFileTextLine,
   RiFilter3Line,
   RiSearchLine,
 } from "react-icons/ri";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import { createClient } from "@/utils/supabase/client";
 import {
   fetchDeliveriesByIds,
   fetchPurchaseOrdersByIds,
   fetchPurchaseRequestsByIds,
   fetchRecentRemarks,
+  fetchStatuses,
   type LogPhase,
   type RemarkLogRow,
 } from "@/utils/supabase/logs";
@@ -22,9 +27,11 @@ import {
 type PhaseFilter = "all" | "pr" | "po" | "delivery" | "payment" | "completed";
 
 type CurrentUser = {
+  id?: number;
   fullname: string;
   username: string;
   role_id: number;
+  division_id?: number | null;
   divisions?: { division_name: string };
   roles?: { role_name: string };
 };
@@ -85,6 +92,20 @@ export default function LogsPage() {
   const [flagFilter, setFlagFilter] = useState<number | "all">("all");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [page, setPage] = useState(1);
+  const CURRENT_YEAR = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [prDivisionById, setPrDivisionById] = useState<Record<number, number | null>>({});
+  const [poDivisionById, setPoDivisionById] = useState<Record<number, number | null>>({});
+  const [deliveryDivisionById, setDeliveryDivisionById] = useState<Record<number, number | null>>({});
+  const [prStatusById, setPrStatusById] = useState<Record<number, number | null>>({});
+  const [poStatusById, setPoStatusById] = useState<Record<number, number | null>>({});
+  const [deliveryStatusById, setDeliveryStatusById] = useState<Record<number, number | null>>({});
+  const [statusNameById, setStatusNameById] = useState<Record<number, string>>({});
+  const [allDivisions, setAllDivisions] = useState<{ id: number; name: string }[]>([]);
+  const [myLogsOnly, setMyLogsOnly] = useState(false);
+  const [divisionFilter, setDivisionFilter] = useState<number | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<number | "all">("all");
 
   const [threadOpen, setThreadOpen] = useState(false);
   const [threadTarget, setThreadTarget] = useState<{ poId?: number | null; prId?: number | null; deliveryId?: number | null }>({});
@@ -112,30 +133,61 @@ export default function LogsPage() {
         const poIds = rows.map((r) => r.po_id).filter((x): x is number => typeof x === "number");
         const deliveryIds = rows.map((r) => r.delivery_id).filter((x): x is number => typeof x === "number");
 
-        const [prs, pos, dels] = await Promise.all([
+        const supabase = createClient();
+        const [prs, pos, dels, statusesData, divsResult] = await Promise.all([
           fetchPurchaseRequestsByIds(prIds),
           fetchPurchaseOrdersByIds(poIds),
           fetchDeliveriesByIds(deliveryIds),
+          fetchStatuses(),
+          supabase.from("divisions").select("division_id, division_name"),
         ]);
         if (cancelled) return;
 
         const prMap: Record<number, string> = {};
+        const prDivMap: Record<number, number | null> = {};
+        const prStMap: Record<number, number | null> = {};
         prs.forEach((p) => {
           prMap[p.id] = p.pr_no;
+          prDivMap[p.id] = p.division_id ?? null;
+          prStMap[p.id] = p.status_id ?? null;
         });
         setPrNoById(prMap);
+        setPrDivisionById(prDivMap);
+        setPrStatusById(prStMap);
 
         const poMap: Record<number, string> = {};
+        const poDivMap: Record<number, number | null> = {};
+        const poStMap: Record<number, number | null> = {};
         pos.forEach((p) => {
           if (p.po_no) poMap[p.id] = p.po_no;
+          poDivMap[p.id] = p.division_id ?? null;
+          poStMap[p.id] = p.status_id ?? null;
         });
         setPoNoById(poMap);
+        setPoDivisionById(poDivMap);
+        setPoStatusById(poStMap);
 
         const dMap: Record<number, string> = {};
+        const dDivMap: Record<number, number | null> = {};
+        const dStMap: Record<number, number | null> = {};
         dels.forEach((d) => {
           dMap[d.id] = d.delivery_no;
+          dDivMap[d.id] = d.division_id ?? null;
+          dStMap[d.id] = d.status_id ?? null;
         });
         setDeliveryNoById(dMap);
+        setDeliveryDivisionById(dDivMap);
+        setDeliveryStatusById(dStMap);
+
+        const stMap: Record<number, string> = {};
+        statusesData.forEach((s) => { stMap[s.id] = s.status_name; });
+        setStatusNameById(stMap);
+
+        const divsData = (divsResult.data ?? []) as { division_id: number; division_name: string | null }[];
+        setAllDivisions(divsData.map((d) => ({
+          id: d.division_id,
+          name: d.division_name ?? `Division ${d.division_id}`,
+        })));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -146,6 +198,12 @@ export default function LogsPage() {
   }, []);
 
   const enriched = useMemo(() => {
+    const isRoleRestricted = currentUser != null && (
+      currentUser.role_id === 6 ||
+      (currentUser.roles?.role_name?.toLowerCase().includes("division head") ?? false)
+    );
+    const currentUserDivisionId = currentUser?.division_id ?? null;
+
     const rows = remarks.map((r) => {
       const phase = inferPhase(r);
       const prNo = r.pr_id != null ? prNoById[r.pr_id] : undefined;
@@ -156,6 +214,19 @@ export default function LogsPage() {
         poNo ??
         prNo ??
         (r.delivery_id != null ? `Delivery #${r.delivery_id}` : r.po_id != null ? `PO #${r.po_id}` : r.pr_id != null ? `PR #${r.pr_id}` : `Remark #${r.id}`);
+
+      const divisionId =
+        r.delivery_id != null ? (deliveryDivisionById[r.delivery_id] ?? null) :
+        r.po_id != null ? (poDivisionById[r.po_id] ?? null) :
+        r.pr_id != null ? (prDivisionById[r.pr_id] ?? null) :
+        null;
+
+      const statusId =
+        r.delivery_id != null ? (deliveryStatusById[r.delivery_id] ?? null) :
+        r.po_id != null ? (poStatusById[r.po_id] ?? null) :
+        r.pr_id != null ? (prStatusById[r.pr_id] ?? null) :
+        null;
+
       return {
         ...r,
         phase,
@@ -164,6 +235,9 @@ export default function LogsPage() {
         deliveryNo,
         ref,
         actor: r.fullname ?? r.username ?? "Unknown",
+        divisionId,
+        statusId,
+        statusName: statusId != null ? (statusNameById[statusId] ?? undefined) : undefined,
       };
     });
 
@@ -188,7 +262,13 @@ export default function LogsPage() {
             (r.poNo ?? "").toLowerCase().includes(q) ||
             (r.deliveryNo ?? "").toLowerCase().includes(q);
 
-      return matchTab && matchFlag && matchSearch;
+      const matchYear = new Date(r.created_at).getFullYear() === selectedYear;
+      const matchDivisionGate = !isRoleRestricted || !currentUserDivisionId || r.divisionId === currentUserDivisionId;
+      const matchMyLogs = !myLogsOnly || (currentUser != null && r.user_id === currentUser.id);
+      const matchDivision = divisionFilter === "all" || r.divisionId === divisionFilter;
+      const matchStatus = statusFilter === "all" || r.statusId === statusFilter;
+
+      return matchTab && matchFlag && matchSearch && matchYear && matchDivisionGate && matchMyLogs && matchDivision && matchStatus;
     });
 
     filtered.sort((a, b) => {
@@ -198,7 +278,12 @@ export default function LogsPage() {
     });
 
     return filtered;
-  }, [remarks, prNoById, poNoById, deliveryNoById, activeTab, search, flagFilter, sortDir]);
+  }, [remarks, prNoById, poNoById, deliveryNoById,
+      prDivisionById, poDivisionById, deliveryDivisionById,
+      prStatusById, poStatusById, deliveryStatusById,
+      statusNameById, currentUser,
+      activeTab, search, flagFilter, sortDir, selectedYear,
+      myLogsOnly, divisionFilter, statusFilter]);
 
   const counts = useMemo(() => {
     const c: Record<PhaseFilter, number> = {
@@ -209,7 +294,22 @@ export default function LogsPage() {
       payment: 0,
       completed: 0,
     };
-    remarks.forEach((r) => {
+    const isRoleRestricted = currentUser != null && (
+      currentUser.role_id === 6 ||
+      (currentUser.roles?.role_name?.toLowerCase().includes("division head") ?? false)
+    );
+    const currentUserDivisionId = currentUser?.division_id ?? null;
+    const yearRemarks = remarks.filter((r) => {
+      const matchYear = new Date(r.created_at).getFullYear() === selectedYear;
+      const divisionId =
+        r.delivery_id != null ? (deliveryDivisionById[r.delivery_id] ?? null) :
+        r.po_id != null ? (poDivisionById[r.po_id] ?? null) :
+        r.pr_id != null ? (prDivisionById[r.pr_id] ?? null) :
+        null;
+      const matchDivisionGate = !isRoleRestricted || !currentUserDivisionId || divisionId === currentUserDivisionId;
+      return matchYear && matchDivisionGate;
+    });
+    yearRemarks.forEach((r) => {
       const phase = inferPhase(r);
       if (phase === "pr") c.pr += 1;
       else if (phase === "po") c.po += 1;
@@ -217,13 +317,20 @@ export default function LogsPage() {
       else if (phase === "payment") c.payment += 1;
       if (r.status_flag_id === 2) c.completed += 1;
     });
-    c.all = remarks.length;
+    c.all = yearRemarks.length;
     return c;
-  }, [remarks, enriched.length]);
+  }, [remarks, enriched.length, selectedYear, currentUser,
+      prDivisionById, poDivisionById, deliveryDivisionById]);
+
+  const yearOptions = useMemo(() => {
+    const years = [];
+    for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
+    return years;
+  }, [CURRENT_YEAR]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search, flagFilter, sortDir]);
+  }, [activeTab, search, flagFilter, sortDir, selectedYear, myLogsOnly, divisionFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(enriched.length / PAGE_SIZE));
   const pageRows = enriched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -241,6 +348,11 @@ export default function LogsPage() {
     setThreadSubtitle(r.ref ? `Reference: ${r.ref}` : undefined);
     setThreadOpen(true);
   };
+
+  const isRoleRestricted = currentUser != null && (
+    currentUser.role_id === 6 ||
+    (currentUser.roles?.role_name?.toLowerCase().includes("division head") ?? false)
+  );
 
   if (loading) {
     return (
@@ -278,6 +390,14 @@ export default function LogsPage() {
               </p>
             )}
           </div>
+          <button
+            onClick={() => setShowYearPicker(true)}
+            className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
+          >
+            <RiCalendarLine size={16} className="text-emerald-600" />
+            <span className="font-semibold text-gray-700 text-sm">FY {selectedYear}</span>
+            <RiArrowDownLine size={13} className="text-gray-400" />
+          </button>
         </div>
 
         <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1 w-fit flex-wrap">
@@ -369,11 +489,58 @@ export default function LogsPage() {
                   </button>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">My Logs</label>
+                  <button
+                    onClick={() => setMyLogsOnly((v) => !v)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors ${
+                      myLogsOnly
+                        ? "bg-emerald-700 text-white border-emerald-700"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {myLogsOnly ? "On" : "Off"}
+                  </button>
+                </div>
+
+                {!isRoleRestricted && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Division</label>
+                    <select
+                      value={divisionFilter}
+                      onChange={(e) => setDivisionFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                      className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white"
+                    >
+                      <option value="all">All Divisions</option>
+                      {allDivisions.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                    className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white"
+                  >
+                    <option value="all">All Statuses</option>
+                    {Object.entries(statusNameById).map(([id, name]) => (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   onClick={() => {
                     setFlagFilter("all");
                     setSortDir("desc");
                     setSearch("");
+                    setMyLogsOnly(false);
+                    setDivisionFilter("all");
+                    setStatusFilter("all");
                   }}
                   className="ml-auto px-4 py-1.5 bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-300 transition-colors"
                 >
@@ -392,6 +559,7 @@ export default function LogsPage() {
                   <th className="text-left px-2 py-2 font-semibold">Reference</th>
                   <th className="text-left px-2 py-2 font-semibold">User</th>
                   <th className="text-left px-2 py-2 font-semibold">Flag</th>
+                  <th className="text-left px-2 py-2 font-semibold">Status</th>
                   <th className="text-left px-2 py-2 font-semibold">Remark</th>
                   <th className="text-center px-2 py-2 font-semibold">Action</th>
                 </tr>
@@ -399,7 +567,7 @@ export default function LogsPage() {
               <tbody className="divide-y divide-gray-100">
                 {pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-2 py-8 text-center text-gray-400">
                       No log entries found.
                     </td>
                   </tr>
@@ -430,6 +598,15 @@ export default function LogsPage() {
                         {r.status_flag_id ? (
                           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                             {FLAG_OPTIONS.find((f) => f.id === r.status_flag_id)?.label ?? `Flag ${r.status_flag_id}`}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {r.statusName ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                            {r.statusName}
                           </span>
                         ) : (
                           <span className="text-gray-400">—</span>
@@ -500,6 +677,46 @@ export default function LogsPage() {
         subtitle={threadSubtitle}
         onClose={() => setThreadOpen(false)}
       />
+
+      {showYearPicker && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+              </div>
+              <button
+                onClick={() => setShowYearPicker(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <RiCloseLine size={22} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="max-h-72 overflow-y-auto py-2">
+              {yearOptions.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => {
+                    setSelectedYear(year);
+                    setShowYearPicker(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${
+                    selectedYear === year ? "bg-emerald-50" : "hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={`font-semibold ${
+                    selectedYear === year ? "text-emerald-700" : "text-gray-700"
+                  }`}>
+                    FY {year}
+                  </span>
+                  {selectedYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
