@@ -11,8 +11,6 @@ import {
   RiPauseCircleLine,
   RiAlertLine,
   RiSubtractLine,
-  RiAttachmentLine,
-  RiFileLine,
 } from "react-icons/ri";
 
 interface ProcessPRModalProps {
@@ -61,7 +59,6 @@ export default function ProcessPRModal({
   const [formData, setFormData] = useState({
     flagId:     1,
     remarks:    "",
-    attachment: null as File | null,
   });
 
   const statusMap: Record<number, string> = {
@@ -117,31 +114,9 @@ export default function ProcessPRModal({
     iconColor: "text-gray-500",
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setFormData((prev) => ({ ...prev, attachment: file }));
-  };
-
   const doProcess = async (targetStatus: number, successText: string) => {
     setProcessing(true);
     let remarkText = formData.remarks.trim();
-    let attachmentPublicUrl: string | null = null;
-    if (formData.attachment) {
-      const ext = formData.attachment.name.split(".").pop() || "bin";
-      const path = `pr_attachments/${prId}_${Date.now()}.${ext}`;
-      const uploadRes = await supabase.storage.from("attachments").upload(path, formData.attachment);
-      if (!uploadRes.error) {
-        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
-        attachmentPublicUrl = pub.publicUrl;
-        if (attachmentPublicUrl) {
-          remarkText = remarkText ? `${remarkText} Attachment: ${attachmentPublicUrl}` : `Attachment: ${attachmentPublicUrl}`;
-        }
-      } else {
-        setProcessing(false);
-        alert("Attachment upload failed: " + uploadRes.error.message);
-        return;
-      }
-    }
     const { error: updateErr } = await supabase.from("purchase_requests").update({ status_id: targetStatus, status: statusMap[targetStatus], updated_at: new Date().toISOString() }).eq("id", prId);
     if (updateErr) {
       setProcessing(false);
@@ -316,44 +291,6 @@ export default function ProcessPRModal({
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
-          </div>
-
-          {/* ── FILE ATTACHMENT ── */}
-          <div>
-            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-              File Attachment <span className="text-gray-400 font-normal normal-case">(optional)</span>
-            </label>
-            <label className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all group">
-              <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-emerald-100 flex items-center justify-center flex-shrink-0 transition-colors">
-                <RiAttachmentLine size={18} className="text-gray-400 group-hover:text-emerald-600 transition-colors" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {formData.attachment ? (
-                  <div className="flex items-center gap-2">
-                    <RiFileLine size={14} className="text-emerald-600 flex-shrink-0" />
-                    <span className="text-sm font-semibold text-emerald-700 truncate">{formData.attachment.name}</span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">
-                      ({(formData.attachment.size / 1024).toFixed(1)} KB)
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-gray-600">Click to upload a file</p>
-                    <p className="text-xs text-gray-400">PDF, DOCX, PNG, JPG up to 10MB</p>
-                  </>
-                )}
-              </div>
-              {formData.attachment && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); setFormData({ ...formData, attachment: null }); }}
-                  className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                >
-                  <RiCloseLine size={16} />
-                </button>
-              )}
-              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx,.xls" onChange={handleFileChange} />
-            </label>
           </div>
 
         </div>
