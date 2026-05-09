@@ -1,4 +1,29 @@
-// Shared print utilities used by both ORS and PO print builders
+// Shared print utilities used by ORS, PO, and PR print builders
+
+export function printWithIframe(html: string): void {
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "display:none";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) { document.body.removeChild(iframe); return; }
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const cleanup = () => {
+    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+  };
+  iframe.onload = () => {
+    iframe.contentWindow?.addEventListener("afterprint", cleanup);
+    iframe.contentWindow?.print();
+  };
+  setTimeout(() => {
+    if (doc.readyState === "complete" && document.body.contains(iframe)) {
+      iframe.contentWindow?.addEventListener("afterprint", cleanup);
+      iframe.contentWindow?.print();
+    }
+  }, 400);
+}
+
 
 export function escapeHtml(value: string | null | undefined): string {
   if (!value) return "";

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
+import { printWithIframe } from "@/utils/print/printUtils";
 import {
   RiCloseLine,
   RiSaveLine,
@@ -1080,22 +1081,7 @@ function downloadORSPdf(data: ORSPrintData & { textOnlyLines?: TextOnlyLine[]; c
     postPrintRemark(data.currentUserFullname, 'ORS', data.currentUserId, data.poId);
   }
 
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(sharedBuildORS(data));
-  printWindow.document.close();
-  // Wait for content to load before printing
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-  // Fallback if onload doesn't fire
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 300);
+  printWithIframe(sharedBuildORS(data));
 }
 
 // Helper function to post print remark

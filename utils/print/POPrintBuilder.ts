@@ -30,6 +30,7 @@ export interface POPrintData {
   orsDate?: string | null;
   fundsAvailable?: string | null;
   orsAmount?: number | null;
+  hideTotalRow?: boolean | null;
 }
 
 function getItemTotal(item: POPrintItem): number {
@@ -113,7 +114,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
     html, body { margin: 0; padding: 0; }
     body { font-family: 'Times New Roman', Times, serif; color: #000; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    td, th { border: 1px solid #111; }
+    .po-table td, .po-table th { border: 1px solid #111; }
     .right { text-align: right; }
     .center { text-align: center; }
     .bold { font-weight: bold; }
@@ -122,11 +123,11 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   </style>
 </head>
 <body>
-  <table style="margin-bottom:4px;border:none">
-    <tr><td style="border:none;text-align:right;font-size:11pt;font-weight:bold;padding:0">Appendix 61</td></tr>
+  <table style="margin-bottom:8px;border:none">
+    <tr><td style="border:none;text-align:right;font-size:10pt;font-weight:normal;font-style:italic;padding:0">Appendix 61</td></tr>
   </table>
 
-  <table style="border:2px solid #111;">
+  <table class="po-table" style="border:1px solid #111;">
     <colgroup>
       <col style="width:14%" />
       <col style="width:11%" />
@@ -168,10 +169,10 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
         <td class="center bold small" style="padding:4px 2px">Amount</td>
       </tr>
       ${itemRows}
-      <tr>
+      ${!data.hideTotalRow ? `<tr>
         <td colspan="5" style="padding:3px 6px;font-size:9pt;font-weight:bold;text-align:right">TOTAL :</td>
         <td style="padding:3px 4px;font-size:9pt;font-weight:bold;text-align:right">${grandTotal ? formatMoney(grandTotal).replace("\u20b1", "") : ""}</td>
-      </tr>
+      </tr>` : ""}
       <tr>
         <td colspan="6" style="padding:3px 6px;font-size:9pt"><span style="font-weight:bold">(Total Amount in Words) </span>${amountWords}</td>
       </tr>
@@ -179,7 +180,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   </table>
 
   <div class="po-footer">
-    <table>
+    <table class="po-table" style="border:1px solid #111;">
       <colgroup>
         <col style="width:14%" />
         <col style="width:11%" />
@@ -191,23 +192,19 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
       <tbody>
         <tr>
           <td colspan="6" style="padding:0">
-            <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+            <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
             <table style="border:none">
               <tr>
-                <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
-                <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
-              </tr>
-              <tr>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
+                <td style="border:none;padding:10px 8px 20px;font-size:9pt">Conforme:</td>
+                <td style="border:none;padding:10px 8px 20px;font-size:9pt;text-align:left">Very truly yours,</td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>

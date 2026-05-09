@@ -8,6 +8,8 @@ import {
   RiSaveLine,
   RiAddLine,
 } from "react-icons/ri";
+import { buildPRPrintHtml } from "@/utils/print/PRPrintBuilder";
+import { printWithIframe } from "@/utils/print/printUtils";
 
 type ItemDataType = {
   stock_no: string;
@@ -75,143 +77,30 @@ function escapeHtml(text: string): string {
 }
 
 function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?: string, currentUserId?: number | null, prId?: number) {
-  // Post remark if currentUser is available and PR exists
   if (currentUserFullname && prId) {
     postPrintRemark(currentUserFullname, "PR", currentUserId, prId);
   }
-
-  const printWindow = window.open("", "", "height=800,width=1200");
-  if (!printWindow) return;
-
-  // Build item rows HTML
-  const itemRows: string[] = [];
-  items.forEach((item) => {
-    const total = getItemTotal(item);
-    itemRows.push(`
-      <tr style="height: 16px;">
-        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.stock_no)}</td>
-        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.unit)}</td>
-        <td style="border: 1px solid black; text-align: left; font-size: 8pt; padding-left: 4px;">${escapeHtml(item.description)}</td>
-        <td style="border: 1px solid black; text-align: center; font-size: 8pt;">${escapeHtml(item.quantity)}</td>
-        <td style="border: 1px solid black; text-align: right; font-size: 8pt; padding-right: 4px;">${item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""}</td>
-        <td style="border: 1px solid black; text-align: right; font-size: 8pt; padding-right: 4px;">${total > 0 ? total.toFixed(2) : ""}</td>
-      </tr>
-    `);
+  const html = buildPRPrintHtml({
+    prNo: formData.pr_no || '',
+    entityName: formData.entity_name || '',
+    fundCluster: formData.fund_cluster || '',
+    officeSection: formData.office_section || '',
+    respCode: formData.resp_code || '',
+    date: formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+    purpose: formData.purpose || '',
+    reqName: formData.req_name || '',
+    reqDesig: formData.req_desig || '',
+    appName: formData.app_name || '',
+    appDesig: formData.app_desig || '',
+    items: items.map((item) => ({
+      stock_no: item.stock_no,
+      unit: item.unit,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    })),
   });
-
-  // Add empty rows to fill the table (up to 30 rows total)
-  const emptyRowsNeeded = Math.max(0, 30 - items.length);
-  for (let i = 0; i < emptyRowsNeeded; i++) {
-    itemRows.push(`
-      <tr style="height: 16px;">
-        <td style="border: 1px solid black;"></td>
-        <td style="border: 1px solid black;"></td>
-        <td style="border: 1px solid black;"></td>
-        <td style="border: 1px solid black;"></td>
-        <td style="border: 1px solid black;"></td>
-        <td style="border: 1px solid black;"></td>
-      </tr>
-    `);
-  }
-
-  const printContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Purchase Request - ${escapeHtml(formData.pr_no || "Draft")}</title>
-      <style>
-        body { font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #000; }
-        @media print { @page { margin: 12mm; } }
-      </style>
-    </head>
-    <body>
-      <table>
-        <colgroup>
-          <col style="width: 12%" />
-          <col style="width: 8%" />
-          <col style="width: 40%" />
-          <col style="width: 10%" />
-          <col style="width: 15%" />
-          <col style="width: 15%" />
-        </colgroup>
-        <tbody>
-          <tr style="height: 27px;">
-            <td colspan="6" style="text-align: right; font-size: 10pt; padding-right: 4px; color: #000;">Appendix 60</td>
-          </tr>
-          <tr style="height: 34px;">
-            <td colspan="6" style="text-align: center; font-weight: bold; font-size: 12pt; color: #000;">PURCHASE REQUEST</td>
-          </tr>
-          <tr style="height: 21px;">
-            <td colspan="2" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
-              Entity Name: <span style="font-weight: normal;">${escapeHtml(formData.entity_name)}</span>
-            </td>
-            <td style="border-bottom: 1px solid black;"></td>
-            <td colspan="3" style="border-bottom: 1px solid black; font-size: 8pt; padding: 2px 4px; font-weight: bold; color: #000;">
-              Fund Cluster: <span style="font-weight: normal;">${escapeHtml(formData.fund_cluster)}</span>
-            </td>
-          </tr>
-          <tr style="height: 14px;">
-            <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; vertical-align: top; padding: 2px 4px; color: #000;">
-              Office/Section :<br />${escapeHtml(formData.office_section)}
-            </td>
-            <td colspan="2" style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
-              PR No.: <span style="font-weight: normal;">${escapeHtml(formData.pr_no)}</span>
-            </td>
-            <td rowspan="2" colspan="2" style="border: 1px solid black; font-size: 8pt; font-weight: bold; vertical-align: top; padding: 2px 4px; color: #000;">
-              Date:<br /><span style="font-weight: normal;">${formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
-            </td>
-          </tr>
-          <tr style="height: 15px;">
-            <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8pt; font-weight: bold; padding: 2px 4px; color: #000;">
-              Responsibility Center Code: <span style="font-weight: normal;">${escapeHtml(formData.resp_code)}</span>
-            </td>
-          </tr>
-          <tr style="height: 22.5px;">
-            <th style="${thStyle}">Stock/Property No.</th>
-            <th style="${thStyle}">Unit</th>
-            <th style="${thStyle}">Item Description</th>
-            <th style="${thStyle}">Quantity</th>
-            <th style="${thStyle}">Unit Cost</th>
-            <th style="${thStyle}">Total Cost</th>
-          </tr>
-          ${itemRows.join("")}
-          <tr style="height: 40px;">
-            <td colspan="6" style="border: 1px solid black; font-size: 8.5pt; padding: 4px; color: #000; vertical-align: top;">
-              <b>Purpose:</b> ${escapeHtml(formData.purpose)}
-            </td>
-          </tr>
-          <tr style="height: 25px;">
-            <td style="border-left: 1px solid black;"></td>
-            <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Requested by:</i></td>
-            <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom; padding-bottom: 2px;"><i>Approved by:</i></td>
-            <td style="border-right: 1px solid black;"></td>
-          </tr>
-          <tr style="height: 20px;">
-            <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Signature :</td>
-            <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
-            <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;"></td>
-          </tr>
-          <tr style="height: 20px;">
-            <td colspan="2" style="border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Printed Name :</td>
-            <td colspan="2" style="font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_name)}</td>
-            <td colspan="2" style="border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_name)}</td>
-          </tr>
-          <tr style="height: 20px;">
-            <td colspan="2" style="border-bottom: 1px solid black; border-left: 1px solid black; font-size: 8.5pt; padding: 2px 4px; vertical-align: bottom;">Designation :</td>
-            <td colspan="2" style="border-bottom: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.req_desig)}</td>
-            <td colspan="2" style="border-bottom: 1px solid black; border-right: 1px solid black; font-size: 8.5pt; text-align: center; vertical-align: bottom;">${escapeHtml(formData.app_desig)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </body>
-    </html>
-  `;
-
-  printWindow.document.write(printContent);
-  printWindow.document.close();
-  setTimeout(() => printWindow.print(), 250);
+  printWithIframe(html);
 }
 
 // Helper function to post print remark
@@ -810,10 +699,9 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             </td>
           </tr>
           <tr style={{ height: "21px" }}>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
+            <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000", whiteSpace: "nowrap", overflow: "hidden" }}>
               Entity Name: <span style={{ fontWeight: "normal" }}>{formData.entity_name}</span>
             </td>
-            <td style={{ borderBottom: "1px solid black" }}></td>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
               Fund Cluster: <span style={{ fontWeight: "normal" }}>{formData.fund_cluster}</span>
             </td>
@@ -851,13 +739,46 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               <td style={{ ...tdStyle, textAlign: "left", paddingLeft: "4px" }}>{item.description}</td>
               <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
               <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                {item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""}
+                {item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}
               </td>
               <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                {getItemTotal(item) > 0 ? getItemTotal(item).toFixed(2) : ""}
+                {getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}
               </td>
             </tr>
           ))}
+          <tr style={{ height: "17px" }}>
+            <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
+              <b>Purpose:</b> {formData.purpose}
+            </td>
+          </tr>
+          <tr style={{ height: "30px" }}>
+            <td colSpan={6} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black" }}></td>
+          </tr>
+          <tr style={{ height: "12px" }}>
+            <td style={{ borderTop: "1px solid black", borderLeft: "1px solid black" }}></td>
+            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}><i>Requested by:</i></td>
+            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}><i>Approved by:</i></td>
+            <td style={{ borderTop: "1px solid black", borderRight: "1px solid black" }}></td>
+          </tr>
+          <tr style={{ height: "20px" }}>
+            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Signature :</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td style={{ borderRight: "1px solid black" }}></td>
+          </tr>
+          <tr style={{ height: "20px" }}>
+            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Printed Name :</td>
+            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_name}</td>
+            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_name}</td>
+            <td style={{ borderRight: "1px solid black" }}></td>
+          </tr>
+          <tr style={{ height: "20px" }}>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Designation :</td>
+            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_desig}</td>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_desig}</td>
+            <td style={{ borderBottom: "1px solid black", borderRight: "1px solid black" }}></td>
+          </tr>
         </tbody>
       </table>
     </div>

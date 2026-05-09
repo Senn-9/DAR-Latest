@@ -5,6 +5,7 @@ import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine, RiSearchLine } from
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 import { createClient } from "@/utils/supabase/client";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO } from "@/utils/print/POPrintBuilder";
+import { printWithIframe } from "@/utils/print/printUtils";
 
 // Types for PR and Canvass data
 type PurchaseRequest = {
@@ -179,6 +180,7 @@ function POEditablePreview({
   addTextOnlyLine,
   updateTextOnlyLine,
   removeTextOnlyLine,
+  hideTotalRow,
 }: {
   poNo: string;
   setPoNo: (v: string) => void;
@@ -208,6 +210,7 @@ function POEditablePreview({
   addTextOnlyLine: (afterIndex: number) => void;
   updateTextOnlyLine: (id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) => void;
   removeTextOnlyLine: (id: string) => void;
+  hideTotalRow: boolean;
 }) {
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
@@ -456,14 +459,16 @@ function POEditablePreview({
             </td>
           </tr>
 
-          <tr>
-            <td colSpan={5} style={{ border: "1px solid #111", padding: "3px 6px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
-              TOTAL :
-            </td>
-            <td style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
-              {grandTotal ? formatMoney(grandTotal).replace("₱", "") : ""}
-            </td>
-          </tr>
+          {!hideTotalRow && (
+            <tr>
+              <td colSpan={5} style={{ border: "1px solid #111", padding: "3px 6px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
+                TOTAL :
+              </td>
+              <td style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
+                {grandTotal ? formatMoney(grandTotal).replace("₱", "") : ""}
+              </td>
+            </tr>
+          )}
 
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt" }}>
@@ -473,7 +478,7 @@ function POEditablePreview({
 
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
-              <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
+              <div style={{ padding: "8px 10px 8px 20px", fontSize: "9pt", lineHeight: 1.28 }}>
                 In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
               </div>
 
@@ -484,22 +489,14 @@ function POEditablePreview({
                     <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                  </tr>
-                  <tr>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
                       <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
                     </td>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
                       <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
                     </td>
                   </tr>
@@ -698,7 +695,7 @@ function POPreview({
           </tr>
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
-              <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
+              <div style={{ padding: "8px 10px 8px 20px", fontSize: "9pt", lineHeight: 1.28 }}>
                 In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
               </div>
             </td>
@@ -887,23 +884,19 @@ function buildPurchaseOrderPrintHtml(data: {
       <tbody>
         <tr>
           <td colSpan="6" style="padding:0">
-            <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+            <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
             <table style="border:none">
               <tr>
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
               </tr>
               <tr>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-              </tr>
-              <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
@@ -946,6 +939,7 @@ function downloadPDF(data: {
   fundCluster: string;
   items: POItemWithBold[];
   textOnlyLines?: TextOnlyLine[];
+  hideTotalRow?: boolean;
   currentUserFullname?: string;
   currentUserId?: number | null;
   prId?: number | null;
@@ -954,22 +948,7 @@ function downloadPDF(data: {
   if (data.currentUserFullname) {
     postPrintRemark(data.currentUserFullname, 'PO', data.currentUserId, data.prId);
   }
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(sharedBuildPO(data));
-  printWindow.document.close();
-  // Wait for content to load before printing
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-  // Fallback if onload doesn't fire
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 300);
+  printWithIframe(sharedBuildPO(data));
 }
 
 // Helper function to post print remark
@@ -1014,6 +993,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [officeSection, setOfficeSection] = useState("");
   const [fundCluster, setFundCluster] = useState("");
   const [items, setItems] = useState<POItemWithBold[]>([]);
+  const [hideTotalRow, setHideTotalRow] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Text-only lines state (for printing only - descriptive lines between items)
@@ -1284,6 +1264,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         total_amount: grandTotal,
         status_id: 11,
         division_id: selectedDivisionId,
+        hide_total_row: hideTotalRow,
       };
       await onCreate(header, items);
       resetForm();
@@ -1321,6 +1302,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               fundCluster,
               items,
               textOnlyLines,
+              hideTotalRow,
               currentUserFullname,
             })
           }
@@ -1594,6 +1576,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     fundCluster,
                     items,
                     // textOnlyLines, // commented out
+                    hideTotalRow,
                     currentUserFullname,
                     currentUserId,
                     prId: selectedPRId ? Number(selectedPRId) : null,
@@ -1610,6 +1593,18 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
+                <button
+                  type="button"
+                  onClick={() => setHideTotalRow((v) => !v)}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
+                    hideTotalRow
+                      ? "bg-emerald-100 border-emerald-400 text-emerald-700"
+                      : "bg-gray-100 border-gray-300 text-gray-500"
+                  }`}
+                  title="Toggle Total row in the PO document"
+                >
+                  {hideTotalRow ? "Total Row: Hidden" : "Total Row: Visible"}
+                </button>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-4 text-black">
                 <POEditablePreview
@@ -1642,6 +1637,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   addTextOnlyLine={() => {}}
                   updateTextOnlyLine={() => {}}
                   removeTextOnlyLine={() => {}}
+                  hideTotalRow={hideTotalRow}
                 />
               </div>
             </div>

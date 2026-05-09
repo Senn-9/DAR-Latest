@@ -7,6 +7,7 @@ import { fetchPOWithItemsById, type PurchaseOrderItemRow, type PurchaseOrderRow 
 import type { OrsEntry as OrsEntryType } from "@/types/tables";
 import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO, type POPrintData } from "@/utils/print/POPrintBuilder";
+import { printWithIframe } from "@/utils/print/printUtils";
 
 type ViewpomodalProps = {
   visible: boolean;
@@ -345,6 +346,7 @@ function POPreview({
   orsDate,
   fundsAvailable,
   orsAmount,
+  hideTotalRow,
 }: {
   poNo: string;
   supplier: string;
@@ -365,6 +367,7 @@ function POPreview({
   orsDate?: string | null;
   fundsAvailable?: string | null;
   orsAmount?: number | null;
+  hideTotalRow?: boolean | null;
 }) {
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
@@ -383,16 +386,18 @@ function POPreview({
     [items],
   );
 
+  const sideBorder: React.CSSProperties = { borderLeft: "1px solid #111", borderRight: "1px solid #111", borderTop: "none", borderBottom: "none" };
+
   const itemRows = normalizedItems.map((item, index) => {
     const total = getItemTotal(item);
     return (
       <tr key={index} style={{ height: "auto" }}>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.stock_no ?? "")}</td>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.unit ?? "")}</td>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "left", fontSize: "9pt", lineHeight: 1.3, whiteSpace: "pre-wrap", wordWrap: "break-word" }}>{String(item.description ?? "")}</td>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : ""}</td>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""}</td>
-        <td style={{ border: "1px solid #111", verticalAlign: "top", padding: "4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{total ? formatMoney(total).replace("₱", "") : ""}</td>
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: item.stock_no ?? "" }} />
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3, whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: item.unit ?? "" }} />
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "left", fontSize: "9pt", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : ""}</td>
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""}</td>
+        <td style={{ ...sideBorder, verticalAlign: "top", padding: "3px 4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{total ? formatMoney(total).replace("₱", "") : ""}</td>
       </tr>
     );
   });
@@ -402,7 +407,7 @@ function POPreview({
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "4px" }}>
         <tbody>
           <tr>
-            <td style={{ textAlign: "right", fontSize: "11pt", fontWeight: "bold", padding: 0 }}>Appendix 61</td>
+            <td style={{ textAlign: "right", fontSize: "10pt", fontStyle: "italic", padding: 0 }}>Appendix 61</td>
           </tr>
         </tbody>
       </table>
@@ -476,19 +481,21 @@ function POPreview({
           </tr>
           {itemRows.length > 0 ? itemRows : (
             <tr>
-              <td colSpan={6} style={{ border: "1px solid #111", padding: "16px", textAlign: "center", color: "#666", fontStyle: "italic" }}>
+              <td colSpan={6} style={{ ...sideBorder, padding: "16px", textAlign: "center", color: "#666", fontStyle: "italic" }}>
                 No items found
               </td>
             </tr>
           )}
-          <tr>
-            <td colSpan={5} style={{ border: "1px solid #111", padding: "3px 6px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
-              TOTAL :
-            </td>
-            <td style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
-              {grandTotal ? formatMoney(grandTotal).replace("₱", "") : ""}
-            </td>
-          </tr>
+          {!hideTotalRow && (
+            <tr>
+              <td colSpan={5} style={{ border: "1px solid #111", padding: "3px 6px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
+                TOTAL :
+              </td>
+              <td style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold", textAlign: "right" }}>
+                {grandTotal ? formatMoney(grandTotal).replace("₱", "") : ""}
+              </td>
+            </tr>
+          )}
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "2px 6px", fontSize: "9pt" }}>
               <span style={{ fontWeight: "bold" }}>(Total Amount in Words) </span>
@@ -497,7 +504,7 @@ function POPreview({
           </tr>
           <tr>
             <td colSpan={6} style={{ border: "1px solid #111", padding: "0" }}>
-              <div style={{ padding: "8px 10px", fontSize: "9pt", lineHeight: 1.28 }}>
+              <div style={{ padding: "8px 10px 8px 20px", fontSize: "9pt", lineHeight: 1.28 }}>
                 In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
               </div>
               <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -507,22 +514,14 @@ function POPreview({
                     <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                    <td style={{ border: "none", padding: "20px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "72%", margin: "0 auto" }} />
-                    </td>
-                  </tr>
-                  <tr>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
                       <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
                     </td>
-                    <td style={{ border: "none", padding: "10px 8px 2px", textAlign: "center" }}>
+                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
                       <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
                     </td>
                   </tr>
@@ -725,23 +724,19 @@ function buildPurchaseOrderPrintHtml(data: {
       <tbody>
         <tr>
           <td colSpan="6" style="padding:0">
-            <div style="padding:8px 10px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+            <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
             <table style="border:none">
               <tr>
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
               </tr>
               <tr>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-                <td style="border:none;padding:20px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:72%;margin:0 auto"></div></td>
-              </tr>
-              <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:10px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
@@ -1029,20 +1024,7 @@ function downloadORS(data: {
     postPrintRemark(data.currentUserFullname, 'ORS', data.currentUserId, data.poId);
   }
   
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(sharedBuildORS(data));
-  printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 300);
+  printWithIframe(sharedBuildORS(data));
 }
 
 function downloadPDF(data: {
@@ -1066,6 +1048,7 @@ function downloadPDF(data: {
   orsDate?: string | null;
   fundsAvailable?: string | null;
   orsAmount?: number | null;
+  hideTotalRow?: boolean;
   currentUserFullname?: string;
   currentUserId?: number | null;
 }) {
@@ -1073,20 +1056,7 @@ function downloadPDF(data: {
     postPrintRemark(data.currentUserFullname, 'PO', data.currentUserId, data.poId);
   }
   
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(sharedBuildPO(data));
-  printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
-  setTimeout(() => {
-    if (printWindow.document.readyState === "complete") {
-      printWindow.focus();
-      printWindow.print();
-    }
-  }, 300);
+  printWithIframe(sharedBuildPO(data));
 }
 
 export default function Viewpomodal({ visible, poId, onClose, currentUser }: ViewpomodalProps) {
@@ -1398,6 +1368,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         orsDate: poHeader.ors_date,
                         fundsAvailable: poHeader.funds_available,
                         orsAmount: poHeader.ors_amount,
+                        hideTotalRow: poHeader.hide_total_row ?? false,
                         currentUserFullname,
                         currentUserId,
                       })
@@ -1446,6 +1417,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         orsDate: poHeader.ors_date,
                         fundsAvailable: poHeader.funds_available,
                         orsAmount: poHeader.ors_amount,
+                        hideTotalRow: poHeader.hide_total_row ?? false,
                         currentUserFullname,
                         currentUserId,
                       })
@@ -1478,6 +1450,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                     orsDate={poHeader.ors_date}
                     fundsAvailable={poHeader.funds_available}
                     orsAmount={poHeader.ors_amount}
+                    hideTotalRow={poHeader.hide_total_row ?? false}
                   />
                 </div>
               )}
