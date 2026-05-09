@@ -201,6 +201,17 @@ export type OrsEntry = {
   approved_by_name: string | null;
   approved_by_desig: string | null;
   date_created: string | null;
+  // Extended fields saved by ORSProcessModal
+  entity_name: string | null;
+  payee_address: string | null;
+  office: string | null;
+  reference_no: string | null;
+  obligation_amount: number | null;
+  payable_amount: number | null;
+  payment_amount: number | null;
+  not_yet_due_balance: number | null;
+  due_demandable_balance: number | null;
+  blank_status_section?: boolean | null;
 };
 
 export type PrForm = {

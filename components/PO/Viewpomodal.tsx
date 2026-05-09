@@ -4,6 +4,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import { RiCloseLine, RiFilePdf2Line } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { fetchPOWithItemsById, type PurchaseOrderItemRow, type PurchaseOrderRow } from "@/utils/supabase/po";
+import type { OrsEntry as OrsEntryType } from "@/types/tables";
+import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
+import { buildPurchaseOrderPrintHtml as sharedBuildPO, type POPrintData } from "@/utils/print/POPrintBuilder";
 
 type ViewpomodalProps = {
   visible: boolean;
@@ -72,7 +75,9 @@ function toWords(amount: number): string {
 function ORSPreview({
   orsNo, orsDate, entityName, payee, payeeAddress, office,
   fundCluster, responsibilityCenter, particulars, mfoPap, uacsCode,
-  amount, preparedByName, preparedByDesig,
+  amount, referenceNo, obligationAmount, payableAmount, paymentAmount,
+  notYetDueBalance, dueDemandableBalance, preparedByName, preparedByDesig,
+  blankStatusSection,
 }: {
   orsNo: string | null;
   orsDate: string | null;
@@ -86,10 +91,17 @@ function ORSPreview({
   mfoPap: string | null;
   uacsCode: string | null;
   amount: number | null;
+  referenceNo?: string | null;
+  obligationAmount?: number | null;
+  payableAmount?: number | null;
+  paymentAmount?: number | null;
+  notYetDueBalance?: number | null;
+  dueDemandableBalance?: number | null;
   preparedByName: string | null;
   preparedByDesig: string | null;
+  blankStatusSection?: boolean | null;
 }) {
-  const fmt = (n: number) => n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const fmt = (n: number) => n ? "₱" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
   const displayDate = orsDate ? new Date(orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "";
   const amountWords = useMemo(() => (amount && amount > 0 ? toWords(amount) : ""), [amount]);
   const amt = amount || 0;
@@ -109,7 +121,7 @@ function ORSPreview({
   return (
     <div style={S.root}>
       <div style={{ textAlign: "right", fontStyle: "italic", fontSize: "9pt", marginBottom: "4px" }}>Appendix 11</div>
-      <table style={{ ...S.tbl, borderCollapse: "collapse" }}>
+      <table style={{ ...S.tbl, borderCollapse: "collapse", border: "1px solid #000" }}>
         <colgroup><col style={{ width: "62%" }} /><col style={{ width: "38%" }} /></colgroup>
         <tbody>
           <tr>
@@ -134,7 +146,7 @@ function ORSPreview({
           </tr>
         </tbody>
       </table>
-      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+      <table style={{ ...S.tbl, marginTop: "-1px", border: "1px solid #000" }}>
         <colgroup><col style={{ width: "14%" }} /><col style={{ width: "86%" }} /></colgroup>
         <tbody>
           <tr>
@@ -151,7 +163,7 @@ function ORSPreview({
           </tr>
         </tbody>
       </table>
-      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+      <table style={{ ...S.tbl, marginTop: "-1px", border: "1px solid #000" }}>
         <colgroup><col style={{ width: "14%" }} /><col style={{ width: "36%" }} /><col style={{ width: "12%" }} /><col style={{ width: "15%" }} /><col style={{ width: "23%" }} /></colgroup>
         <thead>
           <tr>
@@ -164,11 +176,11 @@ function ORSPreview({
         </thead>
         <tbody>
           <tr>
-            <td style={{ ...S.tdC, height: "90px", verticalAlign: "top", paddingTop: "4px" }}>{responsibilityCenter || ""}</td>
-            <td style={{ ...S.td, verticalAlign: "top", wordBreak: "break-word" }}>{particulars || ""}</td>
-            <td style={{ ...S.tdC, verticalAlign: "top" }}>{mfoPap || ""}</td>
-            <td style={{ ...S.tdC, verticalAlign: "top" }}>{uacsCode || ""}</td>
-            <td style={{ ...S.tdR, verticalAlign: "top" }}>{amt > 0 ? fmt(amt) : ""}</td>
+            <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", height: "90px", verticalAlign: "top", paddingTop: "4px" }}>{responsibilityCenter || ""}</td>
+            <td style={{ ...S.td, borderTop: "none", borderBottom: "none", verticalAlign: "top", wordBreak: "break-word" }}>{particulars || ""}</td>
+            <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{mfoPap || ""}</td>
+            <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{uacsCode || ""}</td>
+            <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{amt > 0 ? fmt(amt) : ""}</td>
           </tr>
           <tr>
             <td colSpan={4} style={{ ...S.tdR, ...S.b, fontSize: "8pt" }}>Total</td>
@@ -176,7 +188,7 @@ function ORSPreview({
           </tr>
         </tbody>
       </table>
-      <table style={{ ...S.tbl, marginTop: "-1px" }}>
+      <table style={{ ...S.tbl, marginTop: "-1px", border: "1px solid #000" }}>
         <colgroup><col style={{ width: "50%" }} /><col style={{ width: "50%" }} /></colgroup>
         <tbody>
           <tr>
@@ -228,86 +240,86 @@ function ORSPreview({
         </tbody>
       </table>
 
-      <table style={{ ...S.tbl, marginTop: "-1px" }}>
-        <tbody>
+      {/* C. STATUS OF OBLIGATION */}
+      <table style={{ ...S.tbl, marginTop: "-1px", border: "1px solid #000" }}>
+        <colgroup>
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "17%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "9%" }} />
+        </colgroup>
+        <thead>
           <tr>
             <td style={{ ...S.td, ...S.b, fontSize: "8pt", padding: "3px 6px" }}>C.</td>
             <td colSpan={7} style={{ ...S.tdC, ...S.b, fontSize: "9pt", letterSpacing: "1px" }}>STATUS OF OBLIGATION</td>
           </tr>
-        </tbody>
-      </table>
-
-      <table style={{ ...S.tbl, marginTop: "-1px" }}>
-        <colgroup>
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "22%" }} />
-          <col style={{ width: "16%" }} />
-          <col style={{ width: "13%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "9%" }} />
-        </colgroup>
-        <thead>
           <tr>
             <td colSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Reference</td>
             <td colSpan={5} style={{ ...S.tdC, ...S.b, fontSize: "7.5pt" }}>Amount</td>
           </tr>
           <tr>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Date</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Particulars</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>ORS/JEV/Check/<br />ADA/TRA No.</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Obligation</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payable</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Payment</td>
+            <td rowSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>Date</td>
+            <td rowSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>Particulars</td>
+            <td rowSpan={3} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>ORS/JEV/Check/<br />ADA/TRA No.</td>
+            <td rowSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>Obligation</td>
+            <td rowSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>Payable</td>
+            <td rowSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt", verticalAlign: "middle" }}>Payment</td>
             <td colSpan={2} style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Balance</td>
           </tr>
           <tr>
-            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
-            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
-            <td style={{ ...S.tdC, fontSize: "7pt" }}></td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due</td>
+            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and<br />Demandable</td>
+          </tr>
+          <tr>
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(a)</td>
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(b)</td>
             <td style={{ ...S.tdC, fontSize: "7pt" }}>(c)</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Not Yet Due<br />(a-b)</td>
-            <td style={{ ...S.tdC, ...S.b, fontSize: "7pt" }}>Due and Demandable<br />(b-c)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(a-b)</td>
+            <td style={{ ...S.tdC, fontSize: "7pt" }}>(b-c)</td>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td style={{ ...S.td, height: "28px", fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.td, fontSize: "7.5pt", wordBreak: "break-word" }}></td>
-            <td style={{ ...S.tdC, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-          </tr>
-          <tr>
-            <td style={{ ...S.td, height: "18px" }}></td>
-            <td style={S.td}></td>
-            <td style={S.td}></td>
-            <td style={S.tdR}></td>
-            <td style={S.tdR}></td>
-            <td style={S.tdR}></td>
-            <td style={S.tdR}></td>
-            <td style={S.tdR}></td>
-          </tr>
-          <tr>
-            <td colSpan={6} style={{ ...S.tdR, ...S.b, fontSize: "7.5pt" }}>Balance</td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-            <td style={{ ...S.tdR, fontSize: "7.5pt" }}></td>
-          </tr>
-        </tbody>
+        {blankStatusSection ? (
+          <tbody>
+            <tr>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", height: "112px" }}></td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+            </tr>
+          </tbody>
+        ) : (
+          <tbody>
+            <tr>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", height: "28px", fontSize: "7.5pt" }}>{displayDate}</td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }}>{particulars || ""}</td>
+              <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{referenceNo || orsNo || ""}</td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{obligationAmount && obligationAmount > 0 ? fmt(obligationAmount) : ""}</td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{payableAmount && payableAmount > 0 ? fmt(payableAmount) : ""}</td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{paymentAmount && paymentAmount > 0 ? fmt(paymentAmount) : ""}</td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
+            </tr>
+            <tr>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", height: "18px" }}></td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none" }}></td>
+            </tr>
+          </tbody>
+        )}
       </table>
-
-      {/* Amount in words note */}
-      {amt > 0 && (
-        <div style={{ marginTop: "4px", fontSize: "7.5pt", fontStyle: "italic" }}>
-          Amount in Words: <strong>{amountWords}</strong>
-        </div>
-      )}
     </div>
   );
 }
@@ -796,10 +808,17 @@ function buildORSPrintHtml(data: {
   mfoPap: string | null;
   uacsCode: string | null;
   amount: number | null;
+  referenceNo?: string | null;
+  obligationAmount?: number | null;
+  payableAmount?: number | null;
+  paymentAmount?: number | null;
+  notYetDueBalance?: number | null;
+  dueDemandableBalance?: number | null;
   preparedByName: string | null;
   preparedByDesig: string | null;
+  blankStatusSection?: boolean | null;
 }) {
-  const fmt = (n: number) => n ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const fmt = (n: number) => n ? "₱" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
   const displayDate = data.orsDate
     ? new Date(data.orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
     : "";
@@ -822,10 +841,13 @@ function buildORSPrintHtml(data: {
   <meta charset="utf-8" />
   <title>OBLIGATION REQUEST AND STATUS</title>
   <style>
+    @page { size: A4; margin: 12mm 14mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px; font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000; line-height: 1.25; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    td, th { border: 1px solid #000; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 9pt; color: #000; line-height: 1.25; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #000; }
+    td, th { border: 1px solid #000; padding: 2px 5px; font-size: 8.5pt; vertical-align: top; }
+    .side { border-top: none !important; border-bottom: none !important; }
     .b { font-weight: bold; }
     .c { text-align: center; }
     .r { text-align: right; }
@@ -875,11 +897,11 @@ function buildORSPrintHtml(data: {
     </thead>
     <tbody>
       <tr>
-        <td class="c" style="height:90px;vertical-align:top;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
-        <td style="vertical-align:top;word-break:break-word">${escapeHtml(data.particulars)}</td>
-        <td class="c" style="vertical-align:top">${escapeHtml(data.mfoPap)}</td>
-        <td class="c" style="vertical-align:top">${escapeHtml(data.uacsCode)}</td>
-        <td class="r" style="vertical-align:top">${amt > 0 ? fmt(amt) : ""}</td>
+        <td class="c side" style="height:90px;vertical-align:top;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
+        <td class="side" style="vertical-align:top;word-break:break-word">${escapeHtml(data.particulars)}</td>
+        <td class="c side" style="vertical-align:top">${escapeHtml(data.mfoPap)}</td>
+        <td class="c side" style="vertical-align:top">${escapeHtml(data.uacsCode)}</td>
+        <td class="r side" style="vertical-align:top">${amt > 0 ? fmt(amt) : ""}</td>
       </tr>
       <tr>
         <td colspan="4" class="r b" style="font-size:8pt">Total</td>
@@ -913,59 +935,66 @@ function buildORSPrintHtml(data: {
   </table>
 
   <table style="margin-top:-1px">
-    <tbody>
+    <colgroup>
+      <col style="width:7%"/><col style="width:16%"/><col style="width:17%"/>
+      <col style="width:14%"/><col style="width:14%"/><col style="width:14%"/>
+      <col style="width:9%"/><col style="width:9%"/>
+    </colgroup>
+    <thead>
       <tr>
         <td class="b" style="font-size:8pt;padding:3px 6px">C.</td>
         <td colspan="7" class="c b" style="font-size:9pt;letter-spacing:1px">STATUS OF OBLIGATION</td>
       </tr>
-    </tbody>
-  </table>
-
-  <table style="margin-top:-1px">
-    <colgroup><col style="width:10%"/><col style="width:22%"/><col style="width:16%"/><col style="width:13%"/><col style="width:10%"/><col style="width:10%"/><col style="width:10%"/><col style="width:9%"/></colgroup>
-    <thead>
-      <tr><td colspan="3" class="c b" style="font-size:7.5pt">Reference</td><td colspan="5" class="c b" style="font-size:7.5pt">Amount</td></tr>
       <tr>
-        <td class="c b" style="font-size:7pt">Date</td>
-        <td class="c b" style="font-size:7pt">Particulars</td>
-        <td class="c b" style="font-size:7pt">ORS/JEV/Check/<br/>ADA/TRA No.</td>
-        <td class="c b" style="font-size:7pt">Obligation</td>
-        <td class="c b" style="font-size:7pt">Payable</td>
-        <td class="c b" style="font-size:7pt">Payment</td>
+        <td colspan="3" class="c b" style="font-size:7.5pt">Reference</td>
+        <td colspan="5" class="c b" style="font-size:7.5pt">Amount</td>
+      </tr>
+      <tr>
+        <td rowspan="3" class="c b" style="font-size:7pt;vertical-align:middle">Date</td>
+        <td rowspan="3" class="c b" style="font-size:7pt;vertical-align:middle">Particulars</td>
+        <td rowspan="3" class="c b" style="font-size:7pt;vertical-align:middle">ORS/JEV/Check/<br/>ADA/TRA No.</td>
+        <td rowspan="2" class="c b" style="font-size:7pt;vertical-align:middle">Obligation</td>
+        <td rowspan="2" class="c b" style="font-size:7pt;vertical-align:middle">Payable</td>
+        <td rowspan="2" class="c b" style="font-size:7pt;vertical-align:middle">Payment</td>
         <td colspan="2" class="c b" style="font-size:7pt">Balance</td>
       </tr>
       <tr>
-        <td class="c" style="font-size:7pt"></td>
-        <td class="c" style="font-size:7pt"></td>
-        <td class="c" style="font-size:7pt"></td>
+        <td class="c b" style="font-size:7pt">Not Yet Due</td>
+        <td class="c b" style="font-size:7pt">Due and<br/>Demandable</td>
+      </tr>
+      <tr>
         <td class="c" style="font-size:7pt">(a)</td>
         <td class="c" style="font-size:7pt">(b)</td>
         <td class="c" style="font-size:7pt">(c)</td>
-        <td class="c b" style="font-size:7pt">Not Yet Due<br/>(a-b)</td>
-        <td class="c b" style="font-size:7pt">Due and Demandable<br/>(b-c)</td>
+        <td class="c" style="font-size:7pt">(a-b)</td>
+        <td class="c" style="font-size:7pt">(b-c)</td>
       </tr>
     </thead>
-    <tbody>
-      <tr>
-        <td style="height:28px;font-size:7.5pt"></td>
-        <td style="font-size:7.5pt;word-break:break-word"></td>
-        <td class="c" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-      </tr>
-      <tr><td style="height:18px"></td><td></td><td></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
-      <tr>
-        <td colspan="6" class="r b" style="font-size:7.5pt">Balance</td>
-        <td class="r" style="font-size:7.5pt"></td>
-        <td class="r" style="font-size:7.5pt"></td>
-      </tr>
-    </tbody>
+      ${data.blankStatusSection ? `
+      <tbody><tr>
+        <td class="side" style="height:112px"></td>
+        <td class="side"></td>
+        <td class="side"></td>
+        <td class="r side"></td>
+        <td class="r side"></td>
+        <td class="r side"></td>
+        <td class="r side"></td>
+        <td class="r side"></td>
+      </tr></tbody>` : `
+      <tbody>
+        <tr>
+          <td class="side" style="height:28px;font-size:7.5pt">${escapeHtml(displayDate)}</td>
+          <td class="side" style="font-size:7.5pt;word-break:break-word">${escapeHtml(data.particulars)}</td>
+          <td class="c side" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
+          <td class="r side" style="font-size:7.5pt">${data.obligationAmount && data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
+          <td class="r side" style="font-size:7.5pt">${data.payableAmount && data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
+          <td class="r side" style="font-size:7.5pt">${data.paymentAmount && data.paymentAmount > 0 ? fmt(data.paymentAmount) : ""}</td>
+          <td class="r side" style="font-size:7.5pt"></td>
+          <td class="r side" style="font-size:7.5pt"></td>
+        </tr>
+        <tr><td class="side" style="height:18px"></td><td class="side"></td><td class="side"></td><td class="r side"></td><td class="r side"></td><td class="r side"></td><td class="r side"></td><td class="r side"></td></tr>
+      </tbody>`}
   </table>
-
-  ${amt > 0 ? `<div style="margin-top:4px;font-size:7.5pt;font-style:italic">Amount in Words: <strong>${amountWords}</strong></div>` : ""}
 </body>
 </html>`;
 }
@@ -983,11 +1012,18 @@ function downloadORS(data: {
   mfoPap: string | null;
   uacsCode: string | null;
   amount: number | null;
+  referenceNo?: string | null;
+  obligationAmount?: number | null;
+  payableAmount?: number | null;
+  paymentAmount?: number | null;
+  notYetDueBalance?: number | null;
+  dueDemandableBalance?: number | null;
   preparedByName: string | null;
   preparedByDesig: string | null;
   currentUserFullname?: string;
   currentUserId?: number | null;
   poId?: number | null;
+  blankStatusSection?: boolean | null;
 }) {
   if (data.currentUserFullname) {
     postPrintRemark(data.currentUserFullname, 'ORS', data.currentUserId, data.poId);
@@ -995,7 +1031,7 @@ function downloadORS(data: {
   
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
-  printWindow.document.write(buildORSPrintHtml(data));
+  printWindow.document.write(sharedBuildORS(data));
   printWindow.document.close();
   printWindow.onload = () => {
     printWindow.focus();
@@ -1039,7 +1075,7 @@ function downloadPDF(data: {
   
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
-  printWindow.document.write(buildPurchaseOrderPrintHtml(data));
+  printWindow.document.write(sharedBuildPO(data));
   printWindow.document.close();
   printWindow.onload = () => {
     printWindow.focus();
@@ -1061,6 +1097,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
   const hasORS = (poHeader?.status_id ?? 0) >= 13; // ORS Creation or beyond
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [orsEntry, setOrsEntry] = useState<OrsEntryType | null>(null);
 
   // Load current user from localStorage
   useEffect(() => {
@@ -1071,6 +1108,18 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
       setCurrentUserId(currentUser.id);
     }
   }, [currentUser]);
+
+  // Fetch ORS entry from ors_entries table by ORS number
+  useEffect(() => {
+    if (!visible || !poHeader?.ors_no) { setOrsEntry(null); return; }
+    const supabase = createClient();
+    supabase
+      .from("ors_entries")
+      .select("*")
+      .eq("ors_no", poHeader.ors_no)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setOrsEntry(data as OrsEntryType); });
+  }, [visible, poHeader?.ors_no]);
 
   useEffect(() => {
     if (!visible || !poId) return;
@@ -1437,10 +1486,10 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
         </>
       )}
 
-      {/* ORS Tab — Two column: ORS Form fields (left) + ORS Preview (right) */}
+      {/* ORS Tab — Two column: ORS info (left) + ORS Preview (right) */}
           {tab === "ors" && (
             <>
-              {/* ORS Form Fields */}
+              {/* ORS Info Fields */}
               <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
                 {loading ? (
                   <div className="flex-1 flex items-center justify-center">
@@ -1469,25 +1518,25 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Number</label>
-                              <input className={readonlyCls} value={poHeader.ors_no || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.ors_no || poHeader.ors_no || ""} readOnly tabIndex={-1} />
                             </div>
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Date</label>
-                              <input className={readonlyCls} value={poHeader.ors_date || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.date_created || poHeader.ors_date || ""} readOnly tabIndex={-1} />
                             </div>
                           </div>
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name</label>
-                            <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                            <input className={readonlyCls} value={orsEntry?.entity_name || poHeader.office_section || ""} readOnly tabIndex={-1} />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Fund Cluster</label>
-                              <input className={readonlyCls} value={poHeader.fund_cluster || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.fund_cluster || poHeader.fund_cluster || ""} readOnly tabIndex={-1} />
                             </div>
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center</label>
-                              <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.responsibility_center || ""} readOnly tabIndex={-1} />
                             </div>
                           </div>
                         </div>
@@ -1503,11 +1552,11 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                           </div>
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office</label>
-                            <input className={readonlyCls} value={poHeader.office_section || ""} readOnly tabIndex={-1} />
+                            <input className={readonlyCls} value={orsEntry?.office || poHeader.office_section || ""} readOnly tabIndex={-1} />
                           </div>
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address</label>
-                            <input className={readonlyCls} value={poHeader.address || ""} readOnly tabIndex={-1} />
+                            <input className={readonlyCls} value={orsEntry?.payee_address || poHeader.address || ""} readOnly tabIndex={-1} />
                           </div>
                         </div>
                       </div>
@@ -1518,21 +1567,21 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <div className="space-y-4">
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Particulars</label>
-                            <textarea className={`${readonlyCls} min-h-[80px]`} value={poHeader.procurement_mode || ""} readOnly tabIndex={-1} />
+                            <textarea className={`${readonlyCls} min-h-[80px]`} value={orsEntry?.particulars || ""} readOnly tabIndex={-1} />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">MFO/PAP</label>
-                              <input className={readonlyCls} value={poHeader.fund_cluster || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.mfo_pap || ""} readOnly tabIndex={-1} />
                             </div>
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">UACS Code</label>
-                              <input className={readonlyCls} value="5010101000" readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.uacs_code || ""} readOnly tabIndex={-1} />
                             </div>
                           </div>
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">ORS Amount</label>
-                            <input className={`${readonlyCls} bg-emerald-50 font-bold text-emerald-700`} value={poHeader.ors_amount != null ? formatMoney(poHeader.ors_amount) : ""} readOnly tabIndex={-1} />
+                            <input className={`${readonlyCls} bg-emerald-50 font-bold text-emerald-700`} value={orsEntry?.obligation_amount != null ? formatMoney(orsEntry.obligation_amount) : (poHeader.ors_amount != null ? formatMoney(poHeader.ors_amount) : "")} readOnly tabIndex={-1} />
                           </div>
                         </div>
                       </div>
@@ -1543,12 +1592,12 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Certified By (Head)</label>
-                              <input className={readonlyCls} value={poHeader.official_name || ""} readOnly tabIndex={-1} />
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Prepared By (Name)</label>
+                              <input className={readonlyCls} value={orsEntry?.prepared_by_name || poHeader.official_name || ""} readOnly tabIndex={-1} />
                             </div>
                             <div>
                               <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Designation</label>
-                              <input className={readonlyCls} value={poHeader.official_desig || ""} readOnly tabIndex={-1} />
+                              <input className={readonlyCls} value={orsEntry?.prepared_by_desig || poHeader.official_desig || ""} readOnly tabIndex={-1} />
                             </div>
                           </div>
                         </div>
@@ -1560,20 +1609,27 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       <button
                         onClick={() =>
                           downloadORS({
-                            orsNo: poHeader.ors_no,
-                            orsDate: poHeader.ors_date,
-                            entityName: poHeader.office_section,
+                            orsNo: orsEntry?.ors_no || poHeader.ors_no,
+                            orsDate: orsEntry?.date_created || poHeader.ors_date,
+                            entityName: orsEntry?.entity_name || poHeader.office_section,
                             payee: poHeader.supplier,
-                            payeeAddress: poHeader.address,
-                            office: poHeader.office_section,
-                            fundCluster: poHeader.fund_cluster,
-                            responsibilityCenter: poHeader.office_section,
-                            particulars: poHeader.procurement_mode,
-                            mfoPap: poHeader.fund_cluster,
-                            uacsCode: "5010101000",
-                            amount: poHeader.ors_amount,
-                            preparedByName: poHeader.official_name,
-                            preparedByDesig: poHeader.official_desig,
+                            payeeAddress: orsEntry?.payee_address || poHeader.address,
+                            office: orsEntry?.office || poHeader.office_section,
+                            fundCluster: orsEntry?.fund_cluster || poHeader.fund_cluster,
+                            responsibilityCenter: orsEntry?.responsibility_center || null,
+                            particulars: orsEntry?.particulars || null,
+                            mfoPap: orsEntry?.mfo_pap || null,
+                            uacsCode: orsEntry?.uacs_code || null,
+                            amount: orsEntry?.obligation_amount || poHeader.ors_amount,
+                            referenceNo: orsEntry?.reference_no || null,
+                            obligationAmount: orsEntry?.obligation_amount || null,
+                            payableAmount: orsEntry?.payable_amount || null,
+                            paymentAmount: orsEntry?.payment_amount || null,
+                            notYetDueBalance: orsEntry?.not_yet_due_balance || null,
+                            dueDemandableBalance: orsEntry?.due_demandable_balance || null,
+                            preparedByName: orsEntry?.prepared_by_name || poHeader.official_name,
+                            preparedByDesig: orsEntry?.prepared_by_desig || poHeader.official_desig,
+                            blankStatusSection: orsEntry?.blank_status_section ?? false,
                             currentUserFullname,
                             currentUserId,
                             poId: poHeader.id,
@@ -1603,20 +1659,27 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       <button
                         onClick={() =>
                           downloadORS({
-                            orsNo: poHeader.ors_no,
-                            orsDate: poHeader.ors_date,
-                            entityName: poHeader.office_section,
+                            orsNo: orsEntry?.ors_no || poHeader.ors_no,
+                            orsDate: orsEntry?.date_created || poHeader.ors_date,
+                            entityName: orsEntry?.entity_name || poHeader.office_section,
                             payee: poHeader.supplier,
-                            payeeAddress: poHeader.address,
-                            office: poHeader.office_section,
-                            fundCluster: poHeader.fund_cluster,
-                            responsibilityCenter: poHeader.office_section,
-                            particulars: poHeader.procurement_mode,
-                            mfoPap: poHeader.fund_cluster,
-                            uacsCode: "5010101000",
-                            amount: poHeader.ors_amount,
-                            preparedByName: poHeader.official_name,
-                            preparedByDesig: poHeader.official_desig,
+                            payeeAddress: orsEntry?.payee_address || poHeader.address,
+                            office: orsEntry?.office || poHeader.office_section,
+                            fundCluster: orsEntry?.fund_cluster || poHeader.fund_cluster,
+                            responsibilityCenter: orsEntry?.responsibility_center || null,
+                            particulars: orsEntry?.particulars || null,
+                            mfoPap: orsEntry?.mfo_pap || null,
+                            uacsCode: orsEntry?.uacs_code || null,
+                            amount: orsEntry?.obligation_amount || poHeader.ors_amount,
+                            referenceNo: orsEntry?.reference_no || null,
+                            obligationAmount: orsEntry?.obligation_amount || null,
+                            payableAmount: orsEntry?.payable_amount || null,
+                            paymentAmount: orsEntry?.payment_amount || null,
+                            notYetDueBalance: orsEntry?.not_yet_due_balance || null,
+                            dueDemandableBalance: orsEntry?.due_demandable_balance || null,
+                            preparedByName: orsEntry?.prepared_by_name || poHeader.official_name,
+                            preparedByDesig: orsEntry?.prepared_by_desig || poHeader.official_desig,
+                            blankStatusSection: orsEntry?.blank_status_section ?? false,
                             currentUserFullname,
                             currentUserId,
                             poId: poHeader.id,
@@ -1631,20 +1694,27 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   {poHeader && (
                     <div className="bg-white rounded-lg shadow-lg p-8 text-black">
                       <ORSPreview
-                        orsNo={poHeader.ors_no}
-                        orsDate={poHeader.ors_date}
-                        entityName={poHeader.office_section}
+                        orsNo={orsEntry?.ors_no || poHeader.ors_no}
+                        orsDate={orsEntry?.date_created || poHeader.ors_date}
+                        entityName={orsEntry?.entity_name || poHeader.office_section}
                         payee={poHeader.supplier}
-                        payeeAddress={poHeader.address}
-                        office={poHeader.office_section}
-                        fundCluster={poHeader.fund_cluster}
-                        responsibilityCenter={poHeader.office_section}
-                        particulars={poHeader.procurement_mode}
-                        mfoPap={poHeader.fund_cluster}
-                        uacsCode="5010101000"
-                        amount={poHeader.ors_amount}
-                        preparedByName={poHeader.official_name}
-                        preparedByDesig={poHeader.official_desig}
+                        payeeAddress={orsEntry?.payee_address || poHeader.address}
+                        office={orsEntry?.office || poHeader.office_section}
+                        fundCluster={orsEntry?.fund_cluster || poHeader.fund_cluster}
+                        responsibilityCenter={orsEntry?.responsibility_center || null}
+                        particulars={orsEntry?.particulars || null}
+                        mfoPap={orsEntry?.mfo_pap || null}
+                        uacsCode={orsEntry?.uacs_code || null}
+                        amount={orsEntry?.obligation_amount || poHeader.ors_amount}
+                        referenceNo={orsEntry?.reference_no || null}
+                        obligationAmount={orsEntry?.obligation_amount || null}
+                        payableAmount={orsEntry?.payable_amount || null}
+                        paymentAmount={orsEntry?.payment_amount || null}
+                        notYetDueBalance={orsEntry?.not_yet_due_balance || null}
+                        dueDemandableBalance={orsEntry?.due_demandable_balance || null}
+                        preparedByName={orsEntry?.prepared_by_name || poHeader.official_name}
+                        preparedByDesig={orsEntry?.prepared_by_desig || poHeader.official_desig}
+                        blankStatusSection={orsEntry?.blank_status_section ?? false}
                       />
                     </div>
                   )}
