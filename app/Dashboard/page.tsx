@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine, RiEyeLine, RiPlayCircleLine,
+  RiCalendarLine, RiCheckLine, RiCloseLine,
 } from "react-icons/ri";
 import AnalyticsDashboard from "../analytics/analytics";
 
@@ -51,7 +52,14 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage]   = useState(1);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
-  const [fiscalYearFilter, setFiscalYearFilter] = useState<number | "all">("all");
+  const CURRENT_YEAR = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const yearOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
+    return years;
+  }, []);
   const PAGE_SIZE = 10;
 
   // Helper function to get fiscal year from date (Philippines: Jan 1 - Dec 31)
@@ -286,6 +294,23 @@ export default function DashboardPage() {
   }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, isCashAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
+    // PO entries use a separate status_id space — check source first to avoid conflicts
+    // (e.g. status_id 34 = "Completed (PO Phase)" for POs, "PARPO signature" for deliveries)
+    if (source === 'po') {
+      const poById: Record<number, { name: string; color: string }> = {
+        11: { name: "PO (Creation)",        color: "po" },
+        12: { name: "PO (Allocation)",      color: "po" },
+        13: { name: "ORS (Creation)",       color: "po" },
+        14: { name: "ORS (Processing)",     color: "po" },
+        15: { name: "PO (Accounting)",      color: "po" },
+        16: { name: "PO (PARPO)",           color: "po" },
+        17: { name: "PO (Serving)",         color: "po" },
+        34: { name: "Completed (PO Phase)", color: "completed" },
+      };
+      if (statusId != null && poById[statusId]) return poById[statusId];
+      return { name: status || "PO", color: "po" };
+    }
+
     const statusById: Record<number, { name: string; color: string }> = {
       1:  { name: "Pending", color: "pending" },
       2:  { name: "Processing (Division Head)", color: "processing" },
@@ -297,13 +322,6 @@ export default function DashboardPage() {
       8:  { name: "Canvassing (Releasing)", color: "canvassing" },
       9:  { name: "Canvassing (Collection)", color: "canvassing" },
       10: { name: "Abstract of Awards", color: "aaa" },
-      11: { name: "PO (Creation)", color: "po" },
-      12: { name: "PO (Allocation)", color: "po" },
-      13: { name: "ORS (Creation)", color: "po" },
-      14: { name: "ORS (Processing)", color: "po" },
-      15: { name: "PO (Accounting)", color: "po" },
-      16: { name: "PO (PARPO)", color: "po" },
-      17: { name: "PO (Serving)", color: "po" },
       18: { name: "Delivery (Waiting)", color: "delivery" },
       19: { name: "Delivery (Received)", color: "delivery" },
       20: { name: "Delivery (IAR)", color: "delivery" },
@@ -319,19 +337,17 @@ export default function DashboardPage() {
       33: { name: "Forward to Cash", color: "payment" },
       34: { name: "PARPO signature", color: "payment" },
       35: { name: "Tax processing", color: "payment" },
-      36: { name: "Payment completed", color: "payment" },
+      36: { name: "Completed", color: "completed" },
     };
 
     if (statusId != null && statusById[statusId]) {
       return statusById[statusId];
     }
 
-    // For delivery, payment, and PO sources, use source-based detection fallback
-    if (source === 'po') return { name: status || "PO", color: "po" };
     if (source === 'delivery') return { name: "Delivery", color: "delivery" };
     if (source === 'payment') return { name: "Payment", color: "payment" };
-    
-    // For purchase requests, use text-based status detection
+
+    // Text-based fallback for PRs
     const k = (status || "unknown").toLowerCase();
     if (k.includes("pending"))        return { name: status || "Unknown", color: "pending" };
     if (k.includes("processing"))     return { name: status || "Unknown", color: "processing" };
@@ -385,9 +401,7 @@ export default function DashboardPage() {
     list.reduce((n, i) => (getStatusInfo(i.status, i.status_id, i.source).color === color ? n + 1 : n), 0);
 
   // Filter list by fiscal year
-  const listByFiscalYear = fiscalYearFilter === "all" 
-    ? list 
-    : list.filter(item => getFiscalYear(item.created_at) === fiscalYearFilter);
+  const listByFiscalYear = list.filter(item => getFiscalYear(item.created_at) === selectedYear);
 
   // Count by source type (filtered by fiscal year)
   const allCount = listByFiscalYear.length;
@@ -403,9 +417,6 @@ export default function DashboardPage() {
   const approvedCount   = countByColor("approved");
   const rejectedCount   = countByColor("rejected");
 
-  // Generate available fiscal years from data
-  const availableFiscalYears = Array.from(new Set(list.map(item => getFiscalYear(item.created_at)))).sort((a, b) => b - a);
-
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortField(f); setSortDir(f === "created_at" ? "desc" : "asc"); }
@@ -419,7 +430,8 @@ export default function DashboardPage() {
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const { color } = getStatusInfo(pr.status, pr.status_id, pr.source);
-      return matchSearch && (statusFilter === "all" || color === statusFilter);
+      const matchYear = getFiscalYear(pr.created_at) === selectedYear;
+      return matchSearch && (statusFilter === "all" || color === statusFilter) && matchYear;
     })
     .sort((a, b) => {
       let aVal: number | string = "";
@@ -455,14 +467,11 @@ export default function DashboardPage() {
     { value: "pending",    label: "Pending" },
     { value: "processing", label: "Processing" },
     { value: "canvassing", label: "Canvassing" },
-    { value: "bac",        label: "BAC Resolution" },
-    { value: "aaa",        label: "AAA Issuance" },
-    { value: "delivery",   label: "Delivery" },
-    { value: "completed",  label: "Completed" },
-    { value: "payment",    label: "Payment" },
+    { value: "aaa",        label: "Abstract of Awards" },
     { value: "po",         label: "PO" },
-    { value: "approved",   label: "Approved" },
-    { value: "rejected",   label: "Rejected" },
+    { value: "delivery",   label: "Delivery" },
+    { value: "payment",    label: "Payment" },
+    { value: "completed",  label: "Completed" },
   ];
 
   const STAT_CARDS = [
@@ -577,46 +586,44 @@ export default function DashboardPage() {
         {/* ── TABLE PANEL ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
 
-          {/* Controls row */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {/* Header row: title + FY button */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Procurement Records</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              {STATUS_OPTIONS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
-                    ${statusFilter === value
-                      ? "bg-emerald-700 text-white border-emerald-700"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
-                    }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-              {/* Fiscal Year Filter */}
-              <select
-                value={fiscalYearFilter}
-                onChange={(e) => { setFiscalYearFilter(e.target.value === "all" ? "all" : Number(e.target.value)); setCurrentPage(1); }}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            <button
+              onClick={() => setShowYearPicker(true)}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
+            >
+              <RiCalendarLine size={16} className="text-emerald-600" />
+              <span className="font-semibold text-gray-700 text-sm">FY {selectedYear}</span>
+              <RiArrowDownLine size={13} className="text-gray-400" />
+            </button>
+          </div>
+
+          {/* Status pills + search row */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {STATUS_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
+                  ${statusFilter === value
+                    ? "bg-emerald-700 text-white border-emerald-700"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                  }`}
               >
-                <option value="all">All Fiscal Years</option>
-                {availableFiscalYears.map(year => (
-                  <option key={year} value={year}>FY {year}</option>
-                ))}
-              </select>
-              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-              <div className="relative flex items-center">
-                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search PR/PO, supplier, or section…"
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
-                />
-              </div>
+                {label}
+              </button>
+            ))}
+            <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+            <div className="relative flex items-center">
+              <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search PR/PO, supplier, or section…"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
+              />
             </div>
           </div>
 
@@ -830,6 +837,35 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+
+        {/* ── YEAR PICKER MODAL ── */}
+        {showYearPicker && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+              <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                  <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+                </div>
+                <button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                  <RiCloseLine size={22} className="text-gray-500" />
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto py-2">
+                {yearOptions.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => { setSelectedYear(year); setShowYearPicker(false); setCurrentPage(1); }}
+                    className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${selectedYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+                  >
+                    <span className={`font-semibold ${selectedYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
+                    {selectedYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── ANALYTICS SECTION ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
