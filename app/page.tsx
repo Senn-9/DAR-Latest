@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { verifyPassword, hashPassword, isBcryptHash } from "@/utils/auth/password";
 
 type Division = {
   division_id: number;
@@ -73,14 +74,25 @@ export default function LoginPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    const matchedUser = users.find(
-      (user) => user.username === username && user.password === password
-    );
+    const matchedUser = users.find((user) => user.username === username);
 
     if (!matchedUser) {
       setError("Invalid username or password");
       setIsLoading(false);
       return;
+    }
+
+    const passwordValid = await verifyPassword(password, matchedUser.password);
+    if (!passwordValid) {
+      setError("Invalid username or password");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!isBcryptHash(matchedUser.password)) {
+      const newHash = await hashPassword(password);
+      await supabase.from("users").update({ password: newHash }).eq("id", matchedUser.id!);
+      matchedUser.password = newHash;
     }
 
     // Update last_login timestamp

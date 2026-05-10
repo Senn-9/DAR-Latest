@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import type { DatabaseUser } from '@/types/user'
+import { verifyPassword, hashPassword, isBcryptHash } from '@/utils/auth/password'
 
 export function useAuthLogic() {
   const router = useRouter()
@@ -45,12 +46,11 @@ export function useAuthLogic() {
       setError(null)
       console.log('Attempting sign in with:', email)
 
-      // Query the users table directly for email and password match
+      // Fetch user by username only, then verify password client-side
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('username', email)
-        .eq('password', password)
         .maybeSingle()
 
       if (profileError) {
@@ -63,6 +63,19 @@ export function useAuthLogic() {
         const message = 'Invalid email or password'
         setError(message)
         return { success: false, message }
+      }
+
+      const passwordValid = await verifyPassword(password, profile.password ?? '')
+      if (!passwordValid) {
+        const message = 'Invalid email or password'
+        setError(message)
+        return { success: false, message }
+      }
+
+      if (!isBcryptHash(profile.password ?? '')) {
+        const newHash = await hashPassword(password)
+        await supabase.from('users').update({ password: newHash }).eq('id', profile.id)
+        profile.password = newHash
       }
 
       console.log('Sign-in successful:', profile.email)

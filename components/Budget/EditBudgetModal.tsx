@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { RiCloseLine, RiDeleteBinLine } from "react-icons/ri";
+import { SuccessModal } from "@/components/StatusModal";
 
 interface Budget {
   id: string;
@@ -41,6 +42,7 @@ export default function EditBudgetModal({
 }: EditBudgetModalProps) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [budgetNumber, setBudgetNumber] = useState("");
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear());
   const [divisionId, setDivisionId] = useState("");
@@ -102,8 +104,7 @@ export default function EditBudgetModal({
 
       if (updateError) throw updateError;
 
-      onBudgetUpdated();
-      onClose();
+      setSuccessMsg("Budget allocation has been updated successfully.");
     } catch (err: any) {
       setError(err.message || "Failed to update budget");
     } finally {
@@ -123,8 +124,7 @@ export default function EditBudgetModal({
 
       if (deleteError) throw deleteError;
 
-      onBudgetUpdated();
-      onClose();
+      setSuccessMsg("Budget allocation has been deleted.");
     } catch (err: any) {
       setError(err.message || "Failed to delete budget");
     } finally {
@@ -139,199 +139,207 @@ export default function EditBudgetModal({
   const canModifyStatus = isAdmin;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Edit Budget Allocation</h2>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <RiCloseLine size={24} className="text-gray-500" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-              {error}
-            </div>
-          )}
-
-          {/* Budget Usage Info */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-            <div className="font-semibold mb-1">Current Utilization</div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>Allocated: ₱{(budget.total_allocated / 1000).toFixed(0)}K</div>
-              <div>Utilized: ₱{(utilized / 1000).toFixed(0)}K</div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Budget Number (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., BUD-2024-001"
-              value={budgetNumber}
-              onChange={(e) => setBudgetNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+    <>
+      <SuccessModal
+        visible={!!successMsg}
+        title="Done!"
+        message={successMsg ?? ""}
+        onConfirm={() => { setSuccessMsg(null); onBudgetUpdated(); onClose(); }}
+      />
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-gray-900">Edit Budget Allocation</h2>
+            <button
+              onClick={onClose}
               disabled={loading}
-            />
-            <p className="text-xs text-gray-500 mt-1">This is for reference only. Stored in notes field.</p>
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <RiCloseLine size={24} className="text-gray-500" />
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {/* Budget Usage Info */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+              <div className="font-semibold mb-1">Current Utilization</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>Allocated: ₱{(budget.total_allocated / 1000).toFixed(0)}K</div>
+                <div>Utilized: ₱{(utilized / 1000).toFixed(0)}K</div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fiscal Year
+                Budget Number (Optional)
               </label>
               <input
-                type="number"
-                value={budgetYear}
-                onChange={(e) => {
-                  const val = e.target.value === "" ? new Date().getFullYear() : parseInt(e.target.value, 10);
-                  setBudgetYear(isNaN(val) ? new Date().getFullYear() : val);
-                }}
+                type="text"
+                placeholder="e.g., BUD-2024-001"
+                value={budgetNumber}
+                onChange={(e) => setBudgetNumber(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">This is for reference only. Stored in notes field.</p>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Division
-              </label>
-              <select
-                value={divisionId}
-                onChange={(e) => setDivisionId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-                disabled={loading}
-              >
-                {divisions.map((d) => (
-                  <option key={d.division_id} value={d.division_id}>
-                    {d.division_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Total Allocated Budget (₱)
-            </label>
-            <input
-              type="number"
-              placeholder="0.00"
-              value={totalAllocated}
-              onChange={(e) => setTotalAllocated(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-              step="0.01"
-              min="0"
-              disabled={loading}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Minimum: ₱{(utilized / 1000).toFixed(0)}K (current utilization)
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Notes
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes or budget number reference..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-              rows={2}
-              disabled={loading}
-            />
-          </div>
-
-          {canModifyStatus && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Budget Status
-              </label>
-              <select
-                value={budgetStatus}
-                onChange={(e) => setBudgetStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-                disabled={loading}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Updating..." : "Update Budget"}
-            </button>
-          </div>
-
-          {/* Delete Section */}
-          {isAdmin && (
-            <div className="pt-4 border-t border-gray-100">
-              {!showDeleteConfirm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fiscal Year
+                </label>
+                <input
+                  type="number"
+                  value={budgetYear}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? new Date().getFullYear() : parseInt(e.target.value, 10);
+                    setBudgetYear(isNaN(val) ? new Date().getFullYear() : val);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Division
+                </label>
+                <select
+                  value={divisionId}
+                  onChange={(e) => setDivisionId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
                   disabled={loading}
                 >
-                  <RiDeleteBinLine size={16} />
-                  Delete Budget
-                </button>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-700 font-medium">
-                    Delete this budget allocation? This action cannot be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                      Keep
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                      {loading ? "Deleting..." : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              )}
+                  {divisions.map((d) => (
+                    <option key={d.division_id} value={d.division_id}>
+                      {d.division_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          )}
-        </form>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Total Allocated Budget (₱)
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={totalAllocated}
+                onChange={(e) => setTotalAllocated(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                step="0.01"
+                min="0"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Minimum: ₱{(utilized / 1000).toFixed(0)}K (current utilization)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional notes or budget number reference..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                rows={2}
+                disabled={loading}
+              />
+            </div>
+
+            {canModifyStatus && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Budget Status
+                </label>
+                <select
+                  value={budgetStatus}
+                  onChange={(e) => setBudgetStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                  disabled={loading}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Suspended">Suspended</option>
+                </select>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Updating..." : "Update Budget"}
+              </button>
+            </div>
+
+            {/* Delete Section */}
+            {isAdmin && (
+              <div className="pt-4 border-t border-gray-100">
+                {!showDeleteConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    disabled={loading}
+                  >
+                    <RiDeleteBinLine size={16} />
+                    Delete Budget
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700 font-medium">
+                      Delete this budget allocation? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
+                      >
+                        Keep
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+                      >
+                        {loading ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { RiCloseLine, RiEditLine } from "react-icons/ri";
+import { SuccessModal } from "@/components/StatusModal";
 
 interface CreateBudgetModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function CreateBudgetModal({
 }: CreateBudgetModalProps) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [budgetNumber, setBudgetNumber] = useState("");
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear());
   const [divisionId, setDivisionId] = useState("");
@@ -100,14 +102,12 @@ export default function CreateBudgetModal({
 
       if (insertError) throw insertError;
 
-      // Reset form
       setBudgetNumber("");
       setTotalAllocated("");
       setDivisionId("");
       setNotes("");
       setDuplicateCheck({ exists: false, existingBudget: null });
-      onBudgetCreated();
-      onClose();
+      setSuccessMsg("Budget allocation has been created successfully.");
     } catch (err: any) {
       setError(err.message || "Failed to create budget");
     } finally {
@@ -118,6 +118,13 @@ export default function CreateBudgetModal({
   if (!isOpen) return null;
 
   return (
+    <>
+    <SuccessModal
+      visible={!!successMsg}
+      title="Budget Created!"
+      message={successMsg ?? ""}
+      onConfirm={() => { setSuccessMsg(null); onBudgetCreated(); onClose(); }}
+    />
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
         {/* Header */}
@@ -255,5 +262,6 @@ export default function CreateBudgetModal({
         </form>
       </div>
     </div>
+    </>
   );
 }

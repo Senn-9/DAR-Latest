@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
+import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
+import { deletePRCascade } from "@/utils/supabase/deletePR";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
 import EditPRModal from "@/components/EditPRModal";
@@ -15,7 +18,7 @@ import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine, RiTruckLine, RiEyeLine, RiPlayCircleLine, RiChat3Line,
-  RiCalendarLine, RiCheckLine, RiCloseLine, RiFilter3Line,
+  RiCalendarLine, RiCheckLine, RiCloseLine, RiFilter3Line, RiDeleteBinLine,
 } from "react-icons/ri";
 
 export default function ProcurementPage() {
@@ -87,6 +90,11 @@ export default function ProcurementPage() {
   const [parpoProcessTarget, setPARPOProcessTarget] = useState<{ prId: number; prNo: string } | null>(null);
   const [budgetProcessTarget, setBudgetProcessTarget] = useState<BudgetTarget | null>(null); // ← updated type
   const [submitting, setSubmitting]       = useState(false);
+  const [remarksTarget, setRemarksTarget]   = useState<{ prId: number; prNo: string } | null>(null);
+  const [deletePrTarget, setDeletePrTarget] = useState<{ prId: number; prNo: string } | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
+  const [deleteErrorMsg,   setDeleteErrorMsg]   = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "purchase order" |"delivery" | "Payment">("pr"); //added tabs
   const router = useRouter();
@@ -275,7 +283,7 @@ export default function ProcurementPage() {
       29: { name: "Voucher Verification",    color: "payment"    },
       30: { name: "Accounting Review",         color: "payment"    },
       32: { name: "PARPO Approval",            color: "payment"    },
-      33: { name: "Forward to Cash",           color: "payment"    },
+      33: { name: "Completed (PR Phase)",      color: "completed"  },
       34: { name: "PARPO office signature",    color: "payment"    },
       35: { name: "Accounting — Tax",          color: "payment"    },
       36: { name: "Payment completed",         color: "completed"  },
@@ -316,8 +324,7 @@ export default function ProcurementPage() {
   const pendingCount    = countByColor("pending");
   const processingCount = countByColor("processing");
   const canvassingCount = countByColor("canvassing");
-  const approvedCount   = countByColor("approved");
-  const rejectedCount   = countByColor("rejected");
+  const completedCount  = countByColor("completed");
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -370,15 +377,15 @@ export default function ProcurementPage() {
     { value: "canvassing", label: "Canvassing" },
     { value: "bac",        label: "BAC Resolution" },
     { value: "po",         label: "PO" },
-    { value: "approved",   label: "Approved" },
-    { value: "rejected",   label: "Rejected" },
+    { value: "completed",  label: "Completed" },
   ];
 
   const STAT_CARDS = [
-    { label: "Total",      value: list.length,     icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
-    { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
-    { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
-    { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,        iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
+    { label: "Total",      value: list.length,     icon: <RiFileListLine size={20} />,        iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Pending",    value: pendingCount,    icon: <RiTimeLine size={20} />,             iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
+    { label: "Processing", value: processingCount, icon: <RiFileListLine size={20} />,         iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
+    { label: "Canvassing", value: canvassingCount, icon: <RiFileListLine size={20} />,         iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
+    { label: "Completed",  value: completedCount,  icon: <RiCheckboxCircleLine size={20} />,   iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
   ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -810,15 +817,25 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
-                              {/* Edit — End Users only (or admin), Pending only, and only their own PRs */}
-                              {(isEndUser || isAdmin) && form.status_id === 1 && (isAdmin || form.req_name === currentUser?.fullname) && (
+                              {/* Delete — Admin only */}
+                              {isAdmin && (
                                 <button
-                                  onClick={() => setEditPrId(form.id)}
-                                  className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                                  onClick={() => setDeletePrTarget({ prId: form.id, prNo: form.pr_no })}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors inline-flex items-center gap-1"
                                 >
-                                  Edit
+                                  <RiDeleteBinLine size={14} />
+                                  Delete
                                 </button>
                               )}
+
+                              {/* Remarks — all users */}
+                              <button
+                                onClick={() => setRemarksTarget({ prId: form.id, prNo: form.pr_no })}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiChat3Line size={14} />
+                                Remarks
+                              </button>
 
                               {/* View — everyone except budget and accounting (they already have View above) */}
                               {!isBudgetAccount && !isAccountingAccount && (
@@ -1106,6 +1123,75 @@ export default function ProcurementPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── DELETE PR CONFIRM MODAL ── */}
+      {deletePrTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleteConfirming && setDeletePrTarget(null)} />
+          <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <RiDeleteBinLine size={28} className="text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Purchase Request?</h3>
+            <p className="text-gray-600 mb-1">
+              PR <span className="font-semibold text-gray-800">{deletePrTarget.prNo}</span> and <strong>all connected records</strong> (POs, deliveries, canvass data, ORS entries, remarks) will be permanently deleted.
+            </p>
+            <p className="text-xs text-red-600 font-semibold mb-6">This action cannot be undone.</p>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setDeletePrTarget(null)}
+                disabled={deleteConfirming}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleteConfirming}
+                onClick={async () => {
+                  setDeleteConfirming(true);
+                  const { error } = await deletePRCascade(deletePrTarget.prId);
+                  setDeleteConfirming(false);
+                  setDeletePrTarget(null);
+                  if (error) {
+                    setDeleteErrorMsg("Delete failed: " + error);
+                  } else {
+                    setList((prev) => prev.filter((p) => p.id !== deletePrTarget.prId));
+                    setDeleteSuccessMsg(`PR ${deletePrTarget.prNo} and all connected records have been deleted.`);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleteConfirming ? (
+                  <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Deleting…</>
+                ) : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SuccessModal
+        visible={!!deleteSuccessMsg}
+        title="Deleted"
+        message={deleteSuccessMsg ?? ""}
+        onConfirm={() => setDeleteSuccessMsg(null)}
+      />
+      <ErrorModal
+        visible={!!deleteErrorMsg}
+        message={deleteErrorMsg ?? ""}
+        onDismiss={() => setDeleteErrorMsg(null)}
+      />
+
+      {/* ── REMARKS TIMELINE MODAL ── */}
+      {remarksTarget && (
+        <RemarksTimelineModal
+          visible={true}
+          target={{ prId: remarksTarget.prId }}
+          title={`Remarks · PR ${remarksTarget.prNo}`}
+          subtitle="PR procurement remarks history"
+          onClose={() => setRemarksTarget(null)}
+        />
       )}
 
       {/* ── SIGNOUT MODAL ── */}

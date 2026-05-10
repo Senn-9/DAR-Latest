@@ -2,12 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import {
-  RiCloseLine,
-  RiSaveLine,
-  RiCheckboxCircleLine,
-  RiErrorWarningLine,
-} from "react-icons/ri";
+import { RiCloseLine, RiSaveLine } from "react-icons/ri";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 interface PARPOProcessModalProps {
   prId: number;
@@ -194,49 +190,17 @@ export default function PARPOProcessModal({
         </div>
       </div>
 
-      {/* Success Modal */}
-      {successModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-[70] bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-              <RiCheckboxCircleLine size={32} className="text-emerald-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Signed & Returned!</h3>
-            <p className="text-gray-600 mb-6">
-              PR {currentPrNo} has been signed and returned to BAC. The page will reload automatically.
-            </p>
-            <button
-              onClick={handleSuccessConfirm}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Error Modal */}
-      {errorModal.show && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-[70] bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <RiErrorWarningLine size={32} className="text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Error</h3>
-            <p className="text-gray-600 mb-6">
-              {errorModal.message}
-            </p>
-            <button
-              onClick={() => setErrorModal({ show: false, message: "" })}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors"
-            >
-              Okay
-            </button>
-          </div>
-        </div>
-      )}
+      <SuccessModal
+        visible={successModal}
+        title="Signed & Returned!"
+        message={`PR ${currentPrNo} has been signed and returned to BAC.`}
+        onConfirm={handleSuccessConfirm}
+      />
+      <ErrorModal
+        visible={errorModal.show}
+        message={errorModal.message}
+        onDismiss={() => setErrorModal({ show: false, message: "" })}
+      />
     </>
   );
 }

@@ -12,6 +12,7 @@ import {
   RiAlertLine,
   RiSubtractLine,
 } from "react-icons/ri";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 interface ProcessPRModalProps {
   prId: number;
@@ -56,6 +57,8 @@ export default function ProcessPRModal({
   const [processing, setProcessing]   = useState(false);
   const [flagOptions, setFlagOptions] = useState<FlagOption[]>([]);
   const [showFlagPicker, setShowFlagPicker] = useState(false);
+  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+  const [errorModal,   setErrorModal]   = useState<{ show: boolean; message: string }>({ show: false, message: "" });
   const [formData, setFormData] = useState({
     flagId:     1,
     remarks:    "",
@@ -120,7 +123,7 @@ export default function ProcessPRModal({
     const { error: updateErr } = await supabase.from("purchase_requests").update({ status_id: targetStatus, status: statusMap[targetStatus], updated_at: new Date().toISOString() }).eq("id", prId);
     if (updateErr) {
       setProcessing(false);
-      alert("Error updating PR status: " + updateErr.message);
+      setErrorModal({ show: true, message: "Error updating PR status: " + updateErr.message });
       return;
     }
     let userId: number | null = null;
@@ -140,7 +143,7 @@ export default function ProcessPRModal({
     }
     if (userId === null) {
       setProcessing(false);
-      alert("Cannot determine user id for remark.");
+      setErrorModal({ show: true, message: "Cannot determine user id for remark." });
       return;
     }
     const statusFlagId = selectedFlag.id;
@@ -152,20 +155,18 @@ export default function ProcessPRModal({
     });
     if (remarksErr) {
       setProcessing(false);
-      alert("Error saving remark: " + remarksErr.message);
+      setErrorModal({ show: true, message: "Error saving remark: " + remarksErr.message });
       return;
     }
     setProcessing(false);
-    alert(successText);
-    onProcessed(prId, targetStatus, statusMap[targetStatus]);
-    onClose();
+    setSuccessModal({ show: true, message: successText });
   };
 
   const handleSendToBAC = async () => {
     const k = selectedFlag.label.toLowerCase();
     const allowed = k === "complete" || k === "urgent";
     if (!allowed) {
-      alert("Send to BAC is allowed only for Complete or Urgent flags.");
+      setErrorModal({ show: true, message: "Send to BAC is allowed only for Complete or Urgent flags." });
       return;
     }
     await doProcess(3, `PR ${prNum} sent to BAC`);
@@ -175,13 +176,25 @@ export default function ProcessPRModal({
     const k = selectedFlag.label.toLowerCase();
     const blocked = k === "complete" || k === "urgent";
     if (blocked) {
-      alert("Return to End User is available for flags other than Complete or Urgent.");
+      setErrorModal({ show: true, message: "Return to End User is available for flags other than Complete or Urgent." });
       return;
     }
     await doProcess(1, `PR ${prNum} returned to End User (Pending)`);
   };
 
   return (
+    <>
+    <SuccessModal
+      visible={successModal.show}
+      title="Processing Complete"
+      message={successModal.message}
+      onConfirm={() => { setSuccessModal({ show: false, message: "" }); onProcessed(prId, successModal.message.includes("returned") ? 1 : 3, undefined); onClose(); }}
+    />
+    <ErrorModal
+      visible={errorModal.show}
+      message={errorModal.message}
+      onDismiss={() => setErrorModal({ show: false, message: "" })}
+    />
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
@@ -322,5 +335,6 @@ export default function ProcessPRModal({
 
       </div>
     </div>
+    </>
   );
 }

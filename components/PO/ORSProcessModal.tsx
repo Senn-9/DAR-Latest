@@ -12,6 +12,7 @@ import {
 } from "react-icons/ri";
 import type { PurchaseOrderRow, PurchaseOrderItemRow } from "@/utils/supabase/po";
 import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 interface ORSProcessModalProps {
   visible: boolean;
@@ -1251,10 +1252,13 @@ export default function ORSProcessModal({
 
   const amount = useMemo(() => Number(po?.total_amount || 0), [po]);
 
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!po) return;
-    if (!orsNo.trim()) { alert("ORS Number is required"); return; }
-    if (!selectedDivisionId) { alert("Office / Division is required"); return; }
+    if (!orsNo.trim()) { setErrorMsg("ORS Number is required"); return; }
+    if (!selectedDivisionId) { setErrorMsg("Office / Division is required"); return; }
     setSaving(true);
     try {
       const { error: orsError } = await supabase.from("ors_entries").insert({
@@ -1287,7 +1291,7 @@ export default function ORSProcessModal({
         blank_status_section: blankStatusSection,
       });
 
-      if (orsError) { alert(`Failed to create ORS entry: ${orsError.message}`); return; }
+      if (orsError) { setSaving(false); setErrorMsg(`Failed to create ORS entry: ${orsError.message}`); return; }
 
       const { error: updateError } = await supabase
         .from("purchase_orders")
@@ -1300,7 +1304,7 @@ export default function ORSProcessModal({
         })
         .eq("id", po.id);
 
-      if (updateError) { alert(`Failed to update PO: ${updateError.message}`); return; }
+      if (updateError) { setSaving(false); setErrorMsg(`Failed to update PO: ${updateError.message}`); return; }
 
       await supabase.from("remarks").insert({
         po_id: Number(po.id),
@@ -1312,10 +1316,10 @@ export default function ORSProcessModal({
       });
 
       await onSubmit(14, `ORS ${orsNo} created`, selectedFlag ? getFlagId(selectedFlag) : null);
-      onClose();
+      setSuccessMsg(`ORS ${orsNo} has been created successfully.`);
     } catch (err) {
       console.error("Error saving ORS:", err);
-      alert("Failed to save ORS. Please try again.");
+      setErrorMsg("Failed to save ORS. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -1324,6 +1328,18 @@ export default function ORSProcessModal({
   if (!visible || !po) return null;
 
   return (
+    <>
+    <SuccessModal
+      visible={!!successMsg}
+      title="ORS Created"
+      message={successMsg ?? ""}
+      onConfirm={() => { setSuccessMsg(null); onClose(); }}
+    />
+    <ErrorModal
+      visible={!!errorMsg}
+      message={errorMsg ?? ""}
+      onDismiss={() => setErrorMsg(null)}
+    />
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
@@ -1745,5 +1761,6 @@ export default function ORSProcessModal({
         onClose={() => setShowFlagPicker(false)}
       />
     </div>
+    </>
   );
 }
