@@ -7,9 +7,10 @@ import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine, RiEyeLine, RiPlayCircleLine,
-  RiCalendarLine, RiCheckLine, RiCloseLine,
+  RiCalendarLine, RiCheckLine, RiCloseLine, RiFileTextLine,
 } from "react-icons/ri";
 import AnalyticsDashboard from "../analytics/analytics";
+import SummaryReportModal from "@/components/Reporting/SummaryReportModal";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null);
   const [isAdmin, setIsAdmin]           = useState(false);
   const [list, setList]                 = useState<PRListRow[]>([]);
+  const [statusNameById, setStatusNameById] = useState<Record<number, string>>({});
   const [searchQuery, setSearchQuery]   = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortField, setSortField]       = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
@@ -52,6 +54,7 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage]   = useState(1);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
+  const [summaryReportOpen, setSummaryReportOpen] = useState(false);
   const CURRENT_YEAR = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -106,6 +109,21 @@ export default function DashboardPage() {
       
       try {
         console.log('Starting dashboard data fetch...');
+
+        const { data: statusData, error: statusError } = await supabase
+          .from("status")
+          .select("id, status_name")
+          .order("id", { ascending: true });
+
+        if (statusError) {
+          console.warn('Status lookup fetch failed:', statusError);
+        } else {
+          const statusMap = (statusData || []).reduce((acc, status) => {
+            acc[status.id] = status.status_name;
+            return acc;
+          }, {} as Record<number, string>);
+          setStatusNameById(statusMap);
+        }
         
         // Fetch purchase requests (PR data)
         const { data: prData, error: prError } = await supabase
@@ -294,6 +312,8 @@ export default function DashboardPage() {
   }, [supabase, isAdmin, currentUser, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, isCashAccount]);
 
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
+    const exactStatusName = statusId != null ? statusNameById[statusId] : undefined;
+
     // PO entries use a separate status_id space — check source first to avoid conflicts
     // (e.g. status_id 34 = "Completed (PO Phase)" for POs, "PARPO signature" for deliveries)
     if (source === 'po') {
@@ -307,8 +327,8 @@ export default function DashboardPage() {
         17: { name: "PO (Serving)",         color: "po" },
         34: { name: "Completed (PO Phase)", color: "completed" },
       };
-      if (statusId != null && poById[statusId]) return poById[statusId];
-      return { name: status || "PO", color: "po" };
+      if (statusId != null && poById[statusId]) return { ...poById[statusId], name: exactStatusName || poById[statusId].name };
+      return { name: exactStatusName || status || "PO", color: "po" };
     }
 
     const statusById: Record<number, { name: string; color: string }> = {
@@ -341,14 +361,28 @@ export default function DashboardPage() {
     };
 
     if (statusId != null && statusById[statusId]) {
-      return statusById[statusId];
+      return { ...statusById[statusId], name: exactStatusName || statusById[statusId].name };
     }
 
-    if (source === 'delivery') return { name: "Delivery", color: "delivery" };
-    if (source === 'payment') return { name: "Payment", color: "payment" };
+    if (source === 'delivery') return { name: exactStatusName || "Delivery", color: "delivery" };
+    if (source === 'payment') return { name: exactStatusName || "Payment", color: "payment" };
 
     // Text-based fallback for PRs
     const k = (status || "unknown").toLowerCase();
+    if (exactStatusName) {
+      if (k.includes("pending"))        return { name: exactStatusName, color: "pending" };
+      if (k.includes("processing"))     return { name: exactStatusName, color: "processing" };
+      if (k.includes("canvassing"))     return { name: exactStatusName, color: "canvassing" };
+      if (k.includes("bac resolution")) return { name: exactStatusName, color: "bac" };
+      if (k.includes("aaa issuance"))   return { name: exactStatusName, color: "aaa" };
+      if (k.includes("delivery"))       return { name: exactStatusName, color: "delivery" };
+      if (k.includes("payment"))        return { name: exactStatusName, color: "payment" };
+      if (k.includes("po"))             return { name: exactStatusName, color: "po" };
+      if (k.includes("approve"))        return { name: exactStatusName, color: "approved" };
+      if (k.includes("reject"))         return { name: exactStatusName, color: "rejected" };
+      if (k.includes("completed"))      return { name: exactStatusName, color: "completed" };
+      return { name: exactStatusName, color: "default" };
+    }
     if (k.includes("pending"))        return { name: status || "Unknown", color: "pending" };
     if (k.includes("processing"))     return { name: status || "Unknown", color: "processing" };
     if (k.includes("canvassing"))     return { name: status || "Unknown", color: "canvassing" };
@@ -360,7 +394,7 @@ export default function DashboardPage() {
     if (k.includes("approve"))        return { name: status || "Unknown", color: "approved" };
     if (k.includes("reject"))         return { name: status || "Unknown", color: "rejected" };
     if (k.includes("completed"))      return { name: status || "Unknown", color: "completed" };
-    return { name: status || "Unknown", color: "default" };
+    return { name: exactStatusName || status || "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
@@ -400,6 +434,62 @@ export default function DashboardPage() {
   const countByColor = (color: string) =>
     list.reduce((n, i) => (getStatusInfo(i.status, i.status_id, i.source).color === color ? n + 1 : n), 0);
 
+  const getStatusFilterKey = (item: PRListRow) => {
+    switch (item.status_id) {
+      case 1:
+        return "pending";
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+        return "processing";
+      case 6:
+      case 8:
+      case 9:
+        return "canvassing";
+      case 7:
+        return "bac-resolution";
+      case 10:
+        return "aaa";
+      case 11:
+      case 12:
+      case 15:
+      case 16:
+      case 17:
+        return "po";
+      case 13:
+      case 14:
+        return "ors";
+      case 18:
+      case 19:
+      case 20:
+      case 21:
+      case 22:
+      case 23:
+      case 24:
+        return "delivery";
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+      case 29:
+      case 30:
+      case 31:
+      case 32:
+        return "payment";
+      case 33:
+        return "completed-pr";
+      case 34:
+        return "completed-po";
+      case 35:
+        return "completed-delivery";
+      case 36:
+        return "completed";
+      default:
+        return "all";
+    }
+  };
+
   // Filter list by fiscal year
   const listByFiscalYear = list.filter(item => getFiscalYear(item.created_at) === selectedYear);
 
@@ -429,9 +519,9 @@ export default function DashboardPage() {
         pr.pr_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const { color } = getStatusInfo(pr.status, pr.status_id, pr.source);
+      const statusKey = getStatusFilterKey(pr);
       const matchYear = getFiscalYear(pr.created_at) === selectedYear;
-      return matchSearch && (statusFilter === "all" || color === statusFilter) && matchYear;
+      return matchSearch && (statusFilter === "all" || statusKey === statusFilter) && matchYear;
     })
     .sort((a, b) => {
       let aVal: number | string = "";
@@ -463,15 +553,20 @@ export default function DashboardPage() {
   );
 
   const STATUS_OPTIONS = [
-    { value: "all",        label: "All Statuses" },
-    { value: "pending",    label: "Pending" },
+    { value: "all", label: "All Statuses" },
+    { value: "pending", label: "Pending" },
     { value: "processing", label: "Processing" },
     { value: "canvassing", label: "Canvassing" },
-    { value: "aaa",        label: "Abstract of Awards" },
-    { value: "po",         label: "PO" },
-    { value: "delivery",   label: "Delivery" },
-    { value: "payment",    label: "Payment" },
-    { value: "completed",  label: "Completed" },
+    { value: "bac-resolution", label: "BAC Resolution" },
+    { value: "aaa", label: "Abstract of Awards" },
+    { value: "po", label: "PO" },
+    { value: "ors", label: "ORS" },
+    { value: "delivery", label: "Delivery" },
+    { value: "payment", label: "Payment Phase" },
+    { value: "completed-pr", label: "Completed PR Phase" },
+    { value: "completed-po", label: "Completed PO Phase" },
+    { value: "completed-delivery", label: "Completed Delivery Phase" },
+    { value: "completed", label: "Completed Payment Phase" },
   ];
 
   const STAT_CARDS = [
@@ -558,6 +653,13 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="text-right">
+            <button
+              onClick={() => setSummaryReportOpen(true)}
+              className="mb-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 text-sm font-medium"
+            >
+              <RiFileTextLine size={16} />
+              Summary Report
+            </button>
             <p className="mono text-xs text-gray-400">Total Budget Tracked</p>
             <p className="mono text-2xl font-bold text-emerald-700">
               ₱{totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -948,6 +1050,12 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Summary Report Modal */}
+      <SummaryReportModal
+        open={summaryReportOpen}
+        onClose={() => setSummaryReportOpen(false)}
+      />
     </div>
   );
 }
