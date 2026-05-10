@@ -91,8 +91,8 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               Appendix 60
             </td>
           </tr>
-          <tr style={{ height: "34px" }}>
-            <td colSpan={6} style={{ textAlign: "center", fontWeight: "bold", fontSize: "12pt", color: "#000" }}>
+          <tr style={{ height: "52px" }}>
+            <td colSpan={6} style={{ textAlign: "center", fontWeight: "bold", fontSize: "12pt", color: "#000", verticalAlign: "top", paddingTop: "6px" }}>
               PURCHASE REQUEST
             </td>
           </tr>

@@ -8,8 +8,10 @@ export interface DivisionBudgetRow {
   fiscal_year: number;
   allocated: number;
   utilized: number;
-  notes?: string | null;
-  division_name?: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  division_name: string | null;
 }
 
 export type OrsStatus = "Pending" | "Processing" | "Approved" | "Rejected";
@@ -33,7 +35,7 @@ export interface OrsEntryRow {
 export async function fetchBudgets(year: number): Promise<DivisionBudgetRow[]> {
   const { data, error } = await supabase
     .from("division_budgets")
-    .select("id, division_id, fiscal_year, allocated, utilized, notes, divisions(division_name)")
+    .select("id, division_id, fiscal_year, allocated, utilized, notes, created_at, updated_at, divisions(division_name)")
     .eq("fiscal_year", year)
     .order("division_id");
   if (error) throw error;
@@ -44,6 +46,8 @@ export async function fetchBudgets(year: number): Promise<DivisionBudgetRow[]> {
     allocated: r.allocated ?? 0,
     utilized: r.utilized ?? 0,
     notes: r.notes ?? null,
+    created_at: r.created_at ?? new Date().toISOString(),
+    updated_at: r.updated_at ?? null,
     division_name: r.divisions?.division_name ?? null,
   }));
 }
@@ -81,6 +85,7 @@ export async function updateDivisionBudget(
       fiscal_year,
       allocated,
       notes: notes?.trim() || null,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .select()

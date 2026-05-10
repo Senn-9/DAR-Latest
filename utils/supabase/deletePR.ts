@@ -1,5 +1,88 @@
 import { createClient } from "@/utils/supabase/client";
 
+export type PRDeletePreview = {
+  prItems: number;
+  purchaseOrders: number;
+  poItems: number;
+  deliveries: number;
+  deliveryDocs: number;
+  canvassSessions: number;
+  canvassEntries: number;
+  canvasserAssignments: number;
+  aaaDocs: number;
+  orsEntries: number;
+  bacLinks: number;
+  proposals: number;
+  remarks: number;
+  total: number;
+};
+
+/**
+ * Returns the count of every record that would be removed by deletePRCascade.
+ * Used to show a summary before the user confirms deletion.
+ */
+export async function fetchPRDeletePreview(prId: number): Promise<PRDeletePreview> {
+  const supabase = createClient();
+
+  const cnt = async (table: string, col: string, val: number | number[]) => {
+    const q = Array.isArray(val)
+      ? supabase.from(table).select("*", { count: "exact", head: true }).in(col, val)
+      : supabase.from(table).select("*", { count: "exact", head: true }).eq(col, val);
+    const { count } = await q;
+    return count ?? 0;
+  };
+
+  /* ── resolve ID lists ─────────────────────────────── */
+  const [poRows, sessionRows] = await Promise.all([
+    supabase.from("purchase_orders").select("id").eq("pr_id", prId),
+    supabase.from("canvass_sessions").select("id").eq("pr_id", prId),
+  ]);
+  const poIds      = (poRows.data ?? []).map((r) => r.id as number);
+  const sessionIds = (sessionRows.data ?? []).map((r) => r.id as number);
+
+  let deliveryIds: number[] = [];
+  if (poIds.length > 0) {
+    const { data } = await supabase.from("deliveries").select("id").in("po_id", poIds);
+    deliveryIds = (data ?? []).map((r) => r.id as number);
+  }
+
+  /* ── parallel counts ──────────────────────────────── */
+  const [
+    prItems, poItems, deliveryDocs_iar, deliveryDocs_loa, deliveryDocs_dv,
+    canvassEntries, canvasserAssignments, aaaDocs,
+    orsEntries, bacLinks, proposals, remarks,
+  ] = await Promise.all([
+    cnt("purchase_request_items", "pr_id", prId),
+    poIds.length      ? cnt("purchase_order_items",      "po_id",       poIds)      : Promise.resolve(0),
+    deliveryIds.length ? cnt("iar_documents",             "delivery_id", deliveryIds) : Promise.resolve(0),
+    deliveryIds.length ? cnt("loa_documents",             "delivery_id", deliveryIds) : Promise.resolve(0),
+    deliveryIds.length ? cnt("dv_documents",              "delivery_id", deliveryIds) : Promise.resolve(0),
+    sessionIds.length  ? cnt("canvass_entries",           "session_id",  sessionIds) : Promise.resolve(0),
+    sessionIds.length  ? cnt("canvasser_assignments",     "session_id",  sessionIds) : Promise.resolve(0),
+    sessionIds.length  ? cnt("aaa_documents",             "session_id",  sessionIds) : Promise.resolve(0),
+    cnt("ors_entries",        "pr_id", prId),
+    cnt("bac_resolution_prs", "pr_id", prId),
+    cnt("proposals",          "pr_id", prId),
+    cnt("remarks",            "pr_id", prId),
+  ]);
+
+  const purchaseOrders   = poIds.length;
+  const canvassSessions  = sessionIds.length;
+  const deliveries       = deliveryIds.length;
+  const deliveryDocs     = deliveryDocs_iar + deliveryDocs_loa + deliveryDocs_dv;
+
+  const total =
+    prItems + purchaseOrders + poItems + deliveries + deliveryDocs +
+    canvassSessions + canvassEntries + canvasserAssignments + aaaDocs +
+    orsEntries + bacLinks + proposals + remarks;
+
+  return {
+    prItems, purchaseOrders, poItems, deliveries, deliveryDocs,
+    canvassSessions, canvassEntries, canvasserAssignments, aaaDocs,
+    orsEntries, bacLinks, proposals, remarks, total,
+  };
+}
+
 /**
  * Cascade-deletes a purchase request and EVERY record linked to it:
  *   purchase_request_items, purchase_orders, purchase_order_items,

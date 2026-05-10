@@ -25,7 +25,6 @@ export default function CreateBudgetModal({
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [budgetNumber, setBudgetNumber] = useState("");
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear());
   const [divisionId, setDivisionId] = useState("");
   const [totalAllocated, setTotalAllocated] = useState("");
@@ -102,7 +101,6 @@ export default function CreateBudgetModal({
 
       if (insertError) throw insertError;
 
-      setBudgetNumber("");
       setTotalAllocated("");
       setDivisionId("");
       setNotes("");
@@ -139,32 +137,16 @@ export default function CreateBudgetModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+            <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Budget Number
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., BUD-2024-001"
-              value={budgetNumber}
-              onChange={(e) => setBudgetNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-              disabled={loading}
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fiscal Year
-              </label>
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Fiscal Year</label>
               <input
                 type="number"
                 value={budgetYear}
@@ -177,9 +159,7 @@ export default function CreateBudgetModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Division
-              </label>
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Division</label>
               <select
                 value={divisionId}
                 onChange={(e) => setDivisionId(e.target.value)}
@@ -188,7 +168,7 @@ export default function CreateBudgetModal({
                 }`}
                 disabled={loading}
               >
-                <option value="">Select...</option>
+                <option value="">Select…</option>
                 {divisions.map((d) => (
                   <option key={d.division_id} value={d.division_id}>
                     {d.division_name}
@@ -200,35 +180,28 @@ export default function CreateBudgetModal({
 
           {/* Duplicate Warning */}
           {duplicateCheck.exists && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <p className="text-sm text-amber-800 font-medium">
-                    Budget already exists for this division and year
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    Allocated: ₱{duplicateCheck.existingBudget?.allocated.toLocaleString()} | 
-                    Utilized: ₱{duplicateCheck.existingBudget?.utilized.toLocaleString()}
-                  </p>
-                </div>
-                {onEditExisting && (
-                  <button
-                    type="button"
-                    onClick={handleEditExisting}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-medium rounded-lg transition-colors"
-                  >
-                    <RiEditLine size={16} />
-                    Edit Existing
-                  </button>
-                )}
+            <div className="px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-amber-800 font-semibold">Budget already exists for this division and year</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  Allocated: ₱{duplicateCheck.existingBudget?.allocated.toLocaleString()} · Utilized: ₱{duplicateCheck.existingBudget?.utilized.toLocaleString()}
+                </p>
               </div>
+              {onEditExisting && (
+                <button
+                  type="button"
+                  onClick={handleEditExisting}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+                >
+                  <RiEditLine size={13} />
+                  Edit Existing
+                </button>
+              )}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Total Allocated Budget (₱)
-            </label>
+            <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Allocated Budget (₱)</label>
             <input
               type="number"
               placeholder="0.00"
@@ -241,8 +214,20 @@ export default function CreateBudgetModal({
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. STOD's allocated budget for the year…"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900 resize-none"
+              rows={2}
+              disabled={loading}
+            />
+          </div>
+
           {/* Actions */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}

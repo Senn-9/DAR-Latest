@@ -81,8 +81,8 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       <tr style="height:27px">
         <td colspan="6" style="border:none;text-align:right;font-size:10pt;font-style:italic;font-weight:normal;padding-right:4px">Appendix 60</td>
       </tr>
-      <tr style="height:34px">
-        <td colspan="6" style="border:none;text-align:center;font-weight:bold;font-size:12pt">PURCHASE REQUEST</td>
+      <tr style="height:52px">
+        <td colspan="6" style="border:none;text-align:center;font-weight:bold;font-size:12pt;vertical-align:top;padding-top:6px">PURCHASE REQUEST</td>
       </tr>
       <tr style="height:21px">
         <td colspan="3" style="border-bottom:1px solid black;border-top:none;border-left:none;border-right:none;font-size:8pt;padding:2px 4px;font-weight:bold;white-space:nowrap;overflow:hidden">

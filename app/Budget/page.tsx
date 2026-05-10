@@ -21,24 +21,29 @@ export default function BudgetPage() {
 
   // Extended Budget type based on DivisionBudgetRow with UI-compatible field names
   type Budget = {
+    // ── DB columns (division_budgets) ──────────────────
     id: string;
-    budget_id: number; // alias for compatibility
     division_id: number;
-    division_name: string;
-    budget_year: number; // alias for fiscal_year
     fiscal_year: number;
-    total_allocated: number; // alias for allocated
     allocated: number;
-    total_earmarked: number; // calculated from ORS
-    total_spent: number; // alias for utilized
     utilized: number;
-    total_remaining: number; // calculated
+    notes: string | null;
+    created_at: string;
+    updated_at: string | null;
+    // ── joined ─────────────────────────────────────────
+    division_name: string;
+    // ── computed UI fields ─────────────────────────────
+    total_earmarked: number;
+    total_remaining: number;
     remaining: number;
-    notes?: string | null;
     utilizationPercent: number;
     remainingPercent: number;
     status: "on-track" | "warning" | "critical";
-    // Fields for EditBudgetModal compatibility
+    // ── EditBudgetModal compatibility aliases ──────────
+    budget_id: number;
+    budget_year: number;
+    total_allocated: number;
+    total_spent: number;
     budget_number: string;
     budget_status: string;
   };
@@ -197,11 +202,12 @@ export default function BudgetPage() {
 
         return {
           ...item,
+          division_name: item.division_name ?? "",
           budget_id: item.division_id,
           budget_year: item.fiscal_year,
           total_allocated: allocated,
           total_earmarked: orsAmount,
-          total_spent: 0, // Not used - budget calculated on ORS obligated amounts only
+          total_spent: 0,
           total_remaining: remaining,
           utilized,
           remaining,
@@ -524,12 +530,13 @@ export default function BudgetPage() {
                 <thead>
                   <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                     {([
-                      { label: "Division", field: "division_name" as const, align: "text-left", width: "flex-1 min-w-40" },
-                      { label: "Allocated", field: "allocated" as const, align: "text-right", width: "w-32" },
-                      { label: "Obligated (ORS)", field: null, align: "text-right", width: "w-32" },
-                      { label: "Remaining", field: null, align: "text-right", width: "w-28" },
+                      { label: "Division / Notes", field: "division_name" as const, align: "text-left", width: "flex-1 min-w-44" },
+                      { label: "Allocated", field: "allocated" as const, align: "text-right", width: "w-28" },
+                      { label: "Obligated (ORS)", field: null, align: "text-right", width: "w-28" },
+                      { label: "Remaining", field: null, align: "text-right", width: "w-24" },
                       { label: "Utilization", field: "utilizationPercent" as const, align: "text-center", width: "w-32" },
-                      { label: "Status", field: null, align: "text-center", width: "w-28" },
+                      { label: "Status", field: null, align: "text-center", width: "w-24" },
+                      { label: "Last Updated", field: null, align: "text-left", width: "w-32" },
                       { label: "Actions", field: null, align: "text-center", width: "w-20" },
                     ] as const).map(({ label, field, align, width }) => (
                       <th
@@ -547,11 +554,21 @@ export default function BudgetPage() {
                 <tbody>
                   {pagedList.map((item, index) => {
                     const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                    const tooltipDir = index === 0 ? "top-full mt-2" : "bottom-full mb-2";
+                    const caretDir   = index === 0 ? "bottom-full border-b-gray-800" : "top-full border-t-gray-800";
 
                     return (
                       <tr key={item.budget_id} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                        <td className={`px-2 py-2 font-semibold text-gray-800 ${rowBg}`}>
-                          {item.division_name}
+                        <td className={`px-2 py-2 ${rowBg}`}>
+                          <p className="font-semibold text-gray-800 leading-tight">{item.division_name}</p>
+                          {item.notes && (
+                            <p
+                              className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]"
+                              title={item.notes}
+                            >
+                              {item.notes}
+                            </p>
+                          )}
                         </td>
                         <td className={`mono px-2 py-2 text-right text-gray-700 ${rowBg}`}>
                           <span className="group relative cursor-help" title={formatFull(item.total_allocated)}>
@@ -592,10 +609,47 @@ export default function BudgetPage() {
                           </div>
                         </td>
                         <td className={`px-2 py-2 text-center ${rowBg}`}>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(item.status)}`}>
-                            {item.status === "on-track" && <RiCheckLine size={12} className="mr-1" />}
-                            {item.status !== "on-track" && <RiAlertLine size={12} className="mr-1" />}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getStatusColor(item.status)}`}>
+                            {item.status === "on-track"
+                              ? <RiCheckLine size={11} />
+                              : <RiAlertLine size={11} />}
                             {item.status === "on-track" ? "On Track" : item.status === "warning" ? "Warning" : "Critical"}
+                          </span>
+                        </td>
+                        <td className={`px-2 py-2 ${rowBg}`}>
+                          <span className="group relative cursor-help inline-block">
+                            <p className="text-xs font-medium text-gray-700">
+                              {item.updated_at
+                                ? new Date(item.updated_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                                : new Date(item.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              {item.updated_at ? "modified" : "created"}
+                            </p>
+                            {/* Timestamp tooltip */}
+                            <span className={`absolute ${tooltipDir} right-0 w-56 px-3 py-2.5 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 shadow-lg space-y-1.5`}>
+                              <span className="flex flex-col gap-0.5">
+                                <span className="text-gray-400 text-[10px] uppercase tracking-wide font-semibold">Created</span>
+                                <span className="font-medium">
+                                  {new Date(item.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                                  {" · "}
+                                  {new Date(item.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                </span>
+                              </span>
+                              <span className="flex flex-col gap-0.5 border-t border-gray-600 pt-1.5">
+                                <span className="text-gray-400 text-[10px] uppercase tracking-wide font-semibold">Last Modified</span>
+                                {item.updated_at ? (
+                                  <span className="font-medium">
+                                    {new Date(item.updated_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                                    {" · "}
+                                    {new Date(item.updated_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500 italic">Not yet modified</span>
+                                )}
+                              </span>
+                              <span className={`absolute ${caretDir} right-4 border-4 border-transparent`} />
+                            </span>
                           </span>
                         </td>
                         <td className={`px-2 py-2 text-center ${rowBg}`}>

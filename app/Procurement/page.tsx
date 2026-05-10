@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
-import { deletePRCascade } from "@/utils/supabase/deletePR";
+import { deletePRCascade, fetchPRDeletePreview, type PRDeletePreview } from "@/utils/supabase/deletePR";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
 import EditPRModal from "@/components/EditPRModal";
@@ -91,8 +91,10 @@ export default function ProcurementPage() {
   const [budgetProcessTarget, setBudgetProcessTarget] = useState<BudgetTarget | null>(null); // ← updated type
   const [submitting, setSubmitting]       = useState(false);
   const [remarksTarget, setRemarksTarget]   = useState<{ prId: number; prNo: string } | null>(null);
-  const [deletePrTarget, setDeletePrTarget] = useState<{ prId: number; prNo: string } | null>(null);
+  const [deletePrTarget, setDeletePrTarget]   = useState<{ prId: number; prNo: string } | null>(null);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deletePreview,    setDeletePreview]    = useState<PRDeletePreview | null>(null);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
   const [deleteErrorMsg,   setDeleteErrorMsg]   = useState<string | null>(null);
 
@@ -251,6 +253,15 @@ export default function ProcurementPage() {
     };
     fetchLatestFlags();
   }, [supabase, list]);
+
+  useEffect(() => {
+    if (!deletePrTarget) { setDeletePreview(null); return; }
+    setDeletePreview(null);
+    setDeletePreviewLoading(true);
+    fetchPRDeletePreview(deletePrTarget.prId)
+      .then((preview) => setDeletePreview(preview))
+      .finally(() => setDeletePreviewLoading(false));
+  }, [deletePrTarget]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -1126,50 +1137,115 @@ export default function ProcurementPage() {
       )}
 
       {/* ── DELETE PR CONFIRM MODAL ── */}
-      {deletePrTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleteConfirming && setDeletePrTarget(null)} />
-          <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <RiDeleteBinLine size={28} className="text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Purchase Request?</h3>
-            <p className="text-gray-600 mb-1">
-              PR <span className="font-semibold text-gray-800">{deletePrTarget.prNo}</span> and <strong>all connected records</strong> (POs, deliveries, canvass data, ORS entries, remarks) will be permanently deleted.
-            </p>
-            <p className="text-xs text-red-600 font-semibold mb-6">This action cannot be undone.</p>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setDeletePrTarget(null)}
-                disabled={deleteConfirming}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={deleteConfirming}
-                onClick={async () => {
-                  setDeleteConfirming(true);
-                  const { error } = await deletePRCascade(deletePrTarget.prId);
-                  setDeleteConfirming(false);
-                  setDeletePrTarget(null);
-                  if (error) {
-                    setDeleteErrorMsg("Delete failed: " + error);
-                  } else {
-                    setList((prev) => prev.filter((p) => p.id !== deletePrTarget.prId));
-                    setDeleteSuccessMsg(`PR ${deletePrTarget.prNo} and all connected records have been deleted.`);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {deleteConfirming ? (
-                  <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Deleting…</>
-                ) : "Confirm Delete"}
-              </button>
+      {deletePrTarget && (() => {
+        const rows: { label: string; count: number }[] = deletePreview ? [
+          { label: "PR Line Items",          count: deletePreview.prItems },
+          { label: "Purchase Orders",        count: deletePreview.purchaseOrders },
+          { label: "PO Line Items",          count: deletePreview.poItems },
+          { label: "Deliveries",             count: deletePreview.deliveries },
+          { label: "Delivery Documents",     count: deletePreview.deliveryDocs },
+          { label: "Canvass Sessions",       count: deletePreview.canvassSessions },
+          { label: "Canvass Entries",        count: deletePreview.canvassEntries },
+          { label: "Canvasser Assignments",  count: deletePreview.canvasserAssignments },
+          { label: "AAA Documents",          count: deletePreview.aaaDocs },
+          { label: "ORS Entries",            count: deletePreview.orsEntries },
+          { label: "BAC Resolution Links",   count: deletePreview.bacLinks },
+          { label: "Proposals",              count: deletePreview.proposals },
+          { label: "Remarks",                count: deletePreview.remarks },
+        ].filter((r) => r.count > 0) : [];
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleteConfirming && setDeletePrTarget(null)} />
+            <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+              {/* Header */}
+              <div className="bg-red-600 px-6 py-5 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <RiDeleteBinLine size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold leading-tight">Delete Purchase Request?</h3>
+                    <p className="text-red-200 text-sm font-mono">{deletePrTarget.prNo}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-4">
+                <p className="text-sm text-gray-600 mb-3">
+                  The following records will be <span className="font-semibold text-red-600">permanently deleted</span>:
+                </p>
+
+                {deletePreviewLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span className="text-sm">Counting connected records…</span>
+                  </div>
+                ) : deletePreview ? (
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    {rows.length === 0 ? (
+                      <p className="px-4 py-3 text-sm text-gray-500">No connected records found.</p>
+                    ) : (
+                      rows.map((row, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50">
+                          <span className="text-sm text-gray-700">{row.label}</span>
+                          <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full">
+                            {row.count}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                    <div className="flex items-center justify-between px-4 py-3 bg-red-50 border-t border-red-200">
+                      <span className="text-sm font-bold text-red-800">Total Records</span>
+                      <span className="text-sm font-extrabold text-red-800">{deletePreview.total}</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="text-xs text-red-600 font-semibold mt-3">This action cannot be undone.</p>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-5 flex gap-3">
+                <button
+                  onClick={() => setDeletePrTarget(null)}
+                  disabled={deleteConfirming}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={deleteConfirming || deletePreviewLoading}
+                  onClick={async () => {
+                    setDeleteConfirming(true);
+                    const { error } = await deletePRCascade(deletePrTarget.prId);
+                    setDeleteConfirming(false);
+                    setDeletePrTarget(null);
+                    setDeletePreview(null);
+                    if (error) {
+                      setDeleteErrorMsg("Delete failed: " + error);
+                    } else {
+                      setList((prev) => prev.filter((p) => p.id !== deletePrTarget.prId));
+                      setDeleteSuccessMsg(`PR ${deletePrTarget.prNo} and all connected records have been deleted.`);
+                    }
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleteConfirming ? (
+                    <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Deleting…</>
+                  ) : "Confirm Delete"}
+                </button>
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <SuccessModal
         visible={!!deleteSuccessMsg}

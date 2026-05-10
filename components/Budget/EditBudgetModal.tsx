@@ -43,25 +43,19 @@ export default function EditBudgetModal({
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [budgetNumber, setBudgetNumber] = useState("");
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear());
   const [divisionId, setDivisionId] = useState("");
   const [totalAllocated, setTotalAllocated] = useState("");
-  const [budgetStatus, setBudgetStatus] = useState("Active");
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-
-  const [notes, setNotes] = useState("");
 
   // Populate form when budget changes
   useEffect(() => {
     if (budget) {
-      setBudgetNumber(budget.budget_number || `BUD-${budget.fiscal_year}-${budget.division_id}`);
       setBudgetYear(budget.fiscal_year || budget.budget_year);
       setDivisionId(budget.division_id.toString());
       setTotalAllocated((budget.allocated || budget.total_allocated).toString());
-      setBudgetStatus(budget.budget_status || "Active");
       setNotes(budget.notes || "");
       setError("");
     }
@@ -75,8 +69,8 @@ export default function EditBudgetModal({
     setLoading(true);
 
     try {
-      if (!budgetNumber || !divisionId || !totalAllocated) {
-        throw new Error("Please fill in all fields");
+      if (!divisionId || !totalAllocated) {
+        throw new Error("Please fill in all required fields");
       }
 
       const allocatedAmount = parseFloat(totalAllocated);
@@ -99,6 +93,7 @@ export default function EditBudgetModal({
           division_id: parseInt(divisionId),
           allocated: allocatedAmount,
           notes: notes?.trim() || null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", budget.id);
 
@@ -136,7 +131,6 @@ export default function EditBudgetModal({
   if (!isOpen || !budget) return null;
 
   const utilized = (budget.utilized || budget.total_spent || 0) + (budget.total_earmarked || 0);
-  const canModifyStatus = isAdmin;
 
   return (
     <>
@@ -161,42 +155,27 @@ export default function EditBudgetModal({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            {/* Current utilization summary */}
+            <div className="flex items-center justify-between px-3 py-2.5 bg-emerald-50 border border-emerald-100 rounded-lg text-xs">
+              <span className="text-gray-500 font-medium">Currently allocated</span>
+              <span className="font-bold text-emerald-700">₱{budget.total_allocated.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-500 font-medium">Obligated (ORS)</span>
+              <span className={`font-bold ${utilized > budget.total_allocated ? "text-red-600" : "text-gray-700"}`}>
+                ₱{utilized.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+              <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
                 {error}
               </div>
             )}
 
-            {/* Budget Usage Info */}
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-              <div className="font-semibold mb-1">Current Utilization</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>Allocated: ₱{(budget.total_allocated / 1000).toFixed(0)}K</div>
-                <div>Utilized: ₱{(utilized / 1000).toFixed(0)}K</div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Budget Number (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., BUD-2024-001"
-                value={budgetNumber}
-                onChange={(e) => setBudgetNumber(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-                disabled={loading}
-              />
-              <p className="text-xs text-gray-500 mt-1">This is for reference only. Stored in notes field.</p>
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Fiscal Year
-                </label>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Fiscal Year</label>
                 <input
                   type="number"
                   value={budgetYear}
@@ -209,9 +188,7 @@ export default function EditBudgetModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Division
-                </label>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Division</label>
                 <select
                   value={divisionId}
                   onChange={(e) => setDivisionId(e.target.value)}
@@ -228,8 +205,8 @@ export default function EditBudgetModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Total Allocated Budget (₱)
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">
+                Allocated Budget (₱)
               </label>
               <input
                 type="number"
@@ -241,42 +218,24 @@ export default function EditBudgetModal({
                 min="0"
                 disabled={loading}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Minimum: ₱{(utilized / 1000).toFixed(0)}K (current utilization)
-              </p>
+              {utilized > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Must be ≥ ₱{utilized.toLocaleString("en-PH", { minimumFractionDigits: 2 })} (current ORS obligations)
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Notes
-              </label>
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Notes</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes or budget number reference..."
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
+                placeholder="e.g. STOD's allocated budget for the year..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900 resize-none"
                 rows={2}
                 disabled={loading}
               />
             </div>
-
-            {canModifyStatus && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Budget Status
-                </label>
-                <select
-                  value={budgetStatus}
-                  onChange={(e) => setBudgetStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm text-gray-900"
-                  disabled={loading}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Suspended">Suspended</option>
-                </select>
-              </div>
-            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-4 border-t border-gray-100">
