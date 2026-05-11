@@ -314,6 +314,49 @@ export default function DashboardPage() {
   const getStatusInfo = (status: string | null, statusId?: number | null, source?: string) => {
     const exactStatusName = statusId != null ? statusNameById[statusId] : undefined;
 
+    // PR entries: status_id 33 = "Completed (PR Phase)", not a payment-phase step.
+    // Mirrors app/Procurement/page.tsx getStatusInfo exactly.
+    if (source === 'pr') {
+      const prById: Record<number, { name: string; color: string }> = {
+        1:  { name: "Pending",                    color: "pending"    },
+        2:  { name: "Processing (Division Head)",  color: "processing" },
+        3:  { name: "Processing (BAC)",            color: "processing" },
+        4:  { name: "Processing (Budget)",         color: "processing" },
+        5:  { name: "Processing (PARPO)",          color: "processing" },
+        6:  { name: "Canvassing (Reception)",      color: "canvassing" },
+        7:  { name: "BAC Resolution",              color: "bac"        },
+        8:  { name: "Canvassing (Releasing)",      color: "canvassing" },
+        9:  { name: "Canvassing (Collection)",     color: "canvassing" },
+        10: { name: "Abstract of Awards",          color: "aaa"        },
+        11: { name: "PO (Creation)",               color: "po"         },
+        12: { name: "PO (Allocation)",             color: "po"         },
+        13: { name: "ORS (Creation)",              color: "approved"   },
+        14: { name: "ORS (Processing)",            color: "approved"   },
+        15: { name: "PO (Accounting)",             color: "po"         },
+        16: { name: "PO (PARPO)",                  color: "po"         },
+        17: { name: "PO (Serving)",                color: "po"         },
+        18: { name: "Delivery (Waiting)",          color: "delivery"   },
+        19: { name: "Delivery (Received)",         color: "delivery"   },
+        20: { name: "Delivery (IAR)",              color: "delivery"   },
+        21: { name: "Delivery (IAR Processing)",   color: "delivery"   },
+        22: { name: "Delivery (LOA)",              color: "delivery"   },
+        25: { name: "Delivery (Division Chief)",   color: "delivery"   },
+        26: { name: "Payment (cancelled)",         color: "payment"    },
+        27: { name: "Cancelled",                   color: "rejected"   },
+        28: { name: "Payment Pending",             color: "payment"    },
+        29: { name: "Voucher Verification",        color: "payment"    },
+        30: { name: "Accounting Review",           color: "payment"    },
+        32: { name: "PARPO Approval",              color: "payment"    },
+        33: { name: "Completed (PR Phase)",        color: "completed"  },
+        34: { name: "PARPO office signature",      color: "payment"    },
+        35: { name: "Accounting \u2014 Tax",       color: "payment"    },
+        36: { name: "Payment completed",           color: "completed"  },
+        37: { name: "Payment Completed",           color: "completed"  },
+      };
+      if (statusId != null && prById[statusId]) return prById[statusId];
+      return { name: status || "Unknown", color: "default" };
+    }
+
     // PO entries use a separate status_id space — check source first to avoid conflicts
     // (e.g. status_id 34 = "Completed (PO Phase)" for POs, "PARPO signature" for deliveries)
     if (source === 'po') {
@@ -327,8 +370,8 @@ export default function DashboardPage() {
         17: { name: "PO (Serving)",         color: "po" },
         34: { name: "Completed (PO Phase)", color: "completed" },
       };
-      if (statusId != null && poById[statusId]) return { ...poById[statusId], name: exactStatusName || poById[statusId].name };
-      return { name: exactStatusName || status || "PO", color: "po" };
+      if (statusId != null && poById[statusId]) return poById[statusId];
+      return { name: status || "PO", color: "po" };
     }
 
     const statusById: Record<number, { name: string; color: string }> = {
@@ -771,6 +814,12 @@ export default function DashboardPage() {
                 <tbody>
                   {pagedList.map((form, index) => {
                     const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.status_id, form.source);
+                    // PR/PO: use the source-aware procurement-page names (matches PR/PO views exactly).
+                    // Delivery/Payment: prefer the DB status_name, fall back to getStatusInfo output.
+                    const displayStatusName =
+                      (form.source === 'pr' || form.source === 'po')
+                        ? statusName
+                        : (form.status_id != null ? statusNameById[form.status_id] : null) ?? statusName;
                     const cost = form.total_cost || 0;
                     const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                     const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || 
@@ -810,7 +859,7 @@ export default function DashboardPage() {
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
-                              {statusName}
+                              {displayStatusName}
                             </span>
                           </td>
                           <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>

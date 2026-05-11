@@ -21,6 +21,8 @@ type ItemDataType = {
   total_cost: string;
   created_at: string;
   division: string;
+  isBold?: boolean;
+  isCenter?: boolean;
 };
 
 // Type for text-only lines in the PR (for printing only)
@@ -75,6 +77,8 @@ function emptyItem(): ItemDataType {
     total_cost: "",
     division: "",
     created_at: new Date().toISOString(),
+    isBold: false,
+    isCenter: false,
   };
 }
 
@@ -93,6 +97,7 @@ function PREditablePreview({
   addItem,
   updateItem,
   removeItem,
+  toggleItemFlag,
   textOnlyLines = [],
   addTextOnlyLine,
   updateTextOnlyLine,
@@ -104,6 +109,7 @@ function PREditablePreview({
   addItem: () => void;
   updateItem: (index: number, field: keyof ItemDataType, value: string) => void;
   removeItem: (index: number) => void;
+  toggleItemFlag: (index: number, flag: 'isBold' | 'isCenter') => void;
   textOnlyLines?: TextOnlyLine[];
   addTextOnlyLine: (afterIndex: number) => void;
   updateTextOnlyLine: (id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) => void;
@@ -228,8 +234,14 @@ function PREditablePreview({
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
                     <textarea value={item.unit} onChange={e => updateItem(originalItemIndex, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px", verticalAlign: "top" }}>
-                    <textarea value={item.description} onChange={e => updateItem(originalItemIndex, 'description', e.target.value)} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  <td style={{ ...tdStyle, textAlign: item.isCenter ? "center" : "left", padding: "1px 4px", verticalAlign: "top" }}>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex justify-end gap-0.5 mb-0.5">
+                        <button type="button" onClick={() => toggleItemFlag(originalItemIndex, 'isBold')} title="Bold" className={`w-5 h-4 flex items-center justify-center text-[8px] font-bold rounded border transition-colors ${item.isBold ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400'}`}>B</button>
+                        <button type="button" onClick={() => toggleItemFlag(originalItemIndex, 'isCenter')} title="Center" className={`w-5 h-4 flex items-center justify-center text-[8px] rounded border transition-colors ${item.isCenter ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400'}`}>≡</button>
+                      </div>
+                      <textarea value={item.description} onChange={e => updateItem(originalItemIndex, 'description', e.target.value)} onInput={autoResize} className={item.isCenter ? editableInputCenterCls : editableInputCls} style={{ width: "95%", minHeight: "16px", fontWeight: item.isBold ? 'bold' : 'normal' }} rows={1} />
+                    </div>
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
                     <textarea value={item.quantity} onChange={e => updateItem(originalItemIndex, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
@@ -349,6 +361,8 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUser?: Current
       description: item.description,
       quantity: item.quantity,
       unit_price: item.unit_cost,
+      isBold: item.isBold,
+      isCenter: item.isCenter,
     })),
   });
 
@@ -511,6 +525,12 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       [updatedItems[index], updatedItems[index + 1]] = [updatedItems[index + 1], updatedItems[index]];
       setItems(updatedItems);
     }
+  };
+
+  const toggleItemFlag = (index: number, flag: 'isBold' | 'isCenter') => {
+    const updatedItems = [...items];
+    updatedItems[index] = { ...updatedItems[index], [flag]: !updatedItems[index][flag] };
+    setItems(updatedItems);
   };
 
   const grandTotal = getGrandTotal(items);
@@ -729,8 +749,14 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                             </div>
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
-                              <input className={inputCls} placeholder="Describe the item" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} />
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-bold text-gray-600 uppercase">Item Description</label>
+                                <div className="flex gap-1">
+                                  <button type="button" onClick={() => toggleItemFlag(index, 'isBold')} title="Bold" className={`w-7 h-7 flex items-center justify-center text-xs font-bold rounded border transition-colors ${item.isBold ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>B</button>
+                                  <button type="button" onClick={() => toggleItemFlag(index, 'isCenter')} title="Center align" className={`w-7 h-7 flex items-center justify-center text-xs rounded border transition-colors ${item.isCenter ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>≡</button>
+                                </div>
+                              </div>
+                              <textarea className={`${inputCls}${item.isBold ? ' font-bold' : ''}${item.isCenter ? ' text-center' : ''}`} placeholder="Describe the item" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} rows={3} style={{ resize: "vertical" }} />
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div>
@@ -896,6 +922,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                       addItem={addItem}
                       updateItem={updateItem}
                       removeItem={removeItem}
+                      toggleItemFlag={toggleItemFlag}
                       textOnlyLines={textOnlyLines}
                       addTextOnlyLine={addTextOnlyLine}
                       updateTextOnlyLine={updateTextOnlyLine}
