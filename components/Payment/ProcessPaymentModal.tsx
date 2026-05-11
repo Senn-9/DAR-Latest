@@ -287,6 +287,9 @@ function LOADocumentPreview({ delivery, loa, poData }: { delivery: any; loa: any
             mergedData.po_no = poNumber;
           }
           
+          // PO date should not be copied to LOA - keep it blank
+          delete mergedData.po_date;
+          
           const generatedHtml = await buildLOAHtml(mergedData);
           setHtml(generatedHtml);
         } catch (error) {
@@ -336,6 +339,8 @@ function documentsForStatus(statusId: number | undefined): PaymentProcessDocType
       return ["dv"];
     case 35:
       return ["ors", "dv"];
+    case 36:
+      return ["dv", "ors"];
     default:
       return [];
   }
@@ -482,6 +487,7 @@ export default function ProcessPaymentModal({
   const [parpoSignatureDone, setParpoSignatureDone] = useState(false);
   const [bir2307Done, setBir2307Done] = useState(false);
   const [jevDone, setJevDone] = useState(false);
+  const [cashReleaseDone, setCashReleaseDone] = useState(false);
 
   // Action label for the transition out of the current status (matches Payment page onSubmit)
   const getCurrentStepInfo = () => {
@@ -498,6 +504,8 @@ export default function ProcessPaymentModal({
         return { label: "Complete PARPO signature routing", nextStatus: 35 };
       case 35:
         return { label: "Complete Tax processing handoff", nextStatus: 36 };
+      case 36:
+        return { label: "Complete Cash for Release", nextStatus: 37 };
       default:
         return { label: "Complete Voucher Verification", nextStatus: 30 };
     }
@@ -519,6 +527,8 @@ export default function ProcessPaymentModal({
         return parpoSignatureDone;
       case 35:
         return bir2307Done && jevDone;
+      case 36:
+        return cashReleaseDone;
       default:
         return true;
     }
@@ -535,6 +545,7 @@ export default function ProcessPaymentModal({
     setParpoSignatureDone(false);
     setBir2307Done(false);
     setJevDone(false);
+    setCashReleaseDone(false);
   };
 
   useEffect(() => {
@@ -667,6 +678,22 @@ export default function ProcessPaymentModal({
               />
               <ChecklistRow checked={jevDone} onChange={setJevDone} title="JEV prepared and linked" />
             </div>
+          </div>
+        );
+
+      case 36:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-green-800">Cash for Release</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Cash office finalizes payment release after tax processing completion.
+            </p>
+            <ChecklistRow
+              checked={cashReleaseDone}
+              onChange={setCashReleaseDone}
+              title="Payment release finalized"
+              subtitle="All requirements met and payment ready for final completion."
+            />
           </div>
         );
 

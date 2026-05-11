@@ -3939,7 +3939,7 @@ export default function ProcessDeliveryModal({
 
                 <input
                   type="text"
-                  value={loa?.po_date ?? poData?.date ?? ""}
+                  value={loa?.po_date ?? ""}
                   onChange={(e) =>
                     setLoa((p: any) => ({
                       ...(p ?? {}),
@@ -4458,7 +4458,7 @@ export default function ProcessDeliveryModal({
         const loaData = { ...mergedData, ...loa };
         loaData.po_items = mergedData.po_items;
         if (mergedData.po_no) loaData.po_no = mergedData.po_no;
-        if (mergedData.po_date) loaData.po_date = mergedData.po_date;
+        // PO date should not be copied to LOA - keep it blank
 
         // Use JSX-based HTML generation (synchronous now)
         html = buildLOAHtml(loaData);

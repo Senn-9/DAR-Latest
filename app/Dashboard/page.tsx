@@ -205,7 +205,7 @@ export default function DashboardPage() {
         
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
+          const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36, 37].includes(delivery.status_id);
           const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
           const isCompletedDelivery = delivery.status_id === 28; // Payment Pending = completed delivery phase
           
@@ -358,6 +358,7 @@ export default function DashboardPage() {
       34: { name: "PARPO signature", color: "payment" },
       35: { name: "Tax processing", color: "payment" },
       36: { name: "Completed", color: "completed" },
+      37: { name: "Payment Completed", color: "completed" },
     };
 
     if (statusId != null && statusById[statusId]) {
@@ -471,6 +472,7 @@ export default function DashboardPage() {
       case 25:
       case 26:
       case 27:
+        return "cancelled";
       case 28:
       case 29:
       case 30:
@@ -484,6 +486,7 @@ export default function DashboardPage() {
       case 35:
         return "completed-delivery";
       case 36:
+      case 37:
         return "completed";
       default:
         return "all";

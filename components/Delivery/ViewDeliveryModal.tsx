@@ -2254,7 +2254,7 @@ export default function ViewDeliveryModal({
       const loaMerged = { ...mergedData, ...loaData };
       loaMerged.po_items = mergedData.po_items;
       if (mergedData.po_no) loaMerged.po_no = mergedData.po_no;
-      if (mergedData.po_date) loaMerged.po_date = mergedData.po_date;
+      // PO date should not be copied to LOA - keep it blank
       const html = buildLOAHtml(loaMerged);
       downloadPDF(html);
     }
@@ -2346,7 +2346,7 @@ export default function ViewDeliveryModal({
 
           if (mergedData.po_no) loaData.po_no = mergedData.po_no;
 
-          if (mergedData.po_date) loaData.po_date = mergedData.po_date;
+          // PO date should not be copied to LOA - keep it blank
 
           html = await buildLOAHtml(loaData);
 
@@ -3180,8 +3180,7 @@ export default function ViewDeliveryModal({
                       const loaData = { ...mergedData, ...loa };
                       loaData.po_items = mergedData.po_items;
                       if (mergedData.po_no) loaData.po_no = mergedData.po_no;
-                      if (mergedData.po_date)
-                        loaData.po_date = mergedData.po_date;
+                      // PO date should not be copied to LOA - keep it blank
                       const html = buildLOAHtml(loaData);
                       downloadPDF(html);
                     }

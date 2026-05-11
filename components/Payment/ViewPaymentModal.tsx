@@ -31,7 +31,8 @@ export default function ViewPaymentModal({
     { id: 33, label: "Forward to Cash", color: "bg-indigo-100 text-indigo-800" },
     { id: 34, label: "Forward to PARPO office for signature", color: "bg-sky-100 text-sky-800" },
     { id: 35, label: "Forward to Accounting for Tax processing", color: "bg-amber-100 text-amber-900" },
-    { id: 36, label: "Payment completed", color: "bg-emerald-100 text-emerald-800" },
+    { id: 36, label: "Cash for Release", color: "bg-emerald-100 text-emerald-800" },
+    { id: 37, label: "Payment Completed", color: "bg-emerald-100 text-emerald-800" },
   ];
 
   const currentStatus = paymentStatuses.find(s => s.id === delivery?.status_id) || paymentStatuses[0];
@@ -83,7 +84,7 @@ export default function ViewPaymentModal({
     }
     
     // For completed steps without cached timestamps, generate a stable one
-    const statusHierarchy = [29, 30, 32, 33, 34, 35, 36];
+    const statusHierarchy = [29, 30, 32, 33, 34, 35, 36, 37];
     const currentIndex = statusHierarchy.indexOf(currentStatusId);
     const stepIndex = statusHierarchy.indexOf(stepStatusId);
     
@@ -118,7 +119,7 @@ export default function ViewPaymentModal({
   // Create a more precise timeline logic that accurately reflects step completion
   const getStepStatus = (stepStatusId: number, currentStatusId: number, stepTimestamp: string | null) => {
     // Define the status hierarchy for accurate progression
-    const statusHierarchy = [29, 30, 32, 33, 34, 35, 36];
+    const statusHierarchy = [29, 30, 32, 33, 34, 35, 36, 37];
     const currentIndex = statusHierarchy.indexOf(currentStatusId);
     const stepIndex = statusHierarchy.indexOf(stepStatusId);
     
@@ -167,7 +168,7 @@ export default function ViewPaymentModal({
     { step: 4, title: "Forward to Cash", status: getStepStatus(33, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 33, delivery?.status_id) },
     { step: 5, title: "PARPO office signature", status: getStepStatus(34, delivery?.status_id || 0, delivery?.parpo_signature_completed_at), date: getStepTimestamp(delivery?.parpo_signature_completed_at, 34, delivery?.status_id) },
     { step: 6, title: "Accounting — Tax processing", status: getStepStatus(35, delivery?.status_id || 0, delivery?.tax_processing_completed_at), date: getStepTimestamp(delivery?.tax_processing_completed_at, 35, delivery?.status_id) },
-    { step: 7, title: "Cash for Release", status: getStepStatus(36, delivery?.status_id || 0, delivery?.cash_release_completed_at), date: getStepTimestamp(delivery?.cash_release_completed_at, 36, delivery?.status_id) },
+    { step: 7, title: "Cash for Release", status: getStepStatus(36, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 36, delivery?.status_id) },
     { step: 8, title: "Payment Completed", status: getStepStatus(37, delivery?.status_id || 0, delivery?.payment_completed_at), date: getStepTimestamp(delivery?.payment_completed_at, 37, delivery?.status_id) },
   ];
 

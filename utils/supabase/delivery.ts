@@ -348,7 +348,7 @@ export async function fetchPoCandidatesForDelivery() {
 
 const PAYMENT_PHASE_STATUS_IDS = [
 
-  26, 27, 28, 29, 30, 32, 33, 34, 35, 36,
+  26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37,
 
 ] as const;
 
@@ -717,6 +717,14 @@ export async function updateDeliveryStatusOnly(id: number, statusId: number, pre
       case 35: // Tax processing completed
         updateDataWithTimestamps.tax_processing_completed_at = currentTimestamp;
         console.log("Setting tax_processing_completed_at timestamp for previous status 35");
+        break;
+      case 36: // Cash for Release completed
+        updateDataWithTimestamps.cash_processing_completed_at = currentTimestamp;
+        console.log("Setting cash_processing_completed_at timestamp for previous status 36");
+        break;
+      case 37: // Payment Completed
+        updateDataWithTimestamps.payment_completed_at = currentTimestamp;
+        console.log("Setting payment_completed_at timestamp for status 37");
         break;
     }
   } else {
