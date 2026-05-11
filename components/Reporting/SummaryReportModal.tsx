@@ -33,7 +33,50 @@ type PRData = {
 	source?: "pr" | "po" | "delivery" | "payment";
 };
 
-function getStatusInfo(status: string | null, statusId?: number | null, source?: string) {
+function getStatusInfo(status: string | null, statusId?: number | null, source?: string, statusNameById?: Record<number, string>) {
+	const exactStatusName = statusId != null ? statusNameById?.[statusId] : undefined;
+
+	if (source === "pr") {
+		const prById: Record<number, { name: string; color: string }> = {
+			1: { name: "Pending", color: "pending" },
+			2: { name: "Processing (Division Head)", color: "processing" },
+			3: { name: "Processing (BAC)", color: "processing" },
+			4: { name: "Processing (Budget)", color: "processing" },
+			5: { name: "Processing (PARPO)", color: "processing" },
+			6: { name: "Canvassing (Reception)", color: "canvassing" },
+			7: { name: "BAC Resolution", color: "bac" },
+			8: { name: "Canvassing (Releasing)", color: "canvassing" },
+			9: { name: "Canvassing (Collection)", color: "canvassing" },
+			10: { name: "Abstract of Awards", color: "aaa" },
+			11: { name: "PO (Creation)", color: "po" },
+			12: { name: "PO (Allocation)", color: "po" },
+			13: { name: "ORS (Creation)", color: "approved" },
+			14: { name: "ORS (Processing)", color: "approved" },
+			15: { name: "PO (Accounting)", color: "po" },
+			16: { name: "PO (PARPO)", color: "po" },
+			17: { name: "PO (Serving)", color: "po" },
+			18: { name: "Delivery (Waiting)", color: "delivery" },
+			19: { name: "Delivery (Received)", color: "delivery" },
+			20: { name: "Delivery (IAR)", color: "delivery" },
+			21: { name: "Delivery (IAR Processing)", color: "delivery" },
+			22: { name: "Delivery (LOA)", color: "delivery" },
+			25: { name: "Delivery (Division Chief)", color: "delivery" },
+			26: { name: "Payment (cancelled)", color: "payment" },
+			27: { name: "Cancelled", color: "rejected" },
+			28: { name: "Payment Pending", color: "payment" },
+			29: { name: "Voucher Verification", color: "payment" },
+			30: { name: "Accounting Review", color: "payment" },
+			32: { name: "PARPO Approval", color: "payment" },
+			33: { name: "Completed (PR Phase)", color: "completed" },
+			34: { name: "PARPO office signature", color: "payment" },
+			35: { name: "Accounting — Tax", color: "payment" },
+			36: { name: "Payment completed", color: "completed" },
+			37: { name: "Payment Completed", color: "completed" },
+		};
+		if (statusId != null && prById[statusId]) return prById[statusId];
+		return { name: status || "Unknown", color: "default" };
+	}
+
 	if (source === "po") {
 		const poById: Record<number, { name: string; color: string }> = {
 			11: { name: "PO (Creation)", color: "po" },
@@ -50,25 +93,103 @@ function getStatusInfo(status: string | null, statusId?: number | null, source?:
 		return { name: status || "PO", color: "po" };
 	}
 
-	if (source === "delivery") return { name: "Delivery", color: "delivery" };
-	if (source === "payment") return { name: "Payment", color: "payment" };
+	const statusById: Record<number, { name: string; color: string }> = {
+		1: { name: "Pending", color: "pending" },
+		2: { name: "Processing (Division Head)", color: "processing" },
+		3: { name: "Processing (BAC)", color: "processing" },
+		4: { name: "Processing (Budget)", color: "processing" },
+		5: { name: "Processing (PARPO)", color: "processing" },
+		6: { name: "Canvassing (Reception)", color: "canvassing" },
+		7: { name: "Canvassing (Releasing)", color: "canvassing" },
+		8: { name: "Canvassing (Releasing)", color: "canvassing" },
+		9: { name: "Canvassing (Collection)", color: "canvassing" },
+		10: { name: "Abstract of Awards", color: "aaa" },
+		18: { name: "Delivery (Waiting)", color: "delivery" },
+		19: { name: "Delivery (Received)", color: "delivery" },
+		20: { name: "Delivery (IAR)", color: "delivery" },
+		21: { name: "Delivery (IAR Processing)", color: "delivery" },
+		22: { name: "Delivery (LOA)", color: "delivery" },
+		25: { name: "Delivery (Division Chief)", color: "delivery" },
+		26: { name: "Payment", color: "payment" },
+		27: { name: "Cancelled", color: "rejected" },
+		28: { name: "Payment Pending", color: "payment" },
+		29: { name: "Voucher Verification", color: "payment" },
+		30: { name: "Accounting Review", color: "payment" },
+		32: { name: "PARPO Approval", color: "payment" },
+		33: { name: "Forward to Cash", color: "payment" },
+		34: { name: "PARPO signature", color: "payment" },
+		35: { name: "Tax processing", color: "payment" },
+		36: { name: "Completed", color: "completed" },
+		37: { name: "Payment Completed", color: "completed" },
+	};
 
-	if (statusId === 1) return { name: "Pending", color: "pending" };
-	if ([2, 3, 4, 5].includes(statusId || 0)) return { name: "Processing", color: "processing" };
-	if ([6, 8, 9].includes(statusId || 0)) return { name: "Canvassing", color: "canvassing" };
-	if (statusId === 7) return { name: "BAC Resolution", color: "bac-resolution" };
-	if (statusId === 10) return { name: "Abstract of Awards", color: "aaa" };
-	if ([11, 12, 15, 16, 17].includes(statusId || 0)) return { name: "PO", color: "po" };
-	if ([13, 14].includes(statusId || 0)) return { name: "ORS", color: "ors" };
-	if ([18, 19, 20, 21, 22, 23, 24].includes(statusId || 0)) return { name: "Delivery", color: "delivery" };
-	if ([25, 26, 27, 28, 29, 30, 31, 32].includes(statusId || 0)) return { name: "Payment Phase", color: "payment" };
-	if (statusId === 33) return { name: "Completed PR Phase", color: "completed-pr" };
-	if (statusId === 34) return { name: "Completed PO Phase", color: "completed-po" };
-	if (statusId === 35) return { name: "Completed Delivery Phase", color: "completed-delivery" };
-	if (statusId === 36) return { name: "Completed Payment Phase", color: "completed" };
+	if (statusId != null && statusById[statusId]) {
+		return { ...statusById[statusId], name: exactStatusName || statusById[statusId].name };
+	}
+
+	if (source === "delivery") return { name: exactStatusName || "Delivery", color: "delivery" };
+	if (source === "payment") return { name: exactStatusName || "Payment", color: "payment" };
 
 	return { name: status || "Unknown", color: "default" };
 }
+
+const getStatusFilterKey = (statusId: number | null) => {
+	switch (statusId) {
+		case 1:
+			return "pending";
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+			return "processing";
+		case 6:
+		case 8:
+		case 9:
+			return "canvassing";
+		case 7:
+			return "bac-resolution";
+		case 10:
+			return "aaa";
+		case 11:
+		case 12:
+		case 15:
+		case 16:
+		case 17:
+			return "po";
+		case 13:
+		case 14:
+			return "ors";
+		case 18:
+		case 19:
+		case 20:
+		case 21:
+		case 22:
+		case 23:
+		case 24:
+			return "delivery";
+		case 25:
+		case 26:
+		case 27:
+			return "cancelled";
+		case 28:
+		case 29:
+		case 30:
+		case 31:
+		case 32:
+			return "payment";
+		case 33:
+			return "completed-pr";
+		case 34:
+			return "completed-po";
+		case 35:
+			return "completed-delivery";
+		case 36:
+		case 37:
+			return "completed";
+		default:
+			return "all";
+	}
+};
 
 export default function SummaryReportModal({ open, onClose }: SummaryReportModalProps) {
 	const supabase = createClient();
@@ -139,8 +260,9 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 				}));
 
 				const processedDeliveries = (deliveryData || []).map(delivery => {
-					const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36].includes(delivery.status_id);
+					const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36, 37].includes(delivery.status_id);
 					const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
+					const isCompletedDelivery = delivery.status_id === 28; // Payment Pending = completed delivery phase
 
 					let statusText = "Unknown";
 					let source: "delivery" | "payment" = "delivery";
@@ -148,6 +270,9 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 					if (isPaymentPhase) {
 						statusText = "Payment";
 						source = "payment";
+					} else if (isCompletedDelivery) {
+						statusText = "Completed";
+						source = "delivery";
 					} else if (isDeliveryPhase) {
 						statusText = "Delivery";
 						source = "delivery";
@@ -175,33 +300,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 
 				const filteredData = selectedStatus === "all"
 					? filteredByYear
-					: selectedStatus === "completed"
-						? filteredByYear.filter(item => item.status_id === 36)
-						: selectedStatus === "pending"
-						? filteredByYear.filter(item => item.status_id === 1)
-						: selectedStatus === "processing"
-						? filteredByYear.filter(item => [2, 3, 4, 5].includes(item.status_id || 0))
-						: selectedStatus === "canvassing"
-						? filteredByYear.filter(item => [6, 8, 9].includes(item.status_id || 0))
-						: selectedStatus === "bac-resolution"
-						? filteredByYear.filter(item => item.status_id === 7)
-						: selectedStatus === "aaa"
-						? filteredByYear.filter(item => item.status_id === 10)
-						: selectedStatus === "po"
-						? filteredByYear.filter(item => [11, 12, 15, 16, 17].includes(item.status_id || 0))
-						: selectedStatus === "ors"
-						? filteredByYear.filter(item => [13, 14].includes(item.status_id || 0))
-						: selectedStatus === "delivery"
-						? filteredByYear.filter(item => [18, 19, 20, 21, 22, 23, 24].includes(item.status_id || 0))
-						: selectedStatus === "payment"
-						? filteredByYear.filter(item => [25, 26, 27, 28, 29, 30, 31, 32].includes(item.status_id || 0))
-						: selectedStatus === "completed-pr"
-						? filteredByYear.filter(item => item.status_id === 33)
-						: selectedStatus === "completed-po"
-						? filteredByYear.filter(item => item.status_id === 34)
-						: selectedStatus === "completed-delivery"
-						? filteredByYear.filter(item => item.status_id === 35)
-						: filteredByYear;
+					: filteredByYear.filter(item => getStatusFilterKey(item.status_id) === selectedStatus);
 
 				filteredData.sort((a, b) => {
 					const sectionA = a.office_section || "Unassigned";
@@ -234,9 +333,13 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 
 		const statusStats: StatusStat[] = Object.entries(
 			data.reduce((acc, item) => {
-				const statusInfo = getStatusInfo(item.status || "", item.status_id, item.source);
+				const statusInfo = getStatusInfo(item.status || "", item.status_id, item.source, statusNameById);
+				const displayStatusName = (item.source === "pr" || item.source === "po")
+					? statusInfo.name
+					: (item.status_id != null ? statusNameById[item.status_id] : null) ?? statusInfo.name;
+				
 				const source = item.source || "unknown";
-				const statusKey = `${statusInfo.name} (${source.toUpperCase()})`;
+				const statusKey = `${displayStatusName} (${source.toUpperCase()})`;
 				acc[statusKey] = (acc[statusKey] || 0) + 1;
 				return acc;
 			}, {} as Record<string, number>)
@@ -257,14 +360,21 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 			count,
 		}));
 
-		const reportRows: SummaryReportRow[] = data.map(item => ({
-			prNo: item.pr_no || "Unknown",
-			section: item.office_section || "Unassigned",
-			entityName: item.entity_name || "Unknown",
-			date: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown",
-				status: statusNameById[item.status_id ?? -1] || item.status || getStatusInfo(item.status, item.status_id, item.source).name,
-			cost: `₱${(item.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-		}));
+		const reportRows: SummaryReportRow[] = data.map(item => {
+			const { name: statusName } = getStatusInfo(item.status || "", item.status_id, item.source, statusNameById);
+			const displayStatusName = (item.source === "pr" || item.source === "po")
+				? statusName
+				: (item.status_id != null ? statusNameById[item.status_id] : null) ?? statusName;
+
+			return {
+				prNo: item.pr_no || "Unknown",
+				section: item.office_section || "Unassigned",
+				entityName: item.entity_name || "Unknown",
+				date: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown",
+				status: displayStatusName,
+				cost: `₱${(item.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+			};
+		});
 
 		printSummaryReport(meta, statusStats, sectionStats, reportRows);
 	};
@@ -360,6 +470,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 										<option value="po">PO</option>
 										<option value="ors">ORS</option>
 										<option value="delivery">Delivery</option>
+										<option value="cancelled">Cancelled</option>
 										<option value="payment">Payment Phase</option>
 										<option value="completed-pr">Completed PR Phase</option>
 										<option value="completed-po">Completed PO Phase</option>
@@ -390,8 +501,11 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 									<div className="grid grid-cols-2 gap-4">
 										{Object.entries(
 											data.reduce((acc, item) => {
-												const statusKey = statusNameById[item.status_id ?? -1] || item.status || getStatusInfo(item.status || "", item.status_id, item.source).name;
-												acc[statusKey] = (acc[statusKey] || 0) + 1;
+												const { name: statusName } = getStatusInfo(item.status || "", item.status_id, item.source, statusNameById);
+												const displayStatusName = (item.source === "pr" || item.source === "po")
+													? statusName
+													: (item.status_id != null ? statusNameById[item.status_id] : null) ?? statusName;
+												acc[displayStatusName] = (acc[displayStatusName] || 0) + 1;
 												return acc;
 											}, {} as Record<string, number>)
 										).map(([status, count]) => (
@@ -435,13 +549,16 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 										</thead>
 										<tbody>
 											{data.map((item) => {
-												const statusLabel = statusNameById[item.status_id ?? -1] || item.status || getStatusInfo(item.status || "", item.status_id, item.source).name;
+												const { name: statusName } = getStatusInfo(item.status || "", item.status_id, item.source, statusNameById);
+												const displayStatusName = (item.source === "pr" || item.source === "po")
+													? statusName
+													: (item.status_id != null ? statusNameById[item.status_id] : null) ?? statusName;
 												return (
 													<tr key={`${item.source}-${item.id}`}>
 														<td className="border border-gray-300 p-2">{item.pr_no}</td>
 														<td className="border border-gray-300 p-2">{item.office_section}</td>
 														<td className="border border-gray-300 p-2">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown"}</td>
-														<td className="border border-gray-300 p-2">{statusLabel}</td>
+														<td className="border border-gray-300 p-2">{displayStatusName}</td>
 														<td className="border border-gray-300 p-2 text-right">₱{(item.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
 													</tr>
 												);

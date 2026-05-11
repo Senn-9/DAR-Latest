@@ -33,24 +33,97 @@ function escapeHtml(str: string): string {
 		.replace(/"/g, "&quot;");
 }
 
-function getStatusInfo(status: string, status_id: number | null, source: string): { name: string; color: string } {
-	if (source === 'delivery') return { name: "Delivery", color: "delivery" };
-	if (source === 'payment') return { name: "Payment", color: "payment" };
+function getStatusInfo(status: string | null, statusId?: number | null, source?: string): { name: string; color: string } {
+	if (source === "pr") {
+		const prById: Record<number, { name: string; color: string }> = {
+			1: { name: "Pending", color: "pending" },
+			2: { name: "Processing (Division Head)", color: "processing" },
+			3: { name: "Processing (BAC)", color: "processing" },
+			4: { name: "Processing (Budget)", color: "processing" },
+			5: { name: "Processing (PARPO)", color: "processing" },
+			6: { name: "Canvassing (Reception)", color: "canvassing" },
+			7: { name: "BAC Resolution", color: "bac" },
+			8: { name: "Canvassing (Releasing)", color: "canvassing" },
+			9: { name: "Canvassing (Collection)", color: "canvassing" },
+			10: { name: "Abstract of Awards", color: "aaa" },
+			11: { name: "PO (Creation)", color: "po" },
+			12: { name: "PO (Allocation)", color: "po" },
+			13: { name: "ORS (Creation)", color: "approved" },
+			14: { name: "ORS (Processing)", color: "approved" },
+			15: { name: "PO (Accounting)", color: "po" },
+			16: { name: "PO (PARPO)", color: "po" },
+			17: { name: "PO (Serving)", color: "po" },
+			18: { name: "Delivery (Waiting)", color: "delivery" },
+			19: { name: "Delivery (Received)", color: "delivery" },
+			20: { name: "Delivery (IAR)", color: "delivery" },
+			21: { name: "Delivery (IAR Processing)", color: "delivery" },
+			22: { name: "Delivery (LOA)", color: "delivery" },
+			25: { name: "Delivery (Division Chief)", color: "delivery" },
+			26: { name: "Payment (cancelled)", color: "payment" },
+			27: { name: "Cancelled", color: "rejected" },
+			28: { name: "Payment Pending", color: "payment" },
+			29: { name: "Voucher Verification", color: "payment" },
+			30: { name: "Accounting Review", color: "payment" },
+			32: { name: "PARPO Approval", color: "payment" },
+			33: { name: "Completed (PR Phase)", color: "completed" },
+			34: { name: "PARPO office signature", color: "payment" },
+			35: { name: "Accounting — Tax", color: "payment" },
+			36: { name: "Payment completed", color: "completed" },
+			37: { name: "Payment Completed", color: "completed" },
+		};
+		if (statusId != null && prById[statusId]) return prById[statusId];
+		return { name: status || "Unknown", color: "default" };
+	}
 
-	// New status ID categorization
-	if (status_id === 1) return { name: "Pending", color: "pending" };
-	if ([2, 3, 4, 5].includes(status_id || 0)) return { name: "Processing", color: "processing" };
-	if ([6, 8, 9].includes(status_id || 0)) return { name: "Canvassing", color: "canvassing" };
-	if (status_id === 7) return { name: "BAC Resolution", color: "bac-resolution" };
-	if (status_id === 10) return { name: "Abstract of Awards", color: "aaa" };
-	if ([11, 12, 15, 16, 17].includes(status_id || 0)) return { name: "PO", color: "po" };
-	if ([13, 14].includes(status_id || 0)) return { name: "ORS", color: "ors" };
-	if ([18, 19, 20, 21, 22, 23, 24].includes(status_id || 0)) return { name: "Delivery", color: "delivery" };
-	if ([25, 26, 27, 28, 29, 30, 31, 32].includes(status_id || 0)) return { name: "Payment Phase", color: "payment" };
-	if (status_id === 33) return { name: "Completed PR Phase", color: "completed-pr" };
-	if (status_id === 34) return { name: "Completed PO Phase", color: "completed-po" };
-	if (status_id === 35) return { name: "Completed Delivery Phase", color: "completed-delivery" };
-	if (status_id === 36) return { name: "Completed Payment Phase", color: "completed" };
+	if (source === "po") {
+		const poById: Record<number, { name: string; color: string }> = {
+			11: { name: "PO (Creation)", color: "po" },
+			12: { name: "PO (Allocation)", color: "po" },
+			13: { name: "ORS (Creation)", color: "po" },
+			14: { name: "ORS (Processing)", color: "po" },
+			15: { name: "PO (Accounting)", color: "po" },
+			16: { name: "PO (PARPO)", color: "po" },
+			17: { name: "PO (Serving)", color: "po" },
+			34: { name: "Completed (PO Phase)", color: "completed" },
+		};
+		if (statusId != null && poById[statusId]) return poById[statusId];
+		return { name: status || "PO", color: "po" };
+	}
+
+	const statusById: Record<number, { name: string; color: string }> = {
+		1: { name: "Pending", color: "pending" },
+		2: { name: "Processing (Division Head)", color: "processing" },
+		3: { name: "Processing (BAC)", color: "processing" },
+		4: { name: "Processing (Budget)", color: "processing" },
+		5: { name: "Processing (PARPO)", color: "processing" },
+		6: { name: "Canvassing (Reception)", color: "canvassing" },
+		7: { name: "Canvassing (Releasing)", color: "canvassing" },
+		8: { name: "Canvassing (Releasing)", color: "canvassing" },
+		9: { name: "Canvassing (Collection)", color: "canvassing" },
+		10: { name: "Abstract of Awards", color: "aaa" },
+		18: { name: "Delivery (Waiting)", color: "delivery" },
+		19: { name: "Delivery (Received)", color: "delivery" },
+		20: { name: "Delivery (IAR)", color: "delivery" },
+		21: { name: "Delivery (IAR Processing)", color: "delivery" },
+		22: { name: "Delivery (LOA)", color: "delivery" },
+		25: { name: "Delivery (Division Chief)", color: "delivery" },
+		26: { name: "Payment", color: "payment" },
+		27: { name: "Cancelled", color: "rejected" },
+		28: { name: "Payment Pending", color: "payment" },
+		29: { name: "Voucher Verification", color: "payment" },
+		30: { name: "Accounting Review", color: "payment" },
+		32: { name: "PARPO Approval", color: "payment" },
+		33: { name: "Forward to Cash", color: "payment" },
+		34: { name: "PARPO signature", color: "payment" },
+		35: { name: "Tax processing", color: "payment" },
+		36: { name: "Completed", color: "completed" },
+		37: { name: "Payment Completed", color: "completed" },
+	};
+
+	if (statusId != null && statusById[statusId]) return statusById[statusId];
+
+	if (source === "delivery") return { name: "Delivery", color: "delivery" };
+	if (source === "payment") return { name: "Payment", color: "payment" };
 
 	return { name: status || "Unknown", color: "default" };
 }
