@@ -25,6 +25,18 @@ export function printWithIframe(html: string): void {
 }
 
 
+export function stripHtml(value: string | null | undefined): string {
+  if (!value) return "";
+  return String(value)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
 export function escapeHtml(value: string | null | undefined): string {
   if (!value) return "";
   return String(value)

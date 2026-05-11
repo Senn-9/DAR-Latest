@@ -9,7 +9,8 @@ import {
   RiAddLine,
 } from "react-icons/ri";
 import { buildPRPrintHtml } from "@/utils/print/PRPrintBuilder";
-import { printWithIframe } from "@/utils/print/printUtils";
+import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
+import { RichEditor } from "@/components/RichEditor";
 
 type ItemDataType = {
   stock_no: string;
@@ -19,8 +20,6 @@ type ItemDataType = {
   unit_price: string;
   subtotal: string;
   created_at: string;
-  isBold?: boolean;
-  isCenter?: boolean;
 };
 
 const tdStyle: React.CSSProperties = {
@@ -57,8 +56,6 @@ function emptyItem(): ItemDataType {
     unit_price: "",
     subtotal: "",
     created_at: new Date().toISOString(),
-    isBold: false,
-    isCenter: false,
   };
 }
 
@@ -102,8 +99,6 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
       description: item.description,
       quantity: item.quantity,
       unit_price: item.unit_price,
-      isBold: item.isBold,
-      isCenter: item.isCenter,
     })),
   });
   printWithIframe(html);
@@ -299,12 +294,6 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
     }
   };
 
-  const toggleItemFlag = (index: number, flag: "isBold" | "isCenter") => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [flag]: !updatedItems[index][flag] };
-    setItems(updatedItems);
-  };
-
   // Save function for updating PR
   const handleSave = async () => {
     setSaving(true);
@@ -336,12 +325,12 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
       await supabase.from("purchase_request_items").delete().eq("pr_id", prId);
 
       const itemsToInsert = items
-        .filter((item) => item.description.trim() !== "")
+        .filter((item) => stripHtml(item.description).trim() !== "")
         .map((item) => ({
           pr_id: prId,
           stock_no: item.stock_no || "",
           unit: item.unit || "",
-          description: item.description,
+          description: stripHtml(item.description),
           quantity: item.quantity.trim() === "" ? null : parseInt(item.quantity),
           unit_price: item.unit_price.trim() === "" ? null : parseFloat(item.unit_price),
           subtotal: Math.round(getItemTotal(item)),
@@ -512,19 +501,11 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
                             </div>
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="text-xs font-bold text-gray-600 uppercase">Item Description</label>
-                                <div className="flex gap-1">
-                                  <button type="button" onClick={() => toggleItemFlag(index, 'isBold')} title="Bold" className={`w-7 h-7 flex items-center justify-center text-xs font-bold rounded border transition-colors ${item.isBold ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>B</button>
-                                  <button type="button" onClick={() => toggleItemFlag(index, 'isCenter')} title="Center align" className={`w-7 h-7 flex items-center justify-center text-xs rounded border transition-colors ${item.isCenter ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>≡</button>
-                                </div>
-                              </div>
-                              <textarea
-                                className={`${editableCls}${item.isBold ? ' font-bold' : ''}${item.isCenter ? ' text-center' : ''}`}
+                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
+                              <RichEditor
                                 value={item.description}
-                                onChange={(e) => updateItem(index, "description", e.target.value)}
-                                rows={3}
-                                style={{ resize: "vertical" }}
+                                onChange={(html) => updateItem(index, 'description', html)}
+                                className={editableCls}
                               />
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
@@ -756,7 +737,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <tr key={idx} style={{ height: "16px" }}>
               <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
               <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-              <td style={{ ...tdStyle, textAlign: item.isCenter ? "center" : "left", paddingLeft: "4px", fontWeight: item.isBold ? "bold" : "normal", whiteSpace: "pre-wrap" }}>{item.description}</td>
+              <td style={{ ...tdStyle, paddingLeft: "4px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
               <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
               <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
                 {item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}

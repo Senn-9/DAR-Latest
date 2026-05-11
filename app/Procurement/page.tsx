@@ -97,6 +97,7 @@ export default function ProcurementPage() {
   const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
   const [deleteErrorMsg,   setDeleteErrorMsg]   = useState<string | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
 
   const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "purchase order" |"delivery" | "Payment">("pr"); //added tabs
   const router = useRouter();
@@ -590,7 +591,7 @@ export default function ProcurementPage() {
         )}
 
         {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Requests</h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -681,34 +682,34 @@ export default function ProcurementPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full text-xs border-collapse">
+              <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <table className="w-full text-xs border-collapse table-fixed">
                   <thead>
                     <tr className="bg-emerald-700 text-white uppercase tracking-widest">
-                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-28" onClick={() => handleSort("pr_no")}>
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-[120px]" onClick={() => handleSort("pr_no")}>
                         <span className="inline-flex items-center gap-1">
                           PR # <SortIcon field="pr_no" />
                         </span>
                       </th>
-                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("office_section")}>
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-[90px]" onClick={() => handleSort("office_section")}>
                         <span className="inline-flex items-center gap-1">
                           Section <SortIcon field="office_section" />
                         </span>
                       </th>
-                      <th className="px-2 py-2 text-left font-semibold flex-1 min-w-40">Description</th>
-                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("created_at")}>
+                      <th className="px-2 py-2 text-left font-semibold w-[130px]">Description</th>
+                      <th className="px-2 py-2 text-left font-semibold th-sort select-none cursor-pointer w-[90px]" onClick={() => handleSort("created_at")}>
                         <span className="inline-flex items-center gap-1">
                           Date <SortIcon field="created_at" />
                         </span>
                       </th>
-                      <th className="px-2 py-2 text-center font-semibold w-32">Status</th>
-                      {isEndUser && <th className="px-2 py-2 text-center font-semibold w-28">Status Flag</th>}
-                      <th className="px-2 py-2 text-right font-semibold th-sort select-none cursor-pointer w-24" onClick={() => handleSort("total_cost")}>
+                      <th className="px-2 py-2 text-center font-semibold w-[160px]">Status</th>
+                      {isEndUser && <th className="px-2 py-2 text-center font-semibold w-[100px]">Status Flag</th>}
+                      <th className="px-2 py-2 text-right font-semibold th-sort select-none cursor-pointer w-[90px]" onClick={() => handleSort("total_cost")}>
                         <span className="inline-flex items-center gap-1 justify-end">
                           Cost <SortIcon field="total_cost" />
                         </span>
                       </th>
-                      <th className="px-2 py-2 text-center font-semibold w-56">Actions</th>
+                      <th className="px-2 py-2 text-center font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -722,20 +723,22 @@ export default function ProcurementPage() {
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
 
                           {/* PR Number */}
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
-                            {form.pr_no}
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 overflow-hidden ${rowBg}`}>
+                            <div className="truncate" title={form.pr_no}>{form.pr_no}</div>
                           </td>
 
                           {/* Office / Section */}
-                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-600 overflow-hidden ${rowBg}`}>
+                            <div className="truncate">
                             {form.office_section || <span className="text-gray-300">—</span>}
+                            </div>
                           </td>
 
                           {/* Description */}
-                          <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>
-                            {desc
-                              ? desc
-                              : <span className="text-gray-300">—</span>}
+                          <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
+                            <div className="truncate" title={desc || ""}>
+                              {desc ? desc : <span className="text-gray-300">—</span>}
+                            </div>
                           </td>
 
                           {/* Date */}
@@ -776,8 +779,8 @@ export default function ProcurementPage() {
                           </td>
 
                           {/* ── ACTIONS ── */}
-                          <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1">
+                          <td className={`px-2 py-2 text-center whitespace-nowrap ${rowBg}`}>
+                            <div className="flex items-center justify-center flex-wrap gap-1">
 
                               {/* Budget account — View + Budget Process */}
                               {isBudgetAccount && (
@@ -1156,7 +1159,7 @@ export default function ProcurementPage() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleteConfirming && setDeletePrTarget(null)} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteConfirming) { setDeletePrTarget(null); setDeleteConfirmInput(""); } }} />
             <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
               {/* Header */}
@@ -1208,25 +1211,41 @@ export default function ProcurementPage() {
                 ) : null}
 
                 <p className="text-xs text-red-600 font-semibold mt-3">This action cannot be undone.</p>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    Type <span className="font-mono text-red-600">{deletePrTarget.prNo}</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    placeholder={deletePrTarget.prNo}
+                    disabled={deleteConfirming}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 font-mono placeholder-gray-300 disabled:opacity-50"
+                    autoFocus
+                  />
+                </div>
               </div>
 
               {/* Footer */}
               <div className="px-6 pb-5 flex gap-3">
                 <button
-                  onClick={() => setDeletePrTarget(null)}
+                  onClick={() => { setDeletePrTarget(null); setDeleteConfirmInput(""); }}
                   disabled={deleteConfirming}
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  disabled={deleteConfirming || deletePreviewLoading}
+                  disabled={deleteConfirming || deletePreviewLoading || deleteConfirmInput !== deletePrTarget.prNo}
                   onClick={async () => {
                     setDeleteConfirming(true);
                     const { error } = await deletePRCascade(deletePrTarget.prId);
                     setDeleteConfirming(false);
                     setDeletePrTarget(null);
                     setDeletePreview(null);
+                    setDeleteConfirmInput("");
                     if (error) {
                       setDeleteErrorMsg("Delete failed: " + error);
                     } else {

@@ -784,19 +784,19 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full text-xs border-collapse">
+              <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <table className="w-full text-xs border-collapse table-fixed">
                 <thead>
                   <tr className="bg-emerald-700 text-white uppercase tracking-widest">
                     {([
-                      { label: "PR #",             field: "pr_no" as const,         align: "text-left",   width: "w-28" },
-                      { label: "Section",          field: "office_section" as const, align: "text-left",   width: "w-24" },
-                      { label: "Description",      field: null,                       align: "text-left",   width: "flex-1 min-w-40" },
-                      { label: "Date",             field: "created_at" as const,     align: "text-left",   width: "w-24" },
-                      { label: "Status Age",            field: null,                       align: "text-center", width: "w-16" },
-                      { label: "Status",           field: null,                       align: "text-center", width: "w-32" },
-                      { label: "Cost",             field: "total_cost" as const,     align: "text-right",  width: "w-24" },
-                      { label: "Actions",          field: null,                       align: "text-center", width: "w-56" },
+                      { label: "PR #",         field: "pr_no" as const,         align: "text-left",   width: "w-[120px]" },
+                      { label: "Section",      field: "office_section" as const, align: "text-left",   width: "w-[90px]" },
+                      { label: "Description",  field: null,                       align: "text-left",   width: "w-[130px]" },
+                      { label: "Date",         field: "created_at" as const,     align: "text-left",   width: "w-[90px]" },
+                      { label: "Age",          field: null,                       align: "text-center", width: "w-[60px]" },
+                      { label: "Status",       field: null,                       align: "text-center", width: "w-[160px]" },
+                      { label: "Cost",         field: "total_cost" as const,     align: "text-right",  width: "w-[90px]" },
+                      { label: "Actions",      field: null,                       align: "text-center", width: "" },
                     ] as const).map(({ label, field, align, width }) => (
                       <th
                         key={label}
@@ -828,21 +828,25 @@ export default function DashboardPage() {
                     const agingStyle = getAgingStyle(agingDays);
                       return (
                         <tr key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
-                            {form.source === 'delivery' || form.source === 'payment' 
-                              ? form.delivery_no || form.pr_no 
-                              : form.pr_no}
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 overflow-hidden ${rowBg}`}>
+                            <div className="truncate" title={form.source === 'delivery' || form.source === 'payment' ? (form.delivery_no || form.pr_no || '') : (form.pr_no || '')}>
+                              {form.source === 'delivery' || form.source === 'payment'
+                                ? form.delivery_no || form.pr_no
+                                : form.pr_no}
+                            </div>
                           </td>
-                          <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>
-                            {form.office_section || <span className="text-gray-300">—</span>}
+                          <td className={`px-2 py-2 text-gray-600 overflow-hidden ${rowBg}`}>
+                            <div className="truncate">{form.office_section || <span className="text-gray-300">—</span>}</div>
                           </td>
-                          <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>
-                            {desc || <span className="text-gray-300">—</span>}
+                          <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
+                            <div className="truncate" title={desc || ""}>{desc || <span className="text-gray-300">—</span>}</div>
                           </td>
-                          <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>
-                            {form.created_at
-                              ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
-                              : <span className="text-gray-300">—</span>}
+                          <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
+                            <div className="truncate">
+                              {form.created_at
+                                ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                                : <span className="text-gray-300">—</span>}
+                            </div>
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
                             <span

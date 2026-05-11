@@ -6,8 +6,6 @@ export interface PRPrintItem {
   description?: string | null;
   quantity?: string | null;
   unit_price?: string | null;
-  isBold?: boolean;
-  isCenter?: boolean;
 }
 
 export interface PRPrintData {
@@ -36,7 +34,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       <tr style="height:16px">
         <td style="border:1px solid black;text-align:center;font-size:8pt">${escapeHtml(item.stock_no)}</td>
         <td style="border:1px solid black;text-align:center;font-size:8pt">${escapeHtml(item.unit)}</td>
-        <td style="border:1px solid black;white-space:pre-wrap;text-align:${item.isCenter ? 'center' : 'left'};font-size:8pt;padding:1px 4px${item.isBold ? ';font-weight:bold' : ''}">${escapeHtml(item.description)}</td>
+        <td style="border:1px solid black;font-size:8pt;padding:1px 4px;word-wrap:break-word;overflow-wrap:break-word">${item.description ?? ""}</td>
         <td style="border:1px solid black;text-align:center;font-size:8pt">${escapeHtml(item.quantity)}</td>
         <td style="border:1px solid black;text-align:right;font-size:8pt">${item.unit_price ? "\u20b1" + parseFloat(item.unit_price).toFixed(2) : ""}</td>
         <td style="border:1px solid black;text-align:right;font-size:8pt">${total > 0 ? "\u20b1" + total.toFixed(2) : ""}</td>

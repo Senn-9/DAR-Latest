@@ -7,8 +7,6 @@ export interface POPrintItem {
   quantity?: number | null;
   unit_price?: number | null;
   subtotal?: number | null;
-  bold_description?: boolean;
-  center_description?: boolean;
 }
 
 export interface POPrintData {
@@ -69,7 +67,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
         <tr>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
-          <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:${item.center_description ? 'center' : 'left'}${item.bold_description ? ';font-weight:bold' : ''}">${item?.description ?? ""}</td>
+          <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;word-wrap:break-word;overflow-wrap:break-word">${item?.description ?? ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("\u20b1", "") : ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("\u20b1", "") : ""}</td>

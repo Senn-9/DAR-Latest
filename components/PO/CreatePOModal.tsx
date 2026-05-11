@@ -5,7 +5,8 @@ import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine, RiSearchLine } from
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 import { createClient } from "@/utils/supabase/client";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO } from "@/utils/print/POPrintBuilder";
-import { printWithIframe } from "@/utils/print/printUtils";
+import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
+import { RichEditor } from "@/components/RichEditor";
 
 // Types for PR and Canvass data
 type PurchaseRequest = {
@@ -118,37 +119,7 @@ type TextOnlyLine = {
   unit_price: string;
 };
 
-// Extended item type with bold flag (bold_description is stored on the item)
-// PurchaseOrderItemRow is imported but we treat bold_description as an extra optional field
-type POItemWithBold = PurchaseOrderItemRow & { bold_description?: boolean; center_description?: boolean };
-
-// Inline rich-text description editor — supports partial bold via execCommand
-function RichDescriptionInput({ value, onChange, className, style }: {
-  value: string;
-  onChange: (html: string) => void;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  const divRef = React.useRef<HTMLDivElement>(null);
-  const isFocused = React.useRef(false);
-  React.useEffect(() => {
-    if (divRef.current && !isFocused.current) {
-      divRef.current.innerHTML = value;
-    }
-  });
-  return (
-    <div
-      ref={divRef}
-      contentEditable
-      suppressContentEditableWarning
-      onFocus={() => { isFocused.current = true; }}
-      onBlur={() => { isFocused.current = false; if (divRef.current) onChange(divRef.current.innerHTML); }}
-      onInput={() => { if (divRef.current) onChange(divRef.current.innerHTML); }}
-      className={className}
-      style={style}
-    />
-  );
-}
+type POItemWithBold = PurchaseOrderItemRow;
 
 // Editable PO Preview - allows manual input directly in the preview panel
 function POEditablePreview({
@@ -374,7 +345,6 @@ function POEditablePreview({
           {items.map((item, index) => {
             const total = getItemTotal(item);
             const itemKey = `item-${index}`;
-            const isBold = !!(item as POItemWithBold).bold_description;
             // No top border on rows after the first (header row already has bottom border)
             const rowBorderStyle = index === 0
               ? { borderLeft: "1px solid #111", borderRight: "1px solid #111", borderBottom: "none", borderTop: "none" }
@@ -388,21 +358,14 @@ function POEditablePreview({
                   <td style={{ ...rowBorderStyle, verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
                     <textarea value={item.unit ?? ""} onChange={(e) => updateItem(index, { unit: e.target.value })} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px", fontFamily: "'Times New Roman', Times, serif" }} rows={1} />
                   </td>
-                  <td style={{ ...rowBorderStyle, verticalAlign: "top", padding: "2px", textAlign: item.center_description ? "center" : "left", fontSize: "9pt" }}>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex justify-end gap-0.5 mb-0.5">
-                        <button type="button" onClick={() => updateItem(index, { bold_description: !item.bold_description })} title="Bold" className={`w-5 h-4 flex items-center justify-center text-[8px] font-bold rounded border transition-colors ${item.bold_description ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400'}`}>B</button>
-                        <button type="button" onClick={() => updateItem(index, { center_description: !item.center_description })} title="Center" className={`w-5 h-4 flex items-center justify-center text-[8px] rounded border transition-colors ${item.center_description ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400'}`}>≡</button>
-                      </div>
-                      <textarea
-                        value={item.description ?? ""}
-                        onChange={(e) => updateItem(index, { description: e.target.value })}
-                        onInput={autoResize}
-                        className={item.center_description ? editableInputCenterCls : editableInputCls}
-                        style={{ width: "95%", minHeight: "16px", fontFamily: "'Times New Roman', Times, serif", fontWeight: item.bold_description ? 'bold' : 'normal' }}
-                        rows={1}
-                      />
-                    </div>
+                  <td style={{ ...rowBorderStyle, verticalAlign: "top", padding: "2px", fontSize: "9pt" }}>
+                    <RichEditor
+                      value={item.description ?? ""}
+                      onChange={(html) => updateItem(index, { description: html })}
+                      compact
+                      className={editableInputCls}
+                      style={{ width: "95%", fontFamily: "'Times New Roman', Times, serif" }}
+                    />
                   </td>
                   <td style={{ ...rowBorderStyle, verticalAlign: "top", padding: "2px", textAlign: "center", fontSize: "9pt" }}>
                     <textarea value={item.quantity ?? ""} onChange={(e) => updateItem(index, { quantity: e.target.value ? Number(e.target.value) : null })} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px", fontFamily: "'Times New Roman', Times, serif" }} rows={1} />
@@ -566,13 +529,12 @@ function POPreview({
 
   const itemRows = normalizedItems.map((item, index) => {
     const total = getItemTotal(item);
-    const isBold = !!(item as POItemWithBold).bold_description;
     const sideBorders = { borderLeft: "1px solid #111", borderRight: "1px solid #111", borderTop: "none", borderBottom: "none" };
     return (
       <tr key={index} style={{ height: "auto" }}>
         <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.stock_no ?? "")}</td>
         <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{String(item.unit ?? "")}</td>
-        <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: item.center_description ? "center" : "left", fontSize: "9pt", lineHeight: 1.3, fontWeight: item.bold_description ? "bold" : "normal", whiteSpace: "pre-wrap" }}>{item.description ?? ""}</td>
+        <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", fontSize: "9pt", lineHeight: 1.3, wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
         <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: "center", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.quantity ?? 0) ? String(Number(item.quantity ?? 0)) : ""}</td>
         <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{Number(item.unit_price ?? 0) ? formatMoney(Number(item.unit_price ?? 0)).replace("₱", "") : ""}</td>
         <td style={{ ...sideBorders, verticalAlign: "top", padding: "4px", textAlign: "right", fontSize: "9pt", lineHeight: 1.3 }}>{total ? formatMoney(total).replace("₱", "") : ""}</td>
@@ -727,7 +689,6 @@ function buildPurchaseOrderPrintHtml(data: {
     const qty = Number(item?.quantity ?? 0);
     const unitCost = Number(item?.unit_price ?? 0);
     const amount = item ? getItemTotal(item) : 0;
-    const isBold = !!item?.bold_description;
     const sideBorder = "border-left:1px solid #111;border-right:1px solid #111;border-top:none;border-bottom:none";
     
     // Add the item row (no horizontal borders between rows)
@@ -735,7 +696,7 @@ function buildPurchaseOrderPrintHtml(data: {
         <tr>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
-          <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:${item.center_description ? 'center' : 'left'}${item.bold_description ? ';font-weight:bold' : ''}">${item?.description ?? ""}</td>
+          <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;word-wrap:break-word;overflow-wrap:break-word">${item?.description ?? ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${qty ? String(qty) : ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
           <td style="${sideBorder};vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
@@ -1182,7 +1143,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   }
 
   function addItem() {
-    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: null, unit_price: null, subtotal: 0, bold_description: false, center_description: false } as POItemWithBold]);
+    setItems((s) => [...s, { stock_no: null, unit: null, description: null, quantity: null, unit_price: null, subtotal: 0 } as POItemWithBold]);
   }
 
   function updateItem(idx: number, patch: Partial<POItemWithBold>) {
@@ -1244,7 +1205,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         division_id: selectedDivisionId,
         hide_total_row: hideTotalRow,
       };
-      await onCreate(header, items);
+      const cleanItems = items.map((item) => ({ ...item, description: stripHtml(item.description ?? "") }));
+      await onCreate(header, cleanItems);
       resetForm();
       onClose();
     } catch (err) {
@@ -1493,14 +1455,12 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                         </div>
                         <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                         <div className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs font-bold text-gray-600 uppercase">Description</label>
-                            <div className="flex gap-1">
-                              <button type="button" onClick={() => updateItem(index, { bold_description: !item.bold_description })} title="Bold" className={`w-7 h-7 flex items-center justify-center text-xs font-bold rounded border transition-colors ${item.bold_description ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>B</button>
-                              <button type="button" onClick={() => updateItem(index, { center_description: !item.center_description })} title="Center align" className={`w-7 h-7 flex items-center justify-center text-xs rounded border transition-colors ${item.center_description ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}>≡</button>
-                            </div>
-                          </div>
-                          <textarea className={`${inputCls}${item.bold_description ? ' font-bold' : ''}${item.center_description ? ' text-center' : ''}`} placeholder="Item description" value={item.description ?? ""} onChange={(e) => updateItem(index, { description: e.target.value })} rows={3} style={{ resize: "vertical" }} />
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description</label>
+                          <RichEditor
+                            value={item.description ?? ""}
+                            onChange={(html) => updateItem(index, { description: html })}
+                            className={inputCls}
+                          />
                         </div>
                         <div className="grid grid-cols-3 gap-2 mb-2">
                           <div>

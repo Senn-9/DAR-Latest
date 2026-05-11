@@ -615,7 +615,7 @@ function buildPurchaseOrderPrintHtml(data: {
         <tr>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.stock_no ?? "")}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap;text-align:center">${escapeHtml(item?.unit ?? "")}</td>
-          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;white-space:pre-wrap">${escapeHtml(item?.description ?? "")}</td>
+          <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;word-wrap:break-word;overflow-wrap:break-word">${item?.description ?? ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:center">${qty ? String(qty) : ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${unitCost ? formatMoney(unitCost).replace("₱", "") : ""}</td>
           <td style="border:1px solid #111;vertical-align:top;padding:3px 4px;font-size:9pt;text-align:right">${amount ? formatMoney(amount).replace("₱", "") : ""}</td>
@@ -1285,7 +1285,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
                               <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
-                              <input className={readonlyCls} value={item.description || ""} readOnly tabIndex={-1} />
+                              <div className={readonlyCls} style={{ minHeight: "38px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description || "" }} />
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div>
