@@ -40,7 +40,7 @@ function buildIARHtml(data: any): string {
       <tr>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:2px solid #000; padding:4px 8px; font-size:9px;">${escapeHtml(item.description || "")}</td>
+        <td style="border:2px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
@@ -57,7 +57,7 @@ function buildIARHtml(data: any): string {
       <tr>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:2px solid #000; padding:4px 8px; font-size:9px;">${escapeHtml(item.description || "")}</td>
+        <td style="border:2px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
@@ -245,6 +245,41 @@ function buildIARHtml(data: any): string {
 }
 
 function buildLOAHtml(data: any): string {
+  const items = data.po_items || [];
+
+  // Build item rows
+  let itemRows = "";
+
+  items.forEach((item: any) => {
+    const quantity = Number(item.quantity || 0);
+    const unitPrice = Number(item.unit_price || 0);
+    const amount = quantity * unitPrice;
+
+    itemRows += `
+      <tr>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${escapeHtml(item.stock_no || "")}</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${escapeHtml(item.unit || "")}</td>
+        <td style="border:1px solid #000; padding:2px; font-size:9.5px;">${escapeHtml(item.description || "")}</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${quantity || ""}</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${amount ? amount.toFixed(2) : ""}</td>
+      </tr>`;
+  });
+
+  // Fill empty rows to maintain minimum height
+  const emptyRows = Math.max(0, 10 - items.length);
+  for (let i = 0; i < emptyRows; i++) {
+    itemRows += `
+      <tr>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
+        <td style="border:1px solid #000; padding:2px; font-size:9.5px;">&nbsp;</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
+        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
+      </tr>`;
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -255,143 +290,101 @@ function buildLOAHtml(data: any): string {
     @page { size: A4; margin: 12mm 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; color: #000; }
+    body { font-family: 'Arial Narrow', Arial, sans-serif; color: #000; }
+    table { width: 100%; border-collapse: collapse; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
   </style>
 </head>
 <body>
-  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 64px 80px;">
-    <div style="color: #000; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.3;">
-      
-      <!-- Header Section -->
-      <div style="position: relative; margin-bottom: 40px;">
-        <!-- DAR Logo - Absolute Position -->
-        <div style="position: absolute; left: 16px; top: 0;">
-          <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height: 64px; width: 64px; object-fit: contain;" />
+  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 48px;">
+    <div style="color: #000; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 10px;">
+      <!-- Top Section -->
+      <div style="display: grid; grid-template-columns: 1fr 3fr 1fr; align-items: start; margin-bottom: 8px;">
+        <div></div>
+
+        <!-- Center Logos and Text -->
+        <div style="display: flex; align-items: flex-start; justify-content: center; gap: 12px;">
+          <img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" style="height: 48px; width: 48px; object-fit: contain;" />
+          <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height: 48px; width: 48px; object-fit: contain;" />
+          <div style="margin-top: 4px; text-align: center;">
+            <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.01em;">REPUBLIC OF THE PHILIPPINES</div>
+            <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.01em;">DEPARTMENT OF AGRARIAN REFORM</div>
+            <div style="font-size: 8px; font-weight: 400;">Tunay na Pagbabago sa Repormang Agraryo</div>
+          </div>
+          <img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" style="margin-left: 4px; height: 48px; width: 48px; border-radius: 4px; object-fit: contain;" />
+          <div style="width: 48px; height: 48px; margin-left: 12px;"></div>
         </div>
-        
-        <!-- Office Details - With left padding for logo -->
-        <div style="text-align: center; padding-left: 64px;">
-          <div style="font-size: 11px; margin-bottom: 4px; font-family: Arial, sans-serif;">
-            Republic of the Philippines
-          </div>
-          <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: Arial, sans-serif;">
-            DEPARTMENT OF AGRARIAN REFORM
-          </div>
-          <div style="font-size: 10px; margin-bottom: 2px; font-family: Arial, sans-serif;">
-            Camarines Sur Provincial Office
-          </div>
-          <div style="font-size: 10px; font-family: Arial, sans-serif;">
-            2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY
-          </div>
+
+        <div style="text-align: right;">
+          <div style="font-size: 9px; font-weight: 700;">Appendix 63</div>
         </div>
       </div>
 
       <!-- Title -->
-      <div style="text-align: center; margin-bottom: 32px; margin-top: 40px;">
-        <div style="font-family: Arial, sans-serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">
-          LETTER OF ACCEPTANCE
-        </div>
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-weight: bold; font-size: 12px; text-transform: uppercase;">LETTER OF ACCEPTANCE</div>
       </div>
 
-      <!-- Date Field - Right Aligned -->
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
-        <div style="width: 280px; text-align: center;">
-          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; text-align: center;">
-            ${escapeHtml(data.accepted_at || "")}
+      <!-- Meta Information -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 10px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-weight: bold;">Entity Name:</span>
+            <span>DEPARTMENT OF AGRARIAN REFORM-CAM SUR 1</span>
           </div>
-          <div style="font-size: 9px; margin-top: 4px;">Date</div>
-        </div>
-      </div>
-
-      <!-- Acceptance Text -->
-      <div style="color: #000; font-family: Arial, sans-serif;">
-        <!-- Line 1 - indented -->
-        <div style="height: 32px; display: flex; align-items: flex-end; padding-bottom: 4px;">
-          <span style="padding-left: 100px; font-family: Arial, sans-serif; word-spacing: 15px;">
-            I/WE hereby certify to have accepted each and every articles/services delivered
-          </span>
-        </div>
-
-        <!-- Line 2 - "rendered by ___" -->
-        <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            rendered&nbsp;by&nbsp;
-          </span>
-          <span style="flex: 1; border-bottom: 1.5px solid #000;">
-            ${escapeHtml(data.supplier_name || data.supplier || "")}
-          </span>
-        </div>
-
-        <!-- Line 3 - "listed in the attached Invoice No. ___ dated" -->
-        <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
-          </span>
-          <span style="flex: 1; border-bottom: 1.5px solid #000;">
-            ${escapeHtml(data.invoice_no || "")}
-          </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            &nbsp;dated
-          </span>
-        </div>
-
-        <!-- Line 4 - "___ was/were found to be in accordance with the specifications" -->
-        <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="width: 180px; flex-shrink: 0; border-bottom: 1.5px solid #000;">
-            ${escapeHtml(data.invoice_date || "")}
-          </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            &nbsp;was/were found to be in accordance with the specifications
-          </span>
-        </div>
-
-        <!-- Line 5 - "stipulated under Order No./Purchase Order No. ___ dated" -->
-        <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;
-          </span>
-          <span style="flex: 1; border-bottom: 1.5px solid #000;">
-            ${escapeHtml(data.po_no || "")}
-          </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
-            &nbsp;dated
-          </span>
-        </div>
-
-        <!-- Line 6 - standalone PO date underline -->
-        <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="width: 180px; border-bottom: 1.5px solid #000;">
-            ${escapeHtml(data.po_date || "")}
-          </span>
-        </div>
-      </div>
-
-      <!-- Signature Section - Right Aligned -->
-      <div style="display: flex; justify-content: flex-end; margin-top: 100px;">
-        <div style="width: 340px; text-align: center;">
-          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: Arial, sans-serif; font-size: 11px;">
-            ${escapeHtml(data.accepted_by_name || "")}
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-weight: bold;">Supplier:</span>
+            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
           </div>
-          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: Arial, sans-serif; word-spacing: 15px;">
-            (Printed Name &amp; Signature)
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-weight: bold;">PO No./Date:</span>
+            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.po_no || "")}</span>
           </div>
-
-          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: Arial, sans-serif; font-weight: 700; font-size: 11px;">
-            ${escapeHtml(data.accepted_by_title || "")}
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-weight: bold;">Invoice No.:</span>
+            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.invoice_no || "")}</span>
           </div>
-          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 15px;">
-            (Official Title)
-          </div>
-          <div style="font-size: 9px; font-family: Arial, sans-serif; word-spacing: 15px;">
-            (Head of Agency/Authorized Representative)
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: bold;">Date:</span>
+            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.invoice_date || "")}</span>
           </div>
         </div>
       </div>
 
-      <!-- Form Reference - Bottom Right -->
-      <div style="display: flex; justify-content: flex-end; margin-top: 40px;">
-        <div style="font-size: 9px; font-weight: 700; font-family: Arial, sans-serif;">
-          DAR CS1-QF-STO-016 REV 00
+      <!-- Items Table -->
+      <div style="margin-bottom: 24px;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 9.5px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Stock No.</th>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Unit</th>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Description</th>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Quantity</th>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Unit Cost</th>
+              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Acceptance Section -->
+      <div style="margin-bottom: 24px;">
+        <div style="font-weight: bold; font-size: 11px; margin-bottom: 16px;">ACCEPTANCE</div>
+        <div style="font-size: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span>Date Accepted:</span>
+            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.accepted_at || "")}</span>
+          </div>
+          <div style="margin-top: 16px;">
+            <span style="border-bottom: 1px solid #000; display: block; width: 100%; padding: 0 4px; font-weight: bold;">${escapeHtml(data.accepted_by_name || "")}</span>
+            <div style="font-size: 9px;">${escapeHtml(data.accepted_by_title || "")}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -696,7 +689,7 @@ function IARPreview({
                       <td className="border-2 border-black p-1 text-center">
                         {item.unit || ""}
                       </td>
-                      <td className="border-2 border-black p-1 px-2">
+                      <td className="border-2 border-black p-1 px-2" style={{ overflow: "hidden", wordWrap: "break-word", whiteSpace: "normal" }}>
                         {item.description || ""}
                       </td>
                       <td className="border-2 border-black p-1 text-center">
@@ -723,7 +716,7 @@ function IARPreview({
                         <td className="border-2 border-black p-1 text-center">
                           {item.unit || ""}
                         </td>
-                        <td className="border-2 border-black p-1 px-2">
+                        <td className="border-2 border-black p-1 px-2" style={{ overflow: "hidden", wordWrap: "break-word", whiteSpace: "normal" }}>
                           {item.description || ""}
                         </td>
                         <td className="border-2 border-black p-1 text-center">
