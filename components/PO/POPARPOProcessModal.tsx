@@ -5,14 +5,13 @@ import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
   RiSaveLine,
-  RiCheckboxCircleLine,
-  RiErrorWarningLine,
   RiUserLine,
   RiCalendarLine,
   RiFlagLine,
 } from "react-icons/ri";
 import { type PurchaseOrderRow } from "@/utils/supabase/po";
 import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 interface POPARPOProcessModalProps {
   visible: boolean;
@@ -42,6 +41,7 @@ export default function POPARPOProcessModal({
   });
   const [approvedBy, setApprovedBy] = useState("");
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [selectedFlag, setSelectedFlag] = useState<StatusFlag | null>(null);
   const [showFlagPicker, setShowFlagPicker] = useState(false);
 
@@ -76,7 +76,7 @@ export default function POPARPOProcessModal({
       
       const flagId = selectedFlag ? getFlagId(selectedFlag) : null;
       await onSubmit(17, fullRemarks, flagId); // Move to status 17 (PO Serving)
-      onClose();
+      setSuccessMsg(`PO ${po?.po_no ?? ""} has been forwarded to PO Serving successfully.`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       setErrorModal({ show: true, message: errorMsg });
@@ -240,25 +240,17 @@ export default function POPARPOProcessModal({
         onClose={() => setShowFlagPicker(false)}
       />
 
-      {/* Error Modal */}
-      {errorModal.show && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-[70] bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <RiErrorWarningLine size={32} className="text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Error</h3>
-            <p className="text-gray-600 mb-6">{errorModal.message}</p>
-            <button
-              onClick={() => setErrorModal({ show: false, message: "" })}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors"
-            >
-              Okay
-            </button>
-          </div>
-        </div>
-      )}
+      <SuccessModal
+        visible={!!successMsg}
+        title="PARPO Approved"
+        message={successMsg ?? ""}
+        onConfirm={() => { setSuccessMsg(null); onClose(); }}
+      />
+      <ErrorModal
+        visible={errorModal.show}
+        message={errorModal.message}
+        onDismiss={() => setErrorModal({ show: false, message: "" })}
+      />
     </>
   );
 }

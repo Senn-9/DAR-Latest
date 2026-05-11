@@ -137,7 +137,11 @@ function isPPMPPointPerson(user: POUserContext) {
 function isPARPOUser(user: POUserContext) {
   const roleName = normalizeText(user?.roles?.role_name);
   const username = normalizeText(user?.username);
-  return roleName.includes("parpo") || username.includes("parpo");
+  return user?.role_id === 5 || roleName.includes("parpo") || username.includes("parpo");
+}
+
+function isAccountingUser(user: POUserContext) {
+  return user?.role_id === 9 || normalizeText(user?.roles?.role_name).includes("accounting");
 }
 
 function nextStatusOptions(statusId: number, user: POUserContext, divisionName?: string | null) {
@@ -149,15 +153,19 @@ function nextStatusOptions(statusId: number, user: POUserContext, divisionName?:
 
   if (isSupplyUser(user)) {
     if (statusId === 11) return [12];
-    if (statusId === 12) return [13];
     if (statusId === 16) return [17];
     if (statusId === 17) return [34];
     return [];
   }
 
   if (isBudgetUser(user)) {
+    if (statusId === 12) return [13];
     if (statusId === 13) return [14];
     if (statusId === 14) return [15];
+    return [];
+  }
+
+  if (isAccountingUser(user)) {
     if (statusId === 15) return [16];
     return [];
   }
@@ -543,8 +551,9 @@ export default function PurchaseOrderPage() {
   const isAdmin = currentUser?.role_id === 1;
   const isBudget = currentUser?.role_id === 4 || (currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
   const isSupply = currentUser?.role_id === 8 || (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
-  const isPARPO = currentUser?.role_id === 9 || (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false) || (currentUser?.username?.toLowerCase().includes("parpo") ?? false);
-  const canViewAll = isAdmin || isBudget || isSupply || isPARPO;
+  const isPARPO = currentUser?.role_id === 5 || (currentUser?.roles?.role_name?.toLowerCase().includes("parpo") ?? false) || (currentUser?.username?.toLowerCase().includes("parpo") ?? false);
+  const isAccounting = currentUser?.role_id === 9 || (currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false);
+  const canViewAll = isAdmin || isBudget || isSupply || isPARPO || isAccounting;
 
   const CURRENT_YEAR = new Date().getFullYear();
   const [filterOpen, setFilterOpen] = useState(false);
