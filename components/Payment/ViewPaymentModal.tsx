@@ -167,7 +167,8 @@ export default function ViewPaymentModal({
     { step: 4, title: "Forward to Cash", status: getStepStatus(33, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 33, delivery?.status_id) },
     { step: 5, title: "PARPO office signature", status: getStepStatus(34, delivery?.status_id || 0, delivery?.parpo_signature_completed_at), date: getStepTimestamp(delivery?.parpo_signature_completed_at, 34, delivery?.status_id) },
     { step: 6, title: "Accounting — Tax processing", status: getStepStatus(35, delivery?.status_id || 0, delivery?.tax_processing_completed_at), date: getStepTimestamp(delivery?.tax_processing_completed_at, 35, delivery?.status_id) },
-    { step: 7, title: "Cash release / completed", status: getStepStatus(36, delivery?.status_id || 0, delivery?.payment_completed_at), date: getStepTimestamp(delivery?.payment_completed_at, 36, delivery?.status_id) },
+    { step: 7, title: "Cash for Release", status: getStepStatus(36, delivery?.status_id || 0, delivery?.cash_release_completed_at), date: getStepTimestamp(delivery?.cash_release_completed_at, 36, delivery?.status_id) },
+    { step: 8, title: "Payment Completed", status: getStepStatus(37, delivery?.status_id || 0, delivery?.payment_completed_at), date: getStepTimestamp(delivery?.payment_completed_at, 37, delivery?.status_id) },
   ];
 
   useEffect(() => {

@@ -9,6 +9,7 @@ interface CreateDeliveryModalProps {
   selectedPoId: number | null;
   setSelectedPoId: (v: number) => void;
   poActiveIds?: number[];
+  poCompletedIds?: number[];
   onClose: () => void;
   onSubmit: () => void;
 }
@@ -19,6 +20,7 @@ export default function CreateDeliveryModal({
   selectedPoId,
   setSelectedPoId,
   poActiveIds,
+  poCompletedIds,
   onClose,
   onSubmit,
 }: CreateDeliveryModalProps) {
@@ -34,6 +36,10 @@ export default function CreateDeliveryModal({
     
     if (selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) {
       errors.push("Selected PO already has an active delivery process");
+    }
+
+    if (selectedPoId && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPoId))) {
+      errors.push("Selected PO already has a completed delivery");
     }
     
     return errors;
@@ -180,7 +186,9 @@ export default function CreateDeliveryModal({
             <div className="max-h-64 overflow-y-auto space-y-2">
                 {filteredPOs.map((p) => {
                   const selected = Number(selectedPoId) === Number(p.id);
-                  const disabled = Array.isArray(poActiveIds) && poActiveIds.includes(Number(p.id));
+                  const hasActiveDelivery = Array.isArray(poActiveIds) && poActiveIds.includes(Number(p.id));
+                  const hasCompletedDelivery = Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(p.id));
+                  const disabled = hasActiveDelivery || hasCompletedDelivery;
                   const baseClass = `w-full p-3 rounded-xl border text-left transition-all `;
                   return (
                     <div key={p.id}>
@@ -191,7 +199,9 @@ export default function CreateDeliveryModal({
                           baseClass +
                           (selected
                             ? "border-emerald-500 bg-emerald-50"
-                            : disabled
+                            : hasCompletedDelivery
+                            ? "border-red-200 bg-red-50 opacity-70 cursor-not-allowed"
+                            : hasActiveDelivery
                             ? "border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed"
                             : "border-gray-200 bg-white hover:bg-gray-50")
                         }
@@ -210,10 +220,18 @@ export default function CreateDeliveryModal({
                               <RiCloseLine size={12} className="text-white" />
                             </div>
                           )}
+                          {hasCompletedDelivery && (
+                            <div className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                              Completed
+                            </div>
+                          )}
                         </div>
                       </button>
-                      {disabled && (
+                      {hasActiveDelivery && (
                         <div className="text-xs text-red-600 mt-1 ml-1">Active delivery in progress for this PO</div>
+                      )}
+                      {hasCompletedDelivery && (
+                        <div className="text-xs text-red-600 mt-1 ml-1">Delivery already completed for this PO</div>
                       )}
                     </div>
                   );
@@ -238,6 +256,9 @@ export default function CreateDeliveryModal({
               {selectedPo && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPo.id)) && (
                 <p className="text-xs text-red-600 mt-1">Note: This PO currently has an active delivery process and cannot be logged until the process completes.</p>
               )}
+              {selectedPo && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPo.id)) && (
+                <p className="text-xs text-red-600 mt-1">Note: This PO already has a completed delivery and cannot be logged again.</p>
+              )}
             </div>
           )}
         </div>
@@ -254,11 +275,13 @@ export default function CreateDeliveryModal({
             onClick={handleSubmit}
             disabled={
               !selectedPoId ||
-              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
+              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) ||
+              Boolean(selectedPoId && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPoId)))
             }
             className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold transition-colors ${
               !selectedPoId ||
-              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId)))
+              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) ||
+              Boolean(selectedPoId && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPoId)))
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-emerald-700 hover:bg-emerald-800"
             }`}

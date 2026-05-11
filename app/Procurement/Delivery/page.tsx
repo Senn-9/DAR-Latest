@@ -53,6 +53,7 @@ import {
   fetchDeliveryStatuses,
   insertDeliveryProcessRemark,
   fetchPoIdsWithActiveDeliveries,
+  fetchPoIdsWithCompletedDeliveries,
   hasActiveDeliveryForPo,
   fetchPODataForDelivery,
 } from "@/utils/supabase/delivery";
@@ -182,6 +183,10 @@ export default function DeliveryPage() {
   const [poCandidates, setPoCandidates] = useState<any[]>([]);
 
   const [poIdsWithActiveDelivery, setPoIdsWithActiveDelivery] = useState<
+    number[]
+  >([]);
+
+  const [poIdsWithCompletedDelivery, setPoIdsWithCompletedDelivery] = useState<
     number[]
   >([]);
 
@@ -394,12 +399,14 @@ export default function DeliveryPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [candidates, statusData, activePoIds] = await Promise.all([
+      const [candidates, statusData, activePoIds, completedPoIds] = await Promise.all([
         fetchPoCandidatesForDelivery(),
 
         fetchDeliveryStatuses(),
 
         fetchPoIdsWithActiveDeliveries(),
+
+        fetchPoIdsWithCompletedDeliveries(),
       ]);
 
       setPoCandidates(candidates);
@@ -407,6 +414,12 @@ export default function DeliveryPage() {
       setStatuses(statusData);
 
       setPoIdsWithActiveDelivery(activePoIds ?? []);
+
+      setPoIdsWithCompletedDelivery(completedPoIds ?? []);
+
+      console.log("Active PO IDs:", activePoIds);
+      console.log("Completed PO IDs:", completedPoIds);
+      console.log("PO Candidates:", candidates.map((p: any) => ({ id: p.id, po_no: p.po_no })));
     };
 
     fetchData();
@@ -1830,6 +1843,7 @@ export default function DeliveryPage() {
         selectedPoId={selectedPoId}
         setSelectedPoId={setSelectedPoId}
         poActiveIds={poIdsWithActiveDelivery}
+        poCompletedIds={poIdsWithCompletedDelivery}
         onClose={() => setCreateModalOpen(false)}
         onSubmit={handleCreateDelivery}
       />

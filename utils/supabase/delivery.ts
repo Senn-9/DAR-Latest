@@ -548,6 +548,24 @@ export async function fetchPoIdsWithActiveDeliveries(): Promise<number[]> {
   return (rows ?? []).map((r: any) => Number(r.po_id));
 }
 
+export async function fetchPoIdsWithCompletedDeliveries(): Promise<number[]> {
+  const supabase = createClient();
+
+  // Completed delivery statuses (28+ are payment phase statuses)
+  const COMPLETED_DELIVERY_STATUS_IDS = [28, 29, 30, 32, 33, 34, 35, 36, 37];
+
+  const { data, error } = await supabase
+    .from("deliveries")
+    .select("po_id, status_id")
+    .in("status_id", COMPLETED_DELIVERY_STATUS_IDS);
+
+  if (error) throw error;
+
+  console.log("Completed delivery PO IDs:", (data ?? []).map((r: any) => ({ po_id: r.po_id, status_id: r.status_id })));
+
+  return (data ?? []).map((r: any) => Number(r.po_id));
+}
+
 
 
 export async function hasActiveDeliveryForPo(poId: number): Promise<boolean> {
@@ -1523,9 +1541,7 @@ export async function deletePaymentDeep(
 
     .delete()
 
-    .eq("delivery_id", deliveryId)
-
-    .like("remark", "[PAYMENT]%");
+    .eq("delivery_id", deliveryId);
 
   if (remarksErr) throw remarksErr;
 

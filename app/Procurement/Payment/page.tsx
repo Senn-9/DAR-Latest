@@ -448,6 +448,7 @@ export default function PaymentPage() {
       33: 34,
       34: 35,
       35: 36,
+      36: 37, // Cash for Release -> Payment Completed
       26: 29, // Cancelled statuses now go directly to voucher verification
       27: 29, // Cancelled statuses now go directly to voucher verification
     };
@@ -455,7 +456,7 @@ export default function PaymentPage() {
     const nextStatusId = statusSequence[delivery.status_id];
     
     if (!nextStatusId) {
-      if (delivery.status_id === 36) {
+      if (delivery.status_id === 37) {
         alert("Payment is already completed. Cannot move forward from completed status.");
       } else {
         alert(`Cannot advance from current status ID: ${delivery.status_id}`);
@@ -471,7 +472,8 @@ export default function PaymentPage() {
       33: "Forward to Cash",
       34: "Forward to PARPO office for signature",
       35: "Forward to Accounting for Tax processing",
-      36: "Payment completed",
+      36: "Cash for Release",
+      37: "Payment Completed",
       26: "Payment Cancelled",
       27: "Cancelled",
     };
@@ -524,6 +526,7 @@ export default function PaymentPage() {
       28: 25, // Payment pending can go back to Division Chief (backward compatibility)
       35: 34,
       36: 35,
+      37: 36, // Payment Completed can go back to Cash for Release
     };
 
     const backStatusId = backStatusSequence[delivery.status_id];
@@ -544,7 +547,8 @@ export default function PaymentPage() {
       33: "Forward to Cash",
       34: "Forward to PARPO office for signature",
       35: "Forward to Accounting for Tax processing",
-      36: "Payment completed",
+      36: "Cash for Release",
+      37: "Payment Completed",
       26: "Payment Cancelled",
       27: "Cancelled",
     };
@@ -555,8 +559,8 @@ export default function PaymentPage() {
     const confirmed = window.confirm(
       `Debug: Move back process status for ${delivery.delivery_no}?\n\n` +
       `Current: ${currentStatusLabel}\n` +
-      `Back to: ${backStatusLabel}\n\n` +
-      "This will move the payment process backward."
+      `Back: ${backStatusLabel}\n\n` +
+      "This will move the payment process backward only."
     );
 
     if (!confirmed) return;
@@ -838,7 +842,7 @@ async function buildLOAHtml(d: any): Promise<string> {
             },
             {
               label: "Completed",
-              value: deliveries.filter((d) => d.status_id === 36).length,
+              value: deliveries.filter((d) => d.status_id === 37).length,
               icon: <RiCheckboxCircleLine />,
               bg: "bg-emerald-50",
               border: "border-emerald-200",
@@ -1300,6 +1304,9 @@ async function buildLOAHtml(d: any): Promise<string> {
                 case 35:
                   nextStatusId = 36;
                   break;
+                case 36:
+                  nextStatusId = 37;
+                  break;
                 default:
                   console.error("Invalid status for payment processing");
                   return;
@@ -1317,6 +1324,8 @@ async function buildLOAHtml(d: any): Promise<string> {
                 selectedDelivery.status_id === 33 ? "Forward to Cash" :
                 selectedDelivery.status_id === 34 ? "Forward to PARPO office for signature" :
                 selectedDelivery.status_id === 35 ? "Forward to Accounting for Tax processing" :
+                selectedDelivery.status_id === 36 ? "Cash for Release" :
+                selectedDelivery.status_id === 37 ? "Payment Completed" :
                 "Unknown Step";
               
               await insertDeliveryProcessRemark(

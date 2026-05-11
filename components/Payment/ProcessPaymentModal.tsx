@@ -429,7 +429,8 @@ const PAYMENT_FLOW_STRIP: { id: number; label: string }[] = [
   { id: 33, label: "Cash" },
   { id: 34, label: "PARPO sig." },
   { id: 35, label: "Tax" },
-  { id: 36, label: "Done" },
+  { id: 36, label: "Cash Release" },
+  { id: 37, label: "Completed" },
 ];
 
 interface ProcessPaymentModalProps {
@@ -766,7 +767,8 @@ export default function ProcessPaymentModal({
     active?.status_id === 33 ? "Forward to Cash" :
     active?.status_id === 34 ? "PARPO office signature" :
     active?.status_id === 35 ? "Tax processing" :
-    active?.status_id === 36 ? "Payment completed" :
+    active?.status_id === 36 ? "Cash for Release" :
+    active?.status_id === 37 ? "Payment Completed" :
     "Unknown";
 
   const canOpenFullTemplate = previewTab === "iar" || previewTab === "loa";
