@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
 import { printWithIframe } from "@/utils/print/printUtils";
@@ -11,8 +11,10 @@ import {
   RiFilePdf2Line,
 } from "react-icons/ri";
 import type { PurchaseOrderRow, PurchaseOrderItemRow } from "@/utils/supabase/po";
+import type { UacsCode } from "@/types/tables";
 import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
+import { UacsCombobox } from "@/components/UacsCombobox";
 
 interface ORSProcessModalProps {
   visible: boolean;
@@ -98,12 +100,17 @@ function ORSEditablePreview({
   uacsCode, setUacsCode,
   referenceNo, setReferenceNo,
   obligationAmount, setObligationAmount,
-  payableAmount, setPayableAmount,
   paymentAmount, setPaymentAmount,
   notYetDueBalance, setNotYetDueBalance,
   dueDemandableBalance, setDueDemandableBalance,
   preparedByName, setPreparedByName,
   preparedByDesig, setPreparedByDesig,
+  certifiedByName, setCertifiedByName,
+  certifiedByDesig, setCertifiedByDesig,
+  preparedByDate, setPreparedByDate,
+  certifiedByDate, setCertifiedByDate,
+  sectionCParticulars, setSectionCParticulars,
+  allUacsCodes,
   textOnlyLines,
   addTextOnlyLine,
   updateTextOnlyLine,
@@ -123,12 +130,17 @@ function ORSEditablePreview({
   uacsCode: string; setUacsCode: (v: string) => void;
   referenceNo: string; setReferenceNo: (v: string) => void;
   obligationAmount: number; setObligationAmount: (v: number) => void;
-  payableAmount: number; setPayableAmount: (v: number) => void;
   paymentAmount: number; setPaymentAmount: (v: number) => void;
   notYetDueBalance: number; setNotYetDueBalance: (v: number) => void;
   dueDemandableBalance: number; setDueDemandableBalance: (v: number) => void;
   preparedByName: string; setPreparedByName: (v: string) => void;
   preparedByDesig: string; setPreparedByDesig: (v: string) => void;
+  certifiedByName: string; setCertifiedByName: (v: string) => void;
+  certifiedByDesig: string; setCertifiedByDesig: (v: string) => void;
+  preparedByDate: string; setPreparedByDate: (v: string) => void;
+  certifiedByDate: string; setCertifiedByDate: (v: string) => void;
+  sectionCParticulars: string; setSectionCParticulars: (v: string) => void;
+  allUacsCodes: UacsCode[];
   textOnlyLines: TextOnlyLine[];
   addTextOnlyLine: () => void;
   updateTextOnlyLine: (id: string, text: string) => void;
@@ -137,6 +149,14 @@ function ORSEditablePreview({
 }) {
   const fmt = (n: number) =>
     n ? "₱" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+
+  const sectionCRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = sectionCRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, [sectionCParticulars]);
 
   const displayDate = orsDate
     ? new Date(orsDate + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
@@ -173,7 +193,7 @@ function ORSEditablePreview({
                   type="text"
                   value={entityName}
                   onChange={(e) => setEntityName(e.target.value)}
-                  placeholder="Entity Name"
+                  placeholder="Department of Agrarian Reform - Camarines Sur 1"
                   className={editableInputCls}
                   style={{ ...S.uline, minWidth: "200px", textAlign: "center" }}
                 />
@@ -181,7 +201,7 @@ function ORSEditablePreview({
               <div style={{ textAlign: "center", fontSize: "8.5pt", fontWeight: "bold", marginTop: "2px" }}>Entity Name</div>
             </td>
             <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
-              <span style={S.b}>Serial No. : </span>
+              <span style={S.b}>ORS No. : </span>
               <input
                 type="text"
                 value={orsNo}
@@ -302,13 +322,19 @@ function ORSEditablePreview({
               />
             </td>
             <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>
-              <input
-                type="text"
+              <UacsCombobox
                 value={uacsCode}
-                onChange={(e) => setUacsCode(e.target.value)}
-                placeholder="UACS"
-                className={editableInputCls}
+                onChange={(code, desc) => {
+                  setUacsCode(code);
+                  if (desc) {
+                    setParticulars(desc);
+                    setSectionCParticulars(desc);
+                  }
+                }}
+                allCodes={allUacsCodes}
+                inputClassName={editableInputCls}
                 style={{ width: "90%", textAlign: "center" }}
+                placeholder="UACS Object Code"
               />
             </td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>
@@ -371,36 +397,29 @@ function ORSEditablePreview({
               <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
                 <span style={S.b}>A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Signature</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Printed Name:</span>
-                <input
-                  type="text"
-                  value={preparedByName}
-                  onChange={(e) => setPreparedByName(e.target.value)}
-                  className={editableInputCls}
-                  style={{ ...S.sigLine, fontWeight: "normal", width: "70%" }}
-                />
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Printed Name</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="text" value={preparedByName} onChange={(e) => setPreparedByName(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, fontWeight: "normal", width: undefined }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <input
-                  type="text"
-                  value={preparedByDesig}
-                  onChange={(e) => setPreparedByDesig(e.target.value)}
-                  className={editableInputCls}
-                  style={{ ...S.sigLine, width: "70%" }}
-                />
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Position</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="text" value={preparedByDesig} onChange={(e) => setPreparedByDesig(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, width: undefined }} />
               </div>
-              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
-                Head, Requesting Office/Authorized Representative
+              <div style={{ display: "flex", marginTop: "2px", marginBottom: "3px" }}>
+                <span style={{ width: "74px", flexShrink: 0 }} />
+                <div style={{ flex: 1, textAlign: "center", fontSize: "7.5pt" }}>Head, Requesting Office/Authorized Representative</div>
               </div>
-              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
-                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Date</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="date" value={preparedByDate} onChange={(e) => setPreparedByDate(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, width: undefined, textAlign: "center" }} />
               </div>
             </td>
             {/* B. Certified */}
@@ -408,24 +427,29 @@ function ORSEditablePreview({
               <div style={{ fontSize: "8pt", marginBottom: "6px" }}>
                 <span style={S.b}>B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Signature</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Printed Name:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Printed Name</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="text" value={certifiedByName} onChange={(e) => setCertifiedByName(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, fontWeight: "normal", width: undefined }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Position</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="text" value={certifiedByDesig} onChange={(e) => setCertifiedByDesig(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, width: undefined }} />
               </div>
-              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
-                Head, Budget Division/Unit/Authorized Representative
+              <div style={{ display: "flex", marginTop: "2px", marginBottom: "3px" }}>
+                <span style={{ width: "74px", flexShrink: 0 }} />
+                <div style={{ flex: 1, textAlign: "center", fontSize: "7.5pt" }}>Head, Budget Division/Unit/Authorized Representative</div>
               </div>
-              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
-                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Date</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <input type="date" value={certifiedByDate} onChange={(e) => setCertifiedByDate(e.target.value)} className={editableInputCls} style={{ ...S.sigLine, flex: 1, width: undefined, textAlign: "center" }} />
               </div>
             </td>
           </tr>
@@ -491,16 +515,16 @@ function ORSEditablePreview({
           <tbody>
             <tr>
               <td style={{ ...S.td, borderTop: "none", borderBottom: "none", height: "28px", fontSize: "7.5pt" }}>{displayDate}</td>
-              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }}>{particulars}</td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }}>
+                <textarea ref={sectionCRef} value={sectionCParticulars} onChange={(e) => setSectionCParticulars(e.target.value)} onInput={autoResize} className={editableInputCls} style={{ width: "95%", minHeight: "18px", wordBreak: "break-word", whiteSpace: "pre-wrap" }} rows={1} />
+              </td>
               <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>
                 <input type="text" value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className={editableInputCls} style={{ width: "90%", textAlign: "center" }} />
               </td>
               <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>
                 <input type="number" step="0.01" value={obligationAmount || ""} onChange={(e) => setObligationAmount(Number(e.target.value))} className={editableInputNumberCls} style={{ width: "90%" }} />
               </td>
-              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>
-                <input type="number" step="0.01" value={payableAmount || ""} onChange={(e) => setPayableAmount(Number(e.target.value))} className={editableInputNumberCls} style={{ width: "90%" }} />
-              </td>
+              <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
               <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>
                 <input type="number" step="0.01" value={paymentAmount || ""} onChange={(e) => setPaymentAmount(Number(e.target.value))} className={editableInputNumberCls} style={{ width: "90%" }} />
               </td>
@@ -528,14 +552,14 @@ function ORSEditablePreview({
 function ORSPreview({
   orsNo, orsDate, entityName, payee, payeeAddress, office,
   fundCluster, responsibilityCenter, particulars, mfoPap, uacsCode,
-  amount, referenceNo, obligationAmount, payableAmount, paymentAmount,
+  amount, referenceNo, obligationAmount, paymentAmount,
   notYetDueBalance, dueDemandableBalance, preparedByName, preparedByDesig,
 }: {
   orsNo: string; orsDate: string; entityName: string; payee: string;
   payeeAddress: string; office: string; fundCluster: string;
   responsibilityCenter: string; particulars: string; mfoPap: string;
   uacsCode: string; amount: number; referenceNo: string;
-  obligationAmount: number; payableAmount: number; paymentAmount: number;
+  obligationAmount: number; paymentAmount: number;
   notYetDueBalance: number; dueDemandableBalance: number;
   preparedByName: string; preparedByDesig: string;
 }) {
@@ -634,9 +658,9 @@ function ORSPreview({
                 Entity Name
               </div>
             </td>
-            {/* RIGHT top: Serial No. */}
+            {/* RIGHT top: ORS No. */}
             <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
-              <span style={S.b}>Serial No. : </span>
+              <span style={S.b}>ORS No. : </span>
               <span style={{ ...S.uline, minWidth: "100px" }}>{orsNo}</span>
             </td>
           </tr>
@@ -744,24 +768,29 @@ function ORSPreview({
                 necessary, lawful and under my direct supervision;and
                 supporting documents valid, proper and legal
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Signature</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Printed Name:</span>
-                <div style={{ ...S.sigLine, fontWeight: "normal" }}>{preparedByName}</div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Printed Name</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1, fontWeight: "normal" }}>{preparedByName}</div>
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={{ ...S.sigLine }}>{preparedByDesig}</div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Position</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }}>{preparedByDesig}</div>
               </div>
-              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
-                Head, Requesting Office/Authorized Representative
+              <div style={{ display: "flex", marginTop: "2px", marginBottom: "3px" }}>
+                <span style={{ width: "74px", flexShrink: 0 }} />
+                <div style={{ flex: 1, textAlign: "center", fontSize: "7.5pt" }}>Head, Requesting Office/Authorized Representative</div>
               </div>
-              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
-                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Date</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1, textAlign: "center" }} />
               </div>
             </td>
             {/* B. Certified — Allotment */}
@@ -771,24 +800,29 @@ function ORSPreview({
                 for the purpose/adjustment necessary as
                 indicated above
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Signature&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Signature</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Printed Name:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Printed Name</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ marginBottom: "3px" }}>
-                <span style={S.sigLabel}>Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Position</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1 }} />
               </div>
-              <div style={{ fontSize: "7.5pt", textAlign: "center", marginTop: "2px" }}>
-                Head, Budget Division/Unit/Authorized Representative
+              <div style={{ display: "flex", marginTop: "2px", marginBottom: "3px" }}>
+                <span style={{ width: "74px", flexShrink: 0 }} />
+                <div style={{ flex: 1, textAlign: "center", fontSize: "7.5pt" }}>Head, Budget Division/Unit/Authorized Representative</div>
               </div>
-              <div style={{ marginBottom: "3px", marginTop: "4px" }}>
-                <span style={S.sigLabel}>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                <div style={S.sigLine}></div>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "5px" }}>
+                <span style={{ fontSize: "7.5pt", width: "74px", flexShrink: 0 }}>Date</span>
+                <span style={{ fontSize: "7.5pt", marginRight: "3px" }}>:</span>
+                <div style={{ ...S.sigLine, flex: 1, textAlign: "center" }} />
               </div>
             </td>
           </tr>
@@ -843,7 +877,7 @@ function ORSPreview({
             <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }}>{particulars}</td>
             <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{referenceNo || orsNo}</td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{obligationAmount > 0 ? fmt(obligationAmount) : ""}</td>
-            <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{payableAmount > 0 ? fmt(payableAmount) : ""}</td>
+            <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{paymentAmount > 0 ? fmt(paymentAmount) : ""}</td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}></td>
@@ -879,9 +913,10 @@ function buildORSPrintHtml(data: {
   payeeAddress: string; office: string; fundCluster: string;
   responsibilityCenter: string; particulars: string; mfoPap: string;
   uacsCode: string; amount: number; referenceNo: string;
-  obligationAmount: number; payableAmount: number; paymentAmount: number;
+  obligationAmount: number; paymentAmount: number;
   notYetDueBalance: number; dueDemandableBalance: number;
   preparedByName: string; preparedByDesig: string;
+  preparedByDate?: string; certifiedByDate?: string;
   textOnlyLines?: TextOnlyLine[];
   blankStatusSection?: boolean;
 }) {
@@ -938,7 +973,7 @@ function buildORSPrintHtml(data: {
           <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
           <div class="b" style="text-align:center;font-size:8.5pt;margin-top:2px">Entity Name</div>
         </td>
-        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">Serial No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
+        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">ORS No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
       </tr>
       <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Date : </span><span class="uline" style="min-width:120px">${displayDate}</span></td></tr>
       <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Fund Cluster : </span><span class="uline" style="min-width:80px">${escapeHtml(data.fundCluster)}</span></td></tr>
@@ -988,19 +1023,19 @@ function buildORSPrintHtml(data: {
         <tr>
           <td style="padding:5px 7px">
             <div style="font-size:8pt;margin-bottom:6px"><span class="b">A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal</div>
-            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line">${escapeHtml(data.preparedByName)}</div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line">${escapeHtml(data.preparedByDesig)}</div></div>
-            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Requesting Office/Authorized Representative</div>
-            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Signature</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Printed Name</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.preparedByName)}</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Position</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.preparedByDesig)}</div></div>
+            <div style="display:flex;margin-top:2px;margin-bottom:3px"><span style="width:76px;flex-shrink:0"></span><div style="flex:1;text-align:center;font-size:7.5pt">Head, Requesting Office/Authorized Representative</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Date</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1;text-align:center">${escapeHtml(data.preparedByDate ?? "")}</div></div>
           </td>
           <td style="padding:5px 7px">
             <div style="font-size:8pt;margin-bottom:6px"><span class="b">B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above</div>
-            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Budget Division/Unit/Authorized Representative</div>
-            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Signature</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Printed Name</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Position</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;margin-top:2px;margin-bottom:3px"><span style="width:76px;flex-shrink:0"></span><div style="flex:1;text-align:center;font-size:7.5pt">Head, Budget Division/Unit/Authorized Representative</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Date</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1;text-align:center">${escapeHtml(data.certifiedByDate ?? "")}</div></div>
           </td>
         </tr>
       </tbody>
@@ -1059,7 +1094,7 @@ function buildORSPrintHtml(data: {
           <td class="side" style="font-size:7.5pt;word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.particulars)}</td>
           <td class="c side" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
           <td class="r side" style="font-size:7.5pt">${data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
-          <td class="r side" style="font-size:7.5pt">${data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
+          <td class="r side" style="font-size:7.5pt"></td>
           <td class="r side" style="font-size:7.5pt">${data.paymentAmount > 0 ? fmt(data.paymentAmount) : ""}</td>
           <td class="r side" style="font-size:7.5pt"></td>
           <td class="r side" style="font-size:7.5pt"></td>
@@ -1108,7 +1143,7 @@ async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'OR
 const inputCls =
   "w-full px-3 py-1.5 text-sm text-gray-900 border border-gray-200 rounded bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition placeholder:text-gray-300";
 
-const labelCls = "block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1";
+const labelCls = "block text-xs font-bold uppercase text-gray-600 mb-1";
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1129,10 +1164,29 @@ export default function ORSProcessModal({
 }: ORSProcessModalProps) {
   const supabase = createClient();
 
+  // Pre-fetch all UACS codes on modal open for instant local fuzzy search
+  const [allUacsCodes, setAllUacsCodes] = useState<UacsCode[]>([]);
+  useEffect(() => {
+    if (visible && allUacsCodes.length === 0) {
+      supabase
+        .from("uacs_codes")
+        .select("id, uacs_code, description, created_at")
+        .order("uacs_code")
+        .then(({ data }) => {
+          if (data) setAllUacsCodes(data as UacsCode[]);
+        });
+    }
+  }, [visible]);
+
   const [blankStatusSection, setBlankStatusSection] = useState(false);
   const [orsNo, setOrsNo] = useState("");
   const [orsDate, setOrsDate] = useState(new Date().toISOString().slice(0, 10));
-  const [entityName, setEntityName] = useState("");
+
+  const handleOrsNoChange = (v: string) => {
+    setOrsNo(v);
+    setReferenceNo(v);
+  };
+  const [entityName, setEntityName] = useState("Department of Agrarian Reform - Camarines Sur 1");
   const [payee, setPayee] = useState("");
   const [payeeAddress, setPayeeAddress] = useState("");
   const [office, setOffice] = useState("");
@@ -1143,12 +1197,16 @@ export default function ORSProcessModal({
   const [uacsCode, setUacsCode] = useState("");
   const [referenceNo, setReferenceNo] = useState("");
   const [obligationAmount, setObligationAmount] = useState<number>(0);
-  const [payableAmount, setPayableAmount] = useState<number>(0);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [notYetDueBalance, setNotYetDueBalance] = useState<number>(0);
   const [dueDemandableBalance, setDueDemandableBalance] = useState<number>(0);
   const [preparedByName, setPreparedByName] = useState("");
   const [preparedByDesig, setPreparedByDesig] = useState("");
+  const [certifiedByName, setCertifiedByName] = useState("");
+  const [certifiedByDesig, setCertifiedByDesig] = useState("");
+  const [preparedByDate, setPreparedByDate] = useState("");
+  const [certifiedByDate, setCertifiedByDate] = useState("");
+  const [sectionCParticulars, setSectionCParticulars] = useState("");
   const [remarks, setRemarks] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<StatusFlag | null>(null);
@@ -1212,7 +1270,6 @@ export default function ORSProcessModal({
 
   useEffect(() => {
     if (po && visible) {
-      setEntityName(po.office_section || "");
       setPayee(po.supplier || "");
       setPayeeAddress("");
       // Set office from PO and try to match division
@@ -1231,8 +1288,7 @@ export default function ORSProcessModal({
       setMfoPap("");
       setPreparedByName(currentUser?.fullname || "");
       setObligationAmount(Number(po.total_amount || 0));
-      setPayableAmount(Number(po.total_amount || 0));
-      setReferenceNo("ORS");
+      setReferenceNo(orsNo || "");
       fetchBudgetInfo(po.pr_no);
     }
   }, [po, visible, currentUser, divisions]);
@@ -1284,11 +1340,17 @@ export default function ORSProcessModal({
         office: office || null,
         reference_no: referenceNo || null,
         obligation_amount: obligationAmount,
-        payable_amount: payableAmount,
+        payable_amount: null,
         payment_amount: paymentAmount,
         not_yet_due_balance: notYetDueBalance,
         due_demandable_balance: dueDemandableBalance,
         blank_status_section: blankStatusSection,
+        certified_by_name: certifiedByName || null,
+        certified_by_desig: certifiedByDesig || null,
+        section_c_particulars: sectionCParticulars || null,
+        payee: payee || null,
+        prepared_by_date: preparedByDate || null,
+        certified_by_date: certifiedByDate || null,
       });
 
       if (orsError) { setSaving(false); setErrorMsg(`Failed to create ORS entry: ${orsError.message}`); return; }
@@ -1351,9 +1413,11 @@ export default function ORSProcessModal({
             orsNo, orsDate, entityName, payee, payeeAddress, office,
             fundCluster, responsibilityCenter, particulars, mfoPap,
             uacsCode, amount: obligationAmount || 0, referenceNo,
-            obligationAmount, payableAmount, paymentAmount,
+            obligationAmount, paymentAmount,
+            certifiedByName, certifiedByDesig, sectionCParticulars,
             notYetDueBalance, dueDemandableBalance,
             preparedByName, preparedByDesig,
+            preparedByDate, certifiedByDate,
             blankStatusSection,
             // textOnlyLines, // commented out
             currentUserFullname,
@@ -1395,16 +1459,16 @@ export default function ORSProcessModal({
           <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-100">
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
-              {/* ① Serial No. + Date */}
+              {/* ① ORS No. + Date */}
               <FormSection title="ORS Details">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">
-                    <label className={labelCls}>Serial No. (ORS Number) *</label>
+                    <label className={labelCls}>ORS Number *</label>
                     <input
                       className={inputCls}
                       placeholder="e.g., ORS-2024-001"
                       value={orsNo}
-                      onChange={(e) => setOrsNo(e.target.value)}
+                      onChange={(e) => handleOrsNoChange(e.target.value)}
                       required
                     />
                   </div>
@@ -1428,7 +1492,7 @@ export default function ORSProcessModal({
                       <label className={labelCls}>Entity Name</label>
                       <input
                         className={inputCls}
-                        placeholder="e.g., DA-RFO02"
+                        placeholder="Department of Agrarian Reform - Camarines Sur 1"
                         value={entityName}
                         onChange={(e) => setEntityName(e.target.value)}
                       />
@@ -1501,11 +1565,18 @@ export default function ORSProcessModal({
                     </div>
                     <div>
                       <label className={labelCls}>UACS Object Code</label>
-                      <input
-                        className={inputCls}
-                        placeholder="e.g., 5-01-02-010"
+                      <UacsCombobox
                         value={uacsCode}
-                        onChange={(e) => setUacsCode(e.target.value)}
+                        onChange={(code, desc) => {
+                          setUacsCode(code);
+                          if (desc) {
+                            setParticulars(desc);
+                            setSectionCParticulars(desc);
+                          }
+                        }}
+                        allCodes={allUacsCodes}
+                        inputClassName={inputCls}
+                        placeholder="e.g., 50203010 02"
                       />
                     </div>
                   </div>
@@ -1532,7 +1603,31 @@ export default function ORSProcessModal({
                 </div>
               </FormSection>
 
-              {/* ④ Prepared-by — feeds Section A certification */}
+              {/* ④ Section B — Budget Officer certification */}
+              <FormSection title="Section B Certification (Budget Officer)">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Printed Name</label>
+                    <input
+                      className={inputCls}
+                      placeholder="Budget Officer full name"
+                      value={certifiedByName}
+                      onChange={(e) => setCertifiedByName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Position / Designation</label>
+                    <input
+                      className={inputCls}
+                      placeholder="e.g., Budget Officer II"
+                      value={certifiedByDesig}
+                      onChange={(e) => setCertifiedByDesig(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </FormSection>
+
+              {/* ⑤ Prepared-by — feeds Section A certification */}
               <FormSection title="Prepared By (Section A Certification)">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1577,17 +1672,6 @@ export default function ORSProcessModal({
                         placeholder="0.00"
                         value={obligationAmount || ""}
                         onChange={(e) => setObligationAmount(Number(e.target.value))}
-                        step="0.01"
-                      />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Payable Amount — (b)</label>
-                      <input
-                        type="number"
-                        className={inputCls}
-                        placeholder="0.00"
-                        value={payableAmount || ""}
-                        onChange={(e) => setPayableAmount(Number(e.target.value))}
                         step="0.01"
                       />
                     </div>
@@ -1720,8 +1804,14 @@ export default function ORSProcessModal({
                 }}
               >
                 <ORSEditablePreview
-                  orsNo={orsNo} setOrsNo={setOrsNo}
+                  orsNo={orsNo} setOrsNo={handleOrsNoChange}
                   orsDate={orsDate} setOrsDate={setOrsDate}
+                  certifiedByName={certifiedByName} setCertifiedByName={setCertifiedByName}
+                  certifiedByDesig={certifiedByDesig} setCertifiedByDesig={setCertifiedByDesig}
+                  preparedByDate={preparedByDate} setPreparedByDate={setPreparedByDate}
+                  certifiedByDate={certifiedByDate} setCertifiedByDate={setCertifiedByDate}
+                  sectionCParticulars={sectionCParticulars} setSectionCParticulars={setSectionCParticulars}
+                  allUacsCodes={allUacsCodes}
                   entityName={entityName} setEntityName={setEntityName}
                   payee={payee} setPayee={setPayee}
                   payeeAddress={payeeAddress} setPayeeAddress={setPayeeAddress}
@@ -1733,7 +1823,6 @@ export default function ORSProcessModal({
                   uacsCode={uacsCode} setUacsCode={setUacsCode}
                   referenceNo={referenceNo} setReferenceNo={setReferenceNo}
                   obligationAmount={obligationAmount} setObligationAmount={setObligationAmount}
-                  payableAmount={payableAmount} setPayableAmount={setPayableAmount}
                   paymentAmount={paymentAmount} setPaymentAmount={setPaymentAmount}
                   notYetDueBalance={notYetDueBalance} setNotYetDueBalance={setNotYetDueBalance}
                   dueDemandableBalance={dueDemandableBalance} setDueDemandableBalance={setDueDemandableBalance}

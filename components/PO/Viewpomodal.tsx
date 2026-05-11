@@ -347,6 +347,7 @@ function POPreview({
   fundsAvailable,
   orsAmount,
   hideTotalRow,
+  poDate,
 }: {
   poNo: string;
   supplier: string;
@@ -368,10 +369,12 @@ function POPreview({
   fundsAvailable?: string | null;
   orsAmount?: number | null;
   hideTotalRow?: boolean | null;
+  poDate?: string | null;
 }) {
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
+  const displayDate = poDate || today;
 
   const normalizedItems = useMemo(
     () =>
@@ -435,7 +438,7 @@ function POPreview({
               Address : <span style={{ fontWeight: "normal" }}>{address}</span>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Date : <span style={{ fontWeight: "normal" }}>{today}</span>
+              Date : <span style={{ fontWeight: "normal" }}>{displayDate}</span>
             </td>
           </tr>
           <tr>
@@ -514,15 +517,27 @@ function POPreview({
                     <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
                   </tr>
                   <tr>
+                    <td style={{ border: "none", padding: "24px 8px 0", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "85%", margin: "0 auto", fontWeight: "bold", fontSize: "9pt", textAlign: "center", paddingBottom: "2px" }}>
+                        {supplier}
+                      </div>
+                    </td>
+                    <td style={{ border: "none", padding: "24px 8px 0", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "85%", margin: "0 auto", fontWeight: "bold", fontSize: "9pt", textAlign: "center", paddingBottom: "2px" }}>
+                        {officialName || ""}
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
+                    <td style={{ border: "none", padding: "8px 8px 2px", textAlign: "center" }}>
                       <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
                     </td>
-                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    <td style={{ border: "none", padding: "4px 8px 2px", textAlign: "center", fontSize: "9pt" }}>
+                      {officialDesig || ""}
                     </td>
                   </tr>
                   <tr>
@@ -590,10 +605,12 @@ function buildPurchaseOrderPrintHtml(data: {
   orsDate?: string | null;
   fundsAvailable?: string | null;
   orsAmount?: number | null;
+  poDate?: string | null;
 }) {
   const grandTotal = getGrandTotal(data.items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
+  const displayDate = data.poDate || today;
   const normalizedItems = data.items.filter(
     (item) =>
       String(item.description ?? "").trim() ||
@@ -675,7 +692,7 @@ function buildPurchaseOrderPrintHtml(data: {
       </tr>
       <tr>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
-        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${today}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${displayDate}</span></td>
       </tr>
       <tr>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">TIN : <span style="font-weight:normal">${escapeHtml(data.tin)}</span></td>
@@ -731,12 +748,20 @@ function buildPurchaseOrderPrintHtml(data: {
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
               </tr>
               <tr>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
+                </td>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>
+                </td>
+              </tr>
+              <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:8px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:4px 8px 2px;text-align:center;font-size:9pt">${escapeHtml(data.officialDesig || "")}</td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
@@ -1049,6 +1074,7 @@ function downloadPDF(data: {
   fundsAvailable?: string | null;
   orsAmount?: number | null;
   hideTotalRow?: boolean;
+  poDate?: string | null;
   currentUserFullname?: string;
   currentUserId?: number | null;
 }) {
@@ -1369,6 +1395,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         fundsAvailable: poHeader.funds_available,
                         orsAmount: poHeader.ors_amount,
                         hideTotalRow: poHeader.hide_total_row ?? false,
+                        poDate: poHeader.date,
                         currentUserFullname,
                         currentUserId,
                       })
@@ -1418,6 +1445,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         fundsAvailable: poHeader.funds_available,
                         orsAmount: poHeader.ors_amount,
                         hideTotalRow: poHeader.hide_total_row ?? false,
+                        poDate: poHeader.date,
                         currentUserFullname,
                         currentUserId,
                       })
@@ -1451,6 +1479,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                     fundsAvailable={poHeader.funds_available}
                     orsAmount={poHeader.ors_amount}
                     hideTotalRow={poHeader.hide_total_row ?? false}
+                    poDate={poHeader.date}
                   />
                 </div>
               )}

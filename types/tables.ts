@@ -212,6 +212,12 @@ export type OrsEntry = {
   not_yet_due_balance: number | null;
   due_demandable_balance: number | null;
   blank_status_section?: boolean | null;
+  certified_by_name: string | null;
+  certified_by_desig: string | null;
+  section_c_particulars: string | null;
+  payee: string | null;
+  prepared_by_date: string | null;
+  certified_by_date: string | null;
 };
 
 export type PrForm = {
@@ -291,6 +297,8 @@ export type PurchaseOrder = {
   official_desig: string | null;
   accountant_name: string | null;
   accountant_desig: string | null;
+  hide_total_row: boolean | null;
+  conforme_date: string | null;
 };
 
 export type PurchaseRequestItem = {
@@ -361,6 +369,13 @@ export type StatusFlag = {
   flag_name: string | null;
 };
 
+export type UacsCode = {
+  id: number;
+  uacs_code: string;
+  description: string;
+  created_at: string;
+};
+
 export type User = {
   id: number;
   created_at: string; // ISO timestamp
@@ -403,6 +418,7 @@ export type Database = {
       roles: { Row: Role };
       status: { Row: Status };
       status_flag: { Row: StatusFlag };
+      uacs_codes: { Row: UacsCode };
       users: { Row: User };
     };
   };

@@ -27,6 +27,7 @@ export interface PurchaseOrderRow {
   official_desig: string | null;
   accountant_name: string | null;
   accountant_desig: string | null;
+  conforme_date: string | null;
   created_at: string | null;
   updated_at: string | null;
   hide_total_row?: boolean | null;

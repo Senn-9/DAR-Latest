@@ -21,6 +21,11 @@ export interface ORSPrintData {
   dueDemandableBalance?: number | null;
   preparedByName: string | null;
   preparedByDesig: string | null;
+  certifiedByName?: string | null;
+  certifiedByDesig?: string | null;
+  preparedByDate?: string | null;
+  certifiedByDate?: string | null;
+  sectionCParticulars?: string | null;
   blankStatusSection?: boolean | null;
 }
 
@@ -48,7 +53,7 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
     : `<tbody>
         <tr>
           <td class="side" style="height:28px;font-size:7.5pt">${escapeHtml(displayDate)}</td>
-          <td class="side" style="font-size:7.5pt;word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.particulars)}</td>
+          <td class="side" style="font-size:7.5pt;word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.sectionCParticulars ?? data.particulars)}</td>
           <td class="c side" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
           <td class="r side" style="font-size:7.5pt">${data.obligationAmount && data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
           <td class="r side" style="font-size:7.5pt">${data.payableAmount && data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
@@ -97,7 +102,7 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
           <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
           <div class="b" style="text-align:center;font-size:8.5pt;margin-top:2px">Entity Name</div>
         </td>
-        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">Serial No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
+        <td style="font-size:8.5pt;padding:4px 6px"><span class="b">ORS No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
       </tr>
       <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Date : </span><span class="uline" style="min-width:120px">${displayDate}</span></td></tr>
       <tr><td style="font-size:8.5pt;padding:4px 6px"><span class="b">Fund Cluster : </span><span class="uline" style="min-width:80px">${escapeHtml(data.fundCluster)}</span></td></tr>
@@ -146,19 +151,19 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
         <tr>
           <td style="padding:5px 7px">
             <div style="font-size:8pt;margin-bottom:6px"><span class="b">A.&nbsp;&nbsp;&nbsp;Certified:</span> Charges to appropriation/allotment are necessary, lawful and under my direct supervision;and supporting documents valid, proper and legal</div>
-            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line">${escapeHtml(data.preparedByName)}</div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line">${escapeHtml(data.preparedByDesig)}</div></div>
-            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Requesting Office/Authorized Representative</div>
-            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Signature</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Printed Name</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.preparedByName ?? "")}</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Position</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.preparedByDesig ?? "")}</div></div>
+            <div style="display:flex;margin-top:2px;margin-bottom:3px"><span style="width:76px;flex-shrink:0"></span><div style="flex:1;text-align:center;font-size:7.5pt">Head, Requesting Office/Authorized Representative</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Date</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1;text-align:center">${escapeHtml(data.preparedByDate ?? "")}</div></div>
           </td>
           <td style="padding:5px 7px">
             <div style="font-size:8pt;margin-bottom:6px"><span class="b">B.&nbsp;&nbsp;&nbsp;Certified:</span> Allotment available and obligated for the purpose/adjustment necessary as indicated above</div>
-            <div style="margin-bottom:3px"><span class="sig-label">Signature&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Printed Name:</span><div class="sig-line"></div></div>
-            <div style="margin-bottom:3px"><span class="sig-label">Position&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
-            <div style="font-size:7.5pt;text-align:center;margin-top:2px">Head, Budget Division/Unit/Authorized Representative</div>
-            <div style="margin-bottom:3px;margin-top:4px"><span class="sig-label">Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><div class="sig-line"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Signature</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1"></div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Printed Name</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.certifiedByName ?? "")}</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Position</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1">${escapeHtml(data.certifiedByDesig ?? "")}</div></div>
+            <div style="display:flex;margin-top:2px;margin-bottom:3px"><span style="width:76px;flex-shrink:0"></span><div style="flex:1;text-align:center;font-size:7.5pt">Head, Budget Division/Unit/Authorized Representative</div></div>
+            <div style="display:flex;align-items:baseline;margin-bottom:5px"><span style="font-size:7.5pt;width:76px;flex-shrink:0">Date</span><span style="font-size:7.5pt;margin-right:3px">:</span><div class="sig-line" style="flex:1;text-align:center">${escapeHtml(data.certifiedByDate ?? "")}</div></div>
           </td>
         </tr>
       </tbody>

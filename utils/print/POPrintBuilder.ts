@@ -21,8 +21,10 @@ export interface POPrintData {
   paymentTerm: string;
   fundCluster: string;
   items: POPrintItem[];
+  poDate?: string | null;
   officialName?: string | null;
   officialDesig?: string | null;
+  conformeDate?: string | null;
   accountantName?: string | null;
   accountantDesig?: string | null;
   orsNo?: string | null;
@@ -46,6 +48,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   const grandTotal = getGrandTotal(data.items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
+  const displayDate = data.poDate || today;
 
   const normalizedItems = data.items.filter(
     (item) =>
@@ -89,17 +92,11 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   const accountantSig = data.accountantName
     ? `<div style="border-bottom:1px solid #111;width:80%;margin:28px auto 2px"></div>
        <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-       <div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.accountantName)}</div>
-       ${data.accountantDesig ? `<div style="text-align:center;font-size:9pt">${escapeHtml(data.accountantDesig)}</div>` : ""}`
+       <div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.accountantName)}</div>`
     : `<div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
        <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>`;
 
-  const officialSig = data.officialName
-    ? `<div style="border-bottom:1px solid #111;width:45%;margin:28px auto 2px"></div>
-       <div style="text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</div>
-       <div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.officialName)}</div>
-       ${data.officialDesig ? `<div style="text-align:center;font-size:9pt">${escapeHtml(data.officialDesig)}</div>` : ""}`
-    : "";
+  const officialSig = "";
 
   return `<!DOCTYPE html>
 <html>
@@ -142,7 +139,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
       </tr>
       <tr>
         <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
-        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${today}</span></td>
+        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${displayDate}</span></td>
       </tr>
       <tr>
         <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">TIN : <span style="font-weight:normal">${escapeHtml(data.tin)}</span></td>
@@ -194,16 +191,24 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
             <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
             <table style="border:none">
               <tr>
-                <td style="border:none;padding:10px 8px 20px;font-size:9pt">Conforme:</td>
-                <td style="border:none;padding:10px 8px 20px;font-size:9pt;text-align:left">Very truly yours,</td>
+                <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
+                <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
+              </tr>
+              <tr>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
+                </td>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>
+                </td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:8px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;text-align:center;padding-bottom:2px">${escapeHtml(data.conformeDate || "")}</div></td>
+                <td style="border:none;padding:4px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;text-align:center;padding-bottom:2px">${escapeHtml(data.officialDesig || "")}</div></td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>

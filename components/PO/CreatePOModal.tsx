@@ -153,6 +153,18 @@ function POEditablePreview({
   updateTextOnlyLine,
   removeTextOnlyLine,
   hideTotalRow,
+  poDate,
+  setPoDate,
+  officialName,
+  setOfficialName,
+  officialDesig,
+  setOfficialDesig,
+  accountantName,
+  setAccountantName,
+  accountantDesig,
+  setAccountantDesig,
+  conformeDate,
+  setConformeDate,
 }: {
   poNo: string;
   setPoNo: (v: string) => void;
@@ -183,10 +195,21 @@ function POEditablePreview({
   updateTextOnlyLine: (id: string, field: keyof Omit<TextOnlyLine, 'id' | 'position'>, value: string) => void;
   removeTextOnlyLine: (id: string) => void;
   hideTotalRow: boolean;
+  poDate: string;
+  setPoDate: (v: string) => void;
+  officialName: string;
+  setOfficialName: (v: string) => void;
+  officialDesig: string;
+  setOfficialDesig: (v: string) => void;
+  accountantName: string;
+  setAccountantName: (v: string) => void;
+  accountantDesig: string;
+  setAccountantDesig: (v: string) => void;
+  conformeDate: string;
+  setConformeDate: (v: string) => void;
 }) {
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
-  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", color: "#000", padding: 0, margin: 0 }}>
@@ -246,7 +269,14 @@ function POEditablePreview({
               />
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Date : <span style={{ fontWeight: "normal" }}>{today}</span>
+              Date :{" "}
+              <input
+                type="date"
+                value={poDate}
+                onChange={(e) => setPoDate(e.target.value)}
+                style={{ fontWeight: "normal" }}
+                className={editableInputCls}
+              />
             </td>
           </tr>
 
@@ -431,15 +461,45 @@ function POEditablePreview({
                     <td style={{ border: "none", padding: "10px 8px 6px", fontSize: "9pt", textAlign: "left" }}>Very truly yours,</td>
                   </tr>
                   <tr>
+                    <td style={{ border: "none", padding: "24px 8px 0", textAlign: "center" }}>
+                      <div style={{ borderBottom: "1px solid #111", width: "85%", margin: "0 auto", fontWeight: "bold", fontSize: "9pt", textAlign: "center", paddingBottom: "2px" }}>
+                        {supplier || <span style={{ color: "#bbb", fontWeight: "normal" }}>Supplier Name</span>}
+                      </div>
+                    </td>
+                    <td style={{ border: "none", padding: "24px 8px 0", textAlign: "center" }}>
+                      <input
+                        type="text"
+                        value={officialName}
+                        onChange={(e) => setOfficialName(e.target.value)}
+                        placeholder="Authorized Official"
+                        style={{ fontWeight: "bold", textAlign: "center", width: "85%", borderBottom: "1px solid #111" }}
+                        className={editableInputCls}
+                      />
+                    </td>
+                  </tr>
+                  <tr>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Supplier</td>
                     <td style={{ border: "none", padding: "2px 8px", textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Authorized Official</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    <td style={{ border: "none", padding: "8px 8px 2px", textAlign: "center" }}>
+                      <input
+                        type="date"
+                        value={conformeDate}
+                        onChange={(e) => setConformeDate(e.target.value)}
+                        className={editableInputCenterCls}
+                        style={{ width: "85%", borderBottom: "1px solid #111" }}
+                      />
                     </td>
-                    <td style={{ border: "none", padding: "24px 8px 2px", textAlign: "center" }}>
-                      <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "0 auto" }} />
+                    <td style={{ border: "none", padding: "4px 8px 2px", textAlign: "center" }}>
+                      <input
+                        type="text"
+                        value={officialDesig}
+                        onChange={(e) => setOfficialDesig(e.target.value)}
+                        placeholder="Designation"
+                        style={{ textAlign: "center", width: "85%", borderBottom: "1px solid #111" }}
+                        className={editableInputCls}
+                      />
                     </td>
                   </tr>
                   <tr>
@@ -464,9 +524,17 @@ function POEditablePreview({
                   style={{ width: "60%" }}
                 />
               </div>
-              <div style={{ fontSize: "10pt", marginBottom: "24px" }}><b>Funds Available :</b> </div>
-
-              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "36px auto 2px" }} />
+              <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Funds Available :</b> </div>
+              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "20px auto 0", fontWeight: "bold", fontSize: "9pt", textAlign: "center", paddingBottom: "2px" }}>
+                <input
+                  type="text"
+                  value={accountantName}
+                  onChange={(e) => setAccountantName(e.target.value)}
+                  placeholder="Chief Accountant Name"
+                  style={{ fontWeight: "bold", textAlign: "center", width: "95%" }}
+                  className={editableInputCls}
+                />
+              </div>
               <div style={{ textAlign: "center", fontSize: "9pt" }}>Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
@@ -668,10 +736,17 @@ function buildPurchaseOrderPrintHtml(data: {
   fundCluster: string;
   items: POItemWithBold[];
   textOnlyLines?: TextOnlyLine[];
+  poDate?: string | null;
+  officialName?: string | null;
+  officialDesig?: string | null;
+  accountantName?: string | null;
+  accountantDesig?: string | null;
+  conformeDate?: string | null;
 }) {
   const grandTotal = getGrandTotal(data.items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
+  const displayDate = data.poDate || today;
   const normalizedItems = data.items.filter(
     (item) =>
       String(item.description ?? "").trim() ||
@@ -775,7 +850,7 @@ function buildPurchaseOrderPrintHtml(data: {
       </tr>
       <tr>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
-        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${today}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${displayDate}</span></td>
       </tr>
       <tr>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">TIN : <span style="font-weight:normal">${escapeHtml(data.tin)}</span></td>
@@ -831,12 +906,20 @@ function buildPurchaseOrderPrintHtml(data: {
                 <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
               </tr>
               <tr>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
+                </td>
+                <td style="border:none;padding:24px 8px 0;text-align:center">
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>
+                </td>
+              </tr>
+              <tr>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
                 <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
               </tr>
               <tr>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:24px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
+                <td style="border:none;padding:8px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;text-align:center;padding-bottom:2px">${escapeHtml(data.conformeDate || "")}</div></td>
+                <td style="border:none;padding:4px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;text-align:center;padding-bottom:2px">${escapeHtml(data.officialDesig || "")}</div></td>
               </tr>
               <tr>
                 <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
@@ -848,8 +931,8 @@ function buildPurchaseOrderPrintHtml(data: {
         <tr>
           <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
             <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
-            <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> </div>
-            <div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
+            <div style="font-size:10pt;margin-bottom:8px"><b>Funds Available :</b> </div>
+            <div style="border-bottom:1px solid #111;width:80%;margin:20px auto 0;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.accountantName || "")}</div>
             <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
           </td>
           <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
@@ -880,6 +963,12 @@ function downloadPDF(data: {
   items: POItemWithBold[];
   textOnlyLines?: TextOnlyLine[];
   hideTotalRow?: boolean;
+  poDate?: string;
+  officialName?: string;
+  officialDesig?: string;
+  accountantName?: string;
+  accountantDesig?: string;
+  conformeDate?: string | null;
   currentUserFullname?: string;
   currentUserId?: number | null;
   prId?: number | null;
@@ -928,7 +1017,11 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [procurementMode, setProcurementMode] = useState("");
   const [deliveryPlace, setDeliveryPlace] = useState("");
   const [deliveryTerm, setDeliveryTerm] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  });
   const [paymentTerm, setPaymentTerm] = useState("");
   const [officeSection, setOfficeSection] = useState("");
   const [fundCluster, setFundCluster] = useState("");
@@ -937,6 +1030,12 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [poDate, setPoDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [officialName, setOfficialName] = useState("");
+  const [officialDesig, setOfficialDesig] = useState("");
+  const [accountantName, setAccountantName] = useState("");
+  const [accountantDesig, setAccountantDesig] = useState("");
+  const [conformeDate, setConformeDate] = useState("");
 
   // Text-only lines state (for printing only - descriptive lines between items)
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
@@ -1126,6 +1225,15 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     }
   }
 
+  function handlePoDateChange(newDate: string) {
+    setPoDate(newDate);
+    if (newDate) {
+      const d = new Date(newDate + "T00:00:00");
+      d.setDate(d.getDate() + 7);
+      setDeliveryDate(d.toISOString().slice(0, 10));
+    }
+  }
+
   function resetForm() {
     setSelectedPRId("");
     setSelectedPRNo("");
@@ -1136,13 +1244,21 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     setProcurementMode("");
     setDeliveryPlace("");
     setDeliveryTerm("");
-    setDeliveryDate("");
+    const dReset = new Date();
+    dReset.setDate(dReset.getDate() + 7);
+    setDeliveryDate(dReset.toISOString().slice(0, 10));
     setPaymentTerm("");
     setOfficeSection("");
     setSelectedDivisionId(null);
     setFundCluster("");
     setItems([]);
     setSaving(false);
+    setPoDate(new Date().toISOString().slice(0, 10));
+    setOfficialName("");
+    setOfficialDesig("");
+    setAccountantName("");
+    setAccountantDesig("");
+    setConformeDate("");
   }
 
   function addItem() {
@@ -1207,6 +1323,12 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         status_id: 11,
         division_id: selectedDivisionId,
         hide_total_row: hideTotalRow,
+        date: poDate || null,
+        official_name: officialName || null,
+        official_desig: officialDesig || null,
+        accountant_name: accountantName || null,
+        accountant_desig: accountantDesig || null,
+        conforme_date: conformeDate || null,
       };
       const cleanItems = items.map((item) => ({ ...item, description: stripHtml(item.description ?? "") }));
       await onCreate(header, cleanItems);
@@ -1257,6 +1379,12 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               items,
               textOnlyLines,
               hideTotalRow,
+              poDate,
+              officialName,
+              officialDesig,
+              accountantName,
+              accountantDesig,
+              conformeDate,
               currentUserFullname,
             })
           }
@@ -1426,13 +1554,33 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               </div>
 
               <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Date &amp; Signatories</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PO Date</label>
+                    <input type="date" className={inputCls} value={poDate} onChange={(e) => handlePoDateChange(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Authorized Official</label>
+                    <input className={inputCls} placeholder="e.g., Juan Dela Cruz" value={officialName} onChange={(e) => setOfficialName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Designation</label>
+                    <input className={inputCls} placeholder="e.g., PARPO II" value={officialDesig} onChange={(e) => setOfficialDesig(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Chief Accountant</label>
+                  <input className={inputCls} placeholder="e.g., Maria Santos" value={accountantName} onChange={(e) => setAccountantName(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
                 <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700">Line Items</h3>
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-emerald-300 rounded hover:bg-emerald-50 transition-colors"
-                  >
+                  <button type="button" onClick={addItem} className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-emerald-300 rounded hover:bg-emerald-50 transition-colors">
                     <RiAddLine size={14} /> Add Item
                   </button>
                 </div>
@@ -1533,8 +1681,13 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     officeSection,
                     fundCluster,
                     items,
-                    // textOnlyLines, // commented out
                     hideTotalRow,
+                    poDate,
+                    officialName,
+                    officialDesig,
+                    accountantName,
+                    accountantDesig,
+                    conformeDate,
                     currentUserFullname,
                     currentUserId,
                     prId: selectedPRId ? Number(selectedPRId) : null,
@@ -1596,6 +1749,18 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   updateTextOnlyLine={() => {}}
                   removeTextOnlyLine={() => {}}
                   hideTotalRow={hideTotalRow}
+                  poDate={poDate}
+                  setPoDate={handlePoDateChange}
+                  officialName={officialName}
+                  setOfficialName={setOfficialName}
+                  officialDesig={officialDesig}
+                  setOfficialDesig={setOfficialDesig}
+                  conformeDate={conformeDate}
+                  setConformeDate={setConformeDate}
+                  accountantName={accountantName}
+                  setAccountantName={setAccountantName}
+                  accountantDesig={accountantDesig}
+                  setAccountantDesig={setAccountantDesig}
                 />
               </div>
             </div>
