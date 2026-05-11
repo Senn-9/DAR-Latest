@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO } from "@/utils/print/POPrintBuilder";
 import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
 import { RichEditor } from "@/components/RichEditor";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 // Types for PR and Canvass data
 type PurchaseRequest = {
@@ -934,6 +935,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [items, setItems] = useState<POItemWithBold[]>([]);
   const [hideTotalRow, setHideTotalRow] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Text-only lines state (for printing only - descriptive lines between items)
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
@@ -1182,8 +1185,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (!supplier) return alert("Supplier is required");
-    if (!poNo.trim()) return alert("PO Number is required");
+    if (!supplier) { setErrorMsg("Supplier is required"); return; }
+    if (!poNo.trim()) { setErrorMsg("PO Number is required"); return; }
     setSaving(true);
     try {
       const header: Partial<PurchaseOrderRow> = {
@@ -1207,11 +1210,10 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       };
       const cleanItems = items.map((item) => ({ ...item, description: stripHtml(item.description ?? "") }));
       await onCreate(header, cleanItems);
-      resetForm();
-      onClose();
+      setSuccessMsg(`Purchase Order ${poNo} has been created successfully.`);
     } catch (err) {
       console.error(err);
-      alert("Failed to create PO.");
+      setErrorMsg("Failed to create PO. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -1220,6 +1222,18 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   if (!visible) return null;
 
   return (
+    <>
+    <SuccessModal
+      visible={!!successMsg}
+      title="PO Created"
+      message={successMsg ?? ""}
+      onConfirm={() => { setSuccessMsg(null); resetForm(); onClose(); }}
+    />
+    <ErrorModal
+      visible={!!errorMsg}
+      message={errorMsg ?? ""}
+      onDismiss={() => setErrorMsg(null)}
+    />
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
@@ -1589,5 +1603,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         </div>
       </div>
     </div>
+    </>
   );
 }

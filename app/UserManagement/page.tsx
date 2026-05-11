@@ -72,6 +72,7 @@ export default function UserManagementPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<UserRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
 
@@ -85,6 +86,8 @@ export default function UserManagementPage() {
     const stored = localStorage.getItem("currentUser");
     if (stored) setCurrentUser(JSON.parse(stored));
   }, []);
+
+  useEffect(() => { setDeleteConfirmInput(""); }, [deleteTarget]);
 
   const resetForm = () => {
     setFormUsername("");
@@ -364,12 +367,6 @@ export default function UserManagementPage() {
                 >
                   <RiEdit2Line size={14} /> Edit
                 </button>
-                <button
-                  onClick={() => setDeleteTarget(currentUserRow)}
-                  className="px-3 py-2 bg-red-500/25 hover:bg-red-500/40 border border-red-300/30 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5 transition-colors"
-                >
-                  <RiDeleteBinLine size={14} /> Delete
-                </button>
               </div>
             </div>
           </div>
@@ -541,12 +538,14 @@ export default function UserManagementPage() {
                           >
                             <RiEdit2Line size={13} /> Edit
                           </button>
-                          <button
-                            onClick={() => setDeleteTarget(u)}
-                            className="px-2.5 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors inline-flex items-center gap-1.5 text-xs"
-                          >
-                            <RiDeleteBinLine size={13} /> Delete
-                          </button>
+                          {u.username !== currentUser?.username && (
+                            <button
+                              onClick={() => setDeleteTarget(u)}
+                              className="px-2.5 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors inline-flex items-center gap-1.5 text-xs"
+                            >
+                              <RiDeleteBinLine size={13} /> Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -639,8 +638,20 @@ export default function UserManagementPage() {
                     Delete user {deleteTarget.fullname ?? deleteTarget.username ?? "—"}?
                   </p>
                   <p className="text-xs text-red-700 mt-1">
-                    Username: {deleteTarget.username ?? "—"}
+                    Username: <span className="font-mono font-bold">{deleteTarget.username ?? "—"}</span>
                   </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
+                    Type the username to confirm
+                  </label>
+                  <input
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    placeholder={deleteTarget.username ?? ""}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    autoComplete="off"
+                  />
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -651,7 +662,8 @@ export default function UserManagementPage() {
                   </button>
                   <button
                     onClick={doDelete}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+                    disabled={deleteConfirmInput !== deleteTarget.username}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Delete
                   </button>

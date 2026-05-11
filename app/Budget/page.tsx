@@ -65,8 +65,6 @@ export default function BudgetPage() {
   // ─── Constants ────────────────────────────────────────────────────────────
   const CURRENT_YEAR = new Date().getFullYear();
   const PAGE_SIZE = 10;
-  /** Roles that may write to this module */
-  const EDIT_ROLES = new Set([1, 4]); // Admin, Budget
   /** Role that sees only their own division */
   const ENDUSER_ROLE = 6;
 
@@ -106,8 +104,11 @@ export default function BudgetPage() {
       const user = JSON.parse(stored);
       setCurrentUser(user);
       const roleId = user.role_id ?? 0;
+      const isBudgetRole =
+        (user?.username?.toLowerCase() === "budget") ||
+        (user?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
       setIsAdmin(roleId === 1);
-      setCanEdit(EDIT_ROLES.has(roleId));
+      setCanEdit(roleId === 1 || isBudgetRole);
       setIsEndUser(roleId === ENDUSER_ROLE);
     }
   }, []);

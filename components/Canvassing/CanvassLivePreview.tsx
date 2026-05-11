@@ -236,7 +236,12 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	const handlePrint = (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		// Blur the button to prevent focus issues after returning from print tab
+		
+		// Reset any resizing states to prevent them from getting stuck
+		setResizingColumn(null);
+		setResizingRow(null);
+
+		// Blur the button to prevent focus issues
 		(e.currentTarget as HTMLButtonElement).blur();
 		printRFQ({ ...meta, prNo }, items);
 	};
@@ -360,32 +365,36 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6">
-			<div className="fixed inset-0 z-0" onClick={onClose} aria-hidden="true" />
+		<div className="fixed inset-0 z-50 overflow-y-auto bg-black/50">
+			{/* Backdrop: Clickable area around the modal */}
+			<div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-			<div className="absolute right-4 top-4 z-20 flex gap-2">
-				<button
-					type="button"
-					onClick={handlePrint}
-					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-					aria-label="Print preview"
-					title="Print"
-				>
-					<RiPrinterLine size={20} />
-				</button>
-				<button
-					type="button"
-					onClick={onClose}
-					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-					aria-label="Close preview"
-					title="Close"
-				>
-					<RiCloseLine size={20} />
-				</button>
-			</div>
+			<div className="relative pointer-events-none min-h-screen flex items-center justify-center p-3 sm:p-6">
+				{/* Modal Actions (Fixed at top-right of the viewport) */}
+				<div className="fixed right-4 top-4 z-20 flex gap-2 pointer-events-auto">
+					<button
+						type="button"
+						onClick={handlePrint}
+						className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+						aria-label="Print preview"
+						title="Print"
+					>
+						<RiPrinterLine size={20} />
+					</button>
+					<button
+						type="button"
+						onClick={onClose}
+						className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
+						aria-label="Close preview"
+						title="Close"
+					>
+						<RiCloseLine size={20} />
+					</button>
+				</div>
 
-			<div className="relative z-10 mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 p-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
-				<div className="text-black" style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}>
+				{/* Modal Content Card */}
+				<div className="relative pointer-events-auto mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 p-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
+					<div className="text-black" style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}>
 					
 					{/* Top Section */}
 					<div className="grid grid-cols-[1fr_3fr_1fr] items-start mb-2">
@@ -704,5 +713,6 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 				</div>
 			</div>
 		</div>
+	</div>
 	);
 }

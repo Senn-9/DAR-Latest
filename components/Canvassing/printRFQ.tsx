@@ -17,18 +17,14 @@ export type RFQItem = {
 };
 
 export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
-	const MIN_PRINT_ROWS = 10;
-
 	function escapeHtml(str: string): string {
 		if (!str) return "";
 		return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 	}
 
-	// Show all items, pad with empty rows to reach minimum
-	const printableItems = [...items];
-	while (printableItems.length < MIN_PRINT_ROWS) {
-		printableItems.push({ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" });
-	}
+	// Print the exact rows shown in the live preview so added/removed rows are preserved.
+	const printableItems =
+		items.length > 0 ? [...items] : [{ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" }];
 
 	const bodyRows = printableItems
 		.map(
@@ -49,7 +45,6 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 <meta charset="utf-8" />
 <title>Request for Quotation - ${escapeHtml(meta.canvassNo || "Draft")}</title>
 <style>
-	@page { size: A4 portrait; margin: 0; }
 	* { box-sizing: border-box; margin: 0; padding: 0; }
 	body {
 		color: #000;
@@ -61,10 +56,9 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 	}
 	.page {
 		width: 100%;
-		max-width: 850px;
-		min-height: 1100px;
+		max-width: 210mm;
 		margin: 0 auto;
-		padding: 48px 28px;
+		padding: 10mm;
 	}
 	.top-grid {
 		display: grid;
@@ -349,22 +343,57 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 }
 
 /**
- * Opens a new browser window and prints the RFQ document.
+ * Prints the RFQ document using a hidden iframe to avoid blocking the main window's event loop
+ * and focus issues commonly associated with window.open().
  */
 export function printRFQ(meta: RFQMeta, items: RFQItem[]) {
 	const html = buildRFQHtml(meta, items);
-	const printWindow = window.open("", "_blank");
-	if (!printWindow) return;
+	
+	// Create a hidden iframe
+	const iframe = document.createElement("iframe");
+	iframe.style.position = "fixed";
+	iframe.style.right = "0";
+	iframe.style.bottom = "0";
+	iframe.style.width = "0";
+	iframe.style.height = "0";
+	iframe.style.border = "0";
+	iframe.style.display = "none";
+	iframe.id = "print-iframe";
+	
+	document.body.appendChild(iframe);
 
-	printWindow.document.write(html);
-	printWindow.document.close();
+	const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+	if (!iframeDoc) {
+		console.error("Could not access iframe document for printing");
+		return;
+	}
 
-	// Use a small delay to ensure content is rendered before printing
-	// and to avoid blocking the opener window's event loop immediately.
-	setTimeout(() => {
-		if (printWindow) {
-			printWindow.focus();
-			printWindow.print();
+	iframeDoc.open();
+	iframeDoc.write(html);
+	iframeDoc.close();
+
+	// Wait for resources to load within the iframe
+	let isPrinted = false;
+	const handlePrint = () => {
+		if (isPrinted) return;
+		isPrinted = true;
+
+		if (iframe.contentWindow) {
+			iframe.contentWindow.focus();
+			iframe.contentWindow.print();
+			
+			// Remove the iframe after the print dialog is closed
+			setTimeout(() => {
+				if (iframe.parentNode === document.body) {
+					document.body.removeChild(iframe);
+				}
+			}, 1000);
 		}
-	}, 500);
+	};
+
+	if (iframe.contentWindow) {
+		iframe.contentWindow.onload = handlePrint;
+		// Fallback for cases where onload might have already fired or won't fire
+		setTimeout(handlePrint, 500);
+	}
 }
