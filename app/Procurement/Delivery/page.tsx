@@ -1831,6 +1831,7 @@ export default function DeliveryPage() {
         delivery={selectedDelivery}
         iar={iarData}
         loa={loaData}
+        dv={dvData}
         poData={poData}
         defaultTab={defaultViewTab}
       />

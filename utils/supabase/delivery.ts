@@ -891,17 +891,17 @@ export async function fetchIARByDelivery(deliveryId: number) {
     mappedData.inspection_verified = mappedData.inspection_verified === true;
     mappedData.items_complete = mappedData.items_complete === true;
 
-    // Parse missing_units_items from JSON string back to array
-    if (mappedData.missing_units_items) {
-      if (typeof mappedData.missing_units_items === 'string') {
+    // Parse iar_po_items from JSON string back to array
+    if (mappedData.iar_po_items) {
+      if (typeof mappedData.iar_po_items === 'string') {
         try {
-          mappedData.missing_units_items = JSON.parse(mappedData.missing_units_items);
+          mappedData.iar_po_items = JSON.parse(mappedData.iar_po_items);
         } catch {
-          mappedData.missing_units_items = [];
+          mappedData.iar_po_items = [];
         }
       }
     } else {
-      mappedData.missing_units_items = [];
+      mappedData.iar_po_items = [];
     }
 
     return mappedData;
@@ -941,12 +941,12 @@ export async function upsertIARByDelivery(
     filteredPayload.items_complete = filteredPayload.items_complete === true;
   }
 
-  // Serialize missing_units_items array to JSON string for DB storage (column is text)
-  if (filteredPayload.missing_units_items !== undefined) {
-    if (Array.isArray(filteredPayload.missing_units_items)) {
-      filteredPayload.missing_units_items = JSON.stringify(filteredPayload.missing_units_items);
-    } else if (filteredPayload.missing_units_items === null) {
-      filteredPayload.missing_units_items = null;
+  // Serialize iar_po_items array to JSON string for DB storage (column is jsonb)
+  if (filteredPayload.iar_po_items !== undefined) {
+    if (Array.isArray(filteredPayload.iar_po_items)) {
+      filteredPayload.iar_po_items = JSON.stringify(filteredPayload.iar_po_items);
+    } else if (filteredPayload.iar_po_items === null) {
+      filteredPayload.iar_po_items = null;
     }
   }
 
@@ -976,16 +976,16 @@ export async function upsertIARByDelivery(
 
     if (error) throw error;
 
-    // Add iar_date back for template usage, coerce checkbox booleans, and parse missing_units_items
-    let parsedMissingItems: any[] = [];
-    if (data.missing_units_items) {
-      try { parsedMissingItems = typeof data.missing_units_items === 'string' ? JSON.parse(data.missing_units_items) : data.missing_units_items; } catch { parsedMissingItems = []; }
+    // Add iar_date back for template usage, coerce checkbox booleans, and parse iar_po_items
+    let parsedIarPoItems: any[] = [];
+    if (data.iar_po_items) {
+      try { parsedIarPoItems = typeof data.iar_po_items === 'string' ? JSON.parse(data.iar_po_items) : data.iar_po_items; } catch { parsedIarPoItems = []; }
     }
-    const result = { 
+    const result = {
       ...data,
       inspection_verified: data.inspection_verified === true,
       items_complete: data.items_complete === true,
-      missing_units_items: parsedMissingItems,
+      iar_po_items: parsedIarPoItems,
       iar_date: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : undefined
     };
     return result;
@@ -1004,16 +1004,16 @@ export async function upsertIARByDelivery(
 
   if (error) throw error;
 
-  // Add iar_date back for template usage, coerce checkbox booleans, and parse missing_units_items
-  let parsedMissingItemsInsert: any[] = [];
-  if (data.missing_units_items) {
-    try { parsedMissingItemsInsert = typeof data.missing_units_items === 'string' ? JSON.parse(data.missing_units_items) : data.missing_units_items; } catch { parsedMissingItemsInsert = []; }
+  // Add iar_date back for template usage, coerce checkbox booleans, and parse iar_po_items
+  let parsedIarPoItemsInsert: any[] = [];
+  if (data.iar_po_items) {
+    try { parsedIarPoItemsInsert = typeof data.iar_po_items === 'string' ? JSON.parse(data.iar_po_items) : data.iar_po_items; } catch { parsedIarPoItemsInsert = []; }
   }
-  const result = { 
+  const result = {
     ...data,
     inspection_verified: data.inspection_verified === true,
     items_complete: data.items_complete === true,
-    missing_units_items: parsedMissingItemsInsert,
+    iar_po_items: parsedIarPoItemsInsert,
     iar_date: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : undefined
   };
   return result;
@@ -1070,7 +1070,6 @@ export async function upsertLOAByDelivery(
   // Filter out the id field to prevent constraint violations
   const filteredPayload = { ...payload };
   delete filteredPayload.id; // Never update the id field
-  delete filteredPayload.po_date; // Remove po_date as it's not a column in loa_documents
 
   if (existing?.id) {
 
@@ -1163,98 +1162,94 @@ export async function fetchDVByDelivery(deliveryId: number) {
 
 
 export async function upsertDVByDelivery(
-
   deliveryId: number,
-
   payload: Record<string, any>,
-
 ) {
-
   console.log("=== UPSERT DV BY DELIVERY ===");
-
   console.log("Delivery ID:", deliveryId);
-
   console.log("DV Payload:", payload);
-
   
-
   const supabase = createClient();
-
   const existing = await fetchDVByDelivery(deliveryId);
-
   console.log("Existing DV:", existing);
-
   
-
-  // Filter out the id field to prevent constraint violations
+  // Filter out fields that shouldn't be in the database
   const filteredPayload = { ...payload };
   delete filteredPayload.id; // Never update the id field
-  delete filteredPayload.po_date; // Remove po_date as it's not a column in dv_documents
+  delete filteredPayload.delivery_id; // This is set separately
+  delete filteredPayload.created_at; // Managed by database
+  delete filteredPayload.created_by; // Should be set separately if needed
+  
+  // Remove any undefined values and validate date fields (except dv_date which accepts any text)
+  Object.keys(filteredPayload).forEach(key => {
+    const value = filteredPayload[key];
+    
+    // Remove undefined values
+    if (value === undefined) {
+      delete filteredPayload[key];
+      return;
+    }
+    
+    // dv_date can be any text format, so skip validation for it
+    if (key === 'dv_date') {
+      return;
+    }
+    
+    // Validate other date fields - they should be null or valid date strings
+    if (key.includes('date') || key.includes('_at')) {
+      // If it's a number or looks like a number, set to null
+      if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)) && value.trim() !== '')) {
+        console.warn(`Invalid date value for ${key}: ${value}, setting to null`);
+        filteredPayload[key] = null;
+      }
+      // If it's an empty string, set to null
+      else if (value === '') {
+        filteredPayload[key] = null;
+      }
+    }
+  });
+
+  console.log("Filtered DV Payload:", filteredPayload);
 
   if (existing?.id) {
-
     console.log("Updating existing DV...");
-
     const { data, error } = await supabase
-
       .from("dv_documents")
-
       .update({ ...filteredPayload, updated_at: new Date().toISOString() })
-
       .eq("id", existing.id)
-
       .select("*")
-
       .single();
 
     if (error) {
-
       console.error("DV update error:", error);
-
+      console.error("DV update error details:", JSON.stringify(error, null, 2));
       throw error;
-
     }
 
     console.log("DV updated successfully:", data);
-
     return data;
-
   }
 
   console.log("Inserting new DV...");
-
   const { data, error } = await supabase
-
     .from("dv_documents")
-
     .insert({
-
       delivery_id: deliveryId,
-
       ...filteredPayload,
-
       created_at: new Date().toISOString(),
-
       updated_at: new Date().toISOString(),
-
     })
-
     .select("*")
-
     .single();
 
   if (error) {
-
     console.error("DV insert error:", error);
-
+    console.error("DV insert error details:", JSON.stringify(error, null, 2));
     throw error;
-
   }
 
   console.log("DV inserted successfully:", data);
-
   return data;
-
 }
 
 

@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 
 import {
-  RiCloseLine,
-  RiEyeLine,
   RiArrowLeftLine,
   RiArrowRightLine,
   RiCheckLine,
@@ -13,7 +11,6 @@ import {
   RiZoomOutLine,
   RiRefreshLine,
   RiAddLine,
-  RiEditLine,
 } from "react-icons/ri";
 
 import {
@@ -23,182 +20,13 @@ import {
   getFlagId,
 } from "../StatusFlagPicker";
 
-// Template loading function
-
-async function loadTemplate(templateName: string): Promise<string> {
-  try {
-    const response = await fetch(`/documents/${templateName}-template.html`);
-
-    if (!response.ok)
-      throw new Error(`Failed to load ${templateName} template`);
-
-    return await response.text();
-  } catch (error) {
-    console.error(`Error loading ${templateName} template:`, error);
-
-    throw error;
-  }
-}
-
-// Placeholder replacement function
-
-function replacePlaceholders(template: string, data: any): string {
-  let result = template;
-
-  // Handle Handlebars-style loops for PO items
-
-  result = result.replace(
-    /{{#each po_items}}([\s\S]*?){{\/each}}/g,
-
-    (match, templateBlock) => {
-      if (!data.po_items || !Array.isArray(data.po_items)) return "";
-
-      return data.po_items
-
-        .map((item: any, index: number) => {
-          let itemBlock = templateBlock;
-
-          Object.keys(item).forEach((key) => {
-            const value = item[key] ?? "";
-
-            const placeholder = new RegExp(`{{${key}}}`, "g");
-
-            itemBlock = itemBlock.replace(placeholder, value);
-          });
-
-          // Handle {{add @index value}} for positioning
-
-          itemBlock = itemBlock.replace(
-            /{{add @index (\d+(?:\.\d+)?)}}/g,
-
-            (_match: string, value: string) => {
-              return (index + parseFloat(value)).toString();
-            },
-          );
-
-          return itemBlock;
-        })
-
-        .join("");
-    },
-  );
-
-  // Handle Handlebars-style loops for missing units items
-
-  result = result.replace(
-    /{{#each missing_units_items}}([\s\S]*?){{\/each}}/g,
-
-    (match, templateBlock) => {
-      if (!data.missing_units_items || !Array.isArray(data.missing_units_items))
-        return "";
-
-      return data.missing_units_items
-
-        .map((item: any, index: number) => {
-          let itemBlock = templateBlock;
-
-          Object.keys(item).forEach((key) => {
-            const value = item[key] ?? "";
-
-            const placeholder = new RegExp(`{{${key}}}`, "g");
-
-            itemBlock = itemBlock.replace(placeholder, value);
-          });
-
-          // Handle {{add @index value}} for positioning
-
-          itemBlock = itemBlock.replace(
-            /{{add @index (\d+(?:\.\d+)?)}}/g,
-
-            (_match: string, value: string) => {
-              return (index + parseFloat(value)).toString();
-            },
-          );
-
-          return itemBlock;
-        })
-
-        .join("");
-    },
-  );
-
-  // Handle Handlebars conditionals
-
-  result = result.replace(
-    /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
-    (_match: string, condition: string, content: string) => {
-      const value = data[condition];
-      const isTruthy = value && (!Array.isArray(value) || value.length > 0);
-      return isTruthy ? content : "";
-    },
-  );
-
-  result = result.replace(
-    /{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g,
-    (_match: string, condition: string, content: string) => {
-      const value = data[condition];
-      const isFalsy = !value || (Array.isArray(value) && value.length === 0);
-      return isFalsy ? content : "";
-    },
-  );
-
-  // Handle nested property access like {{po_items.length}}
-
-  result = result.replace(
-    /{{([^}]+\.([^}]+))}}/g,
-
-    (match, fullExpression, property) => {
-      const parts = fullExpression.split(".");
-
-      let value = data;
-
-      for (const part of parts) {
-        if (value && typeof value === "object" && part in value) {
-          value = value[part];
-        } else {
-          return match; // Return original if not found
-        }
-      }
-
-      return value !== undefined && value !== null ? String(value) : "";
-    },
-  );
-
-  // Handle simple placeholders
-
-  Object.keys(data).forEach((key) => {
-    if (key === "po_items") return; // Skip arrays, handled above
-
-    let value = data[key] ?? "";
-
-    // Format date fields
-
-    if (key === "created_at" && value) {
-      const date = new Date(value);
-
-      if (!isNaN(date.getTime())) {
-        value = date.toLocaleDateString("en-US", {
-          year: "numeric",
-
-          month: "2-digit",
-
-          day: "2-digit",
-        });
-      }
-    }
-
-    const placeholder = new RegExp(`{{${key}}}`, "g");
-
-    result = result.replace(placeholder, value);
-  });
-
-  return result;
-}
-
-// Read-only input style for preview
-
-const readonlyCls =
-  "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
+// Editable input styles for live preview
+const editableInputCls =
+  "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+const editableInputCenterCls =
+  "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-center whitespace-pre-wrap break-words resize-none overflow-hidden";
+const editableInputRightCls =
+  "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-right whitespace-pre-wrap break-words resize-none overflow-hidden";
 
 // JSX-to-HTML conversion functions for PDF generation
 
@@ -213,33 +41,16 @@ function escapeHtml(value: string) {
 }
 
 function buildIARHtml(data: any): string {
-  const items = data.po_items || [];
-  const missingItems = data.missing_units_items || [];
+  // Use iar_po_items if available (editable PO items), otherwise fall back to po_items
+  const items = data.iar_po_items || data.po_items || [];
 
   // Build item rows
   let itemRows = "";
 
-  // Add regular items
+  // Add regular items (from iar_po_items or po_items)
   items.forEach((item: any) => {
     const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unit_price || 0);
-    const amount = quantity * unitPrice;
-
-    itemRows += `
-      <tr>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:2px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
-        <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
-        <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
-      </tr>`;
-  });
-
-  // Add missing items
-  missingItems.forEach((item: any) => {
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unit_price || 0);
+    const unitPrice = Number(item.unit_cost || item.unit_price || 0);
     const amount = quantity * unitPrice;
 
     itemRows += `
@@ -254,7 +65,7 @@ function buildIARHtml(data: any): string {
   });
 
   // Fill empty rows to maintain minimum height
-  const emptyRows = Math.max(0, 15 - items.length - missingItems.length);
+  const emptyRows = Math.max(0, 15 - items.length);
   for (let i = 0; i < emptyRows; i++) {
     itemRows += `
       <tr style="height:24px;">
@@ -277,7 +88,7 @@ function buildIARHtml(data: any): string {
     @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; color: #000; }
+    body { font-family: Times New Roman, serif; color: #000; }
     table { width: 100%; border-collapse: collapse; }
     .center { text-align: center; }
     .right { text-align: right; }
@@ -443,12 +254,12 @@ function buildLOAHtml(data: any): string {
     @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; color: #000; }
+    body { font-family: Times New Roman, serif; color: #000; }
   </style>
 </head>
 <body>
   <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 64px 80px;">
-    <div style="color: #000; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.2; letter-spacing: 0.5px;">
+    <div style="color: #000; font-family: Times New Roman, serif; font-size: 11px; line-height: 1.2; letter-spacing: 0.5px;">
       <!-- Header Section -->
       <div style="position: relative; margin-bottom: 40px;">
         <!-- DAR Logo - Absolute Position -->
@@ -457,16 +268,16 @@ function buildLOAHtml(data: any): string {
         </div>
         <!-- Office Details - With left padding for logo -->
         <div style="text-align: center; padding-left: 64px;">
-          <div style="font-size: 11px; margin-bottom: 4px; font-family: Arial, sans-serif;">
+          <div style="font-size: 11px; margin-bottom: 4px; font-family: Times New Roman, serif;">
             Republic of the Philippines
           </div>
-          <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: Arial, sans-serif;">
+          <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: Times New Roman, serif;">
             DEPARTMENT OF AGRARIAN REFORM
           </div>
-          <div style="font-size: 10px; margin-bottom: 2px; font-family: Arial, sans-serif;">
+          <div style="font-size: 10px; margin-bottom: 2px; font-family: Times New Roman, serif;">
             Camarines Sur Provincial Office
           </div>
-          <div style="font-size: 10px; font-family: Arial, sans-serif;">
+          <div style="font-size: 10px; font-family: Times New Roman, serif;">
             2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY
           </div>
         </div>
@@ -474,7 +285,7 @@ function buildLOAHtml(data: any): string {
 
       <!-- Title -->
       <div style="text-align: center; margin-bottom: 32px; margin-top: 40px;">
-        <div style="font-family: Arial, sans-serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">
+        <div style="font-family: Times New Roman, serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">
           LETTER OF ACCEPTANCE
         </div>
       </div>
@@ -490,10 +301,10 @@ function buildLOAHtml(data: any): string {
       </div>
 
       <!-- Acceptance Text -->
-      <div style="color: #000; font-family: Arial, sans-serif;">
+      <div style="color: #000; font-family: Times New Roman, serif;">
         <!-- Line 1 - indented -->
-        <div style="height: 32px; display: flex; align-items: flex-end; padding-bottom: 4px; font-family: Arial, sans-serif;">
-          <span style="padding-left: 100px; font-family: Arial, sans-serif; word-spacing: 15px;">
+        <div style="height: 32px; display: flex; align-items: flex-end; padding-bottom: 4px; font-family: Times New Roman, serif;">
+          <span style="padding-left: 100px; font-family: Times New Roman, serif; word-spacing: 15px;">
             I/WE hereby certify to have accepted each and every
             articles/services delivered
           </span>
@@ -501,7 +312,7 @@ function buildLOAHtml(data: any): string {
 
         <!-- Line 2 - "rendered by ___" -->
         <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             rendered&nbsp;by&nbsp;
           </span>
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
@@ -511,13 +322,13 @@ function buildLOAHtml(data: any): string {
 
         <!-- Line 3 - "listed in the attached Invoice No. ___ dated" -->
         <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
           </span>
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
             ${escapeHtml(data.invoice_no || "")}
           </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             &nbsp;dated
           </span>
         </div>
@@ -527,7 +338,7 @@ function buildLOAHtml(data: any): string {
           <span style="width: 180px; flex-shrink: 0; border-bottom: 1.5px solid #000;">
             ${escapeHtml(data.invoice_date || "")}
           </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             &nbsp;was/were found to be in accordance with the
             specifications
           </span>
@@ -535,13 +346,13 @@ function buildLOAHtml(data: any): string {
 
         <!-- Line 5 - "stipulated under Order No./Purchase Order No. ___ dated" -->
         <div style="height: 32px; display: flex; align-items: flex-end;">
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;
           </span>
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
             ${escapeHtml(data.po_no || "")}
           </span>
-          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 8px;">
+          <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
             &nbsp;dated
           </span>
         </div>
@@ -557,20 +368,20 @@ function buildLOAHtml(data: any): string {
       <!-- Signature Section - Right Aligned -->
       <div style="display: flex; justify-content: flex-end; margin-top: 100px;">
         <div style="width: 340px; text-align: center;">
-          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: Arial, sans-serif; font-size: 11px;">
+          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: Times New Roman, serif; font-size: 11px;">
             ${escapeHtml(data.accepted_by_name || "")}
           </div>
-          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: Arial, sans-serif; word-spacing: 15px;">
+          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: Times New Roman, serif; word-spacing: 15px;">
             (Printed Name &amp; Signature)
           </div>
 
-          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: Arial, sans-serif; font-weight: 700; font-size: 11px;">
+          <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: Times New Roman, serif; font-weight: 700; font-size: 11px;">
             ${escapeHtml(data.accepted_by_title || "")}
           </div>
-          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 15px;">
+          <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 15px;">
             (Official Title)
           </div>
-          <div style="font-size: 9px; font-family: Arial, sans-serif; word-spacing: 15px;">
+          <div style="font-size: 9px; font-family: Times New Roman, serif; word-spacing: 15px;">
             (Head of Agency/Authorized Representative)
           </div>
         </div>
@@ -578,7 +389,7 @@ function buildLOAHtml(data: any): string {
 
       <!-- Form Reference - Bottom Right -->
       <div style="display: flex; justify-content: flex-end; margin-top: 40px;">
-        <div style="font-size: 9px; font-weight: 700; font-family: Arial, sans-serif;">
+        <div style="font-size: 9px; font-weight: 700; font-family: Times New Roman, serif;">
           DAR CS1-QF-STO-016 REV 00
         </div>
       </div>
@@ -589,8 +400,6 @@ function buildLOAHtml(data: any): string {
 }
 
 function buildDVHtml(data: any): string {
-  // For now, keep the existing DV template approach but convert it to JSX-style HTML generation
-  // This can be enhanced later to match the full JSX approach
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -601,15 +410,101 @@ function buildDVHtml(data: any): string {
     @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; color: #000; }
+    body { font-family: Times New Roman, serif; color: #000; }
+    table { width: 100%; border-collapse: collapse; }
+    .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
+    .field-row { display: flex; margin-bottom: 10px; }
+    .field-label { width: 150px; font-weight: bold; }
+    .field-value { flex: 1; border-bottom: 1px solid #000; }
+    .signature-section { margin-top: 40px; }
+    .signature-box { width: 250px; margin-right: 20px; display: inline-block; }
+    .signature-line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 5px; }
+    .signature-title { font-size: 12px; text-align: center; }
   </style>
 </head>
 <body>
   <div style="padding: 20px;">
-    <h2>Disbursement Voucher</h2>
-    <p>DV document for ${escapeHtml(data.supplier_name || data.supplier || "")}</p>
-    <p>PO No: ${escapeHtml(data.po_no || "")}</p>
-    <!-- Add more DV content as needed -->
+    <div class="header">
+      <h1>DISBURSEMENT VOUCHER</h1>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">DV No.:</div>
+      <div class="field-value">${escapeHtml(data.dv_no || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Payee:</div>
+      <div class="field-value">${escapeHtml(data.payee || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">TIN:</div>
+      <div class="field-value">${escapeHtml(data.payee_tin || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Address:</div>
+      <div class="field-value">${escapeHtml(data.address || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">ORS No.:</div>
+      <div class="field-value">${escapeHtml(data.ors_no || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Fund Cluster:</div>
+      <div class="field-value">${escapeHtml(data.fund_cluster || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Responsibility Center:</div>
+      <div class="field-value">${escapeHtml(data.responsibility_center || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">MFO/PAP:</div>
+      <div class="field-value">${escapeHtml(data.mfo_pap || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Amount Due:</div>
+      <div class="field-value">${escapeHtml(data.amount_due || "")}</div>
+    </div>
+    
+    <div class="field-row">
+      <div class="field-label">Mode of Payment:</div>
+      <div class="field-value">${escapeHtml(data.mode_of_payment || "")}</div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <div style="font-weight: bold; margin-bottom: 5px;">Particulars:</div>
+      <div style="border: 1px solid #ccc; padding: 10px; min-height: 60px;">
+        ${escapeHtml(data.particulars || "")}
+      </div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <div style="font-weight: bold; margin-bottom: 5px;">PO Reference:</div>
+      <div>PO No: ${escapeHtml(data.po_no || "")}</div>
+    </div>
+    
+    <div class="signature-section">
+      <div style="display: flex; justify-content: space-between;">
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-title">Certified By:</div>
+          <div style="text-align: center; font-weight: bold;">${escapeHtml(data.certified_by || "")}</div>
+        </div>
+        
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-title">Approved By:</div>
+          <div style="text-align: center; font-weight: bold;">${escapeHtml(data.approved_by || "")}</div>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>`;
@@ -651,18 +546,18 @@ function downloadPDF(html: string) {
   }
 }
 
-// JSX Preview Components - Live Renderers matching official template layout
-
-function IARPreview({
+function IAREditablePreview({
   delivery,
   iar,
   poData,
+  setIar,
 }: {
   delivery: any;
   iar: any;
   poData: any;
+  setIar: (data: any) => void;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
+  const [zoomLevel, setZoomLevel] = useState(0.85);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
@@ -673,10 +568,29 @@ function IARPreview({
   };
 
   const handleReset = () => {
-    setZoomLevel(0.7);
+    setZoomLevel(0.85);
   };
 
   const scalePercentage = Math.round(zoomLevel * 100);
+
+  // Auto-resize handler for textareas
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = "auto";
+    target.style.height = target.scrollHeight + "px";
+  };
+
+  // Update IAR field
+  const updateIarField = (field: string, value: string) => {
+    setIar({ ...iar, [field]: value });
+  };
+
+  // Update IAR PO item
+  const updateIarPoItem = (index: number, field: string, value: string) => {
+    const updatedItems = [...(iar?.iar_po_items || [])];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    setIar({ ...iar, iar_po_items: updatedItems });
+  };
 
   // Transform poData to have the correct structure
   const transformedPoData = poData
@@ -688,15 +602,11 @@ function IARPreview({
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...iar };
-  mergedData.po_items = transformedPoData.po_items;
+  mergedData.po_items = iar?.iar_po_items || transformedPoData.po_items;
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-  if (iar?.missing_units_items) {
-    mergedData.missing_units_items = iar.missing_units_items;
-  }
 
   const items = mergedData.po_items || [];
-  const missingItems = mergedData.missing_units_items || [];
 
   return (
     <div className="space-y-2">
@@ -743,11 +653,12 @@ function IARPreview({
           }}
         >
           <div
-            className="bg-white p-8"
+            className="bg-white"
             style={{
-              width: "816px",
-              minHeight: "1056px",
+              maxWidth: "800px",
+              minHeight: "1100px",
               margin: "0 auto",
+              padding: "40px 60px",
             }}
           >
             {/* Appendix Header */}
@@ -764,7 +675,7 @@ function IARPreview({
                   fontSize: "14px",
                   fontWeight: 700,
                   letterSpacing: "1px",
-                  fontFamily: "Arial, sans-serif",
+                  fontFamily: "Times New Roman, serif",
                 }}
               >
                 INSPECTION AND ACCEPTANCE REPORT
@@ -774,20 +685,26 @@ function IARPreview({
             {/* Entity Name and Fund Cluster Row */}
             <div
               className="mb-3 flex items-baseline"
-              style={{ fontSize: "10px", fontFamily: "Arial, sans-serif" }}
+              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <span className="font-semibold">Entity Name :</span>
               <span className="flex-1 px-2">
                 DEPARTMENT OF AGRARIAN REFORM-CAM SUR I
               </span>
               <span className="font-semibold">Fund Cluster :</span>
-              <span className="px-2">{mergedData.fund_cluster || ""}</span>
+              <input
+                type="text"
+                value={mergedData.fund_cluster || ""}
+                onChange={(e) => updateIarField("fund_cluster", e.target.value)}
+                className={editableInputCls}
+                style={{ width: "60px", fontSize: "9px" }}
+              />
             </div>
 
             {/* Main Info Box */}
             <div
               className="border-2 border-black"
-              style={{ fontSize: "10px", fontFamily: "Arial, sans-serif" }}
+              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <div className="grid grid-cols-2">
                 {/* Left Section */}
@@ -826,21 +743,49 @@ function IARPreview({
                 <div className="p-2 space-y-1">
                   <div>
                     <span className="font-semibold">IAR No. :</span>
-                    <span className="ml-2">{mergedData.iar_no || ""}</span>
+                    <input
+                      type="text"
+                      value={mergedData.iar_no || ""}
+                      onChange={(e) => updateIarField("iar_no", e.target.value)}
+                      className={editableInputCls}
+                      style={{ width: "100px", fontSize: "9px" }}
+                    />
                   </div>
                   <div>
                     <span className="font-semibold">Date :</span>
-                    <span className="ml-2">{mergedData.iar_date || ""}</span>
+                    <input
+                      type="text"
+                      value={mergedData.iar_date || ""}
+                      onChange={(e) =>
+                        updateIarField("iar_date", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{ width: "100px", fontSize: "9px" }}
+                    />
                   </div>
                   <div>
                     <span className="font-semibold">Invoice No. :</span>
-                    <span className="ml-2">{mergedData.invoice_no || ""}</span>
+                    <input
+                      type="text"
+                      value={mergedData.invoice_no || ""}
+                      onChange={(e) =>
+                        updateIarField("invoice_no", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{ width: "100px", fontSize: "9px" }}
+                    />
                   </div>
                   <div>
                     <span className="font-semibold">Date :</span>
-                    <span className="ml-2">
-                      {mergedData.invoice_date || ""}
-                    </span>
+                    <input
+                      type="text"
+                      value={mergedData.invoice_date || ""}
+                      onChange={(e) =>
+                        updateIarField("invoice_date", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{ width: "100px", fontSize: "9px" }}
+                    />
                   </div>
                 </div>
               </div>
@@ -850,7 +795,10 @@ function IARPreview({
             <div>
               <table
                 className="w-full border-collapse border-2 border-black"
-                style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
+                style={{
+                  fontSize: "9px",
+                  fontFamily: "Times New Roman, serif",
+                }}
               >
                 <thead>
                   <tr>
@@ -897,62 +845,103 @@ function IARPreview({
                   {items.map((item: any, i: number) => (
                     <tr key={i}>
                       <td className="border-2 border-black p-1 text-center">
-                        {item.stock_no || ""}
+                        <textarea
+                          value={item.stock_no || ""}
+                          onChange={(e) =>
+                            updateIarPoItem(i, "stock_no", e.target.value)
+                          }
+                          onInput={autoResize}
+                          className={editableInputCenterCls}
+                          style={{
+                            width: "95%",
+                            minHeight: "16px",
+                            fontSize: "9px",
+                          }}
+                          rows={1}
+                        />
                       </td>
                       <td className="border-2 border-black p-1 text-center">
-                        {item.unit || ""}
+                        <textarea
+                          value={item.unit || ""}
+                          onChange={(e) =>
+                            updateIarPoItem(i, "unit", e.target.value)
+                          }
+                          onInput={autoResize}
+                          className={editableInputCenterCls}
+                          style={{
+                            width: "95%",
+                            minHeight: "16px",
+                            fontSize: "9px",
+                          }}
+                          rows={1}
+                        />
                       </td>
-                      <td className="border-2 border-black p-1 px-2" style={{ overflow: "hidden", wordWrap: "break-word", whiteSpace: "normal" }}>
-                        {item.description || ""}
+                      <td
+                        className="border-2 border-black p-1 px-2"
+                        style={{
+                          overflow: "hidden",
+                          wordWrap: "break-word",
+                          whiteSpace: "normal",
+                        }}
+                      >
+                        <textarea
+                          value={item.description || ""}
+                          onChange={(e) =>
+                            updateIarPoItem(i, "description", e.target.value)
+                          }
+                          onInput={autoResize}
+                          className={editableInputCls}
+                          style={{
+                            width: "95%",
+                            minHeight: "16px",
+                            fontSize: "9px",
+                          }}
+                          rows={1}
+                        />
                       </td>
                       <td className="border-2 border-black p-1 text-center">
-                        {item.quantity || ""}
+                        <textarea
+                          value={item.quantity || ""}
+                          onChange={(e) =>
+                            updateIarPoItem(i, "quantity", e.target.value)
+                          }
+                          onInput={autoResize}
+                          className={editableInputCenterCls}
+                          style={{
+                            width: "95%",
+                            minHeight: "16px",
+                            fontSize: "9px",
+                          }}
+                          rows={1}
+                        />
                       </td>
                       <td className="border-2 border-black p-1 text-right pr-2">
-                        {item.unit_price || ""}
+                        <textarea
+                          value={item.unit_cost || ""}
+                          onChange={(e) =>
+                            updateIarPoItem(i, "unit_cost", e.target.value)
+                          }
+                          onInput={autoResize}
+                          className={editableInputRightCls}
+                          style={{
+                            width: "95%",
+                            minHeight: "16px",
+                            fontSize: "9px",
+                          }}
+                          rows={1}
+                        />
                       </td>
                       <td className="border-2 border-black p-1 text-right pr-2">
-                        {item.quantity && item.unit_price
+                        {item.quantity && item.unit_cost
                           ? (
-                              Number(item.quantity) * Number(item.unit_price)
+                              Number(item.quantity) * Number(item.unit_cost)
                             ).toFixed(2)
                           : ""}
                       </td>
                     </tr>
                   ))}
-                  {missingItems.length > 0 &&
-                    missingItems.map((item: any, i: number) => (
-                      <tr key={`missing-${i}`}>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.stock_no || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.unit || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 px-2" style={{ overflow: "hidden", wordWrap: "break-word", whiteSpace: "normal" }}>
-                          {item.description || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.quantity || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-right pr-2">
-                          {item.unit_price || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-right pr-2">
-                          {item.quantity && item.unit_price
-                            ? (
-                                Number(item.quantity) * Number(item.unit_price)
-                              ).toFixed(2)
-                            : ""}
-                        </td>
-                      </tr>
-                    ))}
                   {/* Fill empty rows */}
-                  {[
-                    ...Array(
-                      Math.max(0, 15 - items.length - missingItems.length),
-                    ),
-                  ].map((_, i) => (
+                  {[...Array(Math.max(0, 15 - items.length))].map((_, i) => (
                     <tr key={`empty-${i}`} style={{ height: "24px" }}>
                       <td className="border-2 border-black p-1">&nbsp;</td>
                       <td className="border-2 border-black p-1">&nbsp;</td>
@@ -969,7 +958,7 @@ function IARPreview({
             {/* Inspection and Acceptance Section */}
             <div
               className="border border-black"
-              style={{ fontSize: "10px", fontFamily: "Arial, sans-serif" }}
+              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <div className="flex" style={{ minHeight: "200px" }}>
                 {/* Inspection Column */}
@@ -978,7 +967,7 @@ function IARPreview({
                     className="border-b border-black p-2 text-center font-bold"
                     style={{
                       fontStyle: "italic",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     INSPECTION
@@ -989,18 +978,27 @@ function IARPreview({
                   >
                     <div className="mb-3">
                       <span className="font-semibold">Date Inspected :</span>
-                      <span
-                        className="border-b border-black inline-block ml-2"
-                        style={{ minWidth: "150px" }}
-                      >
-                        {mergedData.inspected_at || ""}
-                      </span>
+                      <input
+                        type="text"
+                        value={mergedData.inspected_at || ""}
+                        onChange={(e) =>
+                          updateIarField("inspected_at", e.target.value)
+                        }
+                        className={editableInputCls}
+                        style={{ minWidth: "150px", fontSize: "9px" }}
+                      />
                     </div>
 
                     <div className="mb-4 flex items-start gap-2">
                       <div
-                        className="border border-black"
+                        className="border border-black cursor-pointer"
                         style={{ width: "18px", height: "18px", flexShrink: 0 }}
+                        onClick={() =>
+                          updateIarField(
+                            "inspection_verified",
+                            !mergedData.inspection_verified,
+                          )
+                        }
                       >
                         {mergedData.inspection_verified && (
                           <div
@@ -1014,7 +1012,7 @@ function IARPreview({
                       <span
                         style={{
                           fontSize: "9px",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
                         }}
                       >
                         Inspected, verified and found in order as to quantity
@@ -1026,19 +1024,26 @@ function IARPreview({
                       className="absolute bottom-0 left-0 right-0 text-center"
                       style={{ paddingBottom: "12px" }}
                     >
-                      <div
+                      <input
+                        type="text"
+                        value={mergedData.inspection_officer || ""}
+                        onChange={(e) =>
+                          updateIarField("inspection_officer", e.target.value)
+                        }
+                        className={editableInputCls}
                         style={{
                           fontWeight: 700,
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
+                          width: "80%",
+                          fontSize: "9px",
+                          borderBottom: "1px solid black",
                         }}
-                        className="border-b border-black mx-4 mb-1 pt-6"
-                      >
-                        {mergedData.inspection_officer || ""}
-                      </div>
+                        placeholder="Inspection Officer"
+                      />
                       <div
                         style={{
                           fontSize: "9px",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
                         }}
                       >
                         Inspection Officer/Inspection Committee
@@ -1051,8 +1056,10 @@ function IARPreview({
                 <div className="flex-1 h-full">
                   <div
                     className="border-b border-black p-2 text-center font-bold"
-                    style={{ fontStyle: "italic",                           fontFamily: "Arial, sans-serif",
- }}
+                    style={{
+                      fontStyle: "italic",
+                      fontFamily: "Times New Roman, serif",
+                    }}
                   >
                     ACCEPTANCE
                   </div>
@@ -1062,18 +1069,22 @@ function IARPreview({
                   >
                     <div className="mb-3">
                       <span className="font-semibold">Date Received :</span>
-                      <span
-                        className="border-b border-black inline-block ml-2"
-                        style={{ minWidth: "150px" }}
-                      >
-                        {mergedData.received_at || ""}
-                      </span>
+                      <input
+                        type="text"
+                        value={mergedData.received_at || ""}
+                        onChange={(e) =>
+                          updateIarField("received_at", e.target.value)
+                        }
+                        className={editableInputCls}
+                        style={{ minWidth: "150px", fontSize: "9px" }}
+                      />
                     </div>
 
                     <div className="mb-2 flex items-center gap-2">
                       <div
-                        className="border border-black"
+                        className="border border-black cursor-pointer"
                         style={{ width: "18px", height: "18px", flexShrink: 0 }}
+                        onClick={() => updateIarField("items_complete", true)}
                       >
                         {mergedData.items_complete !== false && (
                           <div
@@ -1087,7 +1098,7 @@ function IARPreview({
                       <span
                         style={{
                           fontSize: "9px",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
                         }}
                       >
                         Complete
@@ -1096,8 +1107,9 @@ function IARPreview({
 
                     <div className="mb-4 flex items-center gap-2">
                       <div
-                        className="border border-black"
+                        className="border border-black cursor-pointer"
                         style={{ width: "18px", height: "18px", flexShrink: 0 }}
+                        onClick={() => updateIarField("items_complete", false)}
                       >
                         {mergedData.items_complete === false && (
                           <div
@@ -1111,7 +1123,7 @@ function IARPreview({
                       <span
                         style={{
                           fontSize: "9px",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
                         }}
                       >
                         Partial (pls. specify quantity)
@@ -1122,19 +1134,26 @@ function IARPreview({
                       className="absolute bottom-0 left-0 right-0 text-center"
                       style={{ paddingBottom: "12px" }}
                     >
-                      <div
+                      <input
+                        type="text"
+                        value={mergedData.supply_officer || ""}
+                        onChange={(e) =>
+                          updateIarField("supply_officer", e.target.value)
+                        }
+                        className={editableInputCls}
                         style={{
                           fontWeight: 700,
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
+                          width: "80%",
+                          fontSize: "9px",
+                          borderBottom: "1px solid black",
                         }}
-                        className="border-b border-black mx-4 mb-1 pt-6"
-                      >
-                        {mergedData.supply_officer || ""}
-                      </div>
+                        placeholder="Supply Officer"
+                      />
                       <div
                         style={{
                           fontSize: "9px",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Times New Roman, serif",
                         }}
                       >
                         ARPT/SUPPLY OFFICER
@@ -1151,16 +1170,18 @@ function IARPreview({
   );
 }
 
-function LOAPreview({
+function LOAEditablePreview({
   delivery,
   loa,
   poData,
+  setLoa,
 }: {
   delivery: any;
   loa: any;
   poData: any;
+  setLoa: (data: any) => void;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
+  const [zoomLevel, setZoomLevel] = useState(0.85);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
@@ -1171,10 +1192,22 @@ function LOAPreview({
   };
 
   const handleReset = () => {
-    setZoomLevel(0.7);
+    setZoomLevel(0.85);
   };
 
   const scalePercentage = Math.round(zoomLevel * 100);
+
+  // Auto-resize handler for textareas
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = "auto";
+    target.style.height = target.scrollHeight + "px";
+  };
+
+  // Update LOA field
+  const updateLoaField = (field: string, value: string) => {
+    setLoa({ ...loa, [field]: value });
+  };
 
   // Transform poData to have the correct structure
   const transformedPoData = poData
@@ -1239,15 +1272,15 @@ function LOAPreview({
           <div
             className="bg-white"
             style={{
-              maxWidth: "850px",
+              maxWidth: "800px",
               minHeight: "1100px",
               margin: "0 auto",
-              padding: "64px 80px",
+              padding: "40px 60px",
             }}
           >
             <div
               className="text-black font-sans text-[11px] leading-tight tracking-tight"
-              style={{ fontFamily: "Arial, sans-serif" }}
+              style={{ fontFamily: "Times New Roman, serif" }}
             >
               {/* Header Section */}
               <div className="relative mb-10">
@@ -1265,7 +1298,7 @@ function LOAPreview({
                     style={{
                       fontSize: "11px",
                       marginBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Republic of the Philippines
@@ -1276,7 +1309,7 @@ function LOAPreview({
                       fontWeight: 700,
                       letterSpacing: "0.5px",
                       marginBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     DEPARTMENT OF AGRARIAN REFORM
@@ -1285,7 +1318,7 @@ function LOAPreview({
                     style={{
                       fontSize: "10px",
                       marginBottom: "2px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Camarines Sur Provincial Office
@@ -1293,7 +1326,7 @@ function LOAPreview({
                   <div
                     style={{
                       fontSize: "10px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY
@@ -1308,11 +1341,11 @@ function LOAPreview({
               <div className="text-center mb-8 mt-10">
                 <div
                   style={{
-                    fontFamily: "Arial, sans-serif", // Matches the template's clean terminals
+                    fontFamily: "Times New Roman, serif",
                     fontWeight: 700,
                     fontSize: "14px",
                     marginTop: "28px",
-                    textTransform: "uppercase", // Ensures consistent casing
+                    textTransform: "uppercase",
                   }}
                 >
                   LETTER OF ACCEPTANCE
@@ -1321,16 +1354,21 @@ function LOAPreview({
               {/* Date Field - Right Aligned */}
               <div className="flex justify-end mb-8">
                 <div style={{ width: "280px", textAlign: "center" }}>
-                  <div
+                  <input
+                    type="text"
+                    value={mergedData.accepted_at || ""}
+                    onChange={(e) =>
+                      updateLoaField("accepted_at", e.target.value)
+                    }
+                    className={editableInputCls}
                     style={{
                       borderBottom: "1.5px solid #000",
                       minHeight: "22px",
                       paddingBottom: "2px",
                       textAlign: "center",
+                      fontSize: "9px",
                     }}
-                  >
-                    {mergedData.accepted_at || ""}
-                  </div>
+                  />
                   <div style={{ fontSize: "9px", marginTop: "4px" }}>Date</div>
                 </div>
               </div>
@@ -1338,7 +1376,7 @@ function LOAPreview({
               {/* Acceptance Text */}
               <div
                 className="text-black"
-                style={{ fontFamily: "Arial, sans-serif" }}
+                style={{ fontFamily: "Times New Roman, serif" }}
               >
                 {/* Line 1 - indented */}
                 <div
@@ -1347,15 +1385,14 @@ function LOAPreview({
                     display: "flex",
                     alignItems: "flex-end",
                     paddingBottom: "4px",
-                    fontFamily: "Arial, sans-serif",
+                    fontFamily: "Times New Roman, serif",
                   }}
                 >
                   <span
                     style={{
-                      paddingLeft: "100px",
-
-                      fontFamily: "Arial, sans-serif",
-                      wordSpacing: "15px",
+                      paddingLeft: "50px",
+                      fontFamily: "Times New Roman, serif",
+                      wordSpacing: "10px",
                     }}
                   >
                     I/WE hereby certify to have accepted each and every
@@ -1375,7 +1412,7 @@ function LOAPreview({
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
@@ -1398,20 +1435,30 @@ function LOAPreview({
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
                     listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
                   </span>
-                  <span style={{ flex: 1, borderBottom: "1.5px solid #000" }}>
-                    {mergedData.invoice_no || ""}
-                  </span>
+                  <input
+                    type="text"
+                    value={mergedData.invoice_no || ""}
+                    onChange={(e) =>
+                      updateLoaField("invoice_no", e.target.value)
+                    }
+                    className={editableInputCls}
+                    style={{
+                      flex: 1,
+                      borderBottom: "1.5px solid #000",
+                      fontSize: "9px",
+                    }}
+                  />
                   <span
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
@@ -1427,20 +1474,25 @@ function LOAPreview({
                     alignItems: "flex-end",
                   }}
                 >
-                  <span
+                  <input
+                    type="text"
+                    value={mergedData.invoice_date || ""}
+                    onChange={(e) =>
+                      updateLoaField("invoice_date", e.target.value)
+                    }
+                    className={editableInputCls}
                     style={{
                       width: "180px",
                       flexShrink: 0,
                       borderBottom: "1.5px solid #000",
+                      fontSize: "9px",
                     }}
-                  >
-                    {mergedData.invoice_date || ""}
-                  </span>
+                  />
                   <span
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
@@ -1461,7 +1513,7 @@ function LOAPreview({
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
@@ -1474,7 +1526,7 @@ function LOAPreview({
                     style={{
                       whiteSpace: "nowrap",
                       paddingBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       wordSpacing: "8px",
                     }}
                   >
@@ -1490,60 +1542,76 @@ function LOAPreview({
                     alignItems: "flex-end",
                   }}
                 >
-                  <span
-                    style={{ width: "180px", borderBottom: "1.5px solid #000" }}
-                  >
-                    {mergedData.po_date || ""}
-                  </span>
+                  <input
+                    type="text"
+                    value={mergedData.po_date || ""}
+                    onChange={(e) => updateLoaField("po_date", e.target.value)}
+                    className={editableInputCls}
+                    style={{
+                      width: "180px",
+                      borderBottom: "1.5px solid #000",
+                      fontSize: "9px",
+                    }}
+                  />
                 </div>
               </div>
 
               {/* Signature Section - Right Aligned */}
               <div className="flex justify-end" style={{ marginTop: "100px" }}>
                 <div style={{ width: "340px", textAlign: "center" }}>
-                  <div
+                  <input
+                    type="text"
+                    value={mergedData.accepted_by_name || ""}
+                    onChange={(e) =>
+                      updateLoaField("accepted_by_name", e.target.value)
+                    }
+                    className={editableInputCls}
                     style={{
                       borderBottom: "1.5px solid #000",
                       minHeight: "22px",
                       paddingBottom: "2px",
                       fontWeight: 700,
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       fontSize: "11px",
+                      width: "100%",
                     }}
-                  >
-                    {mergedData.accepted_by_name || ""}
-                  </div>
+                    placeholder="Printed Name & Signature"
+                  />
                   <div
                     style={{
                       fontSize: "9px",
                       marginTop: "4px",
                       marginBottom: "24px",
-                      fontFamily: "Arial, sans-serif",
-                      wordSpacing: "15px",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     (Printed Name &amp; Signature)
                   </div>
 
-                  <div
+                  <input
+                    type="text"
+                    value={mergedData.accepted_by_title || ""}
+                    onChange={(e) =>
+                      updateLoaField("accepted_by_title", e.target.value)
+                    }
+                    className={editableInputCls}
                     style={{
                       borderBottom: "1.5px solid #000",
                       minHeight: "22px",
                       paddingBottom: "2px",
-                      fontFamily: "Arial, sans-serif",
+                      fontFamily: "Times New Roman, serif",
                       fontWeight: 700,
                       fontSize: "11px",
+                      width: "100%",
                     }}
-                  >
-                    {mergedData.accepted_by_title || ""}
-                  </div>
+                    placeholder="Official Title"
+                  />
                   <div
                     style={{
                       fontSize: "9px",
                       marginTop: "4px",
                       marginBottom: "4px",
-                      fontFamily: "Arial, sans-serif",
-                      wordSpacing: "15px",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     (Official Title)
@@ -1551,8 +1619,7 @@ function LOAPreview({
                   <div
                     style={{
                       fontSize: "9px",
-                      fontFamily: "Arial, sans-serif",
-                      wordSpacing: "15px",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     (Head of Agency/Authorized Representative)
@@ -1566,7 +1633,7 @@ function LOAPreview({
                   style={{
                     fontSize: "9px",
                     fontWeight: 700,
-                    fontFamily: "Arial, sans-serif",
+                    fontFamily: "Times New Roman, serif",
                   }}
                 >
                   DAR CS1-QF-STO-016 REV 00
@@ -1580,16 +1647,18 @@ function LOAPreview({
   );
 }
 
-function DVPreview({
+function DVEditablePreview({
   delivery,
   dv,
   poData,
+  setDv,
 }: {
   delivery: any;
   dv: any;
   poData: any;
+  setDv: (data: any) => void;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
+  const [zoomLevel, setZoomLevel] = useState(0.85);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
@@ -1600,23 +1669,31 @@ function DVPreview({
   };
 
   const handleReset = () => {
-    setZoomLevel(0.7);
+    setZoomLevel(0.85);
   };
 
   const scalePercentage = Math.round(zoomLevel * 100);
+
+  // Update DV field
+  const updateDvField = (field: string, value: string) => {
+    setDv({ ...dv, [field]: value });
+  };
 
   // Transform poData to have the correct structure
   const transformedPoData = poData
     ? {
         ...poData,
         po_items: poData.purchase_order_items || [],
+        po_date: poData.date,
       }
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...dv };
   mergedData.po_items = transformedPoData.po_items;
 
-  const items = mergedData.po_items || [];
+  // Ensure DV-specific fields are available in mergedData
+  if (!mergedData.dv_no && dv?.dv_no) mergedData.dv_no = dv.dv_no;
+  if (!mergedData.dv_date && dv?.dv_date) mergedData.dv_date = dv.dv_date;
 
   return (
     <div className="space-y-2">
@@ -1653,7 +1730,7 @@ function DVPreview({
         </span>
       </div>
 
-      {/* Live JSX Preview Container */}
+      {/* Preview Container */}
       <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
         <div
           style={{
@@ -1663,224 +1740,1125 @@ function DVPreview({
           }}
         >
           <div
-            className="bg-white p-12"
-            style={{ maxWidth: "850px", minHeight: "1100px", margin: "0 auto" }}
+            className="bg-white p-4"
+            style={{
+              width: "600px",
+              minHeight: "1056px",
+              margin: "0 auto",
+              fontFamily: "Times New Roman, serif",
+              fontSize: "9px",
+              color: "#000",
+            }}
           >
+            {/* Appendix */}
             <div
-              className="text-black"
-              style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}
+              style={{
+                textAlign: "right",
+                fontStyle: "italic",
+                marginBottom: "2px",
+              }}
             >
-              {/* Top Section */}
-              <div className="grid grid-cols-[1fr_3fr_1fr] items-start mb-2">
-                <div />
+              Appendix 32
+            </div>
 
-                {/* Center Logos and Text */}
-                <div className="flex items-start justify-center gap-3">
-                  <img
-                    src="/temp_pic/image_1195822096_0.jpg"
-                    alt="Republic of the Philippines emblem"
-                    className="h-12 w-12 object-contain"
-                  />
-                  <img
-                    src="/temp_pic/image_1195822096_1.jpg"
-                    alt="DAR logo"
-                    className="h-12 w-12 object-contain"
-                  />
-                  <div
-                    className="pt-1 text-center"
-                    style={{ marginLeft: "2px", marginRight: "2px" }}
+            {/* HEADER: Logo | Title | Fund Cluster/Date/DV No */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "90px",
+                      padding: "4px",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <img
+                      src="/temp_pic/image_1195822096_1.jpg"
+                      alt="DAR Logo"
+                      style={{
+                        width: "72px",
+                        height: "44px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "4px",
+                      verticalAlign: "top",
+                    }}
                   >
                     <div
                       style={{
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        letterSpacing: "0.01em",
-                      }}
-                    >
-                      REPUBLIC OF THE PHILIPPINES
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        letterSpacing: "0.01em",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        fontFamily: "Times New Roman, serif",
                       }}
                     >
                       DEPARTMENT OF AGRARIAN REFORM
                     </div>
-                    <div style={{ fontSize: "8px", fontWeight: 400 }}>
-                      Tunay na Pagbabago sa Repormang Agraryo
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        textAlign: "center",
+                        marginBottom: "4px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
+                      Camarines Sur Provincial Office
                     </div>
-                  </div>
-                  <img
-                    src="/temp_pic/image_1195822096_2.jpg"
-                    alt="ISO certified"
-                    className="ml-1 h-12 w-12 rounded-md object-contain"
-                  />
-                  <div className="w-12 h-12 ml-3" aria-hidden="true" />
-                </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        letterSpacing: "1px",
+                        paddingTop: "4px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
+                      DISBURSEMENT VOUCHER
+                    </div>
+                  </td>
+                  <td
+                    style={{ width: "160px", padding: 0, verticalAlign: "top" }}
+                  >
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        height: "100%",
+                      }}
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            style={{
+                              borderBottom: "1px solid #000",
+                              padding: "3px 4px",
+                            }}
+                          >
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              Fund:
+                            </b>{" "}
+                            <input
+                              type="text"
+                              value={mergedData.fund_cluster || ""}
+                              onChange={(e) =>
+                                updateDvField("fund_cluster", e.target.value)
+                              }
+                              className={editableInputCls}
+                              style={{
+                                width: "60px",
+                                fontSize: "9px",
+                                fontFamily: "Times New Roman, serif",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style={{
+                              borderBottom: "1px solid #000",
+                              padding: "3px 4px",
+                            }}
+                          >
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              Date:
+                            </b>{" "}
+                            <input
+                              type="text"
+                              value={mergedData.dv_date || ""}
+                              onChange={(e) =>
+                                updateDvField("dv_date", e.target.value)
+                              }
+                              className={editableInputCls}
+                              style={{
+                                width: "80px",
+                                fontSize: "9px",
+                                fontFamily: "Times New Roman, serif",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: "3px 4px" }}>
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              DV No.:
+                            </b>{" "}
+                            <input
+                              type="text"
+                              value={mergedData.dv_no || ""}
+                              onChange={(e) =>
+                                updateDvField("dv_no", e.target.value)
+                              }
+                              className={editableInputCls}
+                              style={{
+                                width: "100px",
+                                fontSize: "9px",
+                                fontFamily: "Times New Roman, serif",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-                <div className="text-right">
-                  <div style={{ fontSize: "9px", fontWeight: 700 }}>
-                    Appendix 64
-                  </div>
-                </div>
-              </div>
+            {/* MODE OF PAYMENT */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "50px",
+                      borderRight: "1px solid #000",
+                      padding: "3px 6px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Mode of <br /> payment
+                    </b>
+                  </td>
+                  <td
+                    style={{
+                      padding: "3px 6px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", gap: "35px", marginTop: "3px" }}
+                    >
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mergedData.mode_of_payment === "MDS Check"}
+                          onChange={(e) =>
+                            updateDvField(
+                              "mode_of_payment",
+                              e.target.checked ? "MDS Check" : "",
+                            )
+                          }
+                          style={{ margin: 0 }}
+                        />
+                        MDS Check
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            mergedData.mode_of_payment === "Commercial Check"
+                          }
+                          onChange={(e) =>
+                            updateDvField(
+                              "mode_of_payment",
+                              e.target.checked ? "Commercial Check" : "",
+                            )
+                          }
+                          style={{ margin: 0 }}
+                        />
+                        Commercial Check
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mergedData.mode_of_payment === "ADA"}
+                          onChange={(e) =>
+                            updateDvField(
+                              "mode_of_payment",
+                              e.target.checked ? "ADA" : "",
+                            )
+                          }
+                          style={{ margin: 0 }}
+                        />
+                        ADA
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mergedData.mode_of_payment === "Others"}
+                          onChange={(e) =>
+                            updateDvField(
+                              "mode_of_payment",
+                              e.target.checked ? "Others" : "",
+                            )
+                          }
+                          style={{ margin: 0 }}
+                        />
+                        Others (Please specify)
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Title */}
-              <div className="text-center mb-6">
-                <div className="font-bold text-[12px] uppercase">
-                  DISBURSEMENT VOUCHER
-                </div>
-              </div>
+            {/* PAYEE / TIN / ORS / ADDRESS */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "50px",
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Payee
+                    </b>
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={
+                        mergedData.payee || transformedPoData.supplier || ""
+                      }
+                      onChange={(e) => updateDvField("payee", e.target.value)}
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
+                  </td>
+                  <td
+                    style={{
+                      width: "140px",
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Tin/Employee No.
+                    </b>
+                  </td>
+                  <td style={{ width: "120px", padding: "3px 4px" }}>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      ORS/BURS No.
+                    </b>
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Address
+                    </b>
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={
+                        mergedData.address || transformedPoData.address || ""
+                      }
+                      onChange={(e) => updateDvField("address", e.target.value)}
+                      className={editableInputCls}
+                      style={{ width: "95%", fontSize: "9px" }}
+                    />
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={
+                        mergedData.payee_tin || transformedPoData.tin || ""
+                      }
+                      onChange={(e) =>
+                        updateDvField("payee_tin", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                      placeholder="VAT 766-956-523-000"
+                    />
+                  </td>
+                  <td
+                    style={{
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={mergedData.ors_no || ""}
+                      onChange={(e) => updateDvField("ors_no", e.target.value)}
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Meta Information */}
-              <div className="grid grid-cols-2 gap-4 mb-6 text-[10px]">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold">Entity Name:</span>
-                    <span>DEPARTMENT OF AGRARIAN REFORM-CAM SUR 1</span>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold">Payee:</span>
-                    <span className="border-b border-black flex-1 px-1">
-                      {mergedData.supplier_name || mergedData.supplier || ""}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold">Address:</span>
-                    <span className="border-b border-black flex-1 px-1">
-                      {mergedData.supplier_address || ""}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold">DV No.:</span>
-                    <span className="border-b border-black flex-1 px-1">
-                      {mergedData.dv_no || ""}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold">Date:</span>
-                    <span className="border-b border-black flex-1 px-1">
-                      {mergedData.dv_date || ""}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">Mode of Payment:</span>
-                    <span className="border-b border-black flex-1 px-1">
-                      {mergedData.payment_mode || ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {/* PARTICULARS TABLE */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Particulars
+                  </th>
+                  <th
+                    style={{
+                      width: "130px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Responsibility Center
+                  </th>
+                  <th
+                    style={{
+                      width: "90px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    MFO/PAP
+                  </th>
+                  <th
+                    style={{
+                      width: "100px",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ height: "120px" }}>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <textarea
+                      value={mergedData.particulars || ""}
+                      onChange={(e) =>
+                        updateDvField("particulars", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        minHeight: "110px",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                      rows={6}
+                    />
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={mergedData.responsibility_center || ""}
+                      onChange={(e) =>
+                        updateDvField("responsibility_center", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={mergedData.mfo_pap || ""}
+                      onChange={(e) => updateDvField("mfo_pap", e.target.value)}
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                    <input
+                      type="text"
+                      value={mergedData.amount_due || ""}
+                      onChange={(e) =>
+                        updateDvField("amount_due", e.target.value)
+                      }
+                      className={editableInputRightCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "9px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
+                  </td>
+                </tr>
+                {[...Array(7)].map((_, i) => (
+                  <tr key={i} style={{ height: "20px" }}>
+                    <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                    <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                    <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                    <td>&nbsp;</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td
+                    colSpan={3}
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      textAlign: "right",
+                      padding: "3px 4px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Amount Due
+                  </td>
+                  <td
+                    style={{
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {mergedData.amount_due || ""}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Items Table */}
-              <div className="mb-6">
-                <table className="w-full border-collapse border border-black text-[9.5px]">
-                  <thead>
-                    <tr>
-                      <th className="border border-black p-1 text-center font-bold">
-                        Responsibility Center
-                      </th>
-                      <th className="border border-black p-1 text-center font-bold">
-                        MFO/PAP
-                      </th>
-                      <th className="border border-black p-1 text-center font-bold">
-                        Account Code
-                      </th>
-                      <th className="border border-black p-1 text-center font-bold">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item: any, i: number) => (
-                      <tr key={i}>
-                        <td className="border border-black p-0.5 text-center">
-                          {mergedData.responsibility_center || ""}
-                        </td>
-                        <td className="border border-black p-0.5 px-1">
-                          {item.description || ""}
-                        </td>
-                        <td className="border border-black p-0.5 text-center">
-                          {item.account_code || ""}
-                        </td>
-                        <td className="border border-black p-0.5 text-center">
-                          {item.quantity && item.unit_price
-                            ? (
-                                Number(item.quantity) * Number(item.unit_price)
-                              ).toFixed(2)
-                            : ""}
-                        </td>
-                      </tr>
+            {/* SECTION A */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      padding: "4px 6px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b>A.</b> Certified: Expenses/Cash Advance necessary, lawful
+                    and incurred under my direct supervision.
+                  </td>
+                </tr>
+                <tr style={{ height: "36px" }}>
+                  <td>&nbsp;</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* SECTION B: Accounting Entry */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{
+                      borderBottom: "1px solid #000",
+                      padding: "3px 6px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b>B.</b> Accounting Entry:
+                  </td>
+                </tr>
+                <tr>
+                  <th
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Account Title
+                  </th>
+                  <th
+                    style={{
+                      width: "110px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    UACS Code
+                  </th>
+                  <th
+                    style={{
+                      width: "80px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Debit
+                  </th>
+                  <th
+                    style={{
+                      width: "80px",
+                      borderBottom: "1px solid #000",
+                      textAlign: "center",
+                      padding: "3px",
+                      fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Credit
+                  </th>
+                </tr>
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i} style={{ height: "20px" }}>
+                    <td
+                      style={{
+                        borderRight: "1px solid #000",
+                        borderBottom: "1px solid #000",
+                      }}
+                    >
+                      &nbsp;
+                    </td>
+                    <td
+                      style={{
+                        borderRight: "1px solid #000",
+                        borderBottom: "1px solid #000",
+                      }}
+                    >
+                      &nbsp;
+                    </td>
+                    <td
+                      style={{
+                        borderRight: "1px solid #000",
+                        borderBottom: "1px solid #000",
+                      }}
+                    >
+                      &nbsp;
+                    </td>
+                    <td style={{ borderBottom: "1px solid #000" }}>&nbsp;</td>
+                  </tr>
+                ))}
+                <tr style={{ height: "20px" }}>
+                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* SECTIONS C & D */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "50%",
+                      borderRight: "1px solid #000",
+                      padding: "4px 6px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold", marginBottom: "4px",                       fontFamily: "Times New Roman, serif",
+ }}>
+                      C. Certified:
+                    </div>
+                    {[
+                      "Cash available",
+                      "Subject to Authority to Debit Account (when applicable)",
+                      "Supporting documents complete and amount claimed proper",
+                    ].map((item) => (
+                      <div
+                        key={item}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "4px",
+                          marginBottom: "3px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: "10px",
+                            height: "10px",
+                            border: "1px solid #000",
+                            flexShrink: 0,
+                            marginTop: "1px",
+                            
+                          }}
+                        ></span>
+                        <span style={{ fontFamily: "Times New Roman, serif" }}>{item}</span>
+                      </div>
                     ))}
-                    {/* Fill empty rows to maintain minimum height */}
-                    {[...Array(Math.max(0, 10 - items.length))].map((_, i) => (
-                      <tr key={`empty-${i}`}>
-                        <td className="border border-black p-0.5 text-center">
-                          &nbsp;
-                        </td>
-                        <td className="border border-black p-0.5 px-1">
-                          &nbsp;
-                        </td>
-                        <td className="border border-black p-0.5 text-center">
-                          &nbsp;
-                        </td>
-                        <td className="border border-black p-0.5 text-center">
-                          &nbsp;
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  </td>
+                  <td
+                    style={{
+                      padding: "4px 6px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>D. Approved for Payment</b>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Total Amount */}
-              <div className="mb-6 text-right">
-                <div className="font-bold text-[11px]">
-                  Total Amount:{" "}
-                  {items
-                    .reduce((sum: number, item: any) => {
-                      const amount =
-                        item.quantity && item.unit_price
-                          ? Number(item.quantity) * Number(item.unit_price)
-                          : 0;
-                      return sum + amount;
-                    }, 0)
-                    .toFixed(2)}
-                </div>
-              </div>
+            {/* SIGNATURES */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "80px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Signature
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                  <td
+                    style={{
+                      width: "80px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Signature
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Printed Name
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      height: "28px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Printed Name
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Position
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Head, Accounting Unit/Authorized Representative
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Position
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Agency Head/Authorized Representative
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Date
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Date
+                  </td>
+                  <td style={{ padding: "3px 4px", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Certification Section */}
-              <div className="grid grid-cols-2 gap-8 mb-6">
-                <div>
-                  <div className="font-bold text-[11px] mb-4">CERTIFIED:</div>
-                  <div className="space-y-2 text-[10px]">
-                    <div className="mt-4">
-                      <span className="border-b border-black block w-full px-1 font-bold">
-                        {mergedData.certified_by || ""}
-                      </span>
-                      <div className="text-[9px]">Budget Officer</div>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <div className="font-bold text-[11px] mb-4">
-                    APPROVED FOR PAYMENT:
-                  </div>
-                  <div className="space-y-2 text-[10px]">
-                    <div className="mt-4">
-                      <span className="border-b border-black block w-full px-1 font-bold">
-                        {mergedData.approved_by || ""}
-                      </span>
-                      <div className="text-[9px]">Agency Head</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* SECTION E: Receipt of Payment */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #000",
+                borderTop: "none",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{
+                      borderBottom: "1px solid #000",
+                      padding: "3px 6px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>E. Receipt of Payment</b>
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      borderLeft: "1px solid #000",
+                      padding: "3px 6px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>JEV No.</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      width: "90px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Check/
+                    <br />
+                    ADA No.
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                  </td>
+                  <td
+                    colSpan={2}
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Bank Name &amp; Account Number:</b>
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      borderLeft: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    Signature
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                  </td>
+                  <td
+                    colSpan={2}
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Printed Name:</b>
+                  </td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #000",
+                      borderLeft: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={5} style={{ padding: "3px 6px", fontFamily: "Times New Roman, serif" }}>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>Official Receipt No. &amp; Date/Other Documents</b>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2049,6 +3027,7 @@ export default function ProcessDeliveryModal({
         loaExists &&
         loa?.invoice_no?.trim() !== "" &&
         loa?.invoice_date?.trim() !== "" &&
+        loa?.po_date?.trim() !== "" &&
         loa?.accepted_at?.trim() !== "" &&
         loa?.accepted_by_name?.trim() !== "" &&
         loa?.accepted_by_title?.trim() !== "";
@@ -2231,6 +3210,8 @@ export default function ProcessDeliveryModal({
 
       if (!loa?.invoice_date?.trim()) errors.push("Invoice Date is required");
 
+      if (!loa?.po_date?.trim()) errors.push("PO Date is required");
+
       if (!loa?.accepted_at?.trim()) errors.push("Date Accepted is required");
 
       if (!loa?.accepted_by_name?.trim())
@@ -2323,24 +3304,28 @@ export default function ProcessDeliveryModal({
       documents.push("delivery");
     }
 
-    // Status 20 (Delivery IAR) - Show IAR and LOA documents only
+    // Status 20 (Delivery IAR) - Show IAR, LOA, and DV documents
 
     if (active?.status_id === 20) {
-      documents.push("iar", "loa");
+      documents.push("iar", "loa", "dv");
     }
 
-    // Status 22 (Delivery LOA) - Show IAR and LOA documents only for preview forwarding to Division Chief
+    // Status 22 (Delivery LOA) - Show IAR, LOA, and DV documents for preview forwarding to Division Chief
 
     if (active?.status_id === 22) {
-      documents.push("iar", "loa");
+      documents.push("iar", "loa", "dv");
     }
 
-    // Status 23 (Delivery DV) - This status is now skipped in workflow
+    // Status 23 (Delivery DV) - Show IAR, LOA, and DV documents
 
-    // For status 25 (Division Chief) - show IAR and LOA documents only
+    if (active?.status_id === 23) {
+      documents.push("iar", "loa", "dv");
+    }
+
+    // For status 25 (Division Chief) - show IAR, LOA, and DV documents
 
     if (active?.status_id === 25) {
-      documents.push("iar", "loa");
+      documents.push("iar", "loa", "dv");
     }
 
     return documents;
@@ -2389,6 +3374,29 @@ export default function ProcessDeliveryModal({
       setSelectedDocument(availableDocuments[0]);
     }
   }, [active?.status_id]);
+
+  // Initialize iar_po_items with PO items when poData is available and iar_po_items is empty
+  useEffect(() => {
+    if (
+      poData?.purchase_order_items &&
+      (!iar?.iar_po_items || iar.iar_po_items.length === 0)
+    ) {
+      const poItems = poData.purchase_order_items;
+      const initialItems = poItems.map((poItem: any, index: number) => ({
+        id: `po_${index}_${Date.now()}`,
+        stock_no: poItem.stock_no || "",
+        unit: poItem.unit || "",
+        description: poItem.description || "",
+        quantity: poItem.quantity?.toString() || "0",
+        unit_cost: poItem.unit_price?.toString() || "0",
+        total_cost: poItem.subtotal?.toString() || "0",
+      }));
+      setIar((p: any) => ({
+        ...(p ?? {}),
+        iar_po_items: initialItems,
+      }));
+    }
+  }, [poData]);
 
   if (!visible) return null;
 
@@ -3590,102 +4598,123 @@ export default function ProcessDeliveryModal({
             <div>
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-                  Missing Units{" "}
-                  <span className="text-gray-400">(Optional)</span>
+                  Edit Units <span className="text-gray-400">(Optional)</span>
                 </h3>
                 <button
                   onClick={() => {
-                    const currentItems = iar?.missing_units_items || [];
-                    const poItems = poData?.purchase_order_items || [];
+                    const currentItems = iar?.iar_po_items || [];
 
-                    // Add all PO items as missing unit rows
-                    const newItems = poItems.map(
-                      (poItem: any, index: number) => ({
-                        id:
-                          Date.now().toString() +
-                          "_" +
-                          index +
-                          "_" +
-                          Math.random().toString(36).substr(2, 9),
-                        stock_no: poItem.stock_no || "",
-                        unit: poItem.unit || "",
-                        description: poItem.description || "",
-                        quantity: poItem.quantity?.toString() || "0",
-                        unit_cost: poItem.unit_price?.toString() || "0",
-                        total_cost: poItem.subtotal?.toString() || "0",
-                      }),
-                    );
+                    // Add a single empty row
+                    const newItem = {
+                      id:
+                        Date.now().toString() +
+                        "_" +
+                        Math.random().toString(36).substr(2, 9),
+                      stock_no: "",
+                      unit: "",
+                      description: "",
+                      quantity: "0",
+                      unit_cost: "0",
+                      total_cost: "0",
+                    };
 
                     setIar((p: any) => ({
                       ...(p ?? {}),
-                      missing_units_items: [...currentItems, ...newItems],
+                      iar_po_items: [...currentItems, newItem],
                     }));
                   }}
                   disabled={active?.status_id === 25}
                   className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-3 py-1.5 border border-dashed border-emerald-300 rounded hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RiAddLine size={14} /> Add Missing Unit Row
+                  <RiAddLine size={14} /> Add Row
                 </button>
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-xs text-amber-800 mb-3">
-                  Use this section to add any missing units that were not
-                  included in the original Purchase Order but were supplied.
+                  Edit the existing PO items below or add additional rows if
+                  needed for items supplied but not in the original PO.
                 </p>
 
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {(iar?.missing_units_items || []).map(
-                    (item: any, index: number) => (
-                      <div
-                        key={item.id}
-                        className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative"
-                      >
-                        {(iar?.missing_units_items || []).length > 1 && (
-                          <button
-                            onClick={() => {
-                              const currentItems =
-                                iar?.missing_units_items || [];
-                              const updatedItems = currentItems.filter(
-                                (_: any, i: number) => i !== index,
-                              );
-                              setIar((p: any) => ({
-                                ...(p ?? {}),
-                                missing_units_items: updatedItems,
-                              }));
-                            }}
-                            disabled={active?.status_id === 25}
-                            className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            ×
-                          </button>
-                        )}
-                        <div className="text-xs font-bold text-gray-500 mb-2 uppercase">
-                          MISSING UNIT {index + 1}
-                        </div>
+                  {(iar?.iar_po_items || []).map((item: any, index: number) => (
+                    <div
+                      key={item.id}
+                      className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative"
+                    >
+                      {(iar?.iar_po_items || []).length > 1 && (
+                        <button
+                          onClick={() => {
+                            const currentItems = iar?.iar_po_items || [];
+                            const updatedItems = currentItems.filter(
+                              (_: any, i: number) => i !== index,
+                            );
+                            setIar((p: any) => ({
+                              ...(p ?? {}),
+                              iar_po_items: updatedItems,
+                            }));
+                          }}
+                          disabled={active?.status_id === 25}
+                          className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ×
+                        </button>
+                      )}
+                      <div className="text-xs font-bold text-gray-500 mb-2 uppercase">
+                        ITEM {index + 1}
+                      </div>
 
-                        <div className="mb-2">
+                      <div className="mb-2">
+                        <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
+                          Item Description
+                        </label>
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => {
+                            const currentItems = iar?.iar_po_items || [];
+                            const updatedItems = [...currentItems];
+                            updatedItems[index] = {
+                              ...updatedItems[index],
+                              description: e.target.value,
+                            };
+                            setIar((p: any) => ({
+                              ...(p ?? {}),
+                              iar_po_items: updatedItems,
+                            }));
+                          }}
+                          readOnly={active?.status_id === 25}
+                          placeholder="Describe the item"
+                          className={`w-full px-2 py-1.5 text-xs rounded border ${
+                            active?.status_id === 25
+                              ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                              : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                          }`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div>
                           <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                            Item Description
+                            Stock/Prop No.
                           </label>
                           <input
                             type="text"
-                            value={item.description}
+                            value={item.stock_no}
                             onChange={(e) => {
-                              const currentItems =
-                                iar?.missing_units_items || [];
+                              const currentItems = iar?.iar_po_items || [];
                               const updatedItems = [...currentItems];
                               updatedItems[index] = {
                                 ...updatedItems[index],
-                                description: e.target.value,
+                                stock_no: e.target.value,
                               };
                               setIar((p: any) => ({
                                 ...(p ?? {}),
-                                missing_units_items: updatedItems,
+                                iar_po_items: updatedItems,
                               }));
                             }}
                             readOnly={active?.status_id === 25}
-                            placeholder="Describe the missing item"
+                            placeholder="—"
                             className={`w-full px-2 py-1.5 text-xs rounded border ${
                               active?.status_id === 25
                                 ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
@@ -3693,169 +4722,133 @@ export default function ProcessDeliveryModal({
                             }`}
                           />
                         </div>
-
-                        <div className="grid grid-cols-3 gap-2 mb-2">
-                          <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                              Stock/Prop No.
-                            </label>
-                            <input
-                              type="text"
-                              value={item.stock_no}
-                              onChange={(e) => {
-                                const currentItems =
-                                  iar?.missing_units_items || [];
-                                const updatedItems = [...currentItems];
-                                updatedItems[index] = {
-                                  ...updatedItems[index],
-                                  stock_no: e.target.value,
-                                };
-                                setIar((p: any) => ({
-                                  ...(p ?? {}),
-                                  missing_units_items: updatedItems,
-                                }));
-                              }}
-                              readOnly={active?.status_id === 25}
-                              placeholder="—"
-                              className={`w-full px-2 py-1.5 text-xs rounded border ${
-                                active?.status_id === 25
-                                  ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
-                                  : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
-                              }`}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                              Unit
-                            </label>
-                            <select
-                              value={item.unit}
-                              onChange={(e) => {
-                                const currentItems =
-                                  iar?.missing_units_items || [];
-                                const updatedItems = [...currentItems];
-                                updatedItems[index] = {
-                                  ...updatedItems[index],
-                                  unit: e.target.value,
-                                };
-                                setIar((p: any) => ({
-                                  ...(p ?? {}),
-                                  missing_units_items: updatedItems,
-                                }));
-                              }}
-                              disabled={active?.status_id === 25}
-                              className={`w-full px-2 py-1.5 text-xs rounded border ${
-                                active?.status_id === 25
-                                  ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
-                                  : "border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-300"
-                              }`}
-                            >
-                              <option value="">Select Unit</option>
-                              <option value="pcs">pcs</option>
-                              <option value="sets">sets</option>
-                              <option value="boxes">boxes</option>
-                              <option value="kg">kg</option>
-                              <option value="liters">liters</option>
-                              <option value="meters">meters</option>
-                              <option value="units">units</option>
-                              <option value="dozens">dozens</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                              Qty
-                            </label>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const currentItems =
-                                  iar?.missing_units_items || [];
-                                const updatedItems = [...currentItems];
-                                const quantity = e.target.value;
-                                const unitCost =
-                                  parseFloat(item.unit_cost) || 0;
-                                const totalCost =
-                                  (parseFloat(quantity) || 0) * unitCost;
-                                updatedItems[index] = {
-                                  ...updatedItems[index],
-                                  quantity: e.target.value,
-                                  total_cost: totalCost.toFixed(2),
-                                };
-                                setIar((p: any) => ({
-                                  ...(p ?? {}),
-                                  missing_units_items: updatedItems,
-                                }));
-                              }}
-                              readOnly={active?.status_id === 25}
-                              placeholder="0"
-                              className={`w-full px-2 py-1.5 text-xs rounded border ${
-                                active?.status_id === 25
-                                  ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
-                                  : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
-                              }`}
-                            />
-                          </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
+                            Unit
+                          </label>
+                          <select
+                            value={item.unit}
+                            onChange={(e) => {
+                              const currentItems = iar?.iar_po_items || [];
+                              const updatedItems = [...currentItems];
+                              updatedItems[index] = {
+                                ...updatedItems[index],
+                                unit: e.target.value,
+                              };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                iar_po_items: updatedItems,
+                              }));
+                            }}
+                            disabled={active?.status_id === 25}
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          >
+                            <option value="">Select Unit</option>
+                            <option value="pcs">pcs</option>
+                            <option value="sets">sets</option>
+                            <option value="boxes">boxes</option>
+                            <option value="kg">kg</option>
+                            <option value="liters">liters</option>
+                            <option value="meters">meters</option>
+                            <option value="units">units</option>
+                            <option value="dozens">dozens</option>
+                          </select>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                              Unit Cost
-                            </label>
-                            <input
-                              type="number"
-                              value={item.unit_cost}
-                              onChange={(e) => {
-                                const currentItems =
-                                  iar?.missing_units_items || [];
-                                const updatedItems = [...currentItems];
-                                const unitCost = e.target.value;
-                                const quantity = parseFloat(item.quantity) || 0;
-                                const totalCost =
-                                  quantity * (parseFloat(unitCost) || 0);
-                                updatedItems[index] = {
-                                  ...updatedItems[index],
-                                  unit_cost: e.target.value,
-                                  total_cost: totalCost.toFixed(2),
-                                };
-                                setIar((p: any) => ({
-                                  ...(p ?? {}),
-                                  missing_units_items: updatedItems,
-                                }));
-                              }}
-                              readOnly={active?.status_id === 25}
-                              placeholder="0.00"
-                              className={`w-full px-2 py-1.5 text-xs rounded border ${
-                                active?.status_id === 25
-                                  ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
-                                  : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
-                              }`}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
-                              Total Cost
-                            </label>
-                            <input
-                              type="text"
-                              value={item.total_cost}
-                              readOnly
-                              placeholder="0.00"
-                              className="w-full px-2 py-1.5 text-xs rounded border font-mono bg-emerald-50 text-emerald-700 border-gray-200"
-                            />
-                          </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
+                            Qty
+                          </label>
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const currentItems = iar?.iar_po_items || [];
+                              const updatedItems = [...currentItems];
+                              const quantity = e.target.value;
+                              const unitCost = parseFloat(item.unit_cost) || 0;
+                              const totalCost =
+                                (parseFloat(quantity) || 0) * unitCost;
+                              updatedItems[index] = {
+                                ...updatedItems[index],
+                                quantity: e.target.value,
+                                total_cost: totalCost.toFixed(2),
+                              };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                iar_po_items: updatedItems,
+                              }));
+                            }}
+                            readOnly={active?.status_id === 25}
+                            placeholder="0"
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          />
                         </div>
                       </div>
-                    ),
-                  )}
 
-                  {(iar?.missing_units_items || []).length === 0 && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
+                            Unit Cost
+                          </label>
+                          <input
+                            type="number"
+                            value={item.unit_cost}
+                            onChange={(e) => {
+                              const currentItems = iar?.iar_po_items || [];
+                              const updatedItems = [...currentItems];
+                              const unitCost = e.target.value;
+                              const quantity = parseFloat(item.quantity) || 0;
+                              const totalCost =
+                                quantity * (parseFloat(unitCost) || 0);
+                              updatedItems[index] = {
+                                ...updatedItems[index],
+                                unit_cost: e.target.value,
+                                total_cost: totalCost.toFixed(2),
+                              };
+                              setIar((p: any) => ({
+                                ...(p ?? {}),
+                                iar_po_items: updatedItems,
+                              }));
+                            }}
+                            readOnly={active?.status_id === 25}
+                            placeholder="0.00"
+                            className={`w-full px-2 py-1.5 text-xs rounded border ${
+                              active?.status_id === 25
+                                ? "border-gray-200 bg-gray-50 text-gray-700 cursor-default"
+                                : "border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">
+                            Total Cost
+                          </label>
+                          <input
+                            type="text"
+                            value={item.total_cost}
+                            readOnly
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 text-xs rounded border font-mono bg-emerald-50 text-emerald-700 border-gray-200"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {(iar?.iar_po_items || []).length === 0 && (
                     <div className="text-center text-gray-500 py-8">
-                      <p className="text-sm">No missing units added yet.</p>
+                      <p className="text-sm">No items to display.</p>
                       <p className="text-xs">
-                        Click "Add Missing Unit Row" to add items that were
-                        supplied but not in the original PO.
+                        Click "Add Row" to add items that were supplied but not
+                        in the original PO.
                       </p>
                     </div>
                   )}
@@ -4088,92 +5081,12 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  DV No. <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.dv_no ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({ ...(p ?? {}), dv_no: e.target.value }))
-                  }
-                  placeholder="e.g. DV-2026-0009"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Amount Due <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.amount_due ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({
-                      ...(p ?? {}),
-
-                      amount_due: e.target.value,
-                    }))
-                  }
-                  placeholder="0.00"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Fund Cluster <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.fund_cluster ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({
-                      ...(p ?? {}),
-
-                      fund_cluster: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g. 01"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  ORS No. <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.ors_no ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({
-                      ...(p ?? {}),
-
-                      ors_no: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g. ORS-2026-0007"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Payee <span className="text-red-500">*</span>
                 </label>
 
                 <input
                   type="text"
-                  value={dv?.payee ?? ""}
+                  value={dv?.payee ?? poData?.supplier ?? ""}
                   onChange={(e) =>
                     setDv((p: any) => ({ ...(p ?? {}), payee: e.target.value }))
                   }
@@ -4189,7 +5102,7 @@ export default function ProcessDeliveryModal({
 
                 <input
                   type="text"
-                  value={dv?.payee_tin ?? ""}
+                  value={dv?.payee_tin ?? poData?.tin ?? ""}
                   onChange={(e) =>
                     setDv((p: any) => ({
                       ...(p ?? {}),
@@ -4205,60 +5118,37 @@ export default function ProcessDeliveryModal({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                ORS No. <span className="text-red-500">*</span>
+              </label>
+
+              <input
+                type="text"
+                value={dv?.ors_no ?? ""}
+                onChange={(e) =>
+                  setDv((p: any) => ({
+                    ...(p ?? {}),
+                    ors_no: e.target.value,
+                  }))
+                }
+                placeholder="e.g. ORS-2026-0007"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Address <span className="text-red-500">*</span>
               </label>
 
               <input
                 type="text"
-                value={dv?.address ?? ""}
+                value={dv?.address ?? poData?.address ?? ""}
                 onChange={(e) =>
                   setDv((p: any) => ({ ...(p ?? {}), address: e.target.value }))
                 }
                 placeholder="Payee address"
                 className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Responsibility Center <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.responsibility_center ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({
-                      ...(p ?? {}),
-
-                      responsibility_center: e.target.value,
-                    }))
-                  }
-                  placeholder="RC-XXXX"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  MFO/PAP <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  value={dv?.mfo_pap ?? ""}
-                  onChange={(e) =>
-                    setDv((p: any) => ({
-                      ...(p ?? {}),
-
-                      mfo_pap: e.target.value,
-                    }))
-                  }
-                  placeholder="MFO/PAP code"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
-                />
-              </div>
             </div>
 
             <div>
@@ -4346,15 +5236,36 @@ export default function ProcessDeliveryModal({
     // Show selected document preview
 
     if (selectedDocument === "iar") {
-      return <IARPreview delivery={active} iar={iar || {}} poData={poData} />;
+      return (
+        <IAREditablePreview
+          delivery={active}
+          iar={iar || {}}
+          poData={poData}
+          setIar={setIar}
+        />
+      );
     }
 
     if (selectedDocument === "loa") {
-      return <LOAPreview delivery={active} loa={loa || {}} poData={poData} />;
+      return (
+        <LOAEditablePreview
+          delivery={active}
+          loa={loa || {}}
+          poData={poData}
+          setLoa={setLoa}
+        />
+      );
     }
 
     if (selectedDocument === "dv") {
-      return <DVPreview delivery={active} dv={dv || {}} poData={poData} />;
+      return (
+        <DVEditablePreview
+          delivery={active}
+          dv={dv || {}}
+          poData={poData}
+          setDv={setDv}
+        />
+      );
     }
 
     return (
@@ -4443,19 +5354,6 @@ export default function ProcessDeliveryModal({
         iarData.po_items = mergedData.po_items;
         if (mergedData.po_no) iarData.po_no = mergedData.po_no;
         if (mergedData.po_date) iarData.po_date = mergedData.po_date;
-
-        // Include missing units items for preview
-        if (iar?.missing_units_items) {
-          iarData.missing_units_items = iar.missing_units_items;
-          console.log(
-            "Missing units items for JSX PDF generation:",
-            iar.missing_units_items,
-          );
-        } else {
-          console.log(
-            "No missing units items found in iar data for JSX PDF generation",
-          );
-        }
         console.log("IAR data for JSX PDF generation:", iarData);
 
         // Use JSX-based HTML generation (synchronous now)

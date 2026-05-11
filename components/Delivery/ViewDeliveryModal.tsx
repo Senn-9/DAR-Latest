@@ -25,7 +25,7 @@ function escapeHtml(value: string) {
 
 function buildIARHtml(data: any): string {
   const items = data.po_items || [];
-  const missingItems = data.missing_units_items || [];
+  const missingItems = data.iar_po_items || [];
 
   // Build item rows
   let itemRows = "";
@@ -430,6 +430,7 @@ interface ViewDeliveryModalProps {
   delivery: any;
   iar: any;
   loa: any;
+  dv?: any;
   poData: any;
   defaultTab?: "iar" | "loa" | "dv";
 }
@@ -449,21 +450,6 @@ function IARPreview({
   iar: any;
   poData: any;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
-
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 0.1, 2));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev - 0.1, 0.3));
-  };
-
-  const handleReset = () => {
-    setZoomLevel(0.7);
-  };
-
-  const scalePercentage = Math.round(zoomLevel * 100);
 
   // Transform poData to have the correct structure
   const transformedPoData = poData
@@ -478,65 +464,19 @@ function IARPreview({
   mergedData.po_items = transformedPoData.po_items;
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-  if (iar?.missing_units_items) {
-    mergedData.missing_units_items = iar.missing_units_items;
+  if (iar?.iar_po_items) {
+    mergedData.iar_po_items = iar.iar_po_items;
   }
 
   const items = mergedData.po_items || [];
-  const missingItems = mergedData.missing_units_items || [];
+  const missingItems = mergedData.iar_po_items || [];
 
   return (
     <div className="space-y-2">
-      {/* Zoom Controls */}
-      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleZoomOut}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Zoom Out"
-          >
-            <RiZoomOutLine className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleReset}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Reset Zoom"
-          >
-            <RiRefreshLine className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleZoomIn}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Zoom In"
-          >
-            <RiZoomInLine className="w-4 h-4" />
-          </button>
-        </div>
-
-        <span className="text-sm text-gray-600 font-medium">
-          {scalePercentage}%
-        </span>
-      </div>
-
       {/* Live JSX Preview Container */}
-      <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
-        <div
-          style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: "top left",
-            width: `${100 / zoomLevel}%`,
-          }}
-        >
-          <div
-            className="bg-white p-8"
-            style={{
-              width: "816px",
-              minHeight: "1056px",
-              margin: "0 auto",
-            }}
-          >
+      <div className="overflow-auto bg-white" style={{ height: "calc(100vh - 200px)" }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "20px", backgroundColor: "#f5f5f5" }}>
+          <div className="bg-white shadow-lg" style={{ width: "816px", minHeight: "1056px", padding: "32px" }}>
             {/* Appendix Header */}
             <div className="text-right mb-2">
               <span style={{ fontSize: "10px", fontStyle: "italic" }}>
@@ -949,21 +889,6 @@ function LOAPreview({
   loa: any;
   poData: any;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
-
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 0.1, 2));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev - 0.1, 0.3));
-  };
-
-  const handleReset = () => {
-    setZoomLevel(0.7);
-  };
-
-  const scalePercentage = Math.round(zoomLevel * 100);
 
   // Transform poData to have the correct structure
   const transformedPoData = poData
@@ -983,57 +908,10 @@ function LOAPreview({
 
   return (
     <div className="space-y-2">
-      {/* Zoom Controls */}
-      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleZoomOut}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Zoom Out"
-          >
-            <RiZoomOutLine className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleReset}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Reset Zoom"
-          >
-            <RiRefreshLine className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleZoomIn}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-            title="Zoom In"
-          >
-            <RiZoomInLine className="w-4 h-4" />
-          </button>
-        </div>
-
-        <span className="text-sm text-gray-600 font-medium">
-          {scalePercentage}%
-        </span>
-      </div>
-
       {/* Live JSX Preview Container */}
-      <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
-        <div
-          style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: "top left",
-            width: `${100 / zoomLevel}%`,
-          }}
-        >
-          <div
-            className="bg-white"
-            style={{
-              maxWidth: "850px",
-              minHeight: "1100px",
-              margin: "0 auto",
-              padding: "64px 80px",
-            }}
-          >
+      <div className="overflow-auto bg-white" style={{ height: "calc(100vh - 200px)" }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "20px", backgroundColor: "#f5f5f5" }}>
+          <div className="bg-white shadow-lg" style={{ maxWidth: "850px", minHeight: "1100px", padding: "64px 80px" }}>
             <div
               className="text-black font-sans text-[11px] leading-tight tracking-tight"
               style={{ fontFamily: "Arial, sans-serif" }}
@@ -1369,8 +1247,34 @@ function LOAPreview({
   );
 }
 
-function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
-  const [zoomLevel, setZoomLevel] = useState(0.7);
+function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: any }) {
+  const [zoomLevel, setZoomLevel] = useState(0.85);
+
+  // Transform PO data - keep all fields and just add the transformed ones
+  const transformedPoData = poData
+    ? {
+        ...poData,
+        po_items: poData.purchase_order_items || [],
+        po_date: poData.date,
+      }
+    : {};
+  
+  // Merge delivery data with transformed PO data and DV data
+  const mergedData = { ...delivery, ...transformedPoData, ...dv };
+  mergedData.po_items = transformedPoData.po_items;
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(0.85);
+  };
+
   const scalePercentage = Math.round(zoomLevel * 100);
 
   return (
@@ -1379,27 +1283,30 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
       <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setZoomLevel((p) => Math.max(p - 0.1, 0.3))}
-            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
+            onClick={handleZoomOut}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
             title="Zoom Out"
           >
             <RiZoomOutLine className="w-4 h-4" />
           </button>
+
           <button
-            onClick={() => setZoomLevel(0.7)}
-            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
-            title="Reset"
+            onClick={handleReset}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+            title="Reset Zoom"
           >
             <RiRefreshLine className="w-4 h-4" />
           </button>
+
           <button
-            onClick={() => setZoomLevel((p) => Math.min(p + 0.1, 2))}
-            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
+            onClick={handleZoomIn}
+            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
             title="Zoom In"
           >
             <RiZoomInLine className="w-4 h-4" />
           </button>
         </div>
+
         <span className="text-sm text-gray-600 font-medium">
           {scalePercentage}%
         </span>
@@ -1417,10 +1324,10 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
           <div
             className="bg-white p-4"
             style={{
-              width: "816px",
+              width: "600px",
               minHeight: "1056px",
               margin: "0 auto",
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "Times New Roman, serif",
               fontSize: "9px",
               color: "#000",
             }}
@@ -1449,7 +1356,6 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                   <td
                     style={{
                       width: "90px",
-                      borderRight: "1px solid #000",
                       padding: "4px",
                       verticalAlign: "middle",
                     }}
@@ -1471,8 +1377,25 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       verticalAlign: "top",
                     }}
                   >
-                    <div style={{ fontSize: "8px", marginBottom: "2px" }}>
-                      Entity Name
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
+                      DEPARTMENT OF AGRARIAN REFORM
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        textAlign: "center",
+                        marginBottom: "4px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
+                      Camarines Sur Provincial Office
                     </div>
                     <div
                       style={{
@@ -1480,7 +1403,8 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                         fontWeight: "bold",
                         textAlign: "center",
                         letterSpacing: "1px",
-                        paddingTop: "6px",
+                        paddingTop: "4px",
+                        fontFamily: "Times New Roman, serif",
                       }}
                     >
                       DISBURSEMENT VOUCHER
@@ -1504,7 +1428,10 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                               padding: "3px 4px",
                             }}
                           >
-                            <b>Fund Cluster :</b>
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              Fund:
+                            </b>{" "}
+                            {mergedData.fund_cluster || ""}
                           </td>
                         </tr>
                         <tr>
@@ -1514,12 +1441,18 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                               padding: "3px 4px",
                             }}
                           >
-                            <b>Date :</b>
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              Date:
+                            </b>{" "}
+                            {mergedData.dv_date || ""}
                           </td>
                         </tr>
                         <tr>
                           <td style={{ padding: "3px 4px" }}>
-                            <b>DV No. :</b>
+                            <b style={{ fontFamily: "Times New Roman, serif" }}>
+                              DV No.:
+                            </b>{" "}
+                            {mergedData.dv_no || ""}
                           </td>
                         </tr>
                       </tbody>
@@ -1540,34 +1473,51 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
             >
               <tbody>
                 <tr>
-                  <td style={{ padding: "3px 6px" }}>
-                    <b>Mode of Payment</b>&nbsp;&nbsp;
-                    {[
-                      "MDS Check",
-                      "Commercial Check",
-                      "ADA",
-                      "Others (Please specify)",
-                    ].map((opt) => (
-                      <span
-                        key={opt}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "3px",
-                          marginRight: "12px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: "10px",
-                            height: "10px",
-                            border: "1px solid #000",
-                          }}
-                        ></span>{" "}
-                        {opt}
-                      </span>
-                    ))}
+                  <td
+                    style={{
+                      width: "50px",
+                      borderRight: "1px solid #000",
+                      padding: "3px 6px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Mode of <br /> payment
+                    </b>
+                  </td>
+                  <td
+                    style={{
+                      padding: "3px 6px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", gap: "35px", marginTop: "3px" }}
+                    >
+                      {["MDS Check", "Commercial Check", "ADA", "Others"].map(
+                        (opt) => (
+                          <label
+                            key={opt}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              fontSize: "9px",
+                              fontFamily: "Times New Roman, serif",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={mergedData.mode_of_payment === opt}
+                              readOnly
+                              style={{ margin: 0 }}
+                            />
+                            {opt === "Others" ? "Others (Please specify)" : opt}
+                          </label>
+                        ),
+                      )}
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -1591,7 +1541,9 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       padding: "3px 4px",
                     }}
                   >
-                    <b>Payee</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Payee
+                    </b>
                   </td>
                   <td
                     style={{
@@ -1599,7 +1551,7 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       padding: "3px 4px",
                     }}
                   >
-                    &nbsp;
+                    {mergedData.payee || mergedData.supplier || ""}
                   </td>
                   <td
                     style={{
@@ -1608,10 +1560,14 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       padding: "3px 4px",
                     }}
                   >
-                    <b>TIN/Employee No.</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Tin/Employee No.
+                    </b>
                   </td>
                   <td style={{ width: "120px", padding: "3px 4px" }}>
-                    <b>ORS/BURS No.</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      ORS/BURS No.
+                    </b>
                   </td>
                 </tr>
                 <tr>
@@ -1622,13 +1578,35 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       padding: "3px 4px",
                     }}
                   >
-                    <b>Address</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Address
+                    </b>
                   </td>
                   <td
-                    colSpan={3}
-                    style={{ borderTop: "1px solid #000", padding: "3px 4px" }}
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
                   >
-                    &nbsp;
+                    {mergedData.address || ""}
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    {mergedData.payee_tin || mergedData.tin || ""}
+                  </td>
+                  <td
+                    style={{
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    {mergedData.ors_no || ""}
                   </td>
                 </tr>
               </tbody>
@@ -1652,6 +1630,7 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       textAlign: "center",
                       padding: "3px",
                       fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Particulars
@@ -1664,6 +1643,7 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       textAlign: "center",
                       padding: "3px",
                       fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Responsibility Center
@@ -1676,6 +1656,7 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       textAlign: "center",
                       padding: "3px",
                       fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     MFO/PAP
@@ -1687,6 +1668,7 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       textAlign: "center",
                       padding: "3px",
                       fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Amount
@@ -1694,7 +1676,54 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                 </tr>
               </thead>
               <tbody>
-                {[...Array(8)].map((_, i) => (
+                <tr style={{ height: "120px" }}>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                      fontSize: "9px",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {mergedData.particulars || ""}
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                      fontSize: "9px",
+                    }}
+                  >
+                    {mergedData.responsibility_center || ""}
+                  </td>
+                  <td
+                    style={{
+                      borderRight: "1px solid #000",
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                      fontSize: "9px",
+                    }}
+                  >
+                    {mergedData.mfo_pap || ""}
+                  </td>
+                  <td
+                    style={{
+                      padding: "3px 4px",
+                      verticalAlign: "top",
+                      fontFamily: "Times New Roman, serif",
+                      fontSize: "9px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {mergedData.amount_due || ""}
+                  </td>
+                </tr>
+                {[...Array(7)].map((_, i) => (
                   <tr key={i} style={{ height: "20px" }}>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
@@ -1711,11 +1740,22 @@ function DVPreview({ delivery, poData }: { delivery: any; poData: any }) {
                       textAlign: "right",
                       padding: "3px 4px",
                       fontWeight: "bold",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Amount Due
                   </td>
-                  <td style={{ borderTop: "1px solid #000" }}>&nbsp;</td>
+                  <td
+                    style={{
+                      borderTop: "1px solid #000",
+                      padding: "3px 4px",
+                      textAlign: "right",
+                      fontFamily: "Times New Roman, serif",
+                      fontSize: "9px",
+                    }}
+                  >
+                    {mergedData.amount_due || ""}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -2193,6 +2233,7 @@ export default function ViewDeliveryModal({
   delivery,
   iar,
   loa,
+  dv,
   poData,
   defaultTab = "iar",
 }: ViewDeliveryModalProps) {
@@ -2238,8 +2279,8 @@ export default function ViewDeliveryModal({
       iarMerged.po_items = mergedData.po_items;
       if (mergedData.po_no) iarMerged.po_no = mergedData.po_no;
       if (mergedData.po_date) iarMerged.po_date = mergedData.po_date;
-      if (iarData?.missing_units_items) {
-        iarMerged.missing_units_items = iarData.missing_units_items;
+      if (iarData?.iar_po_items) {
+        iarMerged.iar_po_items = iarData.iar_po_items;
       }
       const html = buildIARHtml(iarMerged);
       downloadPDF(html);
@@ -2414,7 +2455,7 @@ export default function ViewDeliveryModal({
           data: {},
           html: null,
           label: "Disbursement Voucher",
-          component: <DVPreview delivery={delivery} poData={poData || {}} />,
+          component: <DVPreview delivery={delivery} dv={dv} poData={poData || {}} />,
         };
     }
   };
@@ -2878,78 +2919,14 @@ export default function ViewDeliveryModal({
                   {tab === "dv" && (
                     <>
                       <div className="col-span-2">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-                          <p className="font-semibold mb-1">
-                            DV Form - Preview
-                          </p>
-                          <p className="text-xs">
-                            Preview Only
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          DV No.
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Fund Cluster
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Date
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Mode of Payment
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
                         <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
                           Payee
                         </label>
                         <input
                           className={readonlyCls}
-                          value=""
+                          value={dv?.payee ?? poData?.supplier ?? ""}
                           readOnly
                           tabIndex={-1}
-                          placeholder="To be implemented"
                         />
                       </div>
 
@@ -2959,10 +2936,9 @@ export default function ViewDeliveryModal({
                         </label>
                         <input
                           className={readonlyCls}
-                          value=""
+                          value={dv?.payee_tin ?? poData?.tin ?? ""}
                           readOnly
                           tabIndex={-1}
-                          placeholder="To be implemented"
                         />
                       </div>
 
@@ -2972,10 +2948,9 @@ export default function ViewDeliveryModal({
                         </label>
                         <input
                           className={readonlyCls}
-                          value=""
+                          value={dv?.ors_no ?? ""}
                           readOnly
                           tabIndex={-1}
-                          placeholder="To be implemented"
                         />
                       </div>
 
@@ -2985,10 +2960,9 @@ export default function ViewDeliveryModal({
                         </label>
                         <input
                           className={readonlyCls}
-                          value=""
+                          value={dv?.address ?? poData?.address ?? ""}
                           readOnly
                           tabIndex={-1}
-                          placeholder="To be implemented"
                         />
                       </div>
 
@@ -2998,113 +2972,10 @@ export default function ViewDeliveryModal({
                         </label>
                         <textarea
                           className={readonlyCls}
-                          value=""
+                          value={dv?.particulars ?? ""}
                           readOnly
                           tabIndex={-1}
                           rows={4}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Responsibility Center
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          MFO/PAP
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Amount Due
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Accounting Entry
-                        </label>
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                          <p className="text-xs text-gray-500">
-                            Account entries table will be implemented
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Certified By (Name)
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Certified By (Position)
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Approved By (Name)
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                          Approved By (Position)
-                        </label>
-                        <input
-                          className={readonlyCls}
-                          value=""
-                          readOnly
-                          tabIndex={-1}
-                          placeholder="To be implemented"
                         />
                       </div>
                     </>
@@ -3164,8 +3035,8 @@ export default function ViewDeliveryModal({
                       if (mergedData.po_no) iarData.po_no = mergedData.po_no;
                       if (mergedData.po_date)
                         iarData.po_date = mergedData.po_date;
-                      if (iar?.missing_units_items) {
-                        iarData.missing_units_items = iar.missing_units_items;
+                      if (iar?.iar_po_items) {
+                        iarData.iar_po_items = iar.iar_po_items;
                       }
                       const html = buildIARHtml(iarData);
                       downloadPDF(html);

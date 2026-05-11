@@ -400,6 +400,16 @@ export default function PaymentPage() {
     
     // Don't reset status flag - let user maintain their selection during the session
     
+    // Fetch DV data for all statuses
+    try {
+      const dv = await fetchDVByDelivery(delivery.id);
+      console.log("Fetched DV data:", dv);
+      console.log("DV accounting_entries:", dv?.accounting_entries);
+      setDvData(dv);
+    } catch (error) {
+      console.error("Error fetching DV data:", error);
+    }
+    
     // Fetch IAR, LOA, and PO data for Payment Pending / Voucher Verification
     if (delivery.status_id === 28 || delivery.status_id === 29) {
       try {
@@ -426,6 +436,20 @@ export default function PaymentPage() {
         }
       } catch (error) {
         console.error("Error fetching documents for Voucher Verification:", error);
+      }
+    } else {
+      // Fetch PO data for other statuses as well
+      try {
+        const poDataResult = delivery.po_id ? await fetchPOWithItemsById(delivery.po_id) : null;
+        if (poDataResult) {
+          const transformedPoData = {
+            ...poDataResult.header,
+            purchase_order_items: poDataResult.items
+          };
+          setPoData(transformedPoData);
+        }
+      } catch (error) {
+        console.error("Error fetching PO data:", error);
       }
     }
     
@@ -1114,14 +1138,13 @@ async function buildLOAHtml(d: any): Promise<string> {
           visible={paymentProcessModalOpen}
           active={selectedDelivery}
           onClose={() => setPaymentProcessModalOpen(false)}
-          onSubmit={async () => {
+          onSubmit={async (data) => {
             // Handle payment processing with proper status transition
             try {
               console.log("Payment processing onSubmit called");
               console.log("selectedDelivery:", selectedDelivery);
               console.log("statusFlag:", statusFlag);
-              console.log("selectedDelivery ID:", selectedDelivery?.id);
-              console.log("selectedDelivery status_id:", selectedDelivery?.status_id);
+              console.log("Document data:", data);
               
               if (!selectedDelivery) {
                 console.error("Missing selected delivery for payment processing");
@@ -1166,6 +1189,51 @@ async function buildLOAHtml(d: any): Promise<string> {
                   return;
               }
 
+              // Save document data (DV, ORS, IAR, LOA) to database
+              if (data.dvData) {
+                console.log("Saving DV data:", data.dvData);
+                try {
+                  await upsertDVByDelivery(selectedDelivery.id, data.dvData);
+                  setDvData(data.dvData); // Update local state
+                  console.log("DV data saved successfully");
+                } catch (dvError: any) {
+                  console.error("Error saving DV data:", dvError);
+                  console.error("DV Error details:", JSON.stringify(dvError, null, 2));
+                  const errorMsg = dvError?.message || dvError?.error?.message || dvError?.details || JSON.stringify(dvError);
+                  throw new Error(`Failed to save DV data: ${errorMsg}`);
+                }
+              }
+              if (data.orsData) {
+                console.log("Saving ORS data:", data.orsData);
+                // Add upsertORSByDelivery if you have ORS table
+              }
+              if (data.iarData) {
+                console.log("Saving IAR data:", data.iarData);
+                try {
+                  await upsertIARByDelivery(selectedDelivery.id, data.iarData);
+                  setIarData(data.iarData); // Update local state
+                  console.log("IAR data saved successfully");
+                } catch (iarError: any) {
+                  console.error("Error saving IAR data:", iarError);
+                  console.error("IAR Error details:", JSON.stringify(iarError, null, 2));
+                  const errorMsg = iarError?.message || iarError?.error?.message || iarError?.details || JSON.stringify(iarError);
+                  throw new Error(`Failed to save IAR data: ${errorMsg}`);
+                }
+              }
+              if (data.loaData) {
+                console.log("Saving LOA data:", data.loaData);
+                try {
+                  await upsertLOAByDelivery(selectedDelivery.id, data.loaData);
+                  setLoaData(data.loaData); // Update local state
+                  console.log("LOA data saved successfully");
+                } catch (loaError: any) {
+                  console.error("Error saving LOA data:", loaError);
+                  console.error("LOA Error details:", JSON.stringify(loaError, null, 2));
+                  const errorMsg = loaError?.message || loaError?.error?.message || loaError?.details || JSON.stringify(loaError);
+                  throw new Error(`Failed to save LOA data: ${errorMsg}`);
+                }
+              }
+
               // Update delivery status
               await updateDeliveryStatusOnly(selectedDelivery.id, nextStatusId, selectedDelivery.status_id);
 
@@ -1182,10 +1250,14 @@ async function buildLOAHtml(d: any): Promise<string> {
                 selectedDelivery.status_id === 37 ? "Payment Completed" :
                 "Unknown Step";
               
+              const remarkText = data.notes 
+                ? `${stepLabel}: ${data.notes}`
+                : `Payment processing completed for ${stepLabel}`;
+              
               await insertDeliveryProcessRemark(
                 selectedDelivery.id,
                 currentUser?.id || null,
-                `Payment processing completed for ${stepLabel}`,
+                remarkText,
                 getFlagId(statusFlag),
                 "payment"
               );
@@ -1209,6 +1281,8 @@ async function buildLOAHtml(d: any): Promise<string> {
               setPaymentProcessModalOpen(false);
             } catch (error) {
               console.error("Error processing payment:", error);
+              const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+              alert(`Failed to process payment: ${errorMessage}`);
             }
           }}
           statusLabel="Payment Processing"

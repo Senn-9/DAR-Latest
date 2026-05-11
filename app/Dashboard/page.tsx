@@ -838,7 +838,7 @@ export default function DashboardPage() {
                           <td className={`px-2 py-2 text-gray-600 overflow-hidden ${rowBg}`}>
                             <div className="truncate">{form.office_section || <span className="text-gray-300">—</span>}</div>
                           </td>
-                          <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
+                          <td className={`px-2 py-2 text-gray-500 overflow-hidden max-w-xs ${rowBg}`}>
                             <div className="truncate" title={desc || ""}>{desc || <span className="text-gray-300">—</span>}</div>
                           </td>
                           <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>

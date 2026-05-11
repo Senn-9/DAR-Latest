@@ -124,6 +124,7 @@ export type DvDocument = {
   id: number;
   delivery_id: number;
   dv_no: string | null;
+  dv_date: string | null; // Accepts any text format (not restricted to date format)
   fund_cluster: string | null;
   ors_no: string | null;
   payee: string | null;
@@ -133,9 +134,53 @@ export type DvDocument = {
   responsibility_center: string | null;
   mfo_pap: string | null;
   amount_due: string | null;
-  mode_of_payment: string | null;
-  certified_by: string | null;
-  approved_by: string | null;
+  
+  // Enhanced Mode of Payment fields
+  mode_of_payment_mds_check: boolean;
+  mode_of_payment_commercial_check: boolean;
+  mode_of_payment_ada: boolean;
+  mode_of_payment_others: boolean;
+  mode_of_payment_others_specify: string | null;
+  mode_of_payment: string | null; // Deprecated: Use specific fields above
+  
+  // Section A - Certified Expenses
+  certified_expenses_cash_advance: boolean;
+  certified_by_name: string | null; // Enhanced from certified_by
+  certified_by_position: string | null;
+  certified_by: string | null; // Deprecated: Use certified_by_name instead
+  
+  // Section C - Accounting Certification
+  certified_cash_available: boolean;
+  certified_subject_to_authority: boolean;
+  certified_proper: boolean;
+  certified_signature: string | null; // Store signature path or base64
+  certified_printed_name: string | null;
+  certified_position: string | null;
+  certified_date: string | null;
+  
+  // Section D - Approved for Payment
+  approved_signature: string | null; // Store signature path or base64
+  approved_printed_name: string | null; // Enhanced from approved_by
+  approved_position: string | null;
+  approved_date: string | null;
+  approved_by: string | null; // Deprecated: Use approved_printed_name instead
+  
+  // Section E - Receipt of Payment
+  receipt_check_ada_no: string | null;
+  receipt_date: string | null;
+  receipt_bank_name_account_number: string | null;
+  receipt_printed_name: string | null;
+  receipt_date_received: string | null;
+  receipt_signature: string | null; // Store signature path or base64
+  receipt_official_receipt_no_date: string | null;
+  
+  accounting_entries: {
+    account_title: string;
+    uacs_code: string | null;
+    debit: number;
+    credit: number;
+  }[];
+  
   created_by: number | null;
   created_at: string; // ISO timestamp
   updated_at: string | null;
