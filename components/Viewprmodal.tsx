@@ -66,6 +66,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
   while (itemRows.length < 30) {
     itemRows.push(emptyItem());
   }
+  const grandTotal = getGrandTotal(items);
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>
@@ -144,6 +145,14 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               </tr>
             );
           })}
+          <tr style={{ height: "17px" }}>
+            <td colSpan={5} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", fontSize: "8.5pt", padding: "2px 4px", textAlign: "right", fontWeight: "bold" }}>
+              TOTAL
+            </td>
+            <td style={{ borderTop: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", textAlign: "right", fontWeight: "bold" }}>
+              {grandTotal > 0 ? "₱" + grandTotal.toFixed(2) : ""}
+            </td>
+          </tr>
           <tr style={{ height: "17px" }}>
             <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
               <b>Purpose:</b> {formData.purpose}

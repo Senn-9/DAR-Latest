@@ -131,6 +131,7 @@ function PREditablePreview({
   //   });
   // });
   const rows = items;
+  const grandTotal = getGrandTotal(items);
   
   while (rows.length < 30) {
     rows.push(emptyItem());
@@ -275,6 +276,14 @@ function PREditablePreview({
               >
                 + Add Item
               </button>
+            </td>
+          </tr>
+          <tr style={{ height: "20px" }}>
+            <td colSpan={5} style={{ borderTop: "1px solid black", padding: "4px", textAlign: "right", fontSize: "9pt", fontWeight: "bold" }}>
+              TOTAL
+            </td>
+            <td style={{ borderTop: "1px solid black", padding: "4px", textAlign: "right", fontSize: "9pt", fontWeight: "bold" }}>
+              {grandTotal > 0 ? "₱" + grandTotal.toFixed(2) : ""}
             </td>
           </tr>
           <tr style={{ height: "17px" }}>
