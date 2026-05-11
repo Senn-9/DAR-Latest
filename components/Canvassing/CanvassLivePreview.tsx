@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { RiCloseLine, RiPrinterLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiDraggable } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printRFQ } from "./printRFQ";
@@ -19,6 +19,7 @@ type ItemRow = {
 	quantity: string;
 	unit: string;
 	unit_price: string;
+	isCenter?: boolean;
 };
 
 const formatDateWithOffset = (dateText: string, dayOffset: number) => {
@@ -29,6 +30,99 @@ const formatDateWithOffset = (dateText: string, dayOffset: number) => {
 
 	parsedDate.setDate(parsedDate.getDate() + dayOffset);
 	return parsedDate.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+};
+
+type DescriptionEditorProps = {
+	index: number;
+	initialValue: string;
+	isCenter: boolean;
+	onChange: (value: string) => void;
+	onToggleCenter: () => void;
+};
+
+const DescriptionEditor = ({ index, initialValue, isCenter, onChange, onToggleCenter }: DescriptionEditorProps) => {
+	const editorRef = useRef<HTMLDivElement>(null);
+	const [isBold, setIsBold] = useState(false);
+
+	useEffect(() => {
+		// Only update innerHTML if the editor is not focused
+		// and the content actually differs from initialValue.
+		if (editorRef.current && document.activeElement !== editorRef.current) {
+			if (editorRef.current.innerHTML !== initialValue) {
+				editorRef.current.innerHTML = initialValue;
+			}
+		}
+	}, [initialValue]);
+
+	const updateBoldState = () => {
+		setIsBold(document.queryCommandState("bold"));
+	};
+
+	const toggleBold = (e: React.MouseEvent) => {
+		e.preventDefault();
+		const editor = editorRef.current;
+		if (editor) {
+			if (document.activeElement !== editor) {
+				editor.focus();
+				const range = document.createRange();
+				const sel = window.getSelection();
+				range.selectNodeContents(editor);
+				range.collapse(false);
+				sel?.removeAllRanges();
+				sel?.addRange(range);
+			}
+			document.execCommand("bold", false);
+			updateBoldState();
+		}
+	};
+
+	return (
+		<div className="relative group/editor h-full w-full">
+			<div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 group-hover/editor:opacity-100 transition-opacity z-10">
+				<button
+					type="button"
+					onMouseDown={toggleBold}
+					title="Bold"
+					className={`w-4 h-3.5 flex items-center justify-center text-[7px] font-bold rounded border transition-colors ${
+						isBold ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-gray-500 border-gray-300 hover:border-emerald-400"
+					}`}
+				>
+					B
+				</button>
+				<button
+					type="button"
+					onMouseDown={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						// Sync current content before toggling center
+						if (editorRef.current) {
+							onChange(editorRef.current.innerHTML);
+						}
+						onToggleCenter();
+					}}
+					title="Center"
+					className={`w-4 h-3.5 flex items-center justify-center text-[7px] rounded border transition-colors ${
+						isCenter ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-gray-500 border-gray-300 hover:border-emerald-400"
+					}`}
+				>
+					≡
+				</button>
+			</div>
+			<div
+				ref={editorRef}
+				id={`editor-${index}`}
+				contentEditable
+				onBlur={(e) => onChange(e.currentTarget.innerHTML)}
+				onFocus={updateBoldState}
+				onKeyUp={updateBoldState}
+				onMouseUp={updateBoldState}
+				className={`w-full outline-none bg-transparent px-1 min-h-[16px] block break-words whitespace-pre-wrap ${
+					isCenter ? "text-center" : "text-left"
+				}`}
+				style={{ fontStyle: "normal" }}
+			/>
+		</div>
+	);
 };
 
 export default function CanvassLivePreview({ open, onClose, prNo = "" }: CanvassLivePreviewProps) {
@@ -57,10 +151,6 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	const [startY, setStartY] = useState(0);
 	const tableRef = useRef<HTMLTableElement>(null);
 
-	const handleMetaChange = (k: keyof typeof meta, v: string) => {
-		setMeta((prev) => ({ ...prev, [k]: v }));
-	};
-
 	const handleItemChange = (index: number, field: keyof ItemRow, value: string) => {
 		setItems((prev) => {
 			const next = [...prev];
@@ -72,7 +162,7 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	const addRow = () => {
 		setItems((prev) => [
 			...prev,
-			{ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" },
+			{ stock_no: "", description: "", quantity: "", unit: "", unit_price: "", isCenter: false },
 		]);
 	};
 
@@ -86,6 +176,14 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 			const next = [...prev];
 			const [moved] = next.splice(fromIndex, 1);
 			next.splice(toIndex, 0, moved);
+			return next;
+		});
+	};
+
+	const toggleItemCenter = (index: number) => {
+		setItems((prev) => {
+			const next = [...prev];
+			next[index] = { ...next[index], isCenter: !next[index].isCenter };
 			return next;
 		});
 	};
@@ -135,7 +233,11 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 		}
 	}, [resizingColumn, resizingRow, startX, startY]);
 
-	const handlePrint = () => {
+	const handlePrint = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		// Blur the button to prevent focus issues after returning from print tab
+		(e.currentTarget as HTMLButtonElement).blur();
 		printRFQ({ ...meta, prNo }, items);
 	};
 
@@ -202,12 +304,13 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						quantity: item.quantity != null ? String(item.quantity) : "",
 						unit: item.unit || "",
 						unit_price: "",
+						isCenter: false,
 					}));
 
 					// Ensure at least MIN_ROW_COUNT rows, or keep all items if more
 					const finalItems = [...formattedItems];
 					while (finalItems.length < MIN_ROW_COUNT) {
-						finalItems.push({ stock_no: "", description: "", quantity: "", unit: "", unit_price: "" });
+						finalItems.push({ stock_no: "", description: "", quantity: "", unit: "", unit_price: "", isCenter: false });
 					}
 					setItems(finalItems);
 				}
@@ -250,9 +353,15 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 
 	if (!open) return null;
 
+	const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+		const target = e.currentTarget;
+		target.style.height = "auto";
+		target.style.height = target.scrollHeight + "px";
+	};
+
 	return (
 		<div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6">
-			<div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+			<div className="fixed inset-0 z-0" onClick={onClose} aria-hidden="true" />
 
 			<div className="absolute right-4 top-4 z-20 flex gap-2">
 				<button
@@ -275,7 +384,7 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 				</button>
 			</div>
 
-			<div className="relative mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 p-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
+			<div className="relative z-10 mx-auto w-full bg-white shadow-[0_20px_80px_rgba(0,0,0,0.35)] ring-1 ring-black/10 p-12" style={{ maxWidth: "850px", minHeight: "1100px" }}>
 				<div className="text-black" style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}>
 					
 					{/* Top Section */}
@@ -305,19 +414,11 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						<div className="text-right">
 							<div className="flex items-end justify-end gap-2 mb-1">
 								<span className="text-[10px] italic">Date:</span>
-								<input 
-									value={meta.date} 
-									onChange={(e) => handleMetaChange("date", e.target.value)}
-									className="border-b border-black outline-none w-27 text-left px-1 text-[10px] bg-transparent"
-								/>
+								<span className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] inline-block">{meta.date}</span>
 							</div>
 							<div className="flex items-end justify-end gap-2">
 								<span className="text-[10px] italic">Canvass No.:</span>
-								<input 
-									value={meta.canvassNo} 
-									onChange={(e) => handleMetaChange("canvassNo", e.target.value)}
-									className="border-b border-black outline-none w-27 text-left px-1 text-[10px] bg-transparent"
-								/>
+								<span className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] inline-block">{meta.canvassNo}</span>
 							</div>
 						</div>
 					</div>
@@ -331,19 +432,11 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					{/* Company Info */}
 					<div className="w-[25%] mb-6">
 						<div className="mb-4">
-							<input 
-								value={meta.companyName} 
-								onChange={(e) => handleMetaChange("companyName", e.target.value)}
-								className="border-b border-black outline-none w-full text-center py-0.5"
-							/>
+							<div className="border-b border-black w-full text-center py-0.5 min-h-[16px]">{meta.companyName}</div>
 							<div className="text-[9px] text-center mt-0.5">(Company Name)</div>
 						</div>
 						<div>
-							<input 
-								value={meta.address} 
-								onChange={(e) => handleMetaChange("address", e.target.value)}
-								className="border-b border-black outline-none w-full text-center py-0.5"
-							/>
+							<div className="border-b border-black w-full text-center py-0.5 min-h-[16px]">{meta.address}</div>
 							<div className="text-[9px] text-center mt-0.5">(Address)</div>
 						</div>
 					</div>
@@ -356,21 +449,8 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 								<br />
 								delivery and submit your quotation duly signed by you or your duly authorized representative not later than
 							</span>
-							<input 
-								value={meta.deadline} 
-								onChange={(e) => handleMetaChange("deadline", e.target.value)}
-								className="absolute bottom-0 right-0 w-35 border-b border-black outline-none text-center bg-transparent text-[10px]"
-								placeholder=""
-							/>
+							<span className="absolute bottom-0 right-0 w-35 border-b border-black text-center text-[10px] min-h-[14px]">{meta.deadline}</span>
 						</div>
-						{/* <div className="flex items-start justify-end">
-							<input 
-								value={meta.deadline} 
-								onChange={(e) => handleMetaChange("deadline", e.target.value)}
-								className="border-b border-black outline-none w-40 text-center"
-								placeholder=""
-							/>
-						</div> */}
 					</div>
 
 				{/* Signature Block */}
@@ -480,9 +560,9 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 							</thead>
 							<tbody>
 								{items.map((item, i) => (
-								<tr key={i} style={{ height: rowHeights[i] || "auto" }} className="relative">
-									<td style={{ width: columnWidths.itemNo }} className="border border-black p-0.5 text-center">
-										<div className="flex items-center justify-center gap-0.5">
+								<tr key={i} style={{ height: rowHeights[i] || "auto" }} className="relative group">
+									<td style={{ width: columnWidths.itemNo }} className="border border-black p-0.5 text-center align-middle relative">
+										<div className="absolute top-0 left-0 right-0 flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 py-0.5 z-10">
 											<button
 												type="button"
 												onClick={() => moveRow(i, i - 1)}
@@ -490,9 +570,9 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 												className="text-gray-500 hover:text-gray-700 disabled:text-gray-300 transition"
 												title="Move up"
 											>
-												<RiArrowUpLine size={12} />
+												<RiArrowUpLine size={10} />
 											</button>
-											<span className="text-[9px] text-gray-500">{i + 1}</span>
+											<span className="text-[8px] text-gray-500">{i + 1}</span>
 											<button
 												type="button"
 												onClick={() => moveRow(i, i + 1)}
@@ -500,58 +580,60 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 												className="text-gray-500 hover:text-gray-700 disabled:text-gray-300 transition"
 												title="Move down"
 											>
-												<RiArrowDownLine size={12} />
+												<RiArrowDownLine size={10} />
 											</button>
 										</div>
 										<input
 											value={item.stock_no}
 											onChange={(e) => handleItemChange(i, "stock_no", e.target.value)}
-											className="w-full outline-none text-center bg-transparent mt-0.5"
+											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td style={{ width: columnWidths.description }} className="border border-black p-0.5">
-										<input
-											value={item.description}
-											onChange={(e) => handleItemChange(i, "description", e.target.value)}
-											className="w-full outline-none bg-transparent px-1"
+									<td style={{ width: columnWidths.description }} className="border border-black p-0.5 align-middle relative">
+										<DescriptionEditor
+											index={i}
+											initialValue={item.description}
+											isCenter={!!item.isCenter}
+											onChange={(val) => handleItemChange(i, "description", val)}
+											onToggleCenter={() => toggleItemCenter(i)}
 										/>
 									</td>
-									<td style={{ width: columnWidths.qty }} className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.qty }} className="border border-black p-0.5 text-center align-middle">
 										<input
 											value={item.quantity}
 											onChange={(e) => handleItemChange(i, "quantity", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td style={{ width: columnWidths.unit }} className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.unit }} className="border border-black p-0.5 text-center align-middle">
 										<input
 											value={item.unit}
 											onChange={(e) => handleItemChange(i, "unit", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td style={{ width: columnWidths.unitPrice }} className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.unitPrice }} className="border border-black p-0.5 text-center align-middle">
 										<input
 											value={item.unit_price}
 											onChange={(e) => handleItemChange(i, "unit_price", e.target.value)}
 											className="w-full outline-none text-center bg-transparent"
 										/>
 									</td>
-									<td style={{ width: columnWidths.action }} className="border border-black p-0.5 text-center">
+									<td style={{ width: columnWidths.action }} className="border border-black p-0.5 text-center align-middle relative">
 										<button
 											type="button"
 											onClick={() => removeRow(i)}
-											className="text-red-600 hover:text-red-800 transition p-0.5"
+											className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-600 hover:text-red-800 transition p-0.5 opacity-0 group-hover:opacity-100 z-10"
 											title="Remove row"
 										>
 											<RiDeleteBinLine size={14} />
 										</button>
+										<div
+											onMouseDown={(e) => handleMouseDownRow(e, i)}
+											className="absolute bottom-0 left-0 right-0 h-1 bg-gray-400 hover:bg-blue-500 cursor-row-resize transition-colors"
+											title="Drag to resize row height"
+										/>
 									</td>
-									<div
-										onMouseDown={(e) => handleMouseDownRow(e, i)}
-										className="absolute bottom-0 left-0 right-0 h-1 bg-gray-400 hover:bg-blue-500 cursor-row-resize transition-colors"
-										title="Drag to resize row height"
-									/>
 								</tr>
 							))}
 								<tr className="font-bold h-7">

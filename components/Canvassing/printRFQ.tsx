@@ -13,6 +13,7 @@ export type RFQItem = {
 	quantity: string;
 	unit: string;
 	unit_price: string;
+	isCenter?: boolean;
 };
 
 export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
@@ -34,7 +35,7 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 			(item) => `
 			<tr class="h-7">
 				<td class="cell text-center">${escapeHtml(item.stock_no || "")}</td>
-				<td class="cell text-left px-1">${escapeHtml(item.description || "")}</td>
+				<td class="cell ${item.isCenter ? "text-center" : "text-left"} px-1">${item.description || ""}</td>
 				<td class="cell text-center">${escapeHtml(String(item.quantity || ""))}</td>
 				<td class="cell text-center">${escapeHtml(item.unit || "")}</td>
 				<td class="cell text-center">${escapeHtml(item.unit_price || "")}</td>
@@ -354,10 +355,16 @@ export function printRFQ(meta: RFQMeta, items: RFQItem[]) {
 	const html = buildRFQHtml(meta, items);
 	const printWindow = window.open("", "_blank");
 	if (!printWindow) return;
+
 	printWindow.document.write(html);
 	printWindow.document.close();
-	printWindow.onload = () => {
-		printWindow.focus();
-		printWindow.print();
-	};
+
+	// Use a small delay to ensure content is rendered before printing
+	// and to avoid blocking the opener window's event loop immediately.
+	setTimeout(() => {
+		if (printWindow) {
+			printWindow.focus();
+			printWindow.print();
+		}
+	}, 500);
 }
