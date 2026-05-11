@@ -429,10 +429,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 									<div />
 								</div>
 
-								<div className="mb-4 text-center">
-									<div style={{ fontSize: "10px" }}>PROVINCIAL BIDS AND AWARDS COMMITTEE OF</div>
-									<div style={{ fontSize: "10px", fontWeight: 700 }}>DARPO-CAMARINES SUR I</div>
-								</div>
+								
 
 								<div className="mb-6 text-center">
 									<div style={{ fontSize: "14px", fontWeight: 700 }}>PROCUREMENT SUMMARY REPORT</div>

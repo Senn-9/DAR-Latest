@@ -449,10 +449,7 @@ function generateHeader(meta: SummaryReportMeta, showTitle: boolean = true): str
 				<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO Certified" />
 				<div class="spacer"></div>
 			</div>
-			<div class="committee">
-				<p class="committee-name">PROVINCIAL BIDS AND AWARDS COMMITTEE OF</p>
-				<p class="office">DARPO-CAMARINES SUR I</p>
-			</div>
+			
 			${showTitle ? `
 			<div class="report-title">
 				<h1>PROCUREMENT SUMMARY REPORT</h1>
