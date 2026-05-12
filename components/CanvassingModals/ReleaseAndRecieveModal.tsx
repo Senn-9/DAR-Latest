@@ -8,8 +8,6 @@ import {
   RiTimeLine,
   RiUserLine,
   RiFileListLine,
-  RiAddLine,
-  RiDeleteBinLine,
 } from "react-icons/ri";
 
 interface ReleaseAndRecieveModalProps {
@@ -87,10 +85,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
 
         if (asgErr) throw asgErr;
         setAssignments(asgs || []);
-        // Set the quotation number from the first assignment if available
-        if (asgs && asgs.length > 0 && asgs[0].quotation_no) {
-          setModalQuotationNo(asgs[0].quotation_no);
-        }
+        setModalQuotationNo(asgs?.[0]?.quotation_no ?? "");
       } catch (err: any) {
         console.error("Fetch error in ReleaseAndRecieveModal:", err);
         setError(err.message || "Failed to load data");
@@ -101,9 +96,14 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
     fetchData();
   }, [prId, supabase]);
 
-  const handleAddAssignment = async () => {
+  const handleAddAssignment = async (isReleased = false, isReturned = false) => {
     if (!sessionId) {
       setError("Session not ready. Please try again.");
+      return;
+    }
+    const quotationNoTrimmed = modalQuotationNo.trim();
+    if (!quotationNoTrimmed) {
+      setError("Please enter a quotation number.");
       return;
     }
     setProcessing(true);
@@ -113,11 +113,11 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
         session_id: sessionId,
         pr_no: prNo,
         name_of_canvasser: "",
-        quotation_no: modalQuotationNo,
+        quotation_no: quotationNoTrimmed,
         rfq_index: 0,
-        released_at: null,
-        returned_at: null,
-        status: "Pending",
+        released_at: isReleased ? new Date().toISOString() : null,
+        returned_at: isReturned ? new Date().toISOString() : null,
+        status: isReleased ? "Released" : isReturned ? "Returned" : "Pending",
       };
       const { data, error } = await supabase
         .from("canvasser_assignments")
@@ -130,10 +130,72 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
         throw error;
       }
       setAssignments([...assignments, data]);
+      setModalQuotationNo("");
       setError(null);
     } catch (err: any) {
       console.error("Add assignment error:", err);
-      setError(err.message || "Failed to add supplier name");
+      setError(err.message || "Failed to add assignment");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSaveQuotation = async () => {
+    if (!sessionId) {
+      setError("Session not ready. Please try again.");
+      return;
+    }
+
+    const quotationNoTrimmed = modalQuotationNo.trim();
+    if (!quotationNoTrimmed) {
+      setError("Please enter a quotation number.");
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const existingAssignment = assignments[0];
+
+      if (existingAssignment?.id) {
+        const { data, error } = await supabase
+          .from("canvasser_assignments")
+          .update({ quotation_no: quotationNoTrimmed })
+          .eq("id", existingAssignment.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const nextAssignments = [...assignments];
+        nextAssignments[0] = data;
+        setAssignments(nextAssignments);
+      } else {
+        const { data, error } = await supabase
+          .from("canvasser_assignments")
+          .insert({
+            session_id: sessionId,
+            pr_no: prNo,
+            name_of_canvasser: "",
+            quotation_no: quotationNoTrimmed,
+            rfq_index: 0,
+            released_at: null,
+            returned_at: null,
+            status: "Pending",
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setAssignments([data]);
+      }
+
+      setModalQuotationNo(quotationNoTrimmed);
+      setError(null);
+    } catch (err: any) {
+      console.error("Save quotation error:", err);
+      setError(err.message || "Failed to save quotation number");
     } finally {
       setProcessing(false);
     }
@@ -141,7 +203,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
 
   const handleUpdateAssignment = async (index: number, patch: Partial<AssignmentRow>) => {
     const asg = assignments[index];
-    if (!asg.id) return;
+    if (!asg?.id) return;
 
     setProcessing(true);
     try {
@@ -179,36 +241,32 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
     }
   };
 
-  const handleRemoveAssignment = async (index: number) => {
-    const asg = assignments[index];
-    if (!asg.id) return;
-
-    setProcessing(true);
-    try {
-      const { error } = await supabase.from("canvasser_assignments").delete().eq("id", asg.id);
-      if (error) throw error;
-
-      const newAsgs = assignments.filter((_, i) => i !== index);
-      setAssignments(newAsgs);
-    } catch (err: any) {
-      setError(err.message || "Failed to delete assignment");
-    } finally {
-      setProcessing(false);
+  const handleSetReleased = (index: number) => {
+    if (index === 0 && !assignments[index]) {
+      // Create new assignment and set as released
+      handleAddAssignment(true);
+    } else if (assignments[index]?.released_at) {
+      return;
+    } else {
+      handleUpdateAssignment(index, { 
+        released_at: new Date().toISOString(),
+        status: "Released"
+      });
     }
   };
 
-  const handleSetReleased = (index: number) => {
-    handleUpdateAssignment(index, { 
-      released_at: new Date().toISOString(),
-      status: "Released"
-    });
-  };
-
   const handleSetReturned = (index: number) => {
-    handleUpdateAssignment(index, { 
-      returned_at: new Date().toISOString(),
-      status: "Returned"
-    });
+    if (index === 0 && !assignments[index]) {
+      // Create new assignment and set as returned
+      handleAddAssignment(false, true);
+    } else if (assignments[index]?.returned_at) {
+      return;
+    } else {
+      handleUpdateAssignment(index, { 
+        returned_at: new Date().toISOString(),
+        status: "Returned"
+      });
+    }
   };
 
   const handleSubmitToAAA = async () => {
@@ -241,24 +299,10 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
 
   const allReturned = assignments.length > 0 && assignments.every(a => !!a.returned_at);
 
-  // Find existing canvasser by name
-  const findExistingCanvasser = (name: string, excludeIndex?: number) => {
-    return assignments.findIndex((a, idx) => 
-      (excludeIndex === undefined || idx !== excludeIndex) && 
-      a.name_of_canvasser?.toLowerCase().trim() === name.toLowerCase().trim()
-    );
-  };
-
-  // Get the quotation for an existing canvasser
-  const getExistingQuotation = (name: string, excludeIndex?: number) => {
-    const idx = findExistingCanvasser(name, excludeIndex);
-    return idx >= 0 ? assignments[idx].quotation_no : null;
-  };
-
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-[80] bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
+      <div className="relative z-80 bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-emerald-700 text-white">
@@ -283,132 +327,74 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
             <div className="py-10 text-center text-gray-500">Loading assignments...</div>
           ) : (
             <div className="space-y-4">
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-2 ml-1">Quotation No.</label>
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+                <label className="block text-[10px] font-bold uppercase text-gray-500 ml-1">Quotation No.</label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300"
                   placeholder="e.g. QTN-2026-001"
                   value={modalQuotationNo}
-                  onChange={(e) => setModalQuotationNo(e.target.value.trim())}
+                  onChange={(e) => setModalQuotationNo(e.target.value)}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                  <RiUserLine className="text-emerald-600" /> Canvasser Assignments
-                </h3>
-                <button
-                  onClick={handleAddAssignment}
-                  disabled={processing}
-                  className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
-                >
-                  <RiAddLine size={16} /> Add Supplier Name
-                </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-50">
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1 text-center">Released At</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSetReleased(0)}
+                      disabled={!modalQuotationNo.trim() || processing || !!assignments[0]?.released_at}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                        assignments[0]?.released_at
+                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          : "bg-emerald-600 text-white hover:bg-emerald-700"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {assignments[0]?.released_at ? (
+                        <>
+                          <RiCheckboxCircleLine size={16} />
+                          {new Date(assignments[0].released_at).toLocaleString()}
+                        </>
+                      ) : (
+                        <>
+                          <RiTimeLine size={16} />
+                          Release Now
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-50">
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1 text-center">Returned At</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSetReturned(0)}
+                      disabled={!modalQuotationNo.trim() || processing || !assignments[0]?.released_at || !!assignments[0]?.returned_at}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                        assignments[0]?.returned_at
+                          ? "bg-blue-100 text-blue-700 border border-blue-200"
+                          : !assignments[0]?.released_at
+                          ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {assignments[0]?.returned_at ? (
+                        <>
+                          <RiCheckboxCircleLine size={16} />
+                          {new Date(assignments[0].returned_at).toLocaleString()}
+                        </>
+                      ) : (
+                        <>
+                          <RiTimeLine size={16} />
+                          Return Now
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              {assignments.length === 0 ? (
-                <div className="py-12 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center text-gray-400">
-                  <RiFileListLine size={40} className="opacity-20 mb-2" />
-                  <p className="text-sm">No assignments yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {assignments.map((asg, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-2xl border border-gray-200 p-4 space-y-4 relative">
-                      <button
-                        onClick={() => handleRemoveAssignment(idx)}
-                        disabled={processing}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
-                      >
-                        <RiDeleteBinLine size={18} />
-                      </button>
-
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1">Supplier Name</label>
-                        <input
-                          type="text"
-                          className={`${inputCls} ${asg.released_at ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                          placeholder="Full Name"
-                          value={asg.name_of_canvasser || ""}
-                          disabled={!!asg.released_at}
-                          onBlur={(e) => {
-                            const name = e.target.value.trim();
-                            const existingQuotation = getExistingQuotation(name, idx);
-                            handleUpdateAssignment(idx, { 
-                              name_of_canvasser: name,
-                              ...(existingQuotation ? { quotation_no: existingQuotation } : {})
-                            });
-                          }}
-                          onChange={(e) => {
-                            const newAsgs = [...assignments];
-                            newAsgs[idx].name_of_canvasser = e.target.value;
-                            setAssignments(newAsgs);
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex-1 min-w-[200px]">
-                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1 text-center">Released At</label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleSetReleased(idx)}
-                              disabled={!!asg.released_at || processing}
-                              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                                asg.released_at
-                                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-                              } disabled:opacity-50`}
-                            >
-                              {asg.released_at ? (
-                                <>
-                                  <RiCheckboxCircleLine size={16} />
-                                  {new Date(asg.released_at).toLocaleString()}
-                                </>
-                              ) : (
-                                <>
-                                  <RiTimeLine size={16} />
-                                  Release Now
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-[200px]">
-                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 ml-1 text-center">Returned At</label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleSetReturned(idx)}
-                              disabled={!asg.released_at || !!asg.returned_at || processing}
-                              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                                asg.returned_at
-                                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                                  : !asg.released_at
-                                  ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-                                  : "bg-blue-600 text-white hover:bg-blue-700"
-                              } disabled:opacity-50`}
-                            >
-                              {asg.returned_at ? (
-                                <>
-                                  <RiCheckboxCircleLine size={16} />
-                                  {new Date(asg.returned_at).toLocaleString()}
-                                </>
-                              ) : (
-                                <>
-                                  <RiTimeLine size={16} />
-                                  Return Now
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -421,15 +407,20 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
           >
             Close
           </button>
-          
+          <button
+            onClick={handleSaveQuotation}
+            disabled={processing || !modalQuotationNo.trim()}
+            className="px-6 py-2 bg-blue-700 text-white rounded-lg text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-700/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? "Saving..." : "Save"}
+          </button>
           {allReturned && (
             <button
               onClick={handleSubmitToAAA}
               disabled={processing}
-              className="px-6 py-2 bg-emerald-700 text-white rounded-lg text-sm font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-700/20 flex items-center gap-2"
+              className="px-6 py-2 bg-emerald-700 text-white rounded-lg text-sm font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-700/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {processing ? "Submitting..." : "Submit to Abstract of Awards"}
-              <RiCheckboxCircleLine size={18} />
+              {processing ? "Forwarding..." : "Forward to Abstract of Awards"}
             </button>
           )}
         </div>
