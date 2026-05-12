@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+
 import {
   RiCloseLine,
   RiEyeLine,
@@ -13,40 +14,52 @@ import {
   RiZoomOutLine,
   RiRefreshLine,
 } from "react-icons/ri";
+
 import { type StatusFlag } from "../StatusFlagPicker";
 
 // Editable input styles for live preview
+
 const editableInputCls =
   "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+
 const editableInputCenterCls =
   "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-center whitespace-pre-wrap break-words resize-none overflow-hidden";
+
 const editableInputRightCls =
   "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-right whitespace-pre-wrap break-words resize-none overflow-hidden";
 
 // Template loading function
+
 async function loadTemplate(templateName: string): Promise<string> {
   try {
     const response = await fetch(`/documents/${templateName}-template.html`);
+
     if (!response.ok)
       throw new Error(`Failed to load ${templateName} template`);
+
     return await response.text();
   } catch (error) {
     console.error(`Error loading ${templateName} template:`, error);
+
     throw error;
   }
 }
 
 // Placeholder replacement function
+
 function replacePlaceholders(template: string, data: any): string {
   let result = template;
 
   // Handle Handlebars-style loops for PO items
+
   result = result.replace(
     /{{#each po_items}}([\s\S]*?){{\/each}}/g,
+
     (match, templateBlock) => {
       if (!data.po_items || !Array.isArray(data.po_items)) return "";
 
       return data.po_items
+
         .map((item: any, index: number) => {
           let itemBlock = templateBlock;
 
@@ -59,8 +72,10 @@ function replacePlaceholders(template: string, data: any): string {
           });
 
           // Handle {{add @index value}} for positioning
+
           itemBlock = itemBlock.replace(
             /{{add @index (\d+(?:\.\d+)?)}}/g,
+
             (_match: string, value: string) => {
               return (index + parseFloat(value)).toString();
             },
@@ -68,32 +83,42 @@ function replacePlaceholders(template: string, data: any): string {
 
           return itemBlock;
         })
+
         .join("");
     },
   );
 
   // Handle Handlebars conditionals
+
   result = result.replace(
     /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
+
     (_match: string, condition: string, content: string) => {
       const value = data[condition];
+
       const isTruthy = value && (!Array.isArray(value) || value.length > 0);
+
       return isTruthy ? content : "";
     },
   );
 
   result = result.replace(
     /{{#unless\s+(\w+)}}([\s\S]*?){{\/unless}}/g,
+
     (_match: string, condition: string, content: string) => {
       const value = data[condition];
+
       const isFalsy = !value || (Array.isArray(value) && value.length === 0);
+
       return isFalsy ? content : "";
     },
   );
 
   // Handle nested property access like {{po_items.length}}
+
   result = result.replace(
     /{{([^}]+\.([^}]+))}}/g,
+
     (match, fullExpression, property) => {
       const parts = fullExpression.split(".");
 
@@ -112,19 +137,23 @@ function replacePlaceholders(template: string, data: any): string {
   );
 
   // Handle simple placeholders
+
   Object.keys(data).forEach((key) => {
     if (key === "po_items") return; // Skip arrays, handled above
 
     let value = data[key] ?? "";
 
     // Format date fields
+
     if (key === "created_at" && value) {
       const date = new Date(value);
 
       if (!isNaN(date.getTime())) {
         value = date.toLocaleDateString("en-US", {
           year: "numeric",
+
           month: "2-digit",
+
           day: "2-digit",
         });
       }
@@ -142,649 +171,1261 @@ function replacePlaceholders(template: string, data: any): string {
 
 function escapeHtml(value: string) {
   if (!value) return "";
+
   return String(value)
     .replace(/&/g, "&amp;")
+
     .replace(/</g, "&lt;")
+
     .replace(/>/g, "&gt;")
+
     .replace(/"/g, "&quot;")
+
     .replace(/'/g, "&#39;");
 }
 
 function buildIARHtml(data: any): string {
   // Use iar_po_items if available (editable PO items), otherwise fall back to po_items
+
   const items = data.iar_po_items || data.po_items || [];
 
   // Build item rows
+
   let itemRows = "";
 
   // Add regular items (from iar_po_items or po_items)
+
   items.forEach((item: any) => {
     const quantity = Number(item.quantity || 0);
+
     const unitPrice = Number(item.unit_cost || item.unit_price || 0);
+
     const amount = quantity * unitPrice;
 
     itemRows += `
+
       <tr>
+
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
+
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
+
         <td style="border:2px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
+
         <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
+
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
+
         <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
+
       </tr>`;
   });
 
   // Fill empty rows to maintain minimum height
+
   const emptyRows = Math.max(0, 15 - items.length);
+
   for (let i = 0; i < emptyRows; i++) {
     itemRows += `
+
       <tr style="height:24px;">
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
         <td style="border:2px solid #000; padding:4px;">&nbsp;</td>
+
       </tr>`;
   }
 
   return `<!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="utf-8" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Inspection and Acceptance Report</title>
+
   <style>
+
     @page { size: A4; margin: 15mm; }
+
     * { box-sizing: border-box; }
+
     html, body { margin: 0; padding: 0; }
+
     body { font-family: Times New Roman, serif; color: #000; }
+
     table { width: 100%; border-collapse: collapse; }
+
     .center { text-align: center; }
+
     .right { text-align: right; }
+
     .bold { font-weight: bold; }
+
   </style>
+
 </head>
+
 <body>
+
   <div style="width: 816px; margin: 0 auto; min-height: 1056px;">
+
     <!-- Appendix Header -->
+
     <div style="text-align: right; margin-bottom: 8px;">
+
       <span style="font-size: 10px; font-style: italic;">Appendix 62</span>
+
     </div>
+
+
 
     <!-- Title -->
+
     <div style="text-align: center; margin-bottom: 24px;">
+
       <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px;">INSPECTION AND ACCEPTANCE REPORT</div>
+
     </div>
+
+
 
     <!-- Entity Name and Fund Cluster Row -->
+
     <div style="margin-bottom: 12px; font-size: 10px; display: flex; align-items: baseline;">
+
       <span style="font-weight: bold;">Entity Name :</span>
+
       <span style="flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
+
       <span style="font-weight: bold;">Fund Cluster :</span>
+
       <span style="padding: 0 8px;">${escapeHtml(data.fund_cluster || "")}</span>
+
     </div>
+
+
 
     <!-- Main Info Box -->
+
     <div style="border: 2px solid #000; margin-bottom: 0; font-size: 10px;">
+
       <div style="display: grid; grid-template-columns: 1fr 1fr;">
+
         <!-- Left Section -->
+
         <div style="border-right: 2px solid #000; padding: 8px;">
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Supplier :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">PO No./Date :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.po_no || "")} / ${escapeHtml(data.po_date || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Requisitioning Office/Dept. :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.office_section || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Responsibility Center Code :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.responsibility_center_code || "")}</span>
+
           </div>
+
         </div>
+
+
 
         <!-- Right Section -->
+
         <div style="padding: 8px;">
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">IAR No. :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.iar_no || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Date :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.iar_date || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Invoice No. :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.invoice_no || "")}</span>
+
           </div>
+
           <div style="margin-bottom: 4px;">
+
             <span style="font-weight: bold;">Date :</span>
+
             <span style="margin-left: 8px;">${escapeHtml(data.invoice_date || "")}</span>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
+
+
 
     <!-- Items Table -->
+
     <div style="margin-bottom: 0;">
+
       <table style="border-collapse: collapse; border: 2px solid #000; font-size: 9px; width: 100%;">
+
         <thead>
+
           <tr>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 80px;">
+
               <div style="font-style: italic;">Stock/</div>
+
               <div style="font-style: italic;">Property No.</div>
+
             </th>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 50px; font-style: italic;">Unit</th>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; font-style: italic;">Description</th>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 70px; font-style: italic;">Quantity</th>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 80px; font-style: italic;">Unit Cost</th>
+
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 90px; font-style: italic;">Amount</th>
+
           </tr>
+
         </thead>
+
         <tbody>
+
           ${itemRows}
+
         </tbody>
+
       </table>
+
     </div>
+
+
 
     <!-- Inspection and Acceptance Section -->
+
     <div style="border: 1px solid #000; font-size: 10px;">
+
       <div style="display: flex; min-height: 200px;">
+
         <!-- Inspection Column -->
+
         <div style="border-right: 1px solid #000; flex: 1; height: 100%;">
+
           <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic;">INSPECTION</div>
+
           <div style="padding: 12px; position: relative; display: flex; flex-direction: column; height: 180px;">
+
             <div style="margin-bottom: 12px;">
+
               <span style="font-weight: bold;">Date Inspected :</span>
+
               <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.inspected_at || "")}</span>
-            </div>
-            
-            <div style="margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.inspection_verified ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
-              </div>
-              <span style="font-size: 9px;">Inspected, verified and found in order as to quantity and specifications</span>
+
             </div>
 
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
-              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.inspection_officer || "")}</div>
-              <div style="font-size: 9px;">Inspection Officer/Inspection Committee</div>
+            
+
+            <div style="margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;">
+
+              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
+
+                ${data.inspection_verified ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
+
+              </div>
+
+              <span style="font-size: 9px;">Inspected, verified and found in order as to quantity and specifications</span>
+
             </div>
+
+
+
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
+
+              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.inspection_officer || "")}</div>
+
+              <div style="font-size: 9px;">Inspection Officer/Inspection Committee</div>
+
+            </div>
+
           </div>
+
         </div>
+
+
 
         <!-- Acceptance Column -->
+
         <div style="flex: 1; height: 100%;">
+
           <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic;">ACCEPTANCE</div>
+
           <div style="padding: 12px; position: relative; display: flex; flex-direction: column; height: 180px;">
+
             <div style="margin-bottom: 12px;">
+
               <span style="font-weight: bold;">Date Received :</span>
+
               <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.received_at || "")}</span>
-            </div>
-            
-            <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.items_complete !== false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
-              </div>
-              <span style="font-size: 9px;">Complete</span>
-            </div>
-            
-            <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.items_complete === false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
-              </div>
-              <span style="font-size: 9px;">Partial (pls. specify quantity)</span>
+
             </div>
 
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
-              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.supply_officer || "")}</div>
-              <div style="font-size: 9px;">ARPT/SUPPLY OFFICER</div>
+            
+
+            <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+
+              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
+
+                ${data.items_complete !== false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
+
+              </div>
+
+              <span style="font-size: 9px;">Complete</span>
+
             </div>
+
+            
+
+            <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+
+              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
+
+                ${data.items_complete === false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
+
+              </div>
+
+              <span style="font-size: 9px;">Partial (pls. specify quantity)</span>
+
+            </div>
+
+
+
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
+
+              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.supply_officer || "")}</div>
+
+              <div style="font-size: 9px;">ARPT/SUPPLY OFFICER</div>
+
+            </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
+
   </div>
+
 </body>
+
 </html>`;
 }
 
 function buildDVHtml(data: any): string {
   // Use provided accounting entries or default empty rows
+
   const entries =
     data.accounting_entries && data.accounting_entries.length > 0
       ? data.accounting_entries
       : [
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
         ];
 
   // Build accounting entry rows
+
   let accountingRows = "";
+
   entries.forEach((entry: any, i: number) => {
     accountingRows += `
+
       <tr style="height: 20px;">
+
         <td style="border-right: 1px solid #000; ${i < entries.length - 1 ? "border-bottom: 1px solid #000;" : ""} padding: 2px 4px; font-size: 9px; font-family: Times New Roman, serif;">
+
           ${escapeHtml(entry.account_title || "")}
+
         </td>
+
         <td style="border-right: 1px solid #000; ${i < entries.length - 1 ? "border-bottom: 1px solid #000;" : ""} padding: 2px 4px; font-size: 9px; font-family: Times New Roman, serif;">
+
           ${escapeHtml(entry.uacs_code || "")}
+
         </td>
+
         <td style="border-right: 1px solid #000; ${i < entries.length - 1 ? "border-bottom: 1px solid #000;" : ""} padding: 2px 4px; text-align: right; font-size: 9px; font-family: Times New Roman, serif;">
+
           ${escapeHtml(entry.debit || "")}
+
         </td>
+
         <td style="${i < entries.length - 1 ? "border-bottom: 1px solid #000;" : ""} padding: 2px 4px; text-align: right; font-size: 9px; font-family: Times New Roman, serif;">
+
           ${escapeHtml(entry.credit || "")}
+
         </td>
+
       </tr>`;
   });
 
   return `<!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="utf-8" />
+
   <title>Disbursement Voucher</title>
+
   <style>
+
     @page { size: A4; margin: 15mm; }
+
     * { box-sizing: border-box; }
+
     html, body { margin: 0; padding: 0; }
+
     body { font-family: Times New Roman, serif; color: #000; font-size: 9px; }
+
     table { border-collapse: collapse; }
+
   </style>
+
 </head>
+
 <body>
-  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px; font-family: Times New Roman, serif; font-size: 9px; color: #000;">
+
+  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px; font-family: Times New Roman, serif; font-size: 9px; color: #000; background: white;">
+
     <!-- Appendix -->
+
     <div style="text-align: right; font-style: italic; margin-bottom: 2px;">Appendix 32</div>
 
+
+
     <!-- HEADER: Logo | Title | Fund Cluster/Date/DV No -->
-    <table style="width: 100%; border: 1px solid #000;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+
       <tbody>
+
         <tr>
+
           <td style="width: 90px; padding: 4px; vertical-align: middle;">
+
             <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR Logo" style="width: 72px; height: 44px; object-fit: contain;" />
+
           </td>
+
           <td style="border-right: 1px solid #000; padding: 4px; vertical-align: top;">
+
             <div style="font-size: 12px; font-weight: bold; text-align: center; font-family: Times New Roman, serif;">DEPARTMENT OF AGRARIAN REFORM</div>
+
             <div style="font-size: 10px; text-align: center; margin-bottom: 4px; font-family: Times New Roman, serif;">Camarines Sur Provincial Office</div>
+
             <div style="font-size: 11px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px; font-family: Times New Roman, serif;">DISBURSEMENT VOUCHER</div>
+
           </td>
+
           <td style="width: 160px; padding: 0; vertical-align: top;">
+
             <table style="width: 100%; height: 100%;">
+
               <tbody>
+
                 <tr>
+
                   <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">Fund:</b> ${escapeHtml(data.fund_cluster || "")}</td>
+
                 </tr>
+
                 <tr>
+
                   <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">Date:</b> ${escapeHtml(data.dv_date || "")}</td>
+
                 </tr>
+
                 <tr>
+
                   <td style="padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">DV No.:</b> ${escapeHtml(data.dv_no || "")}</td>
+
                 </tr>
+
               </tbody>
+
             </table>
+
           </td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- MODE OF PAYMENT -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td style="width: 50px; border-right: 1px solid #000; padding: 3px 6px; vertical-align: top;"><b style="font-family: Times New Roman, serif;">Mode of<br/>payment</b></td>
+
           <td style="padding: 3px 6px; vertical-align: top; font-family: Times New Roman, serif;">
+
             <div style="display: flex; gap: 35px; margin-top: 3px;">
-              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px;">
+
+              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: Times New Roman, serif;">
+
                 <input type="checkbox" ${data.mode_of_payment === "MDS Check" ? "checked" : ""} style="margin: 0;" /> MDS Check
+
               </label>
-              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px;">
+
+              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: Times New Roman, serif;">
+
                 <input type="checkbox" ${data.mode_of_payment === "Commercial Check" ? "checked" : ""} style="margin: 0;" /> Commercial Check
+
               </label>
-              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px;">
+
+              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: Times New Roman, serif;">
+
                 <input type="checkbox" ${data.mode_of_payment === "ADA" ? "checked" : ""} style="margin: 0;" /> ADA
+
               </label>
-              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px;">
+
+              <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: Times New Roman, serif;">
+
                 <input type="checkbox" ${data.mode_of_payment === "Others" ? "checked" : ""} style="margin: 0;" /> Others (Please specify)
+
               </label>
+
             </div>
+
           </td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- PAYEE / TIN / ORS / ADDRESS -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td style="width: 50px; border-right: 1px solid #000; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">Payee</b></td>
+
           <td style="border-right: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee || data.supplier || "")}</td>
+
           <td style="width: 140px; border-right: 1px solid #000; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">Tin/Employee No.</b></td>
+
           <td style="width: 120px; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">ORS/BURS No.</b></td>
+
         </tr>
+
         <tr>
+
           <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;"><b style="font-family: Times New Roman, serif;">Address</b></td>
+
           <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.address || "")}</td>
+
           <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee_tin || data.tin || "")}</td>
+
           <td style="border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.ors_no || "")}</td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- PARTICULARS TABLE -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <thead>
+
         <tr>
+
           <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Particulars</th>
+
           <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Responsibility Center</th>
+
           <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">MFO/PAP</th>
+
           <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Amount</th>
+
         </tr>
+
       </thead>
+
       <tbody>
-        <tr style="height: 110px;">
+
+        <tr style="height: 30px;">
+
           <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.particulars || "")}</td>
+
           <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.responsibility_center || "")}</td>
+
           <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.mfo_pap || "")}</td>
+
           <td style="padding: 3px 4px; vertical-align: top; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+
         </tr>
+
         <tr style="height: 10px;">
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td>&nbsp;</td>
+
         </tr>
+
         <tr style="height: 10px;">
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td>&nbsp;</td>
+
         </tr>
+
         <tr style="height: 10px;">
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td style="border-right: 1px solid #000;">&nbsp;</td>
+
           <td>&nbsp;</td>
+
         </tr>
+
         <tr>
+
           <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold; font-family: Times New Roman, serif;">Amount Due</td>
+
           <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- SECTION A -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td style="padding: 4px 6px; font-family: Times New Roman, serif;"><b>A.</b> Certified: Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</td>
+
         </tr>
+
         <tr style="height: 36px;">
-          <td>&nbsp;</td>
+
+          <td style="padding: 4px 6px; font-family: Times New Roman, serif; font-weight: bold;">${escapeHtml(data.certified_printed_name || "")}</td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- SECTION B: Accounting Entry -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px; font-family: Times New Roman, serif;"><b>B.</b> Accounting Entry:</td>
+
         </tr>
+
         <tr>
+
           <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Account Title</th>
+
           <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">UACS Code</th>
+
           <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Debit</th>
+
           <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: Times New Roman, serif;">Credit</th>
+
         </tr>
+
         ${accountingRows}
+
       </tbody>
+
     </table>
+
+
 
     <!-- SECTIONS C & D -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
-          <td style="width: 50%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; font-family: Times New Roman, serif;">
+
+          <td style="width: 52.4%; border-right: 1px solid #000; padding: 4px 5px; vertical-align: top; font-family: Times New Roman, serif;">
+
             <div style="font-weight: bold; margin-bottom: 4px;">C. Certified:</div>
+
             <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-              <span>Cash available</span>
+
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;">
+                ${data.certified_cash_available ? '<div style="text-align: center; line-height: 8px; font-size: 8px;">✓</div>' : ""}
+              </span>
+
+              <span style="font-family: Times New Roman, serif;">Cash available</span>
+
             </div>
+
             <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-              <span>Subject to Authority to Debit Account (when applicable)</span>
+
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;">
+                ${data.certified_subject_to_authority ? '<div style="text-align: center; line-height: 8px; font-size: 8px;">✓</div>' : ""}
+              </span>
+
+              <span style="font-family: Times New Roman, serif;">Subject to Authority to Debit Account (when applicable)</span>
+
             </div>
+
             <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-              <span>Supporting documents complete and amount claimed proper</span>
+
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;">
+                ${data.certified_proper ? '<div style="text-align: center; line-height: 8px; font-size: 8px;">✓</div>' : ""}
+              </span>
+
+              <span style="font-family: Times New Roman, serif;">Supporting documents complete and amount claimed proper</span>
+
             </div>
+
           </td>
+
           <td style="padding: 4px 6px; vertical-align: top; font-family: Times New Roman, serif;"><b>D. Approved for Payment</b></td>
+
         </tr>
+
       </tbody>
+
     </table>
+
+
 
     <!-- SIGNATURES -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Signature</td>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
-          <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Signature</td>
-          <td style="border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">&nbsp;</td>
+
+          <td style="width: 91px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Signature</td>
+
+          <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">&nbsp;</td>
+
         </tr>
+
         <tr>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Printed Name</td>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px;">&nbsp;</td>
+
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-weight: bold; font-family: Times New Roman, serif;">${escapeHtml(data.certified_printed_name || "")}</td>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Printed Name</td>
-          <td style="border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+
+          <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-weight: bold; font-family: Times New Roman, serif;">${escapeHtml(data.approved_printed_name || "")}</td>
+
         </tr>
+
         <tr>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Position</td>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Head, Accounting Unit/Authorized Representative</td>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Position</td>
+
           <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Agency Head/Authorized Representative</td>
+
         </tr>
+
         <tr>
+
           <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Date</td>
-          <td style="border-right: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+
+          <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">${escapeHtml(data.certified_date || "")}</td>
+
           <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Date</td>
-          <td style="padding: 3px 4px;">&nbsp;</td>
+
+          <td style="padding: 3px 4px; font-family: Times New Roman, serif;">${escapeHtml(data.approved_date || "")}</td>
+
         </tr>
+
       </tbody>
+
     </table>
 
+
+
     <!-- SECTION E: Receipt of Payment -->
-    <table style="width: 100%; border: 1px solid #000; border-top: none;">
+
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+
       <tbody>
+
         <tr>
+
           <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px; font-family: Times New Roman, serif;"><b>E. Receipt of Payment</b></td>
+
           <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 6px; font-family: Times New Roman, serif;"><b>JEV No.</b></td>
+
         </tr>
+
         <tr>
+
           <td style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Check/<br/>ADA No.</td>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;"><b>Date :</b></td>
+
           <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;"><b>Bank Name &amp; Account Number:</b></td>
-          <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+
+          <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">&nbsp;</td>
+
         </tr>
+
         <tr>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;">Signature</td>
+
           <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;"><b>Date :</b></td>
+
           <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;"><b>Printed Name:</b></td>
+
           <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px; font-family: Times New Roman, serif;"><b>Date</b></td>
+
         </tr>
+
         <tr>
+
           <td colspan="5" style="padding: 3px 6px; font-family: Times New Roman, serif;"><b>Official Receipt No. &amp; Date/Other Documents</b></td>
+
         </tr>
+
       </tbody>
+
     </table>
+
   </div>
+
 </body>
+
 </html>`;
 }
 
 function buildLOAHtml(data: any): string {
   return `<!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="utf-8" />
+
   <title>Letter of Acceptance</title>
+
   <style>
+
     @page { size: A4; margin: 15mm; }
+
     * { box-sizing: border-box; }
+
     html, body { margin: 0; padding: 0; }
+
     body { font-family: Times New Roman, serif; color: #000; }
+
   </style>
+
 </head>
+
 <body>
+
   <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 64px 80px;">
+
     <div style="color: #000; font-family: Times New Roman, serif; font-size: 11px; line-height: 1.2; letter-spacing: 0.5px;">
+
       <!-- Header Section -->
+
       <div style="position: relative; margin-bottom: 40px;">
+
         <!-- DAR Logo - Absolute Position -->
+
         <div style="position: absolute; left: 16px; top: 0;">
+
           <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height: 64px; width: 64px; object-fit: contain;" />
+
         </div>
+
         <!-- Office Details - With left padding for logo -->
+
         <div style="text-align: center; padding-left: 64px;">
+
           <div style="font-size: 11px; margin-bottom: 4px; font-family: Times New Roman, serif;">
+
             Republic of the Philippines
+
           </div>
+
           <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: Times New Roman, serif;">
+
             DEPARTMENT OF AGRARIAN REFORM
+
           </div>
+
           <div style="font-size: 10px; margin-bottom: 2px; font-family: Times New Roman, serif;">
+
             Camarines Sur Provincial Office
+
           </div>
+
           <div style="font-size: 10px; font-family: Times New Roman, serif;">
+
             2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY
+
           </div>
+
         </div>
+
       </div>
+
+
 
       <!-- Title -->
+
       <div style="text-align: center; margin-bottom: 32px; margin-top: 40px;">
+
         <div style="font-family: Times New Roman, serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">
+
           LETTER OF ACCEPTANCE
+
         </div>
+
       </div>
+
+
 
       <!-- Date Field - Right Aligned -->
+
       <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+
         <div style="width: 280px; text-align: center;">
+
           <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; text-align: center;">
+
             ${escapeHtml(data.accepted_at || "")}
+
           </div>
+
           <div style="font-size: 9px; margin-top: 4px;">Date</div>
+
         </div>
+
       </div>
+
+
 
       <!-- Acceptance Text -->
+
       <div style="color: #000; font-family: Times New Roman, serif;">
+
         <!-- Line 1 - indented -->
+
         <div style="height: 32px; display: flex; align-items: flex-end; padding-bottom: 4px; font-family: Times New Roman, serif;">
-          <span style="padding-left: 100px; font-family: Times New Roman, serif; word-spacing: 15px;">
+
+          <span style="padding-left: 50px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             I/WE hereby certify to have accepted each and every
+
             articles/services delivered
+
           </span>
+
         </div>
+
+
 
         <!-- Line 2 - "rendered by ___" -->
+
         <div style="height: 32px; display: flex; align-items: flex-end;">
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             rendered&nbsp;by&nbsp;
+
           </span>
+
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
+
             ${escapeHtml(data.supplier_name || data.supplier || "")}
+
           </span>
+
         </div>
+
+
 
         <!-- Line 3 - "listed in the attached Invoice No. ___ dated" -->
+
         <div style="height: 32px; display: flex; align-items: flex-end;">
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
+
           </span>
+
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
+
             ${escapeHtml(data.invoice_no || "")}
+
           </span>
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             &nbsp;dated
+
           </span>
+
         </div>
+
+
 
         <!-- Line 4 - "___ was/were found to be in accordance with the specifications" -->
+
         <div style="height: 32px; display: flex; align-items: flex-end;">
+
           <span style="width: 180px; flex-shrink: 0; border-bottom: 1.5px solid #000;">
+
             ${escapeHtml(data.invoice_date || "")}
+
           </span>
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             &nbsp;was/were found to be in accordance with the
+
             specifications
+
           </span>
+
         </div>
+
+
 
         <!-- Line 5 - "stipulated under Order No./Purchase Order No. ___ dated" -->
+
         <div style="height: 32px; display: flex; align-items: flex-end;">
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;
+
           </span>
+
           <span style="flex: 1; border-bottom: 1.5px solid #000;">
+
             ${escapeHtml(data.po_no || "")}
+
           </span>
+
           <span style="white-space: nowrap; padding-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 8px;">
+
             &nbsp;dated
+
           </span>
+
         </div>
+
+
 
         <!-- Line 6 - standalone PO date underline -->
+
         <div style="height: 32px; display: flex; align-items: flex-end;">
+
           <span style="width: 180px; border-bottom: 1.5px solid #000;">
+
             ${escapeHtml(data.po_date || "")}
+
           </span>
+
         </div>
+
       </div>
+
+
 
       <!-- Signature Section - Right Aligned -->
+
       <div style="display: flex; justify-content: flex-end; margin-top: 100px;">
+
         <div style="width: 340px; text-align: center;">
+
           <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: Times New Roman, serif; font-size: 11px;">
+
             ${escapeHtml(data.accepted_by_name || "")}
+
           </div>
+
           <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: Times New Roman, serif; word-spacing: 15px;">
+
             (Printed Name &amp; Signature)
+
           </div>
+
+
 
           <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: Times New Roman, serif; font-weight: 700; font-size: 11px;">
+
             ${escapeHtml(data.accepted_by_title || "")}
+
           </div>
+
           <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: Times New Roman, serif; word-spacing: 15px;">
+
             (Official Title)
+
           </div>
+
           <div style="font-size: 9px; font-family: Times New Roman, serif; word-spacing: 15px;">
+
             (Head of Agency/Authorized Representative)
+
           </div>
+
         </div>
+
       </div>
 
+
+
       <!-- Form Reference - Bottom Right -->
+
       <div style="display: flex; justify-content: flex-end; margin-top: 40px;">
+
         <div style="font-size: 9px; font-weight: 700; font-family: Times New Roman, serif;">
+
           DAR CS1-QF-STO-016 REV 00
+
         </div>
+
       </div>
+
     </div>
+
   </div>
+
 </body>
+
 </html>`;
 }
 
@@ -826,13 +1467,19 @@ function downloadPDF(html: string) {
 
 function IAREditablePreview({
   delivery,
+
   iar,
+
   poData,
+
   setIar,
 }: {
   delivery: any;
+
   iar: any;
+
   poData: any;
+
   setIar: (data: any) => void;
 }) {
   const [zoomLevel, setZoomLevel] = useState(0.85);
@@ -852,36 +1499,49 @@ function IAREditablePreview({
   const scalePercentage = Math.round(zoomLevel * 100);
 
   // Auto-resize handler for textareas
+
   const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
+
     target.style.height = "auto";
+
     target.style.height = target.scrollHeight + "px";
   };
 
   // Update IAR field
+
   const updateIarField = (field: string, value: any) => {
     setIar({ ...iar, [field]: value });
   };
 
   // Update IAR PO item
+
   const updateIarPoItem = (index: number, field: string, value: string) => {
     const updatedItems = [...(iar?.iar_po_items || [])];
+
     updatedItems[index] = { ...updatedItems[index], [field]: value };
+
     setIar({ ...iar, iar_po_items: updatedItems });
   };
 
   // Transform poData to have the correct structure
+
   const transformedPoData = poData
     ? {
         ...poData,
+
         po_items: poData.purchase_order_items || [],
+
         po_date: poData.date,
       }
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...iar };
+
   mergedData.po_items = iar?.iar_po_items || transformedPoData.po_items;
+
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
   const items = mergedData.po_items || [];
@@ -889,6 +1549,7 @@ function IAREditablePreview({
   return (
     <div className="space-y-2">
       {/* Zoom Controls */}
+
       <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
         <div className="flex items-center gap-2">
           <button
@@ -922,11 +1583,14 @@ function IAREditablePreview({
       </div>
 
       {/* Live JSX Preview Container */}
+
       <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
         <div
           style={{
             transform: `scale(${zoomLevel})`,
+
             transformOrigin: "top left",
+
             width: `${100 / zoomLevel}%`,
           }}
         >
@@ -934,12 +1598,16 @@ function IAREditablePreview({
             className="bg-white"
             style={{
               maxWidth: "800px",
+
               minHeight: "1100px",
+
               margin: "0 auto",
+
               padding: "40px 60px",
             }}
           >
             {/* Appendix Header */}
+
             <div className="text-right mb-2">
               <span style={{ fontSize: "10px", fontStyle: "italic" }}>
                 Appendix 62
@@ -947,12 +1615,16 @@ function IAREditablePreview({
             </div>
 
             {/* Title */}
+
             <div className="text-center mb-6">
               <div
                 style={{
                   fontSize: "14px",
+
                   fontWeight: 700,
+
                   letterSpacing: "1px",
+
                   fontFamily: "Times New Roman, serif",
                 }}
               >
@@ -961,50 +1633,63 @@ function IAREditablePreview({
             </div>
 
             {/* Entity Name and Fund Cluster Row */}
+
             <div
               className="mb-3 flex items-baseline"
               style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <span className="font-semibold">Entity Name :</span>
+
               <span className="flex-1 px-2">
                 DEPARTMENT OF AGRARIAN REFORM-CAM SUR I
               </span>
+
               <span className="font-semibold">Fund Cluster :</span>
+
               <span className="ml-2">{mergedData.fund_cluster || ""}</span>
             </div>
 
             {/* Main Info Box */}
+
             <div
               className="border-2 border-black"
               style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <div className="grid grid-cols-2">
                 {/* Left Section */}
+
                 <div className="border-r-2 border-black p-2 space-y-1">
                   <div>
                     <span className="font-semibold">Supplier :</span>
+
                     <span className="ml-2">
                       {mergedData.supplier_name || mergedData.supplier || ""}
                     </span>
                   </div>
+
                   <div>
                     <span className="font-semibold">PO No./Date :</span>
+
                     <span className="ml-2">
                       {mergedData.po_no || ""} / {mergedData.po_date || ""}
                     </span>
                   </div>
+
                   <div>
                     <span className="font-semibold">
                       Requisitioning Office/Dept. :
                     </span>
+
                     <span className="ml-2">
                       {mergedData.office_section || ""}
                     </span>
                   </div>
+
                   <div>
                     <span className="font-semibold">
                       Responsibility Center Code :
                     </span>
+
                     <span className="ml-2">
                       {mergedData.responsibility_center_code || ""}
                     </span>
@@ -1012,21 +1697,29 @@ function IAREditablePreview({
                 </div>
 
                 {/* Right Section */}
+
                 <div className="p-2 space-y-1">
                   <div>
                     <span className="font-semibold">IAR No. :</span>
+
                     <span className="ml-2">{mergedData.iar_no || ""}</span>
                   </div>
+
                   <div>
                     <span className="font-semibold">Date :</span>
+
                     <span className="ml-2">{mergedData.iar_date || ""}</span>
                   </div>
+
                   <div>
                     <span className="font-semibold">Invoice No. :</span>
+
                     <span className="ml-2">{mergedData.invoice_no || ""}</span>
                   </div>
+
                   <div>
                     <span className="font-semibold">Date :</span>
+
                     <span className="ml-2">
                       {mergedData.invoice_date || ""}
                     </span>
@@ -1036,11 +1729,13 @@ function IAREditablePreview({
             </div>
 
             {/* Items Table */}
+
             <div>
               <table
                 className="w-full border-collapse border-2 border-black"
                 style={{
                   fontSize: "9px",
+
                   fontFamily: "Times New Roman, serif",
                 }}
               >
@@ -1051,32 +1746,38 @@ function IAREditablePreview({
                       style={{ width: "80px" }}
                     >
                       <div style={{ fontStyle: "italic" }}>Stock/</div>
+
                       <div style={{ fontStyle: "italic" }}>Property No.</div>
                     </th>
+
                     <th
                       className="border-2 border-black p-1 text-center font-bold"
                       style={{ width: "50px", fontStyle: "italic" }}
                     >
                       Unit
                     </th>
+
                     <th
                       className="border-2 border-black p-1 text-center font-bold"
                       style={{ fontStyle: "italic" }}
                     >
                       Description
                     </th>
+
                     <th
                       className="border-2 border-black p-1 text-center font-bold"
                       style={{ width: "70px", fontStyle: "italic" }}
                     >
                       Quantity
                     </th>
+
                     <th
                       className="border-2 border-black p-1 text-center font-bold"
                       style={{ width: "80px", fontStyle: "italic" }}
                     >
                       Unit Cost
                     </th>
+
                     <th
                       className="border-2 border-black p-1 text-center font-bold"
                       style={{ width: "90px", fontStyle: "italic" }}
@@ -1085,31 +1786,39 @@ function IAREditablePreview({
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {items.map((item: any, i: number) => (
                     <tr key={i}>
                       <td className="border-2 border-black p-1 text-center">
                         {item.stock_no || ""}
                       </td>
+
                       <td className="border-2 border-black p-1 text-center">
                         {item.unit || ""}
                       </td>
+
                       <td
                         className="border-2 border-black p-1 px-2"
                         style={{
                           overflow: "hidden",
+
                           wordWrap: "break-word",
+
                           whiteSpace: "normal",
                         }}
                       >
                         {item.description || ""}
                       </td>
+
                       <td className="border-2 border-black p-1 text-center">
                         {item.quantity || ""}
                       </td>
+
                       <td className="border-2 border-black p-1 text-right pr-2">
                         {item.unit_cost || ""}
                       </td>
+
                       <td className="border-2 border-black p-1 text-right pr-2">
                         {item.quantity && item.unit_cost
                           ? (
@@ -1119,14 +1828,21 @@ function IAREditablePreview({
                       </td>
                     </tr>
                   ))}
+
                   {/* Fill empty rows */}
+
                   {[...Array(Math.max(0, 15 - items.length))].map((_, i) => (
                     <tr key={`empty-${i}`} style={{ height: "24px" }}>
                       <td className="border-2 border-black p-1">&nbsp;</td>
+
                       <td className="border-2 border-black p-1">&nbsp;</td>
+
                       <td className="border-2 border-black p-1">&nbsp;</td>
+
                       <td className="border-2 border-black p-1">&nbsp;</td>
+
                       <td className="border-2 border-black p-1">&nbsp;</td>
+
                       <td className="border-2 border-black p-1">&nbsp;</td>
                     </tr>
                   ))}
@@ -1135,28 +1851,33 @@ function IAREditablePreview({
             </div>
 
             {/* Inspection and Acceptance Section */}
+
             <div
               className="border border-black"
               style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
               <div className="flex" style={{ minHeight: "200px" }}>
                 {/* Inspection Column */}
+
                 <div className="border-r border-black flex-1 h-full">
                   <div
                     className="border-b border-black p-2 text-center font-bold"
                     style={{
                       fontStyle: "italic",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     INSPECTION
                   </div>
+
                   <div
                     className="p-3 relative flex flex-col"
                     style={{ height: "180px" }}
                   >
                     <div className="mb-3">
                       <span className="font-semibold">Date Inspected :</span>
+
                       <span className="ml-2">
                         {mergedData.inspected_at || ""}
                       </span>
@@ -1176,9 +1897,11 @@ function IAREditablePreview({
                           </div>
                         )}
                       </div>
+
                       <span
                         style={{
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1194,18 +1917,25 @@ function IAREditablePreview({
                       <div
                         style={{
                           fontWeight: 700,
+
                           fontFamily: "Times New Roman, serif",
+
                           width: "80%",
+
                           margin: "0 auto",
+
                           fontSize: "9px",
+
                           borderBottom: "1px solid black",
                         }}
                       >
                         {mergedData.inspection_officer || ""}
                       </div>
+
                       <div
                         style={{
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1216,22 +1946,26 @@ function IAREditablePreview({
                 </div>
 
                 {/* Acceptance Column */}
+
                 <div className="flex-1 h-full">
                   <div
                     className="border-b border-black p-2 text-center font-bold"
                     style={{
                       fontStyle: "italic",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     ACCEPTANCE
                   </div>
+
                   <div
                     className="p-3 relative flex flex-col"
                     style={{ height: "180px" }}
                   >
                     <div className="mb-3">
                       <span className="font-semibold">Date Received :</span>
+
                       <span className="ml-2">
                         {mergedData.received_at || ""}
                       </span>
@@ -1251,9 +1985,11 @@ function IAREditablePreview({
                           </div>
                         )}
                       </div>
+
                       <span
                         style={{
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1275,9 +2011,11 @@ function IAREditablePreview({
                           </div>
                         )}
                       </div>
+
                       <span
                         style={{
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1292,18 +2030,25 @@ function IAREditablePreview({
                       <div
                         style={{
                           fontWeight: 700,
+
                           fontFamily: "Times New Roman, serif",
+
                           width: "80%",
+
                           margin: "0 auto",
+
                           fontSize: "9px",
+
                           borderBottom: "1px solid black",
                         }}
                       >
                         {mergedData.supply_officer || ""}
                       </div>
+
                       <div
                         style={{
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1323,13 +2068,19 @@ function IAREditablePreview({
 
 function LOAEditablePreview({
   delivery,
+
   loa,
+
   poData,
+
   setLoa,
 }: {
   delivery: any;
+
   loa: any;
+
   poData: any;
+
   setLoa: (data: any) => void;
 }) {
   const [zoomLevel, setZoomLevel] = useState(0.85);
@@ -1349,29 +2100,39 @@ function LOAEditablePreview({
   const scalePercentage = Math.round(zoomLevel * 100);
 
   // Auto-resize handler for textareas
+
   const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
+
     target.style.height = "auto";
+
     target.style.height = target.scrollHeight + "px";
   };
 
   // Update LOA field
+
   const updateLoaField = (field: string, value: string) => {
     setLoa({ ...loa, [field]: value });
   };
 
   // Transform poData to have the correct structure
+
   const transformedPoData = poData
     ? {
         ...poData,
+
         po_items: poData.purchase_order_items || [],
+
         po_date: poData.date,
       }
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...loa };
+
   mergedData.po_items = transformedPoData.po_items;
+
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
 
   const items = mergedData.po_items || [];
@@ -1379,6 +2140,7 @@ function LOAEditablePreview({
   return (
     <div className="space-y-2">
       {/* Zoom Controls */}
+
       <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
         <div className="flex items-center gap-2">
           <button
@@ -1412,11 +2174,14 @@ function LOAEditablePreview({
       </div>
 
       {/* Live JSX Preview Container */}
+
       <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
         <div
           style={{
             transform: `scale(${zoomLevel})`,
+
             transformOrigin: "top left",
+
             width: `${100 / zoomLevel}%`,
           }}
         >
@@ -1424,8 +2189,11 @@ function LOAEditablePreview({
             className="bg-white"
             style={{
               maxWidth: "800px",
+
               minHeight: "1100px",
+
               margin: "0 auto",
+
               padding: "40px 60px",
             }}
           >
@@ -1434,8 +2202,10 @@ function LOAEditablePreview({
               style={{ fontFamily: "Times New Roman, serif" }}
             >
               {/* Header Section */}
+
               <div className="relative mb-10">
                 {/* DAR Logo - Absolute Position */}
+
                 <div className="absolute left-4 top-0">
                   <img
                     src="/temp_pic/image_1195822096_1.jpg"
@@ -1443,40 +2213,54 @@ function LOAEditablePreview({
                     className="h-16 w-16 object-contain"
                   />
                 </div>
+
                 {/* Office Details - With left padding for logo */}
+
                 <div className="text-center pl-16">
                   <div
                     style={{
                       fontSize: "11px",
+
                       marginBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Republic of the Philippines
                   </div>
+
                   <div
                     style={{
                       fontSize: "14px",
+
                       fontWeight: 700,
+
                       letterSpacing: "0.5px",
+
                       marginBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     DEPARTMENT OF AGRARIAN REFORM
                   </div>
+
                   <div
                     style={{
                       fontSize: "10px",
+
                       marginBottom: "2px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Camarines Sur Provincial Office
                   </div>
+
                   <div
                     style={{
                       fontSize: "10px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -1486,60 +2270,81 @@ function LOAEditablePreview({
               </div>
 
               {/* Divider */}
+
               {/* <div style={{ borderBottom: "2px solid #000", marginBottom: "28px" }} /> */}
 
               {/* Title */}
+
               <div className="text-center mb-8 mt-10">
                 <div
                   style={{
                     fontFamily: "Times New Roman, serif",
+
                     fontWeight: 700,
+
                     fontSize: "14px",
+
                     marginTop: "28px",
+
                     textTransform: "uppercase",
                   }}
                 >
                   LETTER OF ACCEPTANCE
                 </div>
               </div>
+
               {/* Date Field - Right Aligned */}
+
               <div className="flex justify-end mb-8">
-                <div style={{ width: "280px", textAlign: "center" }}>
+                <div style={{ width: "150px", textAlign: "center" }}>
                   <div
                     style={{
                       borderBottom: "1.5px solid #000",
+
                       minHeight: "22px",
+
                       paddingBottom: "2px",
+
                       textAlign: "center",
+
                       fontSize: "9px",
                     }}
                   >
                     {mergedData.accepted_at || ""}
                   </div>
+
                   <div style={{ fontSize: "9px", marginTop: "4px" }}>Date</div>
                 </div>
               </div>
 
               {/* Acceptance Text */}
+
               <div
                 className="text-black"
                 style={{ fontFamily: "Times New Roman, serif" }}
               >
                 {/* Line 1 - indented */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
+
                     paddingBottom: "4px",
+
                     fontFamily: "Times New Roman, serif",
                   }}
                 >
                   <span
                     style={{
                       paddingLeft: "50px",
+
                       fontFamily: "Times New Roman, serif",
-                      wordSpacing: "10px",
+
+                      wordSpacing: "15px",
                     }}
                   >
                     I/WE hereby certify to have accepted each and every
@@ -1548,54 +2353,72 @@ function LOAEditablePreview({
                 </div>
 
                 {/* Line 2 - "rendered by ___" */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
                   }}
                 >
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
                     rendered&nbsp;by&nbsp;
                   </span>
+
                   <span style={{ flex: 1, borderBottom: "1.5px solid #000" }}>
                     {mergedData.supplier_name || mergedData.supplier || ""}
                   </span>
                 </div>
 
                 {/* Line 3 - "listed in the attached Invoice No. ___ dated" */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
                   }}
                 >
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
                     listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
                   </span>
+
                   <span style={{ flex: 1, borderBottom: "1.5px solid #000" }}>
                     {mergedData.invoice_no || ""}
                   </span>
+
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
@@ -1604,29 +2427,40 @@ function LOAEditablePreview({
                 </div>
 
                 {/* Line 4 - "___ was/were found to be in accordance with the specifications" */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
                   }}
                 >
                   <span
                     style={{
                       width: "180px",
+
                       flexShrink: 0,
+
                       borderBottom: "1.5px solid #000",
+
                       fontSize: "9px",
+
                       display: "inline-block",
                     }}
                   >
                     {mergedData.invoice_date || ""}
                   </span>
+
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
@@ -1636,31 +2470,42 @@ function LOAEditablePreview({
                 </div>
 
                 {/* Line 5 - "stipulated under Order No./Purchase Order No. ___ dated" */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
                   }}
                 >
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
                     stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;
                   </span>
+
                   <span style={{ flex: 1, borderBottom: "1.5px solid #000" }}>
                     {mergedData.po_no || ""}
                   </span>
+
                   <span
                     style={{
                       whiteSpace: "nowrap",
+
                       paddingBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
+
                       wordSpacing: "8px",
                     }}
                   >
@@ -1669,18 +2514,24 @@ function LOAEditablePreview({
                 </div>
 
                 {/* Line 6 - standalone PO date underline */}
+
                 <div
                   style={{
                     height: "32px",
+
                     display: "flex",
+
                     alignItems: "flex-end",
                   }}
                 >
                   <span
                     style={{
                       width: "180px",
+
                       borderBottom: "1.5px solid #000",
+
                       fontSize: "9px",
+
                       display: "inline-block",
                     }}
                   >
@@ -1690,26 +2541,37 @@ function LOAEditablePreview({
               </div>
 
               {/* Signature Section - Right Aligned */}
+
               <div className="flex justify-end" style={{ marginTop: "100px" }}>
-                <div style={{ width: "340px", textAlign: "center" }}>
+                <div style={{ width: "200px", textAlign: "center" }}>
                   <div
                     style={{
                       borderBottom: "1.5px solid #000",
+
                       minHeight: "22px",
+
                       paddingBottom: "2px",
+
                       fontWeight: 700,
+
                       fontFamily: "Times New Roman, serif",
+
                       fontSize: "11px",
+
                       width: "100%",
                     }}
                   >
                     {mergedData.accepted_by_name || ""}
                   </div>
+
                   <div
                     style={{
                       fontSize: "9px",
+
                       marginTop: "4px",
+
                       marginBottom: "24px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -1719,29 +2581,41 @@ function LOAEditablePreview({
                   <div
                     style={{
                       borderBottom: "1.5px solid #000",
+
                       minHeight: "22px",
+
                       paddingBottom: "2px",
+
                       fontFamily: "Times New Roman, serif",
+
                       fontWeight: 700,
+
                       fontSize: "11px",
+
                       width: "100%",
                     }}
                   >
                     {mergedData.accepted_by_title || ""}
                   </div>
+
                   <div
                     style={{
                       fontSize: "9px",
+
                       marginTop: "4px",
+
                       marginBottom: "4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     (Official Title)
                   </div>
+
                   <div
                     style={{
                       fontSize: "9px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -1751,11 +2625,14 @@ function LOAEditablePreview({
               </div>
 
               {/* Form Reference - Bottom Right */}
+
               <div className="flex justify-end" style={{ marginTop: "40px" }}>
                 <div
                   style={{
                     fontSize: "9px",
+
                     fontWeight: 700,
+
                     fontFamily: "Times New Roman, serif",
                   }}
                 >
@@ -1772,25 +2649,40 @@ function LOAEditablePreview({
 
 function DVEditablePreview({
   delivery,
+
   dv,
+
   poData,
+
   setDv,
+
   accountingEntries,
+
   onUpdateAccountingEntry,
 }: {
   delivery: any;
+
   dv: any;
+
   poData: any;
+
   setDv: (data: any) => void;
+
   accountingEntries?: Array<{
     account_title: string;
+
     uacs_code: string;
+
     debit: string;
+
     credit: string;
   }>;
+
   onUpdateAccountingEntry?: (
     index: number,
+
     field: string,
+
     value: string,
   ) => void;
 }) {
@@ -1815,37 +2707,50 @@ function DVEditablePreview({
   };
 
   // Transform poData to have the correct structure
+
   const transformedPoData = poData
     ? {
         ...poData,
+
         po_items: poData.purchase_order_items || [],
+
         po_date: poData.date,
       }
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...dv };
+
   mergedData.po_items = transformedPoData.po_items;
 
   // Ensure DV-specific fields are available in mergedData
+
   if (!mergedData.dv_no && dv?.dv_no) mergedData.dv_no = dv.dv_no;
+
   if (!mergedData.dv_date && dv?.dv_date) mergedData.dv_date = dv.dv_date;
 
   // Use provided accounting entries or default empty rows
+
   const entries =
     accountingEntries && accountingEntries.length > 0
       ? accountingEntries
       : [
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
         ];
 
   return (
     <div className="space-y-2">
       {/* Zoom Controls */}
+
       <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
         <div className="flex items-center gap-2">
           <button
@@ -1879,11 +2784,14 @@ function DVEditablePreview({
       </div>
 
       {/* Preview Container */}
+
       <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
         <div
           style={{
             transform: `scale(${zoomLevel})`,
+
             transformOrigin: "top left",
+
             width: `${100 / zoomLevel}%`,
           }}
         >
@@ -1891,18 +2799,26 @@ function DVEditablePreview({
             className="bg-white p-4"
             style={{
               width: "600px",
+
               minHeight: "1056px",
+
               margin: "0 auto",
+
               fontFamily: "Times New Roman, serif",
+
               fontSize: "9px",
+
               color: "#000",
             }}
           >
             {/* Appendix */}
+
             <div
               style={{
                 textAlign: "right",
+
                 fontStyle: "italic",
+
                 marginBottom: "2px",
               }}
             >
@@ -1910,10 +2826,13 @@ function DVEditablePreview({
             </div>
 
             {/* HEADER: Logo | Title | Fund Cluster/Date/DV No */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
               }}
             >
@@ -1922,7 +2841,9 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "90px",
+
                       padding: "4px",
+
                       verticalAlign: "middle",
                     }}
                   >
@@ -1931,58 +2852,79 @@ function DVEditablePreview({
                       alt="DAR Logo"
                       style={{
                         width: "72px",
+
                         height: "44px",
+
                         objectFit: "contain",
                       }}
                     />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "4px",
+
                       verticalAlign: "top",
                     }}
                   >
                     <div
                       style={{
                         fontSize: "12px",
+
                         fontWeight: "bold",
+
                         textAlign: "center",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     >
                       DEPARTMENT OF AGRARIAN REFORM
                     </div>
+
                     <div
                       style={{
                         fontSize: "10px",
+
                         textAlign: "center",
+
                         marginBottom: "4px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     >
                       Camarines Sur Provincial Office
                     </div>
+
                     <div
                       style={{
                         fontSize: "11px",
+
                         fontWeight: "bold",
+
                         textAlign: "center",
+
                         letterSpacing: "1px",
+
                         paddingTop: "4px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     >
                       DISBURSEMENT VOUCHER
                     </div>
                   </td>
+
                   <td
                     style={{ width: "160px", padding: 0, verticalAlign: "top" }}
                   >
                     <table
                       style={{
                         width: "100%",
+
                         borderCollapse: "collapse",
+
                         height: "100%",
                       }}
                     >
@@ -1991,6 +2933,7 @@ function DVEditablePreview({
                           <td
                             style={{
                               borderBottom: "1px solid #000",
+
                               padding: "3px 4px",
                             }}
                           >
@@ -2006,16 +2949,20 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "60px",
+
                                 fontSize: "9px",
+
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
                           </td>
                         </tr>
+
                         <tr>
                           <td
                             style={{
                               borderBottom: "1px solid #000",
+
                               padding: "3px 4px",
                             }}
                           >
@@ -2031,12 +2978,15 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "80px",
+
                                 fontSize: "9px",
+
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
                           </td>
                         </tr>
+
                         <tr>
                           <td style={{ padding: "3px 4px" }}>
                             <b style={{ fontFamily: "Times New Roman, serif" }}>
@@ -2051,7 +3001,9 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "100px",
+
                                 fontSize: "9px",
+
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
@@ -2065,11 +3017,15 @@ function DVEditablePreview({
             </table>
 
             {/* MODE OF PAYMENT */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2078,8 +3034,11 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "50px",
+
                       borderRight: "1px solid #000",
+
                       padding: "3px 6px",
+
                       verticalAlign: "top",
                     }}
                   >
@@ -2087,10 +3046,13 @@ function DVEditablePreview({
                       Mode of <br /> payment
                     </b>
                   </td>
+
                   <td
                     style={{
                       padding: "3px 6px",
+
                       verticalAlign: "top",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -2100,9 +3062,13 @@ function DVEditablePreview({
                       <label
                         style={{
                           display: "flex",
+
                           alignItems: "center",
+
                           gap: "3px",
+
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -2112,6 +3078,7 @@ function DVEditablePreview({
                           onChange={(e) =>
                             updateDvField(
                               "mode_of_payment",
+
                               e.target.checked ? "MDS Check" : "",
                             )
                           }
@@ -2119,12 +3086,17 @@ function DVEditablePreview({
                         />
                         MDS Check
                       </label>
+
                       <label
                         style={{
                           display: "flex",
+
                           alignItems: "center",
+
                           gap: "3px",
+
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -2136,6 +3108,7 @@ function DVEditablePreview({
                           onChange={(e) =>
                             updateDvField(
                               "mode_of_payment",
+
                               e.target.checked ? "Commercial Check" : "",
                             )
                           }
@@ -2143,12 +3116,17 @@ function DVEditablePreview({
                         />
                         Commercial Check
                       </label>
+
                       <label
                         style={{
                           display: "flex",
+
                           alignItems: "center",
+
                           gap: "3px",
+
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -2158,6 +3136,7 @@ function DVEditablePreview({
                           onChange={(e) =>
                             updateDvField(
                               "mode_of_payment",
+
                               e.target.checked ? "ADA" : "",
                             )
                           }
@@ -2165,12 +3144,17 @@ function DVEditablePreview({
                         />
                         ADA
                       </label>
+
                       <label
                         style={{
                           display: "flex",
+
                           alignItems: "center",
+
                           gap: "3px",
+
                           fontSize: "9px",
+
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -2180,6 +3164,7 @@ function DVEditablePreview({
                           onChange={(e) =>
                             updateDvField(
                               "mode_of_payment",
+
                               e.target.checked ? "Others" : "",
                             )
                           }
@@ -2194,11 +3179,15 @@ function DVEditablePreview({
             </table>
 
             {/* PAYEE / TIN / ORS / ADDRESS */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2207,7 +3196,9 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "50px",
+
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2215,9 +3206,11 @@ function DVEditablePreview({
                       Payee
                     </b>
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2230,15 +3223,20 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
                   </td>
+
                   <td
                     style={{
                       width: "140px",
+
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2246,17 +3244,21 @@ function DVEditablePreview({
                       Tin/Employee No.
                     </b>
                   </td>
+
                   <td style={{ width: "120px", padding: "3px 4px" }}>
                     <b style={{ fontFamily: "Times New Roman, serif" }}>
                       ORS/BURS No.
                     </b>
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderTop: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2264,10 +3266,13 @@ function DVEditablePreview({
                       Address
                     </b>
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderTop: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2281,10 +3286,13 @@ function DVEditablePreview({
                       style={{ width: "95%", fontSize: "9px" }}
                     />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderTop: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2299,15 +3307,19 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                       placeholder="VAT 766-956-523-000"
                     />
                   </td>
+
                   <td
                     style={{
                       borderTop: "1px solid #000",
+
                       padding: "3px 4px",
                     }}
                   >
@@ -2318,7 +3330,9 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -2328,11 +3342,15 @@ function DVEditablePreview({
             </table>
 
             {/* PARTICULARS TABLE */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2341,48 +3359,73 @@ function DVEditablePreview({
                   <th
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Particulars
                   </th>
+
                   <th
                     style={{
                       width: "130px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Responsibility Center
                   </th>
+
                   <th
                     style={{
                       width: "90px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     MFO/PAP
                   </th>
+
                   <th
                     style={{
                       width: "100px",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -2390,12 +3433,15 @@ function DVEditablePreview({
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 <tr style={{ height: "30px" }}>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       verticalAlign: "top",
                     }}
                   >
@@ -2407,17 +3453,23 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         minHeight: "110px",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                       rows={6}
                     />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       verticalAlign: "top",
                     }}
                   >
@@ -2430,15 +3482,20 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       verticalAlign: "top",
                     }}
                   >
@@ -2449,11 +3506,14 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
                   </td>
+
                   <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
                     <input
                       type="text"
@@ -2464,38 +3524,53 @@ function DVEditablePreview({
                       className={editableInputRightCls}
                       style={{
                         width: "95%",
+
                         fontSize: "9px",
+
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
                   </td>
                 </tr>
+
                 {[...Array(3)].map((_, i) => (
                   <tr key={i} style={{ height: "10px" }}>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
+
                     <td>&nbsp;</td>
                   </tr>
                 ))}
+
                 <tr>
                   <td
                     colSpan={3}
                     style={{
                       borderRight: "1px solid #000",
+
                       borderTop: "1px solid #000",
+
                       textAlign: "right",
+
                       padding: "3px 4px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Amount Due
                   </td>
+
                   <td
                     style={{
                       borderTop: "1px solid #000",
+
                       padding: "3px 4px",
+
                       textAlign: "right",
                     }}
                   >
@@ -2506,11 +3581,15 @@ function DVEditablePreview({
             </table>
 
             {/* SECTION A */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2519,6 +3598,7 @@ function DVEditablePreview({
                   <td
                     style={{
                       padding: "4px 6px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -2526,6 +3606,7 @@ function DVEditablePreview({
                     and incurred under my direct supervision.
                   </td>
                 </tr>
+
                 <tr style={{ height: "36px" }}>
                   <td>&nbsp;</td>
                 </tr>
@@ -2533,11 +3614,15 @@ function DVEditablePreview({
             </table>
 
             {/* SECTION B: Accounting Entry */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2547,72 +3632,103 @@ function DVEditablePreview({
                     colSpan={4}
                     style={{
                       borderBottom: "1px solid #000",
+
                       padding: "3px 6px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     <b>B.</b> Accounting Entry:
                   </td>
                 </tr>
+
                 <tr>
                   <th
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Account Title
                   </th>
+
                   <th
                     style={{
                       width: "110px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     UACS Code
                   </th>
+
                   <th
                     style={{
                       width: "80px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Debit
                   </th>
+
                   <th
                     style={{
                       width: "80px",
+
                       borderBottom: "1px solid #000",
+
                       textAlign: "center",
+
                       padding: "3px",
+
                       fontWeight: "bold",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Credit
                   </th>
                 </tr>
+
                 {entries.map((entry, i) => (
                   <tr key={i} style={{ height: "20px" }}>
                     <td
                       style={{
                         borderRight: "1px solid #000",
+
                         borderBottom:
                           i < entries.length - 1 ? "1px solid #000" : "none",
+
                         padding: "2px 4px",
                       }}
                     >
@@ -2623,7 +3739,9 @@ function DVEditablePreview({
                           onChange={(e) =>
                             onUpdateAccountingEntry(
                               i,
+
                               "account_title",
+
                               e.target.value,
                             )
                           }
@@ -2634,6 +3752,7 @@ function DVEditablePreview({
                         <span
                           style={{
                             fontSize: "9px",
+
                             fontFamily: "Times New Roman, serif",
                           }}
                         >
@@ -2641,11 +3760,14 @@ function DVEditablePreview({
                         </span>
                       )}
                     </td>
+
                     <td
                       style={{
                         borderRight: "1px solid #000",
+
                         borderBottom:
                           i < entries.length - 1 ? "1px solid #000" : "none",
+
                         padding: "2px 4px",
                       }}
                     >
@@ -2656,7 +3778,9 @@ function DVEditablePreview({
                           onChange={(e) =>
                             onUpdateAccountingEntry(
                               i,
+
                               "uacs_code",
+
                               e.target.value,
                             )
                           }
@@ -2667,6 +3791,7 @@ function DVEditablePreview({
                         <span
                           style={{
                             fontSize: "9px",
+
                             fontFamily: "Times New Roman, serif",
                           }}
                         >
@@ -2674,12 +3799,16 @@ function DVEditablePreview({
                         </span>
                       )}
                     </td>
+
                     <td
                       style={{
                         borderRight: "1px solid #000",
+
                         borderBottom:
                           i < entries.length - 1 ? "1px solid #000" : "none",
+
                         padding: "2px 4px",
+
                         textAlign: "right",
                       }}
                     >
@@ -2697,6 +3826,7 @@ function DVEditablePreview({
                         <span
                           style={{
                             fontSize: "9px",
+
                             fontFamily: "Times New Roman, serif",
                           }}
                         >
@@ -2704,11 +3834,14 @@ function DVEditablePreview({
                         </span>
                       )}
                     </td>
+
                     <td
                       style={{
                         borderBottom:
                           i < entries.length - 1 ? "1px solid #000" : "none",
+
                         padding: "2px 4px",
+
                         textAlign: "right",
                       }}
                     >
@@ -2726,6 +3859,7 @@ function DVEditablePreview({
                         <span
                           style={{
                             fontSize: "9px",
+
                             fontFamily: "Times New Roman, serif",
                           }}
                         >
@@ -2739,11 +3873,15 @@ function DVEditablePreview({
             </table>
 
             {/* SECTIONS C & D */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2752,15 +3890,20 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "52.4%",
+
                       borderRight: "1px solid #000",
+
                       padding: "4px 5px",
+
                       verticalAlign: "top",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     <div
                       style={{
                         fontWeight: "bold",
+
                         marginBottom: "4px",
 
                         fontFamily: "Times New Roman, serif",
@@ -2768,40 +3911,55 @@ function DVEditablePreview({
                     >
                       C. Certified:
                     </div>
+
                     {[
                       "Cash available",
+
                       "Subject to Authority to Debit Account (when applicable)",
+
                       "Supporting documents complete and amount claimed proper",
                     ].map((item) => (
                       <div
                         key={item}
                         style={{
                           display: "flex",
+
                           alignItems: "flex-start",
+
                           gap: "4px",
+
                           marginBottom: "3px",
                         }}
                       >
                         <span
                           style={{
                             display: "inline-block",
+
                             width: "10px",
+
                             height: "10px",
+
                             border: "1px solid #000",
+
                             flexShrink: 0,
+
                             marginTop: "1px",
                           }}
                         ></span>
+
                         <span style={{ fontFamily: "Times New Roman, serif" }}>
                           {item}
                         </span>
                       </div>
                     ))}
                   </td>
+
                   <td
                     style={{
                       padding: "5px 5px",
+
                       verticalAlign: "top",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -2814,11 +3972,15 @@ function DVEditablePreview({
             </table>
 
             {/* SIGNATURES */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -2827,174 +3989,286 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "80px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Signature
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     &nbsp;
                   </td>
+
                   <td
                     style={{
                       width: "91px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Signature
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     &nbsp;
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Printed Name
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       height: "28px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <textarea
+                      value={dv?.certified_printed_name || ""}
+                      onChange={(e) =>
+                        setDv({
+                          ...dv,
+
+                          certified_printed_name: e.target.value,
+                        })
+                      }
+                      className={editableInputCls}
+                      placeholder="Certified by name"
+                      rows={1}
+                      style={{
+                        fontWeight: "bold",
+
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Printed Name
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <textarea
+                      value={dv?.approved_printed_name || ""}
+                      onChange={(e) =>
+                        setDv({
+                          ...dv,
+
+                          approved_printed_name: e.target.value,
+                        })
+                      }
+                      className={editableInputCls}
+                      placeholder="Approved by name"
+                      rows={1}
+                      style={{
+                        fontWeight: "bold",
+
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    />
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Position
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Head, Accounting Unit/Authorized Representative
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Position
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Agency Head/Authorized Representative
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Date
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <textarea
+                      value={dv?.certified_date || ""}
+                      onChange={(e) =>
+                        setDv({ ...dv, certified_date: e.target.value })
+                      }
+                      className={editableInputCls}
+                      placeholder="MM/DD/YYYY"
+                      rows={1}
+                    />
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Date
                   </td>
+
                   <td
                     style={{
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <textarea
+                      value={dv?.approved_date || ""}
+                      onChange={(e) =>
+                        setDv({ ...dv, approved_date: e.target.value })
+                      }
+                      className={editableInputCls}
+                      placeholder="MM/DD/YYYY"
+                      rows={1}
+                    />
                   </td>
                 </tr>
               </tbody>
             </table>
 
             {/* SECTION E: Receipt of Payment */}
+
             <table
               style={{
                 width: "100%",
+
                 borderCollapse: "collapse",
+
                 border: "1px solid #000",
+
                 borderTop: "none",
               }}
             >
@@ -3004,7 +4278,9 @@ function DVEditablePreview({
                     colSpan={4}
                     style={{
                       borderBottom: "1px solid #000",
+
                       padding: "3px 6px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3012,11 +4288,15 @@ function DVEditablePreview({
                       E. Receipt of Payment
                     </b>
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       borderLeft: "1px solid #000",
+
                       padding: "3px 6px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3025,13 +4305,18 @@ function DVEditablePreview({
                     </b>
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       width: "90px",
+
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3039,11 +4324,15 @@ function DVEditablePreview({
                     <br />
                     ADA No.
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3051,12 +4340,16 @@ function DVEditablePreview({
                       Date :
                     </b>
                   </td>
+
                   <td
                     colSpan={2}
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3064,33 +4357,45 @@ function DVEditablePreview({
                       Bank Name &amp; Account Number:
                     </b>
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       borderLeft: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     &nbsp;
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     Signature
                   </td>
+
                   <td
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3098,12 +4403,16 @@ function DVEditablePreview({
                       Date :
                     </b>
                   </td>
+
                   <td
                     colSpan={2}
                     style={{
                       borderRight: "1px solid #000",
+
                       borderBottom: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3111,22 +4420,28 @@ function DVEditablePreview({
                       Printed Name:
                     </b>
                   </td>
+
                   <td
                     style={{
                       borderBottom: "1px solid #000",
+
                       borderLeft: "1px solid #000",
+
                       padding: "3px 4px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
                     <b style={{ fontFamily: "Times New Roman, serif" }}>Date</b>
                   </td>
                 </tr>
+
                 <tr>
                   <td
                     colSpan={5}
                     style={{
                       padding: "3px 6px",
+
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -3151,16 +4466,22 @@ function documentsForStatus(
 ): PaymentProcessDocType[] {
   switch (statusId) {
     case 29:
-      return ["iar", "loa", "dv"];
+      return ["dv", "loa", "iar"];
+
     case 30:
       return ["dv", "ors"];
+
     case 32:
+
     case 33:
-      return ["dv", "ors"];
+      return ["dv"];
+
     case 35:
-      return ["ors", "dv"];
+      return ["dv"];
+
     case 36:
-      return ["dv", "ors"];
+      return ["dv"];
+
     default:
       return [];
   }
@@ -3170,10 +4491,13 @@ function docTabLabel(tab: PaymentProcessDocType): string {
   switch (tab) {
     case "iar":
       return "IAR";
+
     case "loa":
       return "LOA";
+
     case "ors":
       return "ORS";
+
     case "dv":
       return "DV";
   }
@@ -3181,13 +4505,19 @@ function docTabLabel(tab: PaymentProcessDocType): string {
 
 function ChecklistRow({
   checked,
+
   onChange,
+
   title,
+
   subtitle,
 }: {
   checked: boolean;
+
   onChange: (v: boolean) => void;
+
   title: string;
+
   subtitle?: string;
 }) {
   return (
@@ -3198,8 +4528,10 @@ function ChecklistRow({
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
+
       <div className="min-w-0">
         <p className="text-sm font-semibold text-gray-900">{title}</p>
+
         {subtitle ? (
           <p className="text-xs text-gray-500 mt-0.5 leading-snug">
             {subtitle}
@@ -3212,9 +4544,11 @@ function ChecklistRow({
 
 function DeliveryContextPanel({
   active,
+
   poData,
 }: {
   active: any;
+
   poData: any;
 }) {
   return (
@@ -3224,34 +4558,44 @@ function DeliveryContextPanel({
           <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">
             Record
           </p>
+
           <dl className="space-y-2.5 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500 shrink-0">Delivery No.</dt>
+
               <dd className="font-mono font-semibold text-gray-900 text-right truncate">
                 {active?.delivery_no ?? "—"}
               </dd>
             </div>
+
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500 shrink-0">PO No.</dt>
+
               <dd className="font-mono font-medium text-gray-900 text-right truncate">
                 {active?.po_no ?? "—"}
               </dd>
             </div>
+
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500 shrink-0">Supplier</dt>
+
               <dd className="text-gray-900 text-right truncate">
                 {active?.supplier ?? "—"}
               </dd>
             </div>
+
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500 shrink-0">Section</dt>
+
               <dd className="text-gray-900 text-right truncate">
                 {active?.office_section ?? "—"}
               </dd>
             </div>
+
             {poData?.total_amount != null && (
               <div className="flex justify-between gap-4 pt-2 border-t border-emerald-100">
                 <dt className="text-gray-500 shrink-0">PO amount</dt>
+
                 <dd className="font-mono font-semibold text-emerald-900">
                   ₱
                   {Number(poData.total_amount).toLocaleString("en-PH", {
@@ -3262,6 +4606,7 @@ function DeliveryContextPanel({
             )}
           </dl>
         </div>
+
         <p className="text-xs text-gray-500 leading-relaxed">
           Supporting documents (IAR, LOA, ORS, DV) open in the preview column on
           later steps. Advance to Voucher Verification when this record is
@@ -3274,109 +4619,188 @@ function DeliveryContextPanel({
 
 const PAYMENT_FLOW_STRIP: { id: number; label: string }[] = [
   { id: 29, label: "Voucher" },
+
   { id: 30, label: "Accounting" },
+
   { id: 32, label: "PARPO" },
+
   { id: 33, label: "Cash" },
+
   { id: 35, label: "Tax" },
+
   { id: 36, label: "Cash Release" },
+
   { id: 37, label: "Completed" },
 ];
 
 interface ProcessPaymentModalProps {
   visible: boolean;
+
   active: any;
+
   onClose: () => void;
+
   onSubmit: (data: {
     dvData?: any;
+
     orsData?: any;
+
     iarData?: any;
+
     loaData?: any;
+
     notes?: string;
   }) => Promise<void>;
+
   statusLabel: string;
+
   statusFlag: StatusFlag | null;
+
   onSelectStatusFlag: (flag: StatusFlag | null) => void;
+
   onPreviewDocument: (type: PaymentProcessDocType) => void;
+
   voucher?: any;
+
   ors?: any;
+
   dv?: any;
+
   iar?: any;
+
   loa?: any;
+
   poData?: any;
 }
 
 export default function ProcessPaymentModal({
   visible,
+
   active,
+
   onClose,
+
   onSubmit,
+
   statusLabel,
+
   statusFlag,
+
   onSelectStatusFlag,
+
   onPreviewDocument,
+
   voucher: _voucherUnused,
+
   ors,
+
   dv,
+
   iar,
+
   loa,
+
   poData,
 }: ProcessPaymentModalProps) {
   const formPaneRef = useRef<HTMLDivElement | null>(null);
+
   const [notes, setNotes] = useState("");
+
   const [previewTab, setPreviewTab] = useState<PaymentProcessDocType | null>(
     null,
   );
+
   const [orsData, setOrsData] = useState(ors || {});
+
   const [dvData, setDvData] = useState(dv || {});
+
   const [iarData, setIarData] = useState(iar || {});
+
   const [loaData, setLoaData] = useState(loa || {});
 
   const [iarReviewed, setIarReviewed] = useState(false);
+
   const [loaReviewed, setLoaReviewed] = useState(false);
+
   const [acctReconciled, setAcctReconciled] = useState(false);
+
   const [parpoPackageOk, setParpoPackageOk] = useState(false);
+
   const [cashRouted, setCashRouted] = useState(false);
+
   const [bir2307Done, setBir2307Done] = useState(false);
+
   const [jevDone, setJevDone] = useState(false);
+
+  // JEV data state (for case 35 - Tax processing)
+  const [jevData, setJevData] = useState({
+    jev_no: "",
+    jev_date: "",
+  });
+
   const [cashReleaseDone, setCashReleaseDone] = useState(false);
 
+  // DV Certification state (for case 33 - Cash)
+  const [dvCertificationName, setDvCertificationName] = useState("");
+  const [cashAvailable, setCashAvailable] = useState(false);
+  const [authorityToDebit, setAuthorityToDebit] = useState(false);
+  const [supportingDocumentsComplete, setSupportingDocumentsComplete] =
+    useState(false);
+
   // Accounting entries state (for Section B)
+
   const [accountingEntries, setAccountingEntries] = useState<
     Array<{
       account_title: string;
+
       uacs_code: string;
+
       debit: string;
+
       credit: string;
     }>
   >([
     { account_title: "", uacs_code: "", debit: "", credit: "" },
+
     { account_title: "", uacs_code: "", debit: "", credit: "" },
+
     { account_title: "", uacs_code: "", debit: "", credit: "" },
+
     { account_title: "", uacs_code: "", debit: "", credit: "" },
+
     { account_title: "", uacs_code: "", debit: "", credit: "" },
+
     { account_title: "", uacs_code: "", debit: "", credit: "" },
   ]);
 
   // Update accounting entry
+
   const updateAccountingEntry = (
     index: number,
+
     field: string,
+
     value: string,
   ) => {
     const updatedEntries = [...accountingEntries];
+
     updatedEntries[index] = { ...updatedEntries[index], [field]: value };
+
     setAccountingEntries(updatedEntries);
   };
 
   // Add new accounting entry row
+
   const addAccountingEntry = () => {
     setAccountingEntries([
       ...accountingEntries,
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
     ]);
   };
 
   // Remove accounting entry row
+
   const removeAccountingEntry = (index: number) => {
     if (accountingEntries.length > 1) {
       setAccountingEntries(accountingEntries.filter((_, i) => i !== index));
@@ -3384,20 +4808,27 @@ export default function ProcessPaymentModal({
   };
 
   // Action label for the transition out of the current status (matches Payment page onSubmit)
+
   const getCurrentStepInfo = () => {
     switch (active?.status_id) {
       case 29:
         return { label: "Complete Voucher Verification", nextStatus: 30 };
+
       case 30:
         return { label: "Complete Accounting Review", nextStatus: 32 };
+
       case 32:
         return { label: "Complete PARPO Approval", nextStatus: 33 };
+
       case 33:
         return { label: "Complete Forward to Cash", nextStatus: 35 };
+
       case 35:
         return { label: "Complete Tax processing handoff", nextStatus: 36 };
+
       case 36:
         return { label: "Complete Cash for Release", nextStatus: 37 };
+
       default:
         return { label: "Complete Voucher Verification", nextStatus: 30 };
     }
@@ -3409,8 +4840,10 @@ export default function ProcessPaymentModal({
     switch (active?.status_id) {
       case 29:
         return iarReviewed && loaReviewed;
+
       case 30:
         // Validate required DV fields for accounting review
+
         const dvFieldsValid =
           (dvData?.fund_cluster?.trim() || "") !== "" &&
           (dvData?.dv_date?.trim() || "") !== "" &&
@@ -3419,15 +4852,21 @@ export default function ProcessPaymentModal({
           (dvData?.mfo_pap?.trim() || "") !== "" &&
           (dvData?.amount_due?.trim() || "") !== "" &&
           acctReconciled;
+
         return dvFieldsValid;
+
       case 32:
         return parpoPackageOk;
+
       case 33:
         return cashRouted;
+
       case 35:
         return bir2307Done && jevDone;
+
       case 36:
         return cashReleaseDone;
+
       default:
         return true;
     }
@@ -3437,19 +4876,32 @@ export default function ProcessPaymentModal({
 
   const resetStepFields = () => {
     setIarReviewed(false);
+
     setLoaReviewed(false);
+
     setAcctReconciled(false);
+
     setParpoPackageOk(false);
+
     setCashRouted(false);
+
     setBir2307Done(false);
+
     setJevDone(false);
+
     setCashReleaseDone(false);
+
     setAccountingEntries([
       { account_title: "", uacs_code: "", debit: "", credit: "" },
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
+
       { account_title: "", uacs_code: "", debit: "", credit: "" },
     ]);
   };
@@ -3457,28 +4909,60 @@ export default function ProcessPaymentModal({
   useEffect(() => {
     if (visible) {
       setNotes("");
+
       resetStepFields();
+
       setOrsData(ors || {});
-      setDvData(dv || {});
+
+      setDvData({
+        ...(dv || {}),
+        certified_cash_available: dv?.certified_cash_available || false,
+        certified_subject_to_authority:
+          dv?.certified_subject_to_authority || false,
+        certified_proper: dv?.certified_proper || false,
+        jev_no: dv?.jev_no || "",
+        jev_date: dv?.jev_date || "",
+      });
+
+      setJevData({
+        jev_no: dv?.jev_no || "",
+        jev_date: dv?.jev_date || "",
+      });
+
       setIarData(iar || {});
+
       setLoaData(loa || {});
 
       // Initialize accounting entries from dvData if available
+
       if (dv?.accounting_entries && Array.isArray(dv.accounting_entries)) {
         setAccountingEntries(dv.accounting_entries);
       } else {
         // Reset to default empty entries if no data
+
         setAccountingEntries([
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
+
           { account_title: "", uacs_code: "", debit: "", credit: "" },
         ]);
       }
 
+      // Initialize DV certification fields from dvData
+      setDvCertificationName(dv?.certified_printed_name || "");
+      setCashAvailable(dv?.certified_cash_available || false);
+      setAuthorityToDebit(dv?.certified_subject_to_authority || false);
+      setSupportingDocumentsComplete(dv?.certified_proper || false);
+
       const tabs = documentsForStatus(active?.status_id);
+
       setPreviewTab(tabs[0] ?? null);
     }
   }, [visible, ors, dv, iar, loa, active?.status_id]);
@@ -3493,35 +4977,67 @@ export default function ProcessPaymentModal({
     e.preventDefault();
 
     // Prepare updated DV data with accounting entries
+
     const updatedDvData = {
       ...dvData,
+
       // Ensure boolean fields are properly set
-      mode_of_payment_mds_check: dvData?.mode_of_payment === "MDS Check" || false,
-      mode_of_payment_commercial_check: dvData?.mode_of_payment === "Commercial Check" || false,
+
+      mode_of_payment_mds_check:
+        dvData?.mode_of_payment === "MDS Check" || false,
+
+      mode_of_payment_commercial_check:
+        dvData?.mode_of_payment === "Commercial Check" || false,
+
       mode_of_payment_ada: dvData?.mode_of_payment === "ADA" || false,
+
       mode_of_payment_others: dvData?.mode_of_payment === "Others" || false,
-      certified_expenses_cash_advance: dvData?.certified_expenses_cash_advance || false,
-      certified_cash_available: dvData?.certified_cash_available || false,
-      certified_subject_to_authority: dvData?.certified_subject_to_authority || false,
-      certified_proper: dvData?.certified_proper || false,
-      accounting_entries: accountingEntries.filter(entry => 
-        // Only include entries that have at least one field filled
-        entry.account_title || entry.uacs_code || entry.debit || entry.credit
+
+      certified_expenses_cash_advance:
+        dvData?.certified_expenses_cash_advance || false,
+
+      certified_cash_available:
+        cashAvailable || dvData?.certified_cash_available || false,
+
+      certified_subject_to_authority:
+        authorityToDebit || dvData?.certified_subject_to_authority || false,
+
+      certified_proper:
+        supportingDocumentsComplete || dvData?.certified_proper || false,
+
+      certified_printed_name:
+        dvCertificationName || dvData?.certified_printed_name || "",
+
+      accounting_entries: accountingEntries.filter(
+        (entry) =>
+          // Only include entries that have at least one field filled
+
+          entry.account_title || entry.uacs_code || entry.debit || entry.credit,
       ),
+
+      // Include JEV data
+      jev_no: jevData?.jev_no || "",
+      jev_date: jevData?.jev_date || "",
     };
 
     console.log("Submitting DV data:", updatedDvData);
+
     console.log("Accounting entries:", accountingEntries);
 
     // Pass all updated document data back to parent
+
     await onSubmit({
       dvData: updatedDvData,
+
       orsData,
+
       iarData,
+
       loaData,
+
       notes,
     });
-    
+
     onClose();
   };
 
@@ -3537,6 +5053,7 @@ export default function ProcessPaymentModal({
                 title="IAR reviewed"
                 subtitle="Inspection and acceptance aligns with delivery and PO."
               />
+
               <ChecklistRow
                 checked={loaReviewed}
                 onChange={setLoaReviewed}
@@ -3545,24 +5062,29 @@ export default function ProcessPaymentModal({
               />
             </div>
 
+         
+
             <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
               Voucher verification
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
               Use the document preview to review IAR and LOA templates, and
               ORS/DV references. Confirm each line item below matches your
               review.
             </p>
 
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
-              DV 
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+              DV
             </p>
+
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Fund Cluster
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.fund_cluster || ""}
@@ -3573,10 +5095,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., 101"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     DV Date
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.dv_date || ""}
@@ -3587,10 +5111,12 @@ export default function ProcessPaymentModal({
                     placeholder="MM/DD/YYYY"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     DV No.
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.dv_no || ""}
@@ -3602,17 +5128,20 @@ export default function ProcessPaymentModal({
                   />
                 </div>
               </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Responsibility Center
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.responsibility_center || ""}
                     onChange={(e) =>
                       setDvData({
                         ...dvData,
+
                         responsibility_center: e.target.value,
                       })
                     }
@@ -3620,10 +5149,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., DAR-CS I"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     MFO/PAP
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.mfo_pap || ""}
@@ -3634,10 +5165,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., OE-001"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Amount
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.amount_due || ""}
@@ -3650,12 +5183,16 @@ export default function ProcessPaymentModal({
                 </div>
               </div>
 
+              
+
               {/* Accounting Entries Section */}
+
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-gray-700">
                     Accounting Entries (Section B)
                   </label>
+
                   <button
                     type="button"
                     onClick={addAccountingEntry}
@@ -3664,6 +5201,7 @@ export default function ProcessPaymentModal({
                     + Add Row
                   </button>
                 </div>
+
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-50">
@@ -3671,18 +5209,23 @@ export default function ProcessPaymentModal({
                         <th className="px-2 py-2 text-left font-semibold text-gray-700 border-b border-gray-200">
                           Account Title
                         </th>
+
                         <th className="px-2 py-2 text-left font-semibold text-gray-700 border-b border-gray-200 w-28">
                           UACS Code
                         </th>
+
                         <th className="px-2 py-2 text-right font-semibold text-gray-700 border-b border-gray-200 w-24">
                           Debit
                         </th>
+
                         <th className="px-2 py-2 text-right font-semibold text-gray-700 border-b border-gray-200 w-24">
                           Credit
                         </th>
+
                         <th className="px-2 py-2 border-b border-gray-200 w-10"></th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {accountingEntries.map((entry, index) => (
                         <tr
@@ -3696,7 +5239,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "account_title",
+
                                   e.target.value,
                                 )
                               }
@@ -3704,6 +5249,7 @@ export default function ProcessPaymentModal({
                               placeholder="Account title"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3711,7 +5257,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "uacs_code",
+
                                   e.target.value,
                                 )
                               }
@@ -3719,6 +5267,7 @@ export default function ProcessPaymentModal({
                               placeholder="Code"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3726,7 +5275,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "debit",
+
                                   e.target.value,
                                 )
                               }
@@ -3734,6 +5285,7 @@ export default function ProcessPaymentModal({
                               placeholder="0.00"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3741,7 +5293,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "credit",
+
                                   e.target.value,
                                 )
                               }
@@ -3749,6 +5303,7 @@ export default function ProcessPaymentModal({
                               placeholder="0.00"
                             />
                           </td>
+
                           <td className="px-2 py-1.5 text-center">
                             {accountingEntries.length > 1 && (
                               <button
@@ -3765,6 +5320,127 @@ export default function ProcessPaymentModal({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+                 <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+              JEV
+            </p>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    JEV No.
+                  </label>
+                  <input
+                    type="text"
+                    value={jevData?.jev_no || ""}
+                    onChange={(e) =>
+                      setJevData({ ...jevData, jev_no: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    placeholder="e.g., JEV-001"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="text"
+                    value={jevData?.jev_date || ""}
+                    onChange={(e) =>
+                      setJevData({ ...jevData, jev_date: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    placeholder="MM/DD/YYYY"
+                  />
+                </div>
+              </div>
+            </div>
+
+              {/* Signature Section */}
+
+              <div className="mt-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+                  Signature Details
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Certified By (Printed Name)
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.certified_printed_name || ""}
+                      onChange={(e) =>
+                        setDvData({
+                          ...dvData,
+
+                          certified_printed_name: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="e.g., Jolina Magdangal"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Certified By Date
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.certified_date || ""}
+                      onChange={(e) =>
+                        setDvData({ ...dvData, certified_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="MM/DD/YYYY"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Approved By (Printed Name)
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.approved_printed_name || ""}
+                      onChange={(e) =>
+                        setDvData({
+                          ...dvData,
+
+                          approved_printed_name: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="e.g., Marvin Agustin"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Approved By Date
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.approved_date || ""}
+                      onChange={(e) =>
+                        setDvData({ ...dvData, approved_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="MM/DD/YYYY"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -3774,25 +5450,29 @@ export default function ProcessPaymentModal({
       case 30:
         return (
           <div className="space-y-3">
-              <ChecklistRow
-                checked={acctReconciled}
-                onChange={setAcctReconciled}
-                title="Financial package reconciled"
-                subtitle="Amounts, references, and supporting documents are consistent and compliant."
-              />
+            <ChecklistRow
+              checked={acctReconciled}
+              onChange={setAcctReconciled}
+              title="Financial package reconciled"
+              subtitle="Amounts, references, and supporting documents are consistent and compliant."
+            />
+
             <p className="text-xs font-bold uppercase tracking-widest text-purple-800">
               Accounting review
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
-              Reconcile ORS and DV with supporting IAR/LOA. Confirm the package
-              is accurate before PARPO approval.
+              Reconcile DV. Confirm the details is accurate before PARPO
+              approval.
             </p>
+
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Fund Cluster
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.fund_cluster || ""}
@@ -3803,10 +5483,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., 101"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     DV Date
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.dv_date || ""}
@@ -3817,10 +5499,12 @@ export default function ProcessPaymentModal({
                     placeholder="MM/DD/YYYY"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     DV No.
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.dv_no || ""}
@@ -3832,17 +5516,20 @@ export default function ProcessPaymentModal({
                   />
                 </div>
               </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Responsibility Center
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.responsibility_center || ""}
                     onChange={(e) =>
                       setDvData({
                         ...dvData,
+
                         responsibility_center: e.target.value,
                       })
                     }
@@ -3850,10 +5537,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., DAR-CS I"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     MFO/PAP
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.mfo_pap || ""}
@@ -3864,10 +5553,12 @@ export default function ProcessPaymentModal({
                     placeholder="e.g., OE-001"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Amount
                   </label>
+
                   <input
                     type="text"
                     value={dvData?.amount_due || ""}
@@ -3879,14 +5570,15 @@ export default function ProcessPaymentModal({
                   />
                 </div>
               </div>
-            
 
               {/* Accounting Entries Section */}
+
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-gray-700">
                     Accounting Entries (Section B)
                   </label>
+
                   <button
                     type="button"
                     onClick={addAccountingEntry}
@@ -3895,6 +5587,7 @@ export default function ProcessPaymentModal({
                     + Add Row
                   </button>
                 </div>
+
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-50">
@@ -3902,18 +5595,23 @@ export default function ProcessPaymentModal({
                         <th className="px-2 py-2 text-left font-semibold text-gray-700 border-b border-gray-200">
                           Account Title
                         </th>
+
                         <th className="px-2 py-2 text-left font-semibold text-gray-700 border-b border-gray-200 w-28">
                           UACS Code
                         </th>
+
                         <th className="px-2 py-2 text-right font-semibold text-gray-700 border-b border-gray-200 w-24">
                           Debit
                         </th>
+
                         <th className="px-2 py-2 text-right font-semibold text-gray-700 border-b border-gray-200 w-24">
                           Credit
                         </th>
+
                         <th className="px-2 py-2 border-b border-gray-200 w-10"></th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {accountingEntries.map((entry, index) => (
                         <tr
@@ -3927,7 +5625,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "account_title",
+
                                   e.target.value,
                                 )
                               }
@@ -3935,6 +5635,7 @@ export default function ProcessPaymentModal({
                               placeholder="Account title"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3942,7 +5643,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "uacs_code",
+
                                   e.target.value,
                                 )
                               }
@@ -3950,6 +5653,7 @@ export default function ProcessPaymentModal({
                               placeholder="Code"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3957,7 +5661,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "debit",
+
                                   e.target.value,
                                 )
                               }
@@ -3965,6 +5671,7 @@ export default function ProcessPaymentModal({
                               placeholder="0.00"
                             />
                           </td>
+
                           <td className="px-2 py-1.5">
                             <input
                               type="text"
@@ -3972,7 +5679,9 @@ export default function ProcessPaymentModal({
                               onChange={(e) =>
                                 updateAccountingEntry(
                                   index,
+
                                   "credit",
+
                                   e.target.value,
                                 )
                               }
@@ -3980,6 +5689,7 @@ export default function ProcessPaymentModal({
                               placeholder="0.00"
                             />
                           </td>
+
                           <td className="px-2 py-1.5 text-center">
                             {accountingEntries.length > 1 && (
                               <button
@@ -3998,7 +5708,93 @@ export default function ProcessPaymentModal({
                   </table>
                 </div>
               </div>
+
+              {/* Signature Section */}
+
+              <div className="mt-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+                  Signature Details
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Certified By (Printed Name)
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.certified_printed_name || ""}
+                      onChange={(e) =>
+                        setDvData({
+                          ...dvData,
+
+                          certified_printed_name: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="e.g., Jolina Magdangal"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Certified By Date
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.certified_date || ""}
+                      onChange={(e) =>
+                        setDvData({ ...dvData, certified_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="MM/DD/YYYY"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Approved By (Printed Name)
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.approved_printed_name || ""}
+                      onChange={(e) =>
+                        setDvData({
+                          ...dvData,
+
+                          approved_printed_name: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="e.g., Marvin Agustin"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Approved By Date
+                    </label>
+
+                    <input
+                      type="text"
+                      value={dvData?.approved_date || ""}
+                      onChange={(e) =>
+                        setDvData({ ...dvData, approved_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="MM/DD/YYYY"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
+          
           </div>
         );
 
@@ -4008,10 +5804,12 @@ export default function ProcessPaymentModal({
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-800">
               PARPO approval
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
               PARPO confirms the procurement and payment package. Review DV (and
               ORS) in the preview panel.
             </p>
+
             <ChecklistRow
               checked={parpoPackageOk}
               onChange={setParpoPackageOk}
@@ -4027,16 +5825,93 @@ export default function ProcessPaymentModal({
             <p className="text-xs font-bold uppercase tracking-widest text-indigo-800">
               Forward to Cash
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
               Cash classifies payment instrument (check, LLDAP, etc.) and
               handles EMDS encoding as applicable.
             </p>
+
             <ChecklistRow
               checked={cashRouted}
               onChange={setCashRouted}
               title="Routed to Cash / classification logged"
               subtitle="DV and ORS handed off for  Cash processing."
             />
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  A. Certified: Expenses/Cash Advance necessary, lawful and
+                  incurred under my direct supervision.
+                </label>
+                <input
+                  type="text"
+                  value={dvCertificationName}
+                  onChange={(e) => setDvCertificationName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Enter name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  C. Certified:
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={cashAvailable}
+                      onChange={(e) => {
+                        setCashAvailable(e.target.checked);
+                        setDvData({
+                          ...dvData,
+                          certified_cash_available: e.target.checked,
+                        });
+                      }}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Cash available
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={authorityToDebit}
+                      onChange={(e) => {
+                        setAuthorityToDebit(e.target.checked);
+                        setDvData({
+                          ...dvData,
+                          certified_subject_to_authority: e.target.checked,
+                        });
+                      }}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Subject to Authority to Debit Account (when applicable)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={supportingDocumentsComplete}
+                      onChange={(e) => {
+                        setSupportingDocumentsComplete(e.target.checked);
+                        setDvData({
+                          ...dvData,
+                          certified_proper: e.target.checked,
+                        });
+                      }}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Supporting documents complete and amount claimed proper
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
@@ -4046,21 +5921,58 @@ export default function ProcessPaymentModal({
             <p className="text-xs font-bold uppercase tracking-widest text-amber-900">
               Tax processing
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
               Accounting completes BIR 2307, JEV, and related entries before
               final Cash release.
             </p>
+
             <div className="space-y-2">
               <ChecklistRow
                 checked={bir2307Done}
                 onChange={setBir2307Done}
                 title="BIR 2307 / withholding completed"
               />
+
               <ChecklistRow
                 checked={jevDone}
                 onChange={setJevDone}
                 title="JEV prepared and linked"
               />
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    JEV No.
+                  </label>
+                  <input
+                    type="text"
+                    value={jevData?.jev_no || ""}
+                    onChange={(e) =>
+                      setJevData({ ...jevData, jev_no: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    placeholder="e.g., JEV-001"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="text"
+                    value={jevData?.jev_date || ""}
+                    onChange={(e) =>
+                      setJevData({ ...jevData, jev_date: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    placeholder="MM/DD/YYYY"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -4071,10 +5983,12 @@ export default function ProcessPaymentModal({
             <p className="text-xs font-bold uppercase tracking-widest text-green-800">
               Cash for Release
             </p>
+
             <p className="text-sm text-gray-700 leading-relaxed">
               Cash office finalizes payment release after tax processing
               completion.
             </p>
+
             <ChecklistRow
               checked={cashReleaseDone}
               onChange={setCashReleaseDone}
@@ -4106,6 +6020,7 @@ export default function ProcessPaymentModal({
         </div>
       );
     }
+
     switch (previewTab) {
       case "ors":
         return (
@@ -4114,27 +6029,31 @@ export default function ProcessPaymentModal({
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
                 ORS
               </p>
+
               <p className="text-lg font-mono font-semibold text-gray-900 mt-1">
                 {orsData.ors_no || "—"}
               </p>
             </div>
+
             <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-gray-500">
               Open the full ORS document when your workflow provides a generated
               file. Inline voucher-style fields are not shown here.
             </div>
           </div>
         );
+
       case "dv":
         return (
           <DVEditablePreview
             delivery={active}
-            dv={dvData || {}}
+            dv={{ ...dvData, ...jevData } || {}}
             poData={poData}
             setDv={setDvData}
             accountingEntries={accountingEntries}
             onUpdateAccountingEntry={updateAccountingEntry}
           />
         );
+
       case "iar":
         return (
           <IAREditablePreview
@@ -4144,6 +6063,7 @@ export default function ProcessPaymentModal({
             setIar={setIarData}
           />
         );
+
       case "loa":
         return (
           <LOAEditablePreview
@@ -4153,6 +6073,7 @@ export default function ProcessPaymentModal({
             setLoa={setLoaData}
           />
         );
+
       default:
         return null;
     }
@@ -4161,6 +6082,7 @@ export default function ProcessPaymentModal({
   if (!visible) return null;
 
   const docTabs = documentsForStatus(active?.status_id);
+
   const statusBadge =
     active?.status_id === 29
       ? "Voucher Verification"
@@ -4178,33 +6100,42 @@ export default function ProcessPaymentModal({
                   ? "Payment Completed"
                   : "Unknown";
 
-  const canOpenFullTemplate = previewTab === "iar" || previewTab === "loa" || previewTab === "dv";
+  const canOpenFullTemplate =
+    previewTab === "iar" || previewTab === "loa" || previewTab === "dv";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="flex flex-col max-h-[85vh] w-full max-w-7xl overflow-hidden rounded-xl shadow-xl">
         {/* Header */}
+
         <header className="flex items-center justify-between border-b bg-emerald-700  border-gray-200 px-6 py-4">
           <div>
             <p className="text-xs font-medium text-white/60 uppercase tracking-wide">
               {statusLabel}
             </p>
+
             <h1 className="text-xl font-semibold text-white mt-1">
               Process Payment
             </h1>
+
             <div className="flex items-center gap-4 mt-2 text-sm text-white">
               <span className="flex items-center gap-1">
                 <RiTruckLine className="size-4" />
+
                 {active?.delivery_no}
               </span>
+
               <span>·</span>
+
               <span className="font-mono">{active?.po_no}</span>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
               {statusBadge}
             </span>
+
             <button
               type="button"
               onClick={onClose}
@@ -4216,12 +6147,15 @@ export default function ProcessPaymentModal({
         </header>
 
         {/* Progress Steps */}
+
         <div className="flex items-center gap-1 px-6 py-3 bg-gray-50 border-b border-gray-200">
           {PAYMENT_FLOW_STRIP.map((step) => {
             const isActive = active?.status_id === step.id;
+
             const isPast =
               PAYMENT_FLOW_STRIP.findIndex((s) => s.id === active?.status_id) >
               PAYMENT_FLOW_STRIP.findIndex((s) => s.id === step.id);
+
             return (
               <div
                 key={step.id}
@@ -4240,27 +6174,33 @@ export default function ProcessPaymentModal({
         </div>
 
         {/* Main Content */}
+
         <div className="flex-1 min-h-0 overflow-auto bg-gray-50 p-4">
           <div className="grid grid-cols-2 gap-4 h-full">
             {/* Left Column - Form */}
+
             <div className="flex flex-col min-h-0">
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Next Action */}
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-medium text-gray-900 mb-2">
                     Next Action
                   </h3>
+
                   <p className="text-sm text-gray-600">
                     {currentStepInfo.label}
                   </p>
                 </div>
 
                 {/* Form Content */}
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   {renderFormContent()}
                 </div>
 
                 {/* Status Flag */}
+
                 <div
                   className={`bg-white rounded-lg border p-4 ${
                     statusFlag
@@ -4272,6 +6212,7 @@ export default function ProcessPaymentModal({
                     Status Flag{" "}
                     {!statusFlag && <span className="text-red-500">*</span>}
                   </label>
+
                   <select
                     value={statusFlag ?? ""}
                     onChange={(e) =>
@@ -4284,13 +6225,20 @@ export default function ProcessPaymentModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   >
                     <option value="">Select status flag</option>
+
                     <option value="complete">Complete</option>
+
                     <option value="incomplete_info">Incomplete info</option>
+
                     <option value="wrong_information">Wrong information</option>
+
                     <option value="needs_revision">Needs revision</option>
+
                     <option value="on_hold">On hold</option>
+
                     <option value="urgent">Urgent</option>
                   </select>
+
                   {!statusFlag && (
                     <p className="mt-2 text-xs text-gray-500">
                       Required together with the step checklist.
@@ -4299,10 +6247,12 @@ export default function ProcessPaymentModal({
                 </div>
 
                 {/* Notes */}
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <label className="block text-sm font-medium text-gray-900 mb-2">
                     Notes
                   </label>
+
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -4313,6 +6263,7 @@ export default function ProcessPaymentModal({
                 </div>
 
                 {/* Submit Button */}
+
                 <div className="pt-4">
                   {!isFormValid && (
                     <p className="text-xs text-amber-600 mb-3 text-center">
@@ -4320,6 +6271,7 @@ export default function ProcessPaymentModal({
                       enable submit.
                     </p>
                   )}
+
                   <button
                     type="submit"
                     disabled={!isFormValid}
@@ -4330,6 +6282,7 @@ export default function ProcessPaymentModal({
                     }`}
                   >
                     <RiCheckLine size={18} />
+
                     {currentStepInfo.label}
                   </button>
                 </div>
@@ -4337,8 +6290,10 @@ export default function ProcessPaymentModal({
             </div>
 
             {/* Right Column - Document Preview */}
+
             <div className="flex flex-col min-h-0 bg-white rounded-lg border border-gray-200">
               {/* Document Tabs */}
+
               {docTabs.length > 0 && (
                 <div className="flex items-center justify-between border-b border-gray-200">
                   <div className="flex">
@@ -4357,82 +6312,111 @@ export default function ProcessPaymentModal({
                       </button>
                     ))}
                   </div>
+
                   {canOpenFullTemplate && (
                     <button
                       type="button"
                       onClick={() => {
                         if (previewTab === "dv") {
                           // Transform poData to have the correct structure
+
                           const transformedPoData = poData
                             ? {
                                 ...poData,
+
                                 po_items: poData.purchase_order_items || [],
+
                                 po_date: poData.date,
                               }
                             : {};
 
                           const mergedData = {
                             ...active,
+
                             ...transformedPoData,
+
                             ...dvData,
                           };
+
                           mergedData.po_items = transformedPoData.po_items;
+
                           if (transformedPoData.po_no)
                             mergedData.po_no = transformedPoData.po_no;
+
                           if (transformedPoData.po_date)
                             mergedData.po_date = transformedPoData.po_date;
 
                           // Add accounting entries to merged data
+
                           mergedData.accounting_entries = accountingEntries;
 
                           const html = buildDVHtml(mergedData);
+
                           downloadPDF(html);
                         } else if (previewTab === "iar") {
                           // Transform poData to have the correct structure
+
                           const transformedPoData = poData
                             ? {
                                 ...poData,
+
                                 po_items: poData.purchase_order_items || [],
+
                                 po_date: poData.date,
                               }
                             : {};
 
                           const mergedData = {
                             ...active,
+
                             ...transformedPoData,
+
                             ...iarData,
                           };
+
                           mergedData.po_items =
                             iarData?.iar_po_items || transformedPoData.po_items;
+
                           if (transformedPoData.po_no)
                             mergedData.po_no = transformedPoData.po_no;
+
                           if (transformedPoData.po_date)
                             mergedData.po_date = transformedPoData.po_date;
 
                           const html = buildIARHtml(mergedData);
+
                           downloadPDF(html);
                         } else if (previewTab === "loa") {
                           // Transform poData to have the correct structure
+
                           const transformedPoData = poData
                             ? {
                                 ...poData,
+
                                 po_items: poData.purchase_order_items || [],
+
                                 po_date: poData.date,
                               }
                             : {};
 
                           const mergedData = {
                             ...active,
+
                             ...transformedPoData,
+
                             ...loaData,
                           };
+
                           mergedData.po_items = transformedPoData.po_items;
+
                           if (transformedPoData.po_no)
                             mergedData.po_no = transformedPoData.po_no;
+
                           if (transformedPoData.po_date)
                             mergedData.po_date = transformedPoData.po_date;
 
                           const html = buildLOAHtml(mergedData);
+
                           downloadPDF(html);
                         }
                       }}
@@ -4447,6 +6431,7 @@ export default function ProcessPaymentModal({
               )}
 
               {/* Preview Content */}
+
               <div className="flex-1 min-h-0 overflow-auto">
                 {renderPreviewContent()}
               </div>

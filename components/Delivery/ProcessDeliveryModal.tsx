@@ -557,7 +557,7 @@ function IAREditablePreview({
   poData: any;
   setIar: (data: any) => void;
 }) {
-  const [zoomLevel, setZoomLevel] = useState(0.85);
+  const [zoomLevel, setZoomLevel] = useState(0.75);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));

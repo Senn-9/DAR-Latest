@@ -976,6 +976,13 @@ async function buildLOAHtml(d: any): Promise<string> {
                               >
                                 View Payment
                               </button>
+                                                       <button
+                                onClick={() => handleOpenRemarks(delivery)}
+                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
+                              >
+                                <RiChat3Line size={14} />
+                                Remarks
+                              </button>
                               {canRoleProcess(
                                 currentUser?.role_id || 0,
                                 delivery.status_id,
@@ -997,13 +1004,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                                   Delete
                                 </button>
                               )}
-                                                            <button
-                                onClick={() => handleOpenRemarks(delivery)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiChat3Line size={14} />
-                                Remarks
-                              </button>
+                                   
                             </div>
                           </td>
                         </tr>

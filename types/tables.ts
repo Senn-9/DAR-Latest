@@ -174,6 +174,10 @@ export type DvDocument = {
   receipt_signature: string | null; // Store signature path or base64
   receipt_official_receipt_no_date: string | null;
   
+  // JEV (Journal Entry Voucher) fields
+  jev_no: string | null;
+  jev_date: string | null;
+  
   accounting_entries: {
     account_title: string;
     uacs_code: string | null;

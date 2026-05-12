@@ -25,12 +25,11 @@ function escapeHtml(value: string) {
 
 function buildIARHtml(data: any): string {
   const items = data.po_items || [];
-  const missingItems = data.iar_po_items || [];
 
   // Build item rows
   let itemRows = "";
 
-  // Add regular items
+  // Add items
   items.forEach((item: any) => {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.unit_price || 0);
@@ -47,25 +46,8 @@ function buildIARHtml(data: any): string {
       </tr>`;
   });
 
-  // Add missing items
-  missingItems.forEach((item: any) => {
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unit_price || 0);
-    const amount = quantity * unitPrice;
-
-    itemRows += `
-      <tr>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:2px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
-        <td style="border:2px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
-        <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
-        <td style="border:2px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
-      </tr>`;
-  });
-
   // Fill empty rows to maintain minimum height
-  const emptyRows = Math.max(0, 15 - items.length - missingItems.length);
+  const emptyRows = Math.max(0, 15 - items.length);
   for (let i = 0; i < emptyRows; i++) {
     itemRows += `
       <tr style="height:24px;">
@@ -90,13 +72,10 @@ function buildIARHtml(data: any): string {
     html, body { margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #000; }
     table { width: 100%; border-collapse: collapse; }
-    .center { text-align: center; }
-    .right { text-align: right; }
-    .bold { font-weight: bold; }
   </style>
 </head>
 <body>
-  <div style="width: 816px; margin: 0 auto; min-height: 1056px;">
+  <div style="width: 816px; margin: 0 auto; min-height: 1056px; padding: 32px; background: white;">
     <!-- Appendix Header -->
     <div style="text-align: right; margin-bottom: 8px;">
       <span style="font-size: 10px; font-style: italic;">Appendix 62</span>
@@ -104,65 +83,67 @@ function buildIARHtml(data: any): string {
 
     <!-- Title -->
     <div style="text-align: center; margin-bottom: 24px;">
-      <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px;">INSPECTION AND ACCEPTANCE REPORT</div>
+      <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px; font-family: Arial, sans-serif;">INSPECTION AND ACCEPTANCE REPORT</div>
     </div>
 
     <!-- Entity Name and Fund Cluster Row -->
-    <div style="margin-bottom: 12px; font-size: 10px; display: flex; align-items: baseline;">
-      <span style="font-weight: bold;">Entity Name :</span>
+    <div style="margin-bottom: 12px; font-size: 10px; font-family: Arial, sans-serif; display: flex; align-items: baseline;">
+      <span style="font-weight: 600;">Entity Name :</span>
       <span style="flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
-      <span style="font-weight: bold;">Fund Cluster :</span>
+      <span style="font-weight: 600;">Fund Cluster :</span>
       <span style="padding: 0 8px;">${escapeHtml(data.fund_cluster || "")}</span>
     </div>
 
     <!-- Main Info Box -->
-    <div style="border: 2px solid #000; margin-bottom: 0; font-size: 10px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr;">
-        <!-- Left Section -->
-        <div style="border-right: 2px solid #000; padding: 8px;">
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Supplier :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">PO No./Date :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.po_no || "")} / ${escapeHtml(data.po_date || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Requisitioning Office/Dept. :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.office_section || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Responsibility Center Code :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.responsibility_center_code || "")}</span>
-          </div>
-        </div>
+    <div style="border: 2px solid #000; margin-bottom: 0; font-size: 10px; font-family: Arial, sans-serif;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <!-- Left Section -->
+          <td style="border-right: 2px solid #000; padding: 8px; width: 50%; vertical-align: top;">
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Supplier :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">PO No./Date :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.po_no || "")} / ${escapeHtml(data.po_date || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Requisitioning Office/Dept. :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.office_section || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Responsibility Center Code :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.responsibility_center_code || "")}</span>
+            </div>
+          </td>
 
-        <!-- Right Section -->
-        <div style="padding: 8px;">
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">IAR No. :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.iar_no || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Date :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.iar_date || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Invoice No. :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.invoice_no || "")}</span>
-          </div>
-          <div style="margin-bottom: 4px;">
-            <span style="font-weight: bold;">Date :</span>
-            <span style="margin-left: 8px;">${escapeHtml(data.invoice_date || "")}</span>
-          </div>
-        </div>
-      </div>
+          <!-- Right Section -->
+          <td style="padding: 8px; width: 50%; vertical-align: top;">
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">IAR No. :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.iar_no || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Date :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.iar_date || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Invoice No. :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.invoice_no || "")}</span>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <span style="font-weight: 600;">Date :</span>
+              <span style="margin-left: 8px;">${escapeHtml(data.invoice_date || "")}</span>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <!-- Items Table -->
-    <div style="margin-bottom: 0;">
-      <table style="border-collapse: collapse; border: 2px solid #000; font-size: 9px; width: 100%;">
+    <div>
+      <table style="border-collapse: collapse; border: 2px solid #000; font-size: 9px; width: 100%; font-family: Arial, sans-serif;">
         <thead>
           <tr>
             <th style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 80px;">
@@ -183,61 +164,87 @@ function buildIARHtml(data: any): string {
     </div>
 
     <!-- Inspection and Acceptance Section -->
-    <div style="border: 1px solid #000; font-size: 10px;">
-      <div style="display: flex; min-height: 200px;">
-        <!-- Inspection Column -->
-        <div style="border-right: 1px solid #000; flex: 1; height: 100%;">
-          <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic;">INSPECTION</div>
-          <div style="padding: 12px; position: relative; display: flex; flex-direction: column; height: 180px;">
-            <div style="margin-bottom: 12px;">
-              <span style="font-weight: bold;">Date Inspected :</span>
-              <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.inspected_at || "")}</span>
-            </div>
-            
-            <div style="margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.inspection_verified ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
+    <div style="border: 1px solid #000; font-size: 10px; font-family: Arial, sans-serif;">
+      <table style="width: 100%; border-collapse: collapse; min-height: 200px;">
+        <tr>
+          <!-- Inspection Column -->
+          <td style="border-right: 1px solid #000; width: 50%; vertical-align: top;">
+            <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: Arial, sans-serif;">INSPECTION</div>
+            <div style="padding: 12px; position: relative; height: 180px;">
+              <div style="margin-bottom: 12px;">
+                <span style="font-weight: 600;">Date Inspected :</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.inspected_at || "")}</span>
               </div>
-              <span style="font-size: 9px;">Inspected, verified and found in order as to quantity and specifications</span>
-            </div>
-
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
-              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.inspection_officer || "")}</div>
-              <div style="font-size: 9px;">Inspection Officer/Inspection Committee</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Acceptance Column -->
-        <div style="flex: 1; height: 100%;">
-          <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic;">ACCEPTANCE</div>
-          <div style="padding: 12px; position: relative; display: flex; flex-direction: column; height: 180px;">
-            <div style="margin-bottom: 12px;">
-              <span style="font-weight: bold;">Date Received :</span>
-              <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.received_at || "")}</span>
-            </div>
-            
-            <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.items_complete !== false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
+              
+              <div style="margin-bottom: 16px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="width: 18px; vertical-align: top; padding: 0;">
+                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                        ${data.inspection_verified ? "✓" : ""}
+                      </div>
+                    </td>
+                    <td style="padding-left: 8px; vertical-align: top;">
+                      <span style="font-size: 9px; font-family: Arial, sans-serif;">Inspected, verified and found in order as to quantity and specifications</span>
+                    </td>
+                  </tr>
+                </table>
               </div>
-              <span style="font-size: 9px;">Complete</span>
-            </div>
-            
-            <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-              <div style="border: 1px solid #000; width: 18px; height: 18px; flex-shrink: 0;">
-                ${data.items_complete === false ? '<div style="text-align: center; line-height: 14px;">✓</div>' : ""}
-              </div>
-              <span style="font-size: 9px;">Partial (pls. specify quantity)</span>
-            </div>
 
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding-bottom: 12px;">
-              <div style="border-bottom: 1px solid #000; margin: 0 16px 4px 16px; padding-top: 24px; padding-bottom: 0; font-weight: 700;">${escapeHtml(data.supply_officer || "")}</div>
-              <div style="font-size: 9px;">ARPT/SUPPLY OFFICER</div>
+              <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
+                <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: Arial, sans-serif;">${escapeHtml(data.inspection_officer || "")}</div>
+                <div style="font-size: 9px; margin-top: 4px; font-family: Arial, sans-serif;">Inspection Officer/Inspection Committee</div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </td>
+
+          <!-- Acceptance Column -->
+          <td style="width: 50%; vertical-align: top;">
+            <div style="border-bottom: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: Arial, sans-serif;">ACCEPTANCE</div>
+            <div style="padding: 12px; position: relative; height: 180px;">
+              <div style="margin-bottom: 12px;">
+                <span style="font-weight: 600;">Date Received :</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.received_at || "")}</span>
+              </div>
+              
+              <div style="margin-bottom: 8px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="width: 18px; vertical-align: middle; padding: 0;">
+                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                        ${data.items_complete !== false ? "✓" : ""}
+                      </div>
+                    </td>
+                    <td style="padding-left: 8px; vertical-align: middle;">
+                      <span style="font-size: 9px; font-family: Arial, sans-serif;">Complete</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              
+              <div style="margin-bottom: 16px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="width: 18px; vertical-align: middle; padding: 0;">
+                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                        ${data.items_complete === false ? "✓" : ""}
+                      </div>
+                    </td>
+                    <td style="padding-left: 8px; vertical-align: middle;">
+                      <span style="font-size: 9px; font-family: Arial, sans-serif;">Partial (pls. specify quantity)</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
+                <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: Arial, sans-serif;">${escapeHtml(data.supply_officer || "")}</div>
+                <div style="font-size: 9px; margin-top: 4px; font-family: Arial, sans-serif;">ARPT/SUPPLY OFFICER</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
   </div>
 </body>
@@ -245,41 +252,6 @@ function buildIARHtml(data: any): string {
 }
 
 function buildLOAHtml(data: any): string {
-  const items = data.po_items || [];
-
-  // Build item rows
-  let itemRows = "";
-
-  items.forEach((item: any) => {
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unit_price || 0);
-    const amount = quantity * unitPrice;
-
-    itemRows += `
-      <tr>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${escapeHtml(item.stock_no || "")}</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:1px solid #000; padding:2px; font-size:9.5px;">${escapeHtml(item.description || "")}</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${quantity || ""}</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">${amount ? amount.toFixed(2) : ""}</td>
-      </tr>`;
-  });
-
-  // Fill empty rows to maintain minimum height
-  const emptyRows = Math.max(0, 10 - items.length);
-  for (let i = 0; i < emptyRows; i++) {
-    itemRows += `
-      <tr>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
-        <td style="border:1px solid #000; padding:2px; font-size:9.5px;">&nbsp;</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
-        <td style="border:1px solid #000; padding:2px; text-align:center; font-size:9.5px;">&nbsp;</td>
-      </tr>`;
-  }
-
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -287,107 +259,329 @@ function buildLOAHtml(data: any): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Letter of Acceptance</title>
   <style>
-    @page { size: A4; margin: 12mm 15mm; }
+    @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: 'Arial Narrow', Arial, sans-serif; color: #000; }
-    table { width: 100%; border-collapse: collapse; }
-    .center { text-align: center; }
-    .bold { font-weight: bold; }
+    body { font-family: Arial, sans-serif; color: #000; }
+    .underline { border-bottom: 1.5px solid #000; display: inline-block; min-width: 180px; }
   </style>
 </head>
 <body>
-  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 48px;">
-    <div style="color: #000; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 10px;">
-      <!-- Top Section -->
-      <div style="display: grid; grid-template-columns: 1fr 3fr 1fr; align-items: start; margin-bottom: 8px;">
-        <div></div>
-
-        <!-- Center Logos and Text -->
-        <div style="display: flex; align-items: flex-start; justify-content: center; gap: 12px;">
-          <img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" style="height: 48px; width: 48px; object-fit: contain;" />
-          <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height: 48px; width: 48px; object-fit: contain;" />
-          <div style="margin-top: 4px; text-align: center;">
-            <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.01em;">REPUBLIC OF THE PHILIPPINES</div>
-            <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.01em;">DEPARTMENT OF AGRARIAN REFORM</div>
-            <div style="font-size: 8px; font-weight: 400;">Tunay na Pagbabago sa Repormang Agraryo</div>
-          </div>
-          <img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" style="margin-left: 4px; height: 48px; width: 48px; border-radius: 4px; object-fit: contain;" />
-          <div style="width: 48px; height: 48px; margin-left: 12px;"></div>
-        </div>
-
-        <div style="text-align: right;">
-          <div style="font-size: 9px; font-weight: 700;">Appendix 63</div>
-        </div>
+  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 64px 80px;">
+    <!-- Header Section -->
+    <div style="position: relative; margin-bottom: 40px;">
+      <!-- DAR Logo - Absolute Position -->
+      <div style="position: absolute; left: 16px; top: 0;">
+        <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height: 64px; width: 64px; object-fit: contain;" />
       </div>
-
-      <!-- Title -->
-      <div style="text-align: center; margin-bottom: 24px;">
-        <div style="font-weight: bold; font-size: 12px; text-transform: uppercase;">LETTER OF ACCEPTANCE</div>
-      </div>
-
-      <!-- Meta Information -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 10px;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-weight: bold;">Entity Name:</span>
-            <span>DEPARTMENT OF AGRARIAN REFORM-CAM SUR 1</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-weight: bold;">Supplier:</span>
-            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-weight: bold;">PO No./Date:</span>
-            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.po_no || "")}</span>
-          </div>
-        </div>
-        <div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-weight: bold;">Invoice No.:</span>
-            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.invoice_no || "")}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-weight: bold;">Date:</span>
-            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.invoice_date || "")}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Items Table -->
-      <div style="margin-bottom: 24px;">
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 9.5px;">
-          <thead>
-            <tr>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Stock No.</th>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Unit</th>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Description</th>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Quantity</th>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Unit Cost</th>
-              <th style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemRows}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Acceptance Section -->
-      <div style="margin-bottom: 24px;">
-        <div style="font-weight: bold; font-size: 11px; margin-bottom: 16px;">ACCEPTANCE</div>
-        <div style="font-size: 10px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span>Date Accepted:</span>
-            <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px;">${escapeHtml(data.accepted_at || "")}</span>
-          </div>
-          <div style="margin-top: 16px;">
-            <span style="border-bottom: 1px solid #000; display: block; width: 100%; padding: 0 4px; font-weight: bold;">${escapeHtml(data.accepted_by_name || "")}</span>
-            <div style="font-size: 9px;">${escapeHtml(data.accepted_by_title || "")}</div>
-          </div>
-        </div>
+      
+      <!-- Office Details - With left padding for logo -->
+      <div style="text-align: center; padding-left: 64px;">
+        <div style="font-size: 11px; margin-bottom: 4px; font-family: Arial, sans-serif;">Republic of the Philippines</div>
+        <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: Arial, sans-serif;">DEPARTMENT OF AGRARIAN REFORM</div>
+        <div style="font-size: 10px; margin-bottom: 2px; font-family: Arial, sans-serif;">Camarines Sur Provincial Office</div>
+        <div style="font-size: 10px; font-family: Arial, sans-serif;">2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY</div>
       </div>
     </div>
+
+    <!-- Title -->
+    <div style="text-align: center; margin-bottom: 32px; margin-top: 28px;">
+      <div style="font-family: Arial, sans-serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">LETTER OF ACCEPTANCE</div>
+    </div>
+
+    <!-- Date Field - Right Aligned -->
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+      <div style="width: 150px; text-align: center;">
+        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; text-align: center;">${escapeHtml(data.accepted_at || "")}</div>
+        <div style="font-size: 9px; margin-top: 4px;">Date</div>
+      </div>
+    </div>
+
+    <!-- Acceptance Text -->
+    <div style="font-family: Arial, sans-serif; font-size: 11px; line-height: 32px;">
+      <!-- Line 1 - indented -->
+      <div style="padding-left: 50px; word-spacing: 8px;">
+        I/WE hereby certify to have accepted each and every articles/services delivered
+      </div>
+
+      <!-- Line 2 - "rendered by ___" -->
+      <div style="display: flex; align-items: flex-end;">
+        <span style="white-space: nowrap; word-spacing: 8px;">rendered&nbsp;by&nbsp;</span>
+        <span style="flex: 1; border-bottom: 1.5px solid #000;">${escapeHtml(data.supplier_name || data.supplier || "")}</span>
+      </div>
+
+      <!-- Line 3 - "listed in the attached Invoice No. ___ dated" -->
+      <div style="display: flex; align-items: flex-end;">
+        <span style="white-space: nowrap; word-spacing: 8px;">listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;</span>
+        <span style="flex: 1; border-bottom: 1.5px solid #000;">${escapeHtml(data.invoice_no || "")}</span>
+        <span style="white-space: nowrap; word-spacing: 8px;">&nbsp;dated</span>
+      </div>
+
+      <!-- Line 4 - "___ was/were found to be in accordance with the specifications" -->
+      <div style="display: flex; align-items: flex-end;">
+        <span style="width: 180px; flex-shrink: 0; border-bottom: 1.5px solid #000;">${escapeHtml(data.invoice_date || "")}</span>
+        <span style="white-space: nowrap; word-spacing: 8px;">&nbsp;was/were found to be in accordance with the specifications</span>
+      </div>
+
+      <!-- Line 5 - "stipulated under Order No./Purchase Order No. ___ dated" -->
+      <div style="display: flex; align-items: flex-end;">
+        <span style="white-space: nowrap; word-spacing: 8px;">stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;</span>
+        <span style="flex: 1; border-bottom: 1.5px solid #000;">${escapeHtml(data.po_no || "")}</span>
+        <span style="white-space: nowrap; word-spacing: 8px;">&nbsp;dated</span>
+      </div>
+
+      <!-- Line 6 - standalone PO date underline -->
+      <div>
+        <span style="width: 180px; display: inline-block; border-bottom: 1.5px solid #000;">${escapeHtml(data.po_date || "")}</span>
+      </div>
+    </div>
+
+    <!-- Signature Section - Right Aligned -->
+    <div style="display: flex; justify-content: flex-end; margin-top: 100px;">
+      <div style="width: 200px; text-align: center;">
+        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: Arial, sans-serif; font-size: 11px;">${escapeHtml(data.accepted_by_name || "")}</div>
+        <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: Arial, sans-serif; word-spacing: 15px;">(Printed Name &amp; Signature)</div>
+
+        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: Arial, sans-serif; font-weight: 700; font-size: 11px;">${escapeHtml(data.accepted_by_title || "")}</div>
+        <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: Arial, sans-serif; word-spacing: 15px;">(Official Title)</div>
+        <div style="font-size: 9px; font-family: Arial, sans-serif; word-spacing: 15px;">(Head of Agency/Authorized Representative)</div>
+      </div>
+    </div>
+
+    <!-- Form Reference - Bottom Right -->
+    <div style="display: flex; justify-content: flex-end; margin-top: 40px;">
+      <div style="font-size: 9px; font-weight: 700; font-family: Arial, sans-serif;">DAR CS1-QF-STO-016 REV 00</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildDVHtml(data: any): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Disbursement Voucher</title>
+  <style>
+    @page { size: A4; margin: 12mm 15mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', serif; color: #000; font-size: 9px; }
+    table { width: 100%; border-collapse: collapse; }
+  </style>
+</head>
+<body>
+  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px;">
+    <!-- Appendix -->
+    <div style="text-align: right; font-style: italic; margin-bottom: 2px;">Appendix 32</div>
+
+    <!-- HEADER: Logo | Title | Fund Cluster/Date/DV No -->
+    <table style="border: 1px solid #000;">
+      <tr>
+        <td style="width: 90px; padding: 4px; vertical-align: middle;">
+          <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR Logo" style="width: 72px; height: 44px; object-fit: contain;" />
+        </td>
+        <td style="border-right: 1px solid #000; padding: 4px; vertical-align: top;">
+          <div style="font-size: 12px; font-weight: bold; text-align: center;">DEPARTMENT OF AGRARIAN REFORM</div>
+          <div style="font-size: 10px; text-align: center; margin-bottom: 4px;">Camarines Sur Provincial Office</div>
+          <div style="font-size: 11px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px;">DISBURSEMENT VOUCHER</div>
+        </td>
+        <td style="width: 160px; padding: 0; vertical-align: top;">
+          <table style="width: 100%; height: 100%;">
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b>Fund:</b> ${escapeHtml(data.fund_cluster || "")}</td>
+            </tr>
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date:</b> ${escapeHtml(data.dv_date || "")}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 4px;"><b>DV No.:</b> ${escapeHtml(data.dv_no || "")}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- MODE OF PAYMENT -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 6px; vertical-align: top;"><b>Mode of<br/>payment</b></td>
+        <td style="padding: 3px 6px; vertical-align: top;">
+          <div style="display: flex; gap: 35px; margin-top: 3px;">
+            <label style="display: flex; align-items: center; gap: 3px;">
+              <input type="checkbox" ${data.mode_of_payment === "MDS Check" ? "checked" : ""} style="margin: 0;" />MDS Check
+            </label>
+            <label style="display: flex; align-items: center; gap: 3px;">
+              <input type="checkbox" ${data.mode_of_payment === "Commercial Check" ? "checked" : ""} style="margin: 0;" />Commercial Check
+            </label>
+            <label style="display: flex; align-items: center; gap: 3px;">
+              <input type="checkbox" ${data.mode_of_payment === "ADA" ? "checked" : ""} style="margin: 0;" />ADA
+            </label>
+            <label style="display: flex; align-items: center; gap: 3px;">
+              <input type="checkbox" ${data.mode_of_payment === "Others" ? "checked" : ""} style="margin: 0;" />Others (Please specify)
+            </label>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- PAYEE / TIN / ORS / ADDRESS -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 4px;"><b>Payee</b></td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee || data.supplier || "")}</td>
+        <td style="width: 140px; border-right: 1px solid #000; padding: 3px 4px;"><b>Tin/Employee No.</b></td>
+        <td style="width: 120px; padding: 3px 4px;"><b>ORS/BURS No.</b></td>
+      </tr>
+      <tr>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;"><b>Address</b></td>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.address || "")}</td>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee_tin || data.tin || "")}</td>
+        <td style="border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.ors_no || "")}</td>
+      </tr>
+    </table>
+
+    <!-- PARTICULARS TABLE -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <thead>
+        <tr>
+          <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Particulars</th>
+          <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Responsibility Center</th>
+          <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">MFO/PAP</th>
+          <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="height: 120px;">
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; white-space: pre-wrap;">${escapeHtml(data.particulars || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.responsibility_center || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.mfo_pap || "")}</td>
+          <td style="padding: 3px 4px; vertical-align: top; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+        </tr>
+        ${[...Array(7)].map(() => `
+        <tr style="height: 20px;">
+          <td style="border-right: 1px solid #000;">&nbsp;</td>
+          <td style="border-right: 1px solid #000;">&nbsp;</td>
+          <td style="border-right: 1px solid #000;">&nbsp;</td>
+          <td>&nbsp;</td>
+        </tr>`).join("")}
+        <tr>
+          <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold;">Amount Due</td>
+          <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- SECTION A -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td style="padding: 4px 6px;"><b>A.</b> Certified: Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</td>
+      </tr>
+      <tr style="height: 36px;">
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+
+    <!-- SECTION B: Accounting Entry -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px;"><b>B.</b> Accounting Entry:</td>
+      </tr>
+      <tr>
+        <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Account Title</th>
+        <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">UACS Code</th>
+        <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Debit</th>
+        <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Credit</th>
+      </tr>
+      ${[...Array(6)].map(() => `
+      <tr style="height: 20px;">
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
+        <td style="border-bottom: 1px solid #000;">&nbsp;</td>
+      </tr>`).join("")}
+      <tr style="height: 20px;">
+        <td style="border-right: 1px solid #000;">&nbsp;</td>
+        <td style="border-right: 1px solid #000;">&nbsp;</td>
+        <td style="border-right: 1px solid #000;">&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+
+    <!-- SECTIONS C & D -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td style="width: 50%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top;">
+          <div style="font-weight: bold; margin-bottom: 4px;">C. Certified:</div>
+          <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
+            <span>Cash available</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
+            <span>Subject to Authority to Debit Account (when applicable)</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
+            <span>Supporting documents complete and amount claimed proper</span>
+          </div>
+        </td>
+        <td style="padding: 4px 6px; vertical-align: top;"><b>D. Approved for Payment</b></td>
+      </tr>
+    </table>
+
+    <!-- SIGNATURES -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Printed Name</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Printed Name</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Position</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Head, Accounting Unit/Authorized Representative</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Position</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px;">Agency Head/Authorized Representative</td>
+      </tr>
+      <tr>
+        <td style="border-right: 1px solid #000; padding: 3px 4px;">Date</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px;">Date</td>
+        <td style="padding: 3px 4px;">&nbsp;</td>
+      </tr>
+    </table>
+
+    <!-- SECTION E: Receipt of Payment -->
+    <table style="border: 1px solid #000; border-top: none;">
+      <tr>
+        <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px;"><b>E. Receipt of Payment</b></td>
+        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 6px;"><b>JEV No.</b></td>
+      </tr>
+      <tr>
+        <td style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Check/<br/>ADA No.</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date :</b></td>
+        <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Bank Name &amp; Account Number:</b></td>
+        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date :</b></td>
+        <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Printed Name:</b></td>
+        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px;"><b>Date</b></td>
+      </tr>
+      <tr>
+        <td colspan="5" style="padding: 3px 6px;"><b>Official Receipt No. &amp; Date/Other Documents</b></td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>`;
@@ -461,15 +655,11 @@ function IARPreview({
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...iar };
-  mergedData.po_items = transformedPoData.po_items;
+  mergedData.po_items = iar?.iar_po_items || transformedPoData.po_items;
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-  if (iar?.iar_po_items) {
-    mergedData.iar_po_items = iar.iar_po_items;
-  }
 
   const items = mergedData.po_items || [];
-  const missingItems = mergedData.iar_po_items || [];
 
   return (
     <div className="space-y-2">
@@ -647,37 +837,10 @@ function IARPreview({
                       </td>
                     </tr>
                   ))}
-                  {missingItems.length > 0 &&
-                    missingItems.map((item: any, i: number) => (
-                      <tr key={`missing-${i}`}>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.stock_no || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.unit || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 px-2" style={{ overflow: "hidden", wordWrap: "break-word", whiteSpace: "normal" }}>
-                          {item.description || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center">
-                          {item.quantity || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-right pr-2">
-                          {item.unit_price || ""}
-                        </td>
-                        <td className="border-2 border-black p-1 text-right pr-2">
-                          {item.quantity && item.unit_price
-                            ? (
-                                Number(item.quantity) * Number(item.unit_price)
-                              ).toFixed(2)
-                            : ""}
-                        </td>
-                      </tr>
-                    ))}
                   {/* Fill empty rows */}
                   {[
                     ...Array(
-                      Math.max(0, 15 - items.length - missingItems.length),
+                      Math.max(0, 15 - items.length),
                     ),
                   ].map((_, i) => (
                     <tr key={`empty-${i}`} style={{ height: "24px" }}>
@@ -987,7 +1150,7 @@ function LOAPreview({
               </div>
               {/* Date Field - Right Aligned */}
               <div className="flex justify-end mb-8">
-                <div style={{ width: "280px", textAlign: "center" }}>
+                <div style={{ width: "150px", textAlign: "center" }}>
                   <div
                     style={{
                       borderBottom: "1.5px solid #000",
@@ -1019,10 +1182,10 @@ function LOAPreview({
                 >
                   <span
                     style={{
-                      paddingLeft: "100px",
+                      paddingLeft: "50px",
 
                       fontFamily: "Arial, sans-serif",
-                      wordSpacing: "15px",
+                      wordSpacing: "10px",
                     }}
                   >
                     I/WE hereby certify to have accepted each and every
@@ -1167,7 +1330,7 @@ function LOAPreview({
 
               {/* Signature Section - Right Aligned */}
               <div className="flex justify-end" style={{ marginTop: "100px" }}>
-                <div style={{ width: "340px", textAlign: "center" }}>
+                <div style={{ width: "200px", textAlign: "center" }}>
                   <div
                     style={{
                       borderBottom: "1.5px solid #000",
@@ -1248,7 +1411,7 @@ function LOAPreview({
 }
 
 function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: any }) {
-  const [zoomLevel, setZoomLevel] = useState(0.85);
+  const [zoomLevel, setZoomLevel] = useState(1.05);
 
   // Transform PO data - keep all fields and just add the transformed ones
   const transformedPoData = poData
@@ -1262,6 +1425,19 @@ function DVPreview({ delivery, dv, poData }: { delivery: any; dv: any; poData: a
   // Merge delivery data with transformed PO data and DV data
   const mergedData = { ...delivery, ...transformedPoData, ...dv };
   mergedData.po_items = transformedPoData.po_items;
+
+  // Ensure DV-specific fields are available in mergedData
+  if (!mergedData.dv_no && dv?.dv_no) mergedData.dv_no = dv.dv_no;
+  if (!mergedData.payee && dv?.payee) mergedData.payee = dv.payee;
+  if (!mergedData.address && dv?.address) mergedData.address = dv.address;
+  if (!mergedData.payee_tin && dv?.payee_tin) mergedData.payee_tin = dv.payee_tin;
+  if (!mergedData.ors_no && dv?.ors_no) mergedData.ors_no = dv.ors_no;
+  if (!mergedData.fund_cluster && dv?.fund_cluster) mergedData.fund_cluster = dv.fund_cluster;
+  if (!mergedData.responsibility_center && dv?.responsibility_center) mergedData.responsibility_center = dv.responsibility_center;
+  if (!mergedData.mfo_pap && dv?.mfo_pap) mergedData.mfo_pap = dv.mfo_pap;
+  if (!mergedData.amount_due && dv?.amount_due) mergedData.amount_due = dv.amount_due;
+  if (!mergedData.mode_of_payment && dv?.mode_of_payment) mergedData.mode_of_payment = dv.mode_of_payment;
+  if (!mergedData.particulars && dv?.particulars) mergedData.particulars = dv.particulars;
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
@@ -2258,13 +2434,9 @@ export default function ViewDeliveryModal({
     deliveryData: any,
     iarData: any,
     loaData: any,
+    dvData: any,
     poDataParam: any,
   ) => {
-    if (currentTab === "dv") {
-      alert("DV PDF generation will be implemented in the next phase.");
-      return;
-    }
-
     const transformedPoData = poDataParam
       ? {
           ...poDataParam,
@@ -2290,6 +2462,22 @@ export default function ViewDeliveryModal({
       if (mergedData.po_no) loaMerged.po_no = mergedData.po_no;
       // PO date should not be copied to LOA - keep it blank
       const html = buildLOAHtml(loaMerged);
+      downloadPDF(html);
+    } else if (currentTab === "dv" && dvData) {
+      const dvMerged = { ...mergedData, ...dvData };
+      // Ensure DV-specific fields are available
+      if (!dvMerged.dv_no && dvData?.dv_no) dvMerged.dv_no = dvData.dv_no;
+      if (!dvMerged.payee && dvData?.payee) dvMerged.payee = dvData.payee;
+      if (!dvMerged.address && dvData?.address) dvMerged.address = dvData.address;
+      if (!dvMerged.payee_tin && dvData?.payee_tin) dvMerged.payee_tin = dvData.payee_tin;
+      if (!dvMerged.ors_no && dvData?.ors_no) dvMerged.ors_no = dvData.ors_no;
+      if (!dvMerged.fund_cluster && dvData?.fund_cluster) dvMerged.fund_cluster = dvData.fund_cluster;
+      if (!dvMerged.responsibility_center && dvData?.responsibility_center) dvMerged.responsibility_center = dvData.responsibility_center;
+      if (!dvMerged.mfo_pap && dvData?.mfo_pap) dvMerged.mfo_pap = dvData.mfo_pap;
+      if (!dvMerged.amount_due && dvData?.amount_due) dvMerged.amount_due = dvData.amount_due;
+      if (!dvMerged.mode_of_payment && dvData?.mode_of_payment) dvMerged.mode_of_payment = dvData.mode_of_payment;
+      if (!dvMerged.particulars && dvData?.particulars) dvMerged.particulars = dvData.particulars;
+      const html = buildDVHtml(dvMerged);
       downloadPDF(html);
     }
   };
@@ -2988,7 +3176,7 @@ export default function ViewDeliveryModal({
 
             <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
               <button
-                onClick={() => handlePrintPDF(tab, delivery, iar, loa, poData)}
+                onClick={() => handlePrintPDF(tab, delivery, iar, loa, dv, poData)}
                 className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
               >
                 <RiFilePdf2Line size={18} /> Download PDF
@@ -3013,13 +3201,6 @@ export default function ViewDeliveryModal({
                 {/* PDF Print Button */}
                 <button
                   onClick={() => {
-                    if (tab === "dv") {
-                      alert(
-                        "DV PDF generation will be implemented in the next phase.",
-                      );
-                      return;
-                    }
-
                     const transformedPoData = poData
                       ? {
                           ...poData,
@@ -3046,6 +3227,22 @@ export default function ViewDeliveryModal({
                       if (mergedData.po_no) loaData.po_no = mergedData.po_no;
                       // PO date should not be copied to LOA - keep it blank
                       const html = buildLOAHtml(loaData);
+                      downloadPDF(html);
+                    } else if (tab === "dv" && dv) {
+                      const dvData = { ...mergedData, ...dv };
+                      // Ensure DV-specific fields are available
+                      if (!dvData.dv_no && dv?.dv_no) dvData.dv_no = dv.dv_no;
+                      if (!dvData.payee && dv?.payee) dvData.payee = dv.payee;
+                      if (!dvData.address && dv?.address) dvData.address = dv.address;
+                      if (!dvData.payee_tin && dv?.payee_tin) dvData.payee_tin = dv.payee_tin;
+                      if (!dvData.ors_no && dv?.ors_no) dvData.ors_no = dv.ors_no;
+                      if (!dvData.fund_cluster && dv?.fund_cluster) dvData.fund_cluster = dv.fund_cluster;
+                      if (!dvData.responsibility_center && dv?.responsibility_center) dvData.responsibility_center = dv.responsibility_center;
+                      if (!dvData.mfo_pap && dv?.mfo_pap) dvData.mfo_pap = dv.mfo_pap;
+                      if (!dvData.amount_due && dv?.amount_due) dvData.amount_due = dv.amount_due;
+                      if (!dvData.mode_of_payment && dv?.mode_of_payment) dvData.mode_of_payment = dv.mode_of_payment;
+                      if (!dvData.particulars && dv?.particulars) dvData.particulars = dv.particulars;
+                      const html = buildDVHtml(dvData);
                       downloadPDF(html);
                     }
                   }}
