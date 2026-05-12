@@ -20,6 +20,9 @@ type PurchaseRequest = {
   entity_name: string | null;
   total_cost: number;
   division_id?: number | null;
+  created_at?: string;
+  has_po?: boolean;
+  po_count?: number;
 };
 
 type CanvassEntry = {
@@ -1270,6 +1273,10 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [selectedPRNo, setSelectedPRNo] = useState<string>("");
   const [loadingPRs, setLoadingPRs] = useState(false);
   const [prSearch, setPrSearch] = useState("");
+  const [prSortBy, setPrSortBy] = useState<"date" | "pr_no" | "cost">("date");
+  const [prSortDir, setPrSortDir] = useState<"asc" | "desc">("desc");
+  const [prFilterPO, setPrFilterPO] = useState<"all" | "no_po" | "has_po">("all");
+  const [prFilterDivision, setPrFilterDivision] = useState<string>("all");
   
   // PO Form state
   const [poNo, setPoNo] = useState("");
@@ -1414,18 +1421,65 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   async function fetchAvailablePRs() {
     setLoadingPRs(true);
     try {
-      const { data, error } = await supabase
+      // Fetch PRs with status 33 (Completed PR Phase)
+      const { data: prsData, error: prsError } = await supabase
         .from("purchase_requests")
-        .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost, division_id")
-        .eq("status_id", 33) // Completed (PR Phase) status
-        .order("created_at", { ascending: false });
+        .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost, division_id, created_at")
+        .eq("status_id", 33)
+        .order("created_at", { ascending: false })
+        .limit(500); // Limit to latest 500 PRs for performance
 
-      if (error) {
-        console.error("Error fetching PRs:", error);
+      if (prsError) {
+        console.error("Error fetching PRs:", prsError);
         return;
       }
 
-      setAvailablePRs(data || []);
+      if (!prsData || prsData.length === 0) {
+        setAvailablePRs([]);
+        return;
+      }
+
+      // Fetch existing POs to check which PRs already have POs
+      const prIds = prsData.map(pr => pr.id);
+      const { data: posData, error: posError } = await supabase
+        .from("purchase_orders")
+        .select("pr_id")
+        .in("pr_id", prIds);
+
+      if (posError) {
+        console.error("Error fetching POs:", posError);
+      }
+
+      // Count POs per PR
+      const poCountMap = new Map<number, number>();
+      (posData || []).forEach(po => {
+        if (po.pr_id) {
+          poCountMap.set(po.pr_id, (poCountMap.get(po.pr_id) || 0) + 1);
+        }
+      });
+
+      // Enrich PR data with PO status
+      const enrichedPRs = prsData.map(pr => ({
+        ...pr,
+        has_po: poCountMap.has(pr.id),
+        po_count: poCountMap.get(pr.id) || 0,
+      }));
+
+      // Initial sort: PRs without PO first, then by created_at descending
+      enrichedPRs.sort((a, b) => {
+        if (a.has_po !== b.has_po) {
+          return a.has_po ? 1 : -1; // PRs without PO come first
+        }
+        // Both have same PO status, sort by date (newest first)
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+
+      setAvailablePRs(enrichedPRs);
+      // Reset filters when refreshing
+      setPrFilterPO("all");
+      setPrFilterDivision("all");
+      setPrSortBy("date");
+      setPrSortDir("desc");
     } catch (err) {
       console.error("Error fetching PRs:", err);
     } finally {
@@ -1690,6 +1744,56 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     }
   }
 
+  // Compute filtered and sorted PR list
+  const filteredAndSortedPRs = useMemo(() => {
+    let filtered = availablePRs;
+
+    // Apply PO status filter
+    if (prFilterPO === "no_po") {
+      filtered = filtered.filter(pr => !pr.has_po);
+    } else if (prFilterPO === "has_po") {
+      filtered = filtered.filter(pr => pr.has_po);
+    }
+
+    // Apply division filter
+    if (prFilterDivision !== "all") {
+      filtered = filtered.filter(pr => pr.division_id?.toString() === prFilterDivision);
+    }
+
+    // Apply search filter
+    if (prSearch) {
+      const searchLower = prSearch.toLowerCase();
+      filtered = filtered.filter(pr =>
+        pr.pr_no.toLowerCase().includes(searchLower) ||
+        pr.purpose.toLowerCase().includes(searchLower) ||
+        pr.office_section.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      if (prSortBy === "date") {
+        aVal = new Date(a.created_at || 0).getTime();
+        bVal = new Date(b.created_at || 0).getTime();
+      } else if (prSortBy === "pr_no") {
+        aVal = a.pr_no;
+        bVal = b.pr_no;
+      } else if (prSortBy === "cost") {
+        aVal = a.total_cost;
+        bVal = b.total_cost;
+      }
+
+      if (aVal < bVal) return prSortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return prSortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [availablePRs, prSearch, prFilterPO, prFilterDivision, prSortBy, prSortDir]);
+
   if (!visible) return null;
 
   return (
@@ -1726,12 +1830,13 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Select Purchase Request</h3>
                 <div className="space-y-3">
+                  {/* Search and Refresh */}
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="text"
-                        placeholder="Search PR number..."
+                        placeholder="Search PR number, purpose, or office..."
                         value={prSearch}
                         onChange={(e) => setPrSearch(e.target.value)}
                         className={`${inputCls} pl-9`}
@@ -1746,6 +1851,67 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                       {loadingPRs ? "Loading..." : "Refresh"}
                     </button>
                   </div>
+
+                  {/* Sort and Filter Controls */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Sort By */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Sort By</label>
+                      <select
+                        value={prSortBy}
+                        onChange={(e) => setPrSortBy(e.target.value as "date" | "pr_no" | "cost")}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="pr_no">PR Number</option>
+                        <option value="cost">Cost</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Direction */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Order</label>
+                      <select
+                        value={prSortDir}
+                        onChange={(e) => setPrSortDir(e.target.value as "asc" | "desc")}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
+
+                    {/* PO Status Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">PO Status</label>
+                      <select
+                        value={prFilterPO}
+                        onChange={(e) => setPrFilterPO(e.target.value as "all" | "no_po" | "has_po")}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="all">All PRs</option>
+                        <option value="no_po">No PO Yet</option>
+                        <option value="has_po">Has PO</option>
+                      </select>
+                    </div>
+
+                    {/* Division Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Division</label>
+                      <select
+                        value={prFilterDivision}
+                        onChange={(e) => setPrFilterDivision(e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="all">All Divisions</option>
+                        {divisions.map(div => (
+                          <option key={div.division_id} value={div.division_id}>
+                            {div.division_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
@@ -1758,19 +1924,44 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                       required={!supplier} // Require PR selection if no manual entry
                     >
                       <option value="">-- Select a PR --</option>
-                      {availablePRs
-                        .filter((pr) =>
-                          pr.pr_no.toLowerCase().includes(prSearch.toLowerCase()) ||
-                          pr.purpose.toLowerCase().includes(prSearch.toLowerCase())
-                        )
-                        .map((pr) => (
-                          <option key={pr.id} value={pr.id}>
-                            {pr.pr_no} - {pr.purpose.substring(0, 50)}{pr.purpose.length > 50 ? "..." : ""} (₱{pr.total_cost.toLocaleString()})
-                          </option>
-                        ))}
+                      {filteredAndSortedPRs
+                        .slice(0, 100) // Limit displayed options to 100 for performance
+                        .map((pr) => {
+                          const poStatus = pr.has_po 
+                            ? ` [${pr.po_count} PO${pr.po_count! > 1 ? 's' : ''} exist${pr.po_count! > 1 ? '' : 's'}]` 
+                            : " [No PO yet]";
+                          const purposePreview = pr.purpose.length > 40 
+                            ? `${pr.purpose.substring(0, 40)}...` 
+                            : pr.purpose;
+                          return (
+                            <option key={pr.id} value={pr.id}>
+                              {pr.pr_no} - {purposePreview} (₱{pr.total_cost.toLocaleString()}){poStatus}
+                            </option>
+                          );
+                        })}
                     </select>
                     {availablePRs.length === 0 && !loadingPRs && (
                       <p className="text-xs text-gray-500 mt-1">No PRs with Abstract of Awards status available.</p>
+                    )}
+                    {availablePRs.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Showing {Math.min(filteredAndSortedPRs.length, 100)} of {filteredAndSortedPRs.length} filtered PRs
+                        {filteredAndSortedPRs.length !== availablePRs.length && (
+                          <span className="text-gray-400"> (from {availablePRs.length} total)</span>
+                        )}.
+                        {" "}
+                        {filteredAndSortedPRs.filter(pr => !pr.has_po).length > 0 && (
+                          <span className="font-semibold text-emerald-600">
+                            {filteredAndSortedPRs.filter(pr => !pr.has_po).length} without PO
+                          </span>
+                        )}
+                        {filteredAndSortedPRs.filter(pr => pr.has_po).length > 0 && (
+                          <span className="text-amber-600">
+                            {filteredAndSortedPRs.filter(pr => !pr.has_po).length > 0 ? ", " : ""}
+                            {filteredAndSortedPRs.filter(pr => pr.has_po).length} with existing PO(s)
+                          </span>
+                        )}
+                      </p>
                     )}
                   </div>
                 </div>
