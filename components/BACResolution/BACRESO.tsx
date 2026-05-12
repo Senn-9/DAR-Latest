@@ -70,6 +70,12 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 		},
 	]);
 	const [endUser, setEndUser] = useState("");
+	const [bacChairperson, setBacChairperson] = useState("ATTY. JAIME G. RESOCO, JR.");
+	const [bacViceChairperson, setBacViceChairperson] = useState("GERRY L. MATAMOROSA");
+	const [bacMember1, setBacMember1] = useState("ENGR. MA. ELIZABETH N. ARCILLA");
+	const [bacMember2, setBacMember2] = useState("ENGR. JOSE JESUS B. REY, JR.");
+	const [bacMember3, setBacMember3] = useState("MARIA REBECCA R. TAROG");
+	const [hope, setHope] = useState("RICARDO C. GARCIA");
 
 	const addWhereasClause = () => {
 		setWhereasClauses((prev) => [...prev, { id: Date.now(), lines: [""] }]);
@@ -312,6 +318,12 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 				resoSequence,
 				alternativeMode,
 				dateResolved,
+				bacChairperson,
+				bacViceChairperson,
+				bacMember1,
+				bacMember2,
+				bacMember3,
+				hope,
 			},
 			whereasClauses,
 			tableRows
@@ -593,28 +605,53 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 						{/* Signatures */}
 						<div className="mb-8">
 							<div className="text-center mb-6">
-								<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>ATTY. JAIME G. RESOCO, JR.</div>
+								<input 
+									value={bacChairperson} 
+									onChange={(e) => setBacChairperson(e.target.value)}
+									className="w-full outline-none text-center border-b border-black bg-transparent"
+									style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+								/>
 								<div style={{ fontSize: "10px" }}>BAC Chairperson</div>
 							</div>
 
 							<div className="grid grid-cols-2 gap-8 mb-6">
 								<div className="text-center">
-									<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>GERRY L. MATAMOROSA</div>
+									<input 
+										value={bacViceChairperson} 
+										onChange={(e) => setBacViceChairperson(e.target.value)}
+										className="w-full outline-none text-center border-b border-black bg-transparent"
+										style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+									/>
 									<div style={{ fontSize: "10px" }}>BAC Vice-Chairperson</div>
 								</div>
 								<div className="text-center">
-									<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>ENGR. MA. ELIZABETH N. ARCILLA</div>
+									<input 
+										value={bacMember1} 
+										onChange={(e) => setBacMember1(e.target.value)}
+										className="w-full outline-none text-center border-b border-black bg-transparent"
+										style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+									/>
 									<div style={{ fontSize: "10px" }}>BAC Member</div>
 								</div>
 							</div>
 
 							<div className="grid grid-cols-2 gap-8">
 								<div className="text-center">
-									<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>ENGR. JOSE JESUS B. REY, JR.</div>
+									<input 
+										value={bacMember2} 
+										onChange={(e) => setBacMember2(e.target.value)}
+										className="w-full outline-none text-center border-b border-black bg-transparent"
+										style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+									/>
 									<div style={{ fontSize: "10px" }}>BAC Member</div>
 								</div>
 								<div className="text-center">
-									<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>MARIA REBECCA R. TAROG</div>
+									<input 
+										value={bacMember3} 
+										onChange={(e) => setBacMember3(e.target.value)}
+										className="w-full outline-none text-center border-b border-black bg-transparent"
+										style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+									/>
 									<div style={{ fontSize: "10px" }}>BAC Member</div>
 								</div>
 							</div>
@@ -623,7 +660,12 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 						{/* Approved by */}
 						<div className="text-center">
 							<div style={{ fontSize: "10px" }} className="mb-2">Approved by:</div>
-							<div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}>RICARDO C. GARCIA</div>
+							<input 
+								value={hope} 
+								onChange={(e) => setHope(e.target.value)}
+								className="w-full outline-none text-center border-b border-black bg-transparent"
+								style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
+							/>
 							<div style={{ fontSize: "10px" }}>HOPE</div>
 						</div>
 

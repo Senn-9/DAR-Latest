@@ -3,6 +3,12 @@ export type BACResoMeta = {
 	resoSequence: string;
 	alternativeMode: string;
 	dateResolved: string;
+	bacChairperson?: string;
+	bacViceChairperson?: string;
+	bacMember1?: string;
+	bacMember2?: string;
+	bacMember3?: string;
+	hope?: string;
 };
 
 export type WhereasClause = {
@@ -57,7 +63,7 @@ export function buildBACResoHtml(
 			return `<div style="margin-bottom: 12px;">
 				<div style="font-size: 11px; line-height: 1.5;">
 					<span style="font-weight: 700; display: inline;">WHEREAS,</span>
-					<span style="border-bottom: 1px solid #000; display: inline; padding-bottom: 2px;">
+					<span style="display: inline;">
 						${" " + clauseText}
 					</span>
 				</div>
@@ -99,7 +105,7 @@ export function buildBACResoHtml(
 		body {
 			color: #000;
 			background: #fff;
-			font-family: Arial, sans-serif;
+			font-family: Calibri, sans-serif;
 			font-size: 11px;
 			-webkit-print-color-adjust: exact;
 			print-color-adjust: exact;
@@ -393,29 +399,29 @@ export function buildBACResoHtml(
 		<div class="signature-section">
 			<div class="signature-row-top">
 				<div class="signature-block" style="min-width: 260px;">
-					<div class="signature-name">ATTY. JAIME G. RESOCO, JR.</div>
+					<div class="signature-name">${escapeHtml(meta.bacChairperson || "ATTY. JAIME G. RESOCO, JR.")}</div>
 					<div class="signature-role">BAC Chairperson</div>
 				</div>
 			</div>
 
 			<div class="signature-row-two">
 				<div class="signature-block left">
-					<div class="signature-name">GERRY L. MATAMOROSA</div>
+					<div class="signature-name">${escapeHtml(meta.bacViceChairperson || "GERRY L. MATAMOROSA")}</div>
 					<div class="signature-role">BAC Vice-Chairperson</div>
 				</div>
 				<div class="signature-block right">
-					<div class="signature-name">ENGR. MA. ELIZABETH N. ARCILLA</div>
+					<div class="signature-name">${escapeHtml(meta.bacMember1 || "ENGR. MA. ELIZABETH N. ARCILLA")}</div>
 					<div class="signature-role">BAC Member</div>
 				</div>
 			</div>
 
 			<div class="signature-row-two" style="margin-bottom: 36px;">
 				<div class="signature-block left">
-					<div class="signature-name">ENGR. JOSE JESUS B. REY, JR.</div>
+					<div class="signature-name">${escapeHtml(meta.bacMember2 || "ENGR. JOSE JESUS B. REY, JR.")}</div>
 					<div class="signature-role">BAC Member</div>
 				</div>
 				<div class="signature-block right">
-					<div class="signature-name">MARIA REBECCA R. TAROG</div>
+					<div class="signature-name">${escapeHtml(meta.bacMember3 || "MARIA REBECCA R. TAROG")}</div>
 					<div class="signature-role">BAC Member</div>
 				</div>
 			</div>
@@ -423,7 +429,7 @@ export function buildBACResoHtml(
 			<!-- Approved by -->
 			<div class="approved-by">
 				<div style="font-size: 10px; margin-bottom: 8px;">Approved by:</div>
-				<div class="approved-by-name">RICARDO C. GARCIA</div>
+				<div class="approved-by-name">${escapeHtml(meta.hope || "RICARDO C. GARCIA")}</div>
 				<div class="approved-by-role">HOPE</div>
 			</div>
 		</div>
