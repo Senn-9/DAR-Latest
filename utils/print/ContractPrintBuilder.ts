@@ -90,12 +90,14 @@ export function buildContractPrintHtml(data: ContractPrintData): string {
 
 <!-- Party intro -->
 <div class="indent section">
-  ${ROW(L("This contract, executed by and between") + SF(escapeHtml(data.firstPartyAgency)))}
-  ${ROW(L("Provincial Office, represented by") + F(escapeHtml(data.firstPartyRep)) + L("with office address at"))}
-  ${ROW(`<span style="flex:1;min-width:0;border-bottom:1px solid #000;font-weight:bold;padding:0 4px;vertical-align:bottom;">${escapeHtml(data.firstPartyOffice) || "&nbsp;"}</span>` + L(", hereinafter referred to as the party of the FIRST PART;"))}
-  ${ROW(L("and") + F(escapeHtml(data.secondPartyName)) + L(", represented by") + SF(escapeHtml(data.secondPartyRep)))}
-  ${ROW(L("Filipino, of legal age and a resident of") + F(escapeHtml(data.secondPartyCity || data.commencementLocation), "110px") + L("hereinafter referred to"))}
-  <div>as the party of the SECOND PART.</div>
+  <p style="margin:0;text-indent:2em;">
+    This contract, executed by and between ${F(escapeHtml(data.firstPartyAgency))} Provincial Office, 
+    represented by ${F(escapeHtml(data.firstPartyRep))} with office address at 
+    ${F(escapeHtml(data.firstPartyOffice), "200px")}, hereinafter referred to as the party of the FIRST PART; 
+    and ${F(escapeHtml(data.secondPartyName))}, represented by ${F(escapeHtml(data.secondPartyRep))}, 
+    Filipino, of legal age and a resident of ${F(escapeHtml(data.secondPartyCity || data.commencementLocation), "110px")} 
+    hereinafter referred to as the party of the SECOND PART.
+  </p>
 </div>
 
 <!-- WITNESSETH -->
@@ -103,38 +105,45 @@ export function buildContractPrintHtml(data: ContractPrintData): string {
 
 <!-- Consideration -->
 <div class="indent section">
-  ${ROW(L("That for and in consideration of the sum of") + SF(escapeHtml(data.considerationAmountWords).toUpperCase(), "text-transform:uppercase;"))}
-  ${ROW(`<span style="white-space:nowrap;">(${fmtMoney(data.considerationAmount)})</span><span style="margin-left:4px;">, which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND</span>`)}
-  ${ROW(L("PARTY &nbsp;agrees to deliver/provide the") + SF(escapeHtml(data.serviceDescription), "text-transform:uppercase;"))}
+  <p style="margin:0;text-indent:2em;">
+    That for and in consideration of the sum of ${F(escapeHtml(data.considerationAmountWords).toUpperCase(), "300px", "text-transform:uppercase;")} 
+    (${fmtMoney(data.considerationAmount)}), which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND PARTY 
+    agrees to deliver/provide the ${F(escapeHtml(data.serviceDescription), "250px", "text-transform:uppercase;")}.
+  </p>
 </div>
 
 <!-- Payment -->
 <div class="indent section">
-  <div>That the FIRST PARTY shall pay the full amount to the SECOND PARTY when &nbsp;the</div>
-  <div style="border-bottom:1px solid #000;font-weight:bold;text-transform:uppercase;padding:2px 4px;min-height:20px;">
-    ${escapeHtml(paymentText)}
-  </div>
+  <p style="margin:0;text-indent:2em;">
+    That the FIRST PARTY shall pay the full amount to the SECOND PARTY when the 
+    ${F(escapeHtml(paymentText), "300px", "text-transform:uppercase;")}.
+  </p>
 </div>
 
 <!-- Job order -->
 <div class="indent section">
-  ${ROW(L("That the SECOND PARTY agrees to finish the") + SF(escapeHtml(data.jobOrderDescription || "JOB ORDER"), "text-transform:uppercase;"))}
-  ${ROW(L("within") + F(escapeHtml(data.scheduledDays), "40px") + L("scheduled days counted from the day the contract for the") + SF(escapeHtml(data.serviceDescription), "text-transform:uppercase;"))}
-  ${ROW(F(comd.full || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", "180px") + `<span>has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish</span>`)}
-  <div>the job within the said period, the SECOND PARTY shall indemnify the sum of &nbsp;${escapeHtml(data.liquidatedDamagesRate)}&nbsp;for</div>
-  <div>every day of delay of liquidated damages.</div>
+  <p style="margin:0;text-indent:2em;">
+    That the SECOND PARTY agrees to finish the ${F(escapeHtml(data.jobOrderDescription || "JOB ORDER"), "180px", "text-transform:uppercase;")} 
+    within ${F(escapeHtml(data.scheduledDays), "40px")} scheduled days counted from the day the contract for the 
+    ${F(escapeHtml(data.serviceDescription), "200px", "text-transform:uppercase;")} ${F(comd.full || "", "180px")} 
+    has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish the job within the said period, 
+    the SECOND PARTY shall indemnify the sum of ${escapeHtml(data.liquidatedDamagesRate)} for every day of delay of liquidated damages.
+  </p>
 </div>
 
 <!-- Commencement -->
 <div class="indent section">
-  ${ROW(L("That this Contract shall commence on") + SF(comd.full || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))}
-  ${ROW(L("at") + SF(escapeHtml(data.commencementLocation)))}
+  <p style="margin:0;text-indent:2em;">
+    That this Contract shall commence on ${F(comd.full || "", "180px")} at ${F(escapeHtml(data.commencementLocation), "180px")}.
+  </p>
 </div>
 
 <!-- IN WITNESS WHEREOF -->
 <div class="indent section" style="margin-bottom:20px;">
-  ${ROW(L("IN WITNESS WHEREOF, the parties signed &nbsp;&nbsp;this contract on the") + F(cd.ordDay, "55px") + L("day of"))}
-  ${ROW(F(cd.month || "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", "130px") + `<span style="white-space:nowrap;">&nbsp;&nbsp;, ${escapeHtml(cd.year || "____")}</span>`)}
+  <p style="margin:0;text-indent:2em;">
+    IN WITNESS WHEREOF, the parties signed this contract on the ${F(cd.ordDay, "55px")} day of 
+    ${F(cd.month || "", "130px")}, ${escapeHtml(cd.year || "")}.
+  </p>
 </div>
 
 <!-- Signature block -->

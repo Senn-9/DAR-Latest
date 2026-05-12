@@ -1128,34 +1128,19 @@ function ContractEditablePreview({
 
       {/* ── Party intro ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>This contract, executed by and between</span>
-          <span style={stretchFill}>{firstPartyAgency || "DEPARTMENT OF AGRARIAN REFORM"}</span>
-        </div>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>Provincial Office, represented by</span>
-          <span style={{ ...fill(firstPartyRep || "[Official Name]"), flexShrink: 0 }}>{firstPartyRep || "[Official Name]"}</span>
-          <span style={{ whiteSpace: "nowrap" }}>with office address at</span>
-        </div>
-        <div style={row}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          This contract, executed by and between <span style={{ ...fill(firstPartyAgency || "DEPARTMENT OF AGRARIAN REFORM", "200px") }}>{firstPartyAgency || "DEPARTMENT OF AGRARIAN REFORM"}</span> Provincial Office, 
+          represented by <span style={{ ...fill(firstPartyRep || "[Official Name]", "140px") }}>{firstPartyRep || "[Official Name]"}</span> with office address at{" "}
           <input type="text" value={fields.firstPartyOffice} onChange={set("firstPartyOffice")}
-            style={{ ...inp, flex: 1, minWidth: 0 }} placeholder="Office address" />
-          <span style={{ whiteSpace: "nowrap" }}>, hereinafter referred to as the party of the FIRST PART;</span>
-        </div>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>and</span>
-          <span style={{ ...fill(secondPartyName || "[Supplier]"), flexShrink: 0 }}>{secondPartyName || "[Supplier]"}</span>
-          <span style={{ whiteSpace: "nowrap" }}>, represented by</span>
+            style={{ ...inp, minWidth: "200px" }} placeholder="Office address" />, hereinafter referred to as the party of the FIRST PART; 
+          and <span style={{ ...fill(secondPartyName || "[Supplier]", "140px") }}>{secondPartyName || "[Supplier]"}</span>, represented by{" "}
           <input type="text" value={fields.secondPartyRep} onChange={set("secondPartyRep")}
-            style={{ ...inp, flex: "0 0 180px", minWidth: 0 }} placeholder="Supplier representative" />
-        </div>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>Filipino, of legal age and a resident of</span>
+            style={{ ...inp, minWidth: "140px" }} placeholder="Supplier representative" />, 
+          Filipino, of legal age and a resident of{" "}
           <input type="text" value={fields.secondPartyCity} onChange={set("secondPartyCity")}
-            style={{ ...inp, flex: "0 0 140px", minWidth: 0 }} placeholder="City" />
-          <span style={{ whiteSpace: "nowrap" }}>hereinafter referred to</span>
-        </div>
-        <div>as the party of the SECOND PART.</div>
+            style={{ ...inp, minWidth: "110px" }} placeholder="City" />{" "}
+          hereinafter referred to as the party of the SECOND PART.
+        </p>
       </div>
 
       {/* ── WITNESSETH ── */}
@@ -1163,60 +1148,50 @@ function ContractEditablePreview({
 
       {/* ── Consideration ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>That for and in consideration of the sum of</span>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That for and in consideration of the sum of{" "}
           <input type="text" value={fields.considerationAmountWords} onChange={set("considerationAmountWords")}
-            style={{ ...inp, flex: 1, minWidth: 0, textTransform: "uppercase" }}
-            placeholder="AMOUNT IN WORDS" />
-        </div>
-        <div style={{ ...row, flexWrap: "wrap" }}>
-          <span style={{ whiteSpace: "nowrap" }}>({fmtMoney(considerationAmount)})</span>
-          <span>, which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND</span>
-        </div>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>PARTY&nbsp;&nbsp;agrees to deliver/provide the</span>
-          <textarea value={fields.serviceDescription} onChange={set("serviceDescription")} onInput={autoResize}
-            style={{ ...inp, flex: 1, minWidth: 0, resize: "none", height: "22px", overflow: "hidden", textTransform: "uppercase" }}
-            rows={1} placeholder="Service/delivery description…" />
-        </div>
+            style={{ ...inp, minWidth: "300px", textTransform: "uppercase" }}
+            placeholder="AMOUNT IN WORDS" />{" "}
+          ({fmtMoney(considerationAmount)}), which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND PARTY 
+          agrees to deliver/provide the{" "}
+          <input type="text" value={fields.serviceDescription} onChange={set("serviceDescription")}
+            style={{ ...inp, minWidth: "250px", textTransform: "uppercase" }}
+            placeholder="Service/delivery description…" />.
+        </p>
       </div>
 
       {/* ── Payment ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
-        <div>That the FIRST PARTY shall pay the full amount to the SECOND PARTY when&nbsp;&nbsp;the</div>
-        <textarea value={fields.paymentCondition} onChange={set("paymentCondition")} onInput={autoResize}
-          style={{ ...inp, width: "100%", display: "block", resize: "none", height: "40px", overflow: "hidden", textTransform: "uppercase", marginTop: "2px" }}
-          rows={2} placeholder="Payment condition (defaults to service description if blank)" />
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That the FIRST PARTY shall pay the full amount to the SECOND PARTY when the{" "}
+          <input type="text" value={fields.paymentCondition} onChange={set("paymentCondition")}
+            style={{ ...inp, minWidth: "300px", textTransform: "uppercase" }}
+            placeholder="Payment condition (defaults to service description if blank)" />.
+        </p>
       </div>
 
       {/* ── Job order ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>That the SECOND PARTY agrees to finish the</span>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That the SECOND PARTY agrees to finish the{" "}
           <input type="text" value={fields.jobOrderDescription} onChange={set("jobOrderDescription")}
-            style={{ ...inp, flex: 1, minWidth: 0, textTransform: "uppercase" }}
-            placeholder="JOB ORDER" />
-        </div>
-        <div style={{ ...row, flexWrap: "wrap" }}>
-          <span style={{ whiteSpace: "nowrap" }}>within</span>
+            style={{ ...inp, minWidth: "180px", textTransform: "uppercase" }}
+            placeholder="JOB ORDER" />{" "}
+          within{" "}
           <input type="text" value={fields.scheduledDays} onChange={set("scheduledDays")}
-            style={{ ...inp, width: "45px", flex: "none", textAlign: "center" }} placeholder="__" />
-          <span style={{ whiteSpace: "nowrap" }}>scheduled days counted from the day the contract for the</span>
-          <span style={{ ...stretchFill, textTransform: "uppercase" }}>
+            style={{ ...inp, width: "45px", textAlign: "center" }} placeholder="__" />{" "}
+          scheduled days counted from the day the contract for the{" "}
+          <span style={{ ...fill(fields.serviceDescription || "[service item]", "200px"), textTransform: "uppercase" }}>
             {fields.serviceDescription || "[service item]"}
-          </span>
-        </div>
-        <div style={row}>
-          <span style={{ ...fill(comd.full || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0", "160px"), flexShrink: 0 }}>{comd.full || "\u00a0"}</span>
-          <span>has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish</span>
-        </div>
-        <div style={row}>
-          <span>the job within the said period, the SECOND PARTY shall indemnify the sum of&nbsp;</span>
+          </span>{" "}
+          <span style={{ ...fill(comd.full || "", "180px") }}>{comd.full || ""}</span>{" "}
+          has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish the job within the said period, 
+          the SECOND PARTY shall indemnify the sum of{" "}
           <input type="text" value={fields.liquidatedDamagesRate} onChange={set("liquidatedDamagesRate")}
-            style={{ ...inp, width: "130px", flex: "none" }} placeholder="1/10th of 1%" />
-          <span>&nbsp;for</span>
-        </div>
-        <div>every day of delay of liquidated damages.</div>
+            style={{ ...inp, width: "130px" }} placeholder="1/10th of 1%" />{" "}
+          for every day of delay of liquidated damages.
+        </p>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", fontSize: "9pt", color: "#666" }}>
           <span>Commencement date:</span>
           <input type="date" value={fields.commencementDate} onChange={set("commencementDate")}
@@ -1226,31 +1201,26 @@ function ContractEditablePreview({
 
       {/* ── Commencement ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>That this Contract shall commence on</span>
-          <span style={stretchFill}>{comd.full || "\u00a0"}</span>
-        </div>
-        <div style={row}>
-          <span style={{ whiteSpace: "nowrap" }}>at</span>
-          <span style={stretchFill}>{commencementLocation || "[Location]"}</span>
-        </div>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That this Contract shall commence on{" "}
+          <span style={{ ...fill(comd.full || "", "180px") }}>{comd.full || ""}</span>{" "}
+          at{" "}
+          <span style={{ ...fill(commencementLocation || "[Location]", "180px") }}>{commencementLocation || "[Location]"}</span>.
+        </p>
       </div>
 
       {/* ── IN WITNESS WHEREOF ── */}
       <div style={{ paddingLeft: "2em", marginBottom: "20px" }}>
-        <div style={row}>
-          <span>IN WITNESS WHEREOF, the parties signed&nbsp;&nbsp;&nbsp;this contract on the</span>
-          <span style={{ ...fill(cd.ordDay || "___", "50px"), flexShrink: 0 }}>{cd.ordDay || "___"}</span>
-          <span style={{ whiteSpace: "nowrap" }}>day of</span>
-        </div>
-        <div style={row}>
-          <span style={{ ...fill(cd.month || "___________", "130px"), flexShrink: 0 }}>{cd.month || "___________"}</span>
-          <span style={{ whiteSpace: "nowrap" }}>&nbsp;&nbsp;&nbsp;, {cd.year || "____"}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px", fontSize: "9pt", color: "#666" }}>
-            <span>Date:</span>
-            <input type="date" value={fields.contractDate} onChange={set("contractDate")}
-              style={{ border: "1px solid #bbb", background: "#fffde7", fontSize: "9pt", padding: "1px 4px" }} />
-          </span>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          IN WITNESS WHEREOF, the parties signed this contract on the{" "}
+          <span style={{ ...fill(cd.ordDay || "___", "55px") }}>{cd.ordDay || "___"}</span>{" "}
+          day of{" "}
+          <span style={{ ...fill(cd.month || "___________", "130px") }}>{cd.month || "___________"}</span>, {cd.year || "____"}.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px", fontSize: "9pt", color: "#666" }}>
+          <span>Contract date:</span>
+          <input type="date" value={fields.contractDate} onChange={set("contractDate")}
+            style={{ border: "1px solid #bbb", background: "#fffde7", fontSize: "9pt", padding: "1px 4px" }} />
         </div>
       </div>
 

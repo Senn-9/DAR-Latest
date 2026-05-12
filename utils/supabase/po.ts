@@ -31,6 +31,7 @@ export interface PurchaseOrderRow {
   created_at: string | null;
   updated_at: string | null;
   hide_total_row?: boolean | null;
+  includes_contract?: boolean | null;
 }
 
 export interface PurchaseOrderItemRow {

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
+import { deletePOCascade, fetchPODeletePreview, type PODeletePreview } from "@/utils/supabase/deletePO";
 import CreatePOModal from "../../components/PO/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
@@ -38,6 +40,7 @@ import {
   RiCheckLine,
   RiCloseLine,
   RiFilter3Line,
+  RiDeleteBinLine,
 } from "react-icons/ri";
 
 type CurrentUser = {
@@ -560,6 +563,13 @@ export default function PurchaseOrderPage() {
   const [sectionFilter, setSectionFilter] = useState<string | null>(null);
   const [fiscalYear, setFiscalYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [deletePoTarget, setDeletePoTarget] = useState<{ poId: number; poNo: string } | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<PODeletePreview | null>(null);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
+  const [deleteErrorMsg, setDeleteErrorMsg] = useState<string | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const yearOptions = useMemo(() => {
     const years: number[] = [];
     for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
@@ -647,6 +657,16 @@ export default function PurchaseOrderPage() {
         return 0;
       });
   }, [list, searchQuery, statusFilter, sortField, sortDir, sectionFilter, fiscalYear]);
+
+  // Fetch delete preview when deletePoTarget changes
+  useEffect(() => {
+    if (!deletePoTarget) { setDeletePreview(null); return; }
+    setDeletePreview(null);
+    setDeletePreviewLoading(true);
+    fetchPODeletePreview(deletePoTarget.poId)
+      .then((preview) => setDeletePreview(preview))
+      .finally(() => setDeletePreviewLoading(false));
+  }, [deletePoTarget]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const pagedList = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -832,14 +852,11 @@ export default function PurchaseOrderPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total", value: statusCounts.total, icon: <RiFileListLine size={20} />, cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
             { label: "PO", value: statusCounts.po, icon: <RiTimeLine size={20} />, cardBg: "bg-teal-50", border: "border-teal-100", iconBg: "bg-teal-100", iconColor: "text-teal-600", numColor: "text-teal-600" },
             { label: "ORS", value: statusCounts.ors, icon: <RiPlayCircleLine size={20} />, cardBg: "bg-orange-50", border: "border-orange-100", iconBg: "bg-orange-100", iconColor: "text-orange-600", numColor: "text-orange-600" },
-            { label: "Accounting", value: statusCounts.accounting, icon: <RiMoneyDollarCircleLine size={20} />, cardBg: "bg-yellow-50", border: "border-yellow-100", iconBg: "bg-yellow-100", iconColor: "text-yellow-600", numColor: "text-yellow-600" },
-            { label: "PARPO", value: statusCounts.parpo, icon: <RiCheckboxCircleLine size={20} />, cardBg: "bg-fuchsia-50", border: "border-fuchsia-100", iconBg: "bg-fuchsia-100", iconColor: "text-fuchsia-600", numColor: "text-fuchsia-600" },
-            { label: "Serving", value: statusCounts.serving, icon: <RiPlayCircleLine size={20} />, cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
             { label: "Completed", value: statusCounts.completed, icon: <RiCheckboxCircleLine size={20} />, cardBg: "bg-green-50", border: "border-green-100", iconBg: "bg-green-100", iconColor: "text-green-600", numColor: "text-green-600" },
           ].map((card) => (
             <div key={card.label} className={`${card.cardBg} border ${card.border} rounded-2xl p-4 flex items-center gap-3 shadow-sm`}>
@@ -1010,6 +1027,15 @@ export default function PurchaseOrderPage() {
                                   Process
                                 </button>
                               )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => setDeletePoTarget({ poId: po.id, poNo: po.po_no ?? "" })}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiDeleteBinLine size={14} />
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1175,6 +1201,141 @@ export default function PurchaseOrderPage() {
         title={selectedPo?.po_no ? `Remarks · ${selectedPo.po_no}` : "Purchase Order Remarks"}
         subtitle={selectedPo?.supplier ?? "PO history and phase notes"}
         onClose={() => setRemarksOpen(false)}
+      />
+
+      {/* ── DELETE CONFIRMATION MODAL ── */}
+      {deletePoTarget && (() => {
+        const rows = deletePreview
+          ? [
+              { label: "Purchase Order Items", count: deletePreview.poItems },
+              { label: "Deliveries", count: deletePreview.deliveries },
+              { label: "IAR Documents", count: deletePreview.iarDocuments },
+              { label: "LOA Documents", count: deletePreview.loaDocuments },
+              { label: "DV Documents", count: deletePreview.dvDocuments },
+              { label: "Contract Documents", count: deletePreview.contractDocuments },
+              { label: "Remarks", count: deletePreview.remarks },
+            ].filter((r) => r.count > 0)
+          : [];
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteConfirming) { setDeletePoTarget(null); setDeleteConfirmInput(""); } }} />
+            <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+              {/* Header */}
+              <div className="bg-red-600 px-6 py-5 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <RiDeleteBinLine size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold leading-tight">Delete Purchase Order?</h3>
+                    <p className="text-sm text-red-100 mt-0.5">PO {deletePoTarget.poNo}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5">
+                <p className="text-sm text-gray-600 mb-3">
+                  The following records will be <span className="font-semibold text-red-600">permanently deleted</span>:
+                </p>
+
+                {deletePreviewLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span className="text-sm">Counting connected records…</span>
+                  </div>
+                ) : deletePreview ? (
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    {rows.length === 0 ? (
+                      <p className="px-4 py-3 text-sm text-gray-500">No connected records found.</p>
+                    ) : (
+                      rows.map((row, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50">
+                          <span className="text-sm text-gray-700">{row.label}</span>
+                          <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full">
+                            {row.count}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                    <div className="flex items-center justify-between px-4 py-3 bg-red-50 border-t border-red-200">
+                      <span className="text-sm font-bold text-red-800">Total Records</span>
+                      <span className="text-sm font-extrabold text-red-800">{deletePreview.total}</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="text-xs text-red-600 font-semibold mt-3">This action cannot be undone.</p>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    Type <span className="font-mono text-red-600">{deletePoTarget.poNo}</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    placeholder={deletePoTarget.poNo}
+                    disabled={deleteConfirming}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 font-mono placeholder-gray-300 disabled:opacity-50"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-5 flex gap-3">
+                <button
+                  onClick={() => { setDeletePoTarget(null); setDeleteConfirmInput(""); }}
+                  disabled={deleteConfirming}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={deleteConfirming || deletePreviewLoading || deleteConfirmInput !== deletePoTarget.poNo}
+                  onClick={async () => {
+                    setDeleteConfirming(true);
+                    const { error } = await deletePOCascade(deletePoTarget.poId);
+                    setDeleteConfirming(false);
+                    setDeletePoTarget(null);
+                    setDeletePreview(null);
+                    setDeleteConfirmInput("");
+                    if (error) {
+                      setDeleteErrorMsg("Delete failed: " + error);
+                    } else {
+                      setList((prev) => prev.filter((p) => p.id !== deletePoTarget.poId));
+                      setDeleteSuccessMsg(`PO ${deletePoTarget.poNo} and all connected records have been deleted.`);
+                    }
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleteConfirming ? (
+                    <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Deleting…</>
+                  ) : "Confirm Delete"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      <SuccessModal
+        visible={!!deleteSuccessMsg}
+        title="Deleted"
+        message={deleteSuccessMsg ?? ""}
+        onConfirm={() => setDeleteSuccessMsg(null)}
+      />
+      <ErrorModal
+        visible={!!deleteErrorMsg}
+        message={deleteErrorMsg ?? ""}
+        onDismiss={() => setDeleteErrorMsg(null)}
       />
     </div>
   );

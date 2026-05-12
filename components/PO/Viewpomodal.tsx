@@ -4,9 +4,10 @@ import React, { useEffect, useState, useMemo } from "react";
 import { RiCloseLine, RiFilePdf2Line } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { fetchPOWithItemsById, type PurchaseOrderItemRow, type PurchaseOrderRow } from "@/utils/supabase/po";
-import type { OrsEntry as OrsEntryType } from "@/types/tables";
+import type { OrsEntry as OrsEntryType, ContractDocument } from "@/types/tables";
 import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO, type POPrintData } from "@/utils/print/POPrintBuilder";
+import { buildContractPrintHtml } from "@/utils/print/ContractPrintBuilder";
 import { printWithIframe } from "@/utils/print/printUtils";
 
 type ViewpomodalProps = {
@@ -70,6 +71,143 @@ function toWords(amount: number): string {
   const pesoWords = pesos === 0 ? "ZERO" : parts.join(" ");
   const centWords = centavos > 0 ? ` AND ${threeDigits(centavos)}/100` : "";
   return `${pesoWords} PESOS${centWords}`;
+}
+
+// Contract Preview - read-only display for Contract document
+function ContractPreview({
+  contractTitle, firstPartyAgency, firstPartyRep, firstPartyOffice,
+  secondPartyName, secondPartyRep, secondPartyCity, commencementLocation,
+  considerationAmount, considerationAmountWords, serviceDescription,
+  paymentCondition, jobOrderDescription, scheduledDays,
+  liquidatedDamagesRate, contractDate, commencementDate,
+  witnessOne, witnessTwo,
+}: {
+  contractTitle: string | null;
+  firstPartyAgency: string | null;
+  firstPartyRep: string | null;
+  firstPartyOffice: string | null;
+  secondPartyName: string | null;
+  secondPartyRep: string | null;
+  secondPartyCity: string | null;
+  commencementLocation: string | null;
+  considerationAmount: number | null;
+  considerationAmountWords: string | null;
+  serviceDescription: string | null;
+  paymentCondition: string | null;
+  jobOrderDescription: string | null;
+  scheduledDays: string | null;
+  liquidatedDamagesRate: string | null;
+  contractDate: string | null;
+  commencementDate: string | null;
+  witnessOne: string | null;
+  witnessTwo: string | null;
+}) {
+  const fmtDate = (isoDate: string | null) => {
+    if (!isoDate) return { ordDay: "___", month: "___________", year: "____", full: "" };
+    const d = new Date(isoDate + "T00:00:00");
+    const day = d.getDate();
+    const s = ["th","st","nd","rd"], v = day % 100;
+    const ordDay = day + (s[(v-20)%10] || s[v] || s[0]);
+    const month = d.toLocaleDateString("en-PH", { month: "long" });
+    const year = d.getFullYear().toString();
+    const full = d.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+    return { ordDay, month, year, full };
+  };
+
+  const cd = fmtDate(contractDate);
+  const comd = fmtDate(commencementDate);
+  const fmtMoney = (n: number | null) => n ? "\u20B1" + n.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "";
+
+  const S = {
+    root: { fontFamily: "'Times New Roman', Times, serif", fontSize: "11pt", color: "#000", lineHeight: 1.55 } as React.CSSProperties,
+    bold: { fontWeight: "bold" } as React.CSSProperties,
+    center: { textAlign: "center" as const } as React.CSSProperties,
+    fill: { display: "inline-block", borderBottom: "1px solid #000", fontWeight: "bold", textAlign: "center" as const, minWidth: "140px", padding: "0 4px" } as React.CSSProperties,
+  };
+
+  const Fill = (content: string, minW = "140px") => (
+    <span style={{ display: "inline-block", borderBottom: "1px solid #000", fontWeight: "bold", textAlign: "center", minWidth: minW, padding: "0 4px", verticalAlign: "bottom" }}>
+      {content || "\u00a0"}
+    </span>
+  );
+
+  return (
+    <div style={S.root}>
+      <div style={{ ...S.center, ...S.bold, fontSize: "12pt", marginBottom: "20px" }}>
+        {contractTitle || "CONTRACT FOR SERVICES"}
+      </div>
+      <div style={{ ...S.bold, marginBottom: "16px" }}>KNOW ALL MEN BY THESE PRESENTS:</div>
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          This contract, executed by and between {Fill(firstPartyAgency || "", "200px")} Provincial Office, 
+          represented by {Fill(firstPartyRep || "", "140px")} with office address at 
+          {Fill(firstPartyOffice || "", "200px")}, hereinafter referred to as the party of the FIRST PART; 
+          and {Fill(secondPartyName || "", "140px")}, represented by {Fill(secondPartyRep || "", "140px")}, 
+          Filipino, of legal age and a resident of {Fill(secondPartyCity || commencementLocation || "", "110px")} 
+          hereinafter referred to as the party of the SECOND PART.
+        </p>
+      </div>
+      <div style={{ ...S.center, ...S.bold, letterSpacing: "6px", margin: "20px 0" }}>W I T N E S S E T H</div>
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That for and in consideration of the sum of {Fill((considerationAmountWords || "").toUpperCase(), "300px")} 
+          ({fmtMoney(considerationAmount || 0)}), which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND PARTY 
+          agrees to deliver/provide the {Fill((serviceDescription || "").toUpperCase(), "250px")}.
+        </p>
+      </div>
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That the FIRST PARTY shall pay the full amount to the SECOND PARTY when the 
+          {Fill((paymentCondition || serviceDescription || "").toUpperCase(), "300px")}.
+        </p>
+      </div>
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That the SECOND PARTY agrees to finish the {Fill((jobOrderDescription || "JOB ORDER").toUpperCase(), "180px")} 
+          within {Fill(scheduledDays || "", "40px")} scheduled days counted from the day the contract for the 
+          {Fill((serviceDescription || "").toUpperCase(), "200px")} {Fill(comd.full || "", "180px")} 
+          has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish the job within the said period, 
+          the SECOND PARTY shall indemnify the sum of {liquidatedDamagesRate || ""} for every day of delay of liquidated damages.
+        </p>
+      </div>
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          That this Contract shall commence on {Fill(comd.full || "", "180px")} at {Fill(commencementLocation || "", "180px")}.
+        </p>
+      </div>
+      <div style={{ paddingLeft: "2em", marginBottom: "20px" }}>
+        <p style={{ margin: 0, textIndent: "2em" }}>
+          IN WITNESS WHEREOF, the parties signed this contract on the {Fill(cd.ordDay, "55px")} day of 
+          {Fill(cd.month || "", "130px")}, {cd.year || ""}.
+        </p>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px" }}>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={S.bold}>{firstPartyAgency || "[Agency]"}:</div>
+          <div style={{ ...S.bold, marginTop: "4px" }}>{firstPartyRep || "[Official Name]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginTop: "4px", marginBottom: "4px" }} />
+          <div style={{ fontSize: "9pt" }}>(Signature of the FIRST PARTY)</div>
+        </div>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={S.bold}>{secondPartyName || "[Supplier]"}:</div>
+          <div style={{ ...S.bold, marginTop: "4px" }}>{secondPartyRep || "[Representative]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginTop: "4px", marginBottom: "4px" }} />
+          <div style={{ fontSize: "9pt" }}>(Signature of the SECOND PARTY)</div>
+        </div>
+      </div>
+      <div style={{ ...S.center, ...S.bold, margin: "28px 0 16px" }}>WITNESSES:</div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={S.bold}>{(witnessOne || "").toUpperCase() || "[WITNESS NAME]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginTop: "4px" }} />
+        </div>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={S.bold}>{(witnessTwo || "").toUpperCase() || "[WITNESS NAME]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginTop: "4px" }} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ORS Preview - read-only display for ORS document
@@ -1052,6 +1190,39 @@ function downloadORS(data: {
   printWithIframe(sharedBuildORS(data));
 }
 
+function downloadContractPDF(data: {
+  contractTitle: string;
+  firstPartyAgency: string;
+  firstPartyRep: string;
+  firstPartyOffice: string;
+  firstPartyCity: string;
+  secondPartyName: string;
+  secondPartyRep: string;
+  secondPartyCity: string;
+  commencementLocation: string;
+  considerationAmount: number;
+  considerationAmountWords: string;
+  serviceDescription: string;
+  deliveryLocation: string;
+  paymentCondition: string;
+  jobOrderDescription: string;
+  scheduledDays: string;
+  liquidatedDamagesRate: string;
+  contractDate: string;
+  commencementDate: string;
+  witnessOne: string;
+  witnessTwo: string;
+  currentUserFullname?: string;
+  currentUserId?: number | null;
+  poId?: number | null;
+}) {
+  if (data.currentUserFullname) {
+    postPrintRemark(data.currentUserFullname, 'PO', data.currentUserId, data.poId);
+  }
+  
+  printWithIframe(buildContractPrintHtml(data));
+}
+
 function downloadPDF(data: {
   poNo: string;
   poId: number | null;
@@ -1089,11 +1260,13 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
   const [loading, setLoading] = useState(true);
   const [poHeader, setPoHeader] = useState<PurchaseOrderRow | null>(null);
   const [poItems, setPoItems] = useState<PurchaseOrderItemRow[]>([]);
-  const [tab, setTab] = useState<"po" | "ors">("po");
+  const [tab, setTab] = useState<"po" | "ors" | "contract">("po");
   const hasORS = (poHeader?.status_id ?? 0) >= 13; // ORS Creation or beyond
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [orsEntry, setOrsEntry] = useState<OrsEntryType | null>(null);
+  const [contractDoc, setContractDoc] = useState<ContractDocument | null>(null);
+  const hasContract = !!contractDoc; // Contract tab visible if contract document exists
 
   // Load current user from localStorage
   useEffect(() => {
@@ -1116,6 +1289,18 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
       .maybeSingle()
       .then(({ data }) => { if (data) setOrsEntry(data as OrsEntryType); });
   }, [visible, poHeader?.ors_no]);
+
+  // Fetch Contract document from contract_documents table by po_id
+  useEffect(() => {
+    if (!visible || !poId) { setContractDoc(null); return; }
+    const supabase = createClient();
+    supabase
+      .from("contract_documents")
+      .select("*")
+      .eq("po_id", poId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setContractDoc(data as ContractDocument); });
+  }, [visible, poId]);
 
   useEffect(() => {
     if (!visible || !poId) return;
@@ -1176,6 +1361,16 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   }`}
                 >
                   ORS
+                </button>
+              )}
+              {hasContract && (
+                <button
+                  onClick={() => setTab("contract")}
+                  className={`px-5 py-2 text-sm font-semibold transition-all ${
+                    tab === "contract" ? "bg-white text-emerald-700" : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  Contract
                 </button>
               )}
             </div>
@@ -1631,6 +1826,194 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         preparedByName={orsEntry?.prepared_by_name || poHeader.official_name}
                         preparedByDesig={orsEntry?.prepared_by_desig || poHeader.official_desig}
                         blankStatusSection={orsEntry?.blank_status_section ?? false}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+      {/* Contract Tab — Two column: Contract info (left) + Contract Preview (right) */}
+          {tab === "contract" && (
+            <>
+              {/* Contract Info Fields */}
+              <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
+                {loading ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="space-y-3 w-full px-8">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  </div>
+                ) : !poHeader || !contractDoc ? (
+                  <div className="flex-1 flex items-center justify-center text-amber-600 font-semibold">
+                    {!contractDoc ? "Contract document not found." : "Failed to load Contract data."}
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
+                      {/* Contract Notice */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 font-medium">
+                        <span>📜</span> Viewing Contract details for PO #{poHeader.po_no}
+                      </div>
+
+                      {/* Contract Header Info */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Contract Information</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Contract Title</label>
+                            <input className={readonlyCls} value={contractDoc.contract_title || "CONTRACT FOR SERVICES"} readOnly tabIndex={-1} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Contract Date</label>
+                              <input className={readonlyCls} value={contractDoc.contract_date || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Commencement Date</label>
+                              <input className={readonlyCls} value={contractDoc.commencement_date || ""} readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Parties Info */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Parties</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">First Party (Agency)</label>
+                            <input className={readonlyCls} value={contractDoc.first_party_agency || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">First Party Representative</label>
+                            <input className={readonlyCls} value={contractDoc.first_party_rep || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Second Party (Supplier)</label>
+                            <input className={readonlyCls} value={contractDoc.second_party_name || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Second Party Representative</label>
+                            <input className={readonlyCls} value={contractDoc.second_party_rep || ""} readOnly tabIndex={-1} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contract Details */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Contract Details</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Service Description</label>
+                            <textarea className={`${readonlyCls} min-h-[60px]`} value={contractDoc.service_description || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Consideration Amount</label>
+                            <input className={`${readonlyCls} bg-emerald-50 font-bold text-emerald-700`} value={contractDoc.consideration_amount != null ? formatMoney(contractDoc.consideration_amount) : ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Amount in Words</label>
+                            <input className={readonlyCls} value={contractDoc.consideration_amount_words || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Scheduled Days</label>
+                              <input className={readonlyCls} value={contractDoc.scheduled_days || ""} readOnly tabIndex={-1} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Liquidated Damages Rate</label>
+                              <input className={readonlyCls} value={contractDoc.liquidated_damages_rate || ""} readOnly tabIndex={-1} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Witnesses */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Witnesses</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Witness 1</label>
+                            <input className={readonlyCls} value={contractDoc.witness_one || ""} readOnly tabIndex={-1} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Witness 2</label>
+                            <input className={readonlyCls} value={contractDoc.witness_two || ""} readOnly tabIndex={-1} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Contract Preview — Right */}
+              <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
+                <div className="flex-1 overflow-y-auto p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">CONTRACT PREVIEW</h3>
+                    {poHeader && contractDoc && (
+                      <button
+                        onClick={() =>
+                          downloadContractPDF({
+                            contractTitle: contractDoc.contract_title || "CONTRACT FOR SERVICES",
+                            firstPartyAgency: contractDoc.first_party_agency || "",
+                            firstPartyRep: contractDoc.first_party_rep || "",
+                            firstPartyOffice: contractDoc.first_party_office || "",
+                            firstPartyCity: contractDoc.first_party_city || "",
+                            secondPartyName: contractDoc.second_party_name || "",
+                            secondPartyRep: contractDoc.second_party_rep || "",
+                            secondPartyCity: contractDoc.second_party_city || "",
+                            commencementLocation: contractDoc.commencement_location || "",
+                            considerationAmount: contractDoc.consideration_amount || 0,
+                            considerationAmountWords: contractDoc.consideration_amount_words || "",
+                            serviceDescription: contractDoc.service_description || "",
+                            deliveryLocation: contractDoc.delivery_location || "",
+                            paymentCondition: contractDoc.payment_condition || "",
+                            jobOrderDescription: contractDoc.job_order_description || "",
+                            scheduledDays: contractDoc.scheduled_days || "",
+                            liquidatedDamagesRate: contractDoc.liquidated_damages_rate || "",
+                            contractDate: contractDoc.contract_date || "",
+                            commencementDate: contractDoc.commencement_date || "",
+                            witnessOne: contractDoc.witness_one || "",
+                            witnessTwo: contractDoc.witness_two || "",
+                            currentUserFullname,
+                            currentUserId,
+                            poId: poHeader.id,
+                          })
+                        }
+                        className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <RiFilePdf2Line size={16} /> PDF
+                      </button>
+                    )}
+                  </div>
+                  {poHeader && contractDoc && (
+                    <div className="bg-white rounded-lg shadow-lg p-8 text-black">
+                      <ContractPreview
+                        contractTitle={contractDoc.contract_title}
+                        firstPartyAgency={contractDoc.first_party_agency}
+                        firstPartyRep={contractDoc.first_party_rep}
+                        firstPartyOffice={contractDoc.first_party_office}
+                        secondPartyName={contractDoc.second_party_name}
+                        secondPartyRep={contractDoc.second_party_rep}
+                        secondPartyCity={contractDoc.second_party_city}
+                        commencementLocation={contractDoc.commencement_location}
+                        considerationAmount={contractDoc.consideration_amount}
+                        considerationAmountWords={contractDoc.consideration_amount_words}
+                        serviceDescription={contractDoc.service_description}
+                        paymentCondition={contractDoc.payment_condition}
+                        jobOrderDescription={contractDoc.job_order_description}
+                        scheduledDays={contractDoc.scheduled_days}
+                        liquidatedDamagesRate={contractDoc.liquidated_damages_rate}
+                        contractDate={contractDoc.contract_date}
+                        commencementDate={contractDoc.commencement_date}
+                        witnessOne={contractDoc.witness_one}
+                        witnessTwo={contractDoc.witness_two}
                       />
                     </div>
                   )}
