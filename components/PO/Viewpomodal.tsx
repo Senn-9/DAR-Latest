@@ -1368,49 +1368,6 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                     </div>
                   </div>
                 </div>
-
-                {/* Footer — PDF only, no Save */}
-                <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                  <button
-                    onClick={() =>
-                      downloadPDF({
-                        poNo: poHeader.po_no || "",
-                        poId: poHeader.id,
-                        supplier: poHeader.supplier || "",
-                        address: poHeader.address || "",
-                        tin: poHeader.tin || "",
-                        procurementMode: poHeader.procurement_mode || "",
-                        deliveryPlace: poHeader.delivery_place || "",
-                        deliveryTerm: poHeader.delivery_term || "",
-                        deliveryDate: poHeader.delivery_date || "",
-                        paymentTerm: poHeader.payment_term || "",
-                        fundCluster: poHeader.fund_cluster || "",
-                        items: poItems,
-                        officialName: poHeader.official_name,
-                        officialDesig: poHeader.official_desig,
-                        accountantName: poHeader.accountant_name,
-                        accountantDesig: poHeader.accountant_desig,
-                        orsNo: poHeader.ors_no,
-                        orsDate: poHeader.ors_date,
-                        fundsAvailable: poHeader.funds_available,
-                        orsAmount: poHeader.ors_amount,
-                        hideTotalRow: poHeader.hide_total_row ?? false,
-                        poDate: poHeader.date,
-                        currentUserFullname,
-                        currentUserId,
-                      })
-                    }
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-                  >
-                    <RiFilePdf2Line size={18} /> Download PDF
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg transition-colors"
-                  >
-                    <RiCloseLine size={18} /> Close
-                  </button>
-                </div>
               </>
             )}
           </div>
@@ -1604,49 +1561,6 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                      <button
-                        onClick={() =>
-                          downloadORS({
-                            orsNo: orsEntry?.ors_no || poHeader.ors_no,
-                            orsDate: orsEntry?.date_created || poHeader.ors_date,
-                            entityName: orsEntry?.entity_name || poHeader.office_section,
-                            payee: poHeader.supplier,
-                            payeeAddress: orsEntry?.payee_address || poHeader.address,
-                            office: orsEntry?.office || poHeader.office_section,
-                            fundCluster: orsEntry?.fund_cluster || poHeader.fund_cluster,
-                            responsibilityCenter: orsEntry?.responsibility_center || null,
-                            particulars: orsEntry?.particulars || null,
-                            mfoPap: orsEntry?.mfo_pap || null,
-                            uacsCode: orsEntry?.uacs_code || null,
-                            amount: orsEntry?.obligation_amount || poHeader.ors_amount,
-                            referenceNo: orsEntry?.reference_no || null,
-                            obligationAmount: orsEntry?.obligation_amount || null,
-                            payableAmount: orsEntry?.payable_amount || null,
-                            paymentAmount: orsEntry?.payment_amount || null,
-                            notYetDueBalance: orsEntry?.not_yet_due_balance || null,
-                            dueDemandableBalance: orsEntry?.due_demandable_balance || null,
-                            preparedByName: orsEntry?.prepared_by_name || poHeader.official_name,
-                            preparedByDesig: orsEntry?.prepared_by_desig || poHeader.official_desig,
-                            blankStatusSection: orsEntry?.blank_status_section ?? false,
-                            currentUserFullname,
-                            currentUserId,
-                            poId: poHeader.id,
-                          })
-                        }
-                        className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-                      >
-                        <RiFilePdf2Line size={18} /> Download PDF
-                      </button>
-                      <button
-                        onClick={onClose}
-                        className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg transition-colors"
-                      >
-                        <RiCloseLine size={18} /> Close
-                      </button>
                     </div>
                   </>
                 )}

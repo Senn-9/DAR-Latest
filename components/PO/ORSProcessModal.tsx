@@ -5,7 +5,6 @@ import { createClient } from "@/utils/supabase/client";
 import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
 import { printWithIframe } from "@/utils/print/printUtils";
 import {
-  RiCloseLine,
   RiSaveLine,
   RiFlagLine,
   RiFilePdf2Line,
@@ -1405,42 +1404,6 @@ export default function ORSProcessModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Floating action buttons - like livePreview.tsx */}
-      <div className="absolute right-4 top-4 z-20 flex gap-2">
-        <button
-          type="button"
-          onClick={() => downloadORSPdf({
-            orsNo, orsDate, entityName, payee, payeeAddress, office,
-            fundCluster, responsibilityCenter, particulars, mfoPap,
-            uacsCode, amount: obligationAmount || 0, referenceNo,
-            obligationAmount, paymentAmount,
-            certifiedByName, certifiedByDesig, sectionCParticulars,
-            notYetDueBalance, dueDemandableBalance,
-            preparedByName, preparedByDesig,
-            preparedByDate, certifiedByDate,
-            blankStatusSection,
-            // textOnlyLines, // commented out
-            currentUserFullname,
-            currentUserId: currentUser?.id,
-            poId: Number(po.id)
-          })}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-          aria-label="Print preview"
-          title="Print"
-        >
-          <RiFilePdf2Line size={20} />
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-          aria-label="Close preview"
-          title="Close"
-        >
-          <RiCloseLine size={20} />
-        </button>
-      </div>
-
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* ── Modal Header ── */}
@@ -1760,6 +1723,26 @@ export default function ORSProcessModal({
                 className="px-4 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition"
               >
                 Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadORSPdf({
+                  orsNo, orsDate, entityName, payee, payeeAddress, office,
+                  fundCluster, responsibilityCenter, particulars, mfoPap,
+                  uacsCode, amount: obligationAmount || 0, referenceNo,
+                  obligationAmount, paymentAmount,
+                  certifiedByName, certifiedByDesig, sectionCParticulars,
+                  notYetDueBalance, dueDemandableBalance,
+                  preparedByName, preparedByDesig,
+                  preparedByDate, certifiedByDate,
+                  blankStatusSection,
+                  currentUserFullname,
+                  currentUserId: currentUser?.id,
+                  poId: Number(po.id),
+                })}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-orange-300 text-orange-700 bg-white text-sm font-semibold hover:bg-orange-50 transition"
+              >
+                <RiFilePdf2Line size={15} /> PDF
               </button>
               <button
                 type="button"

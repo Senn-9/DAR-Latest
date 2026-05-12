@@ -432,6 +432,37 @@ export type User = {
   last_login: string | null; // ISO timestamp
 };
 
+export type ContractDocument = {
+  id: number;
+  po_id: number;
+  po_no: string | null;
+  first_party_agency: string | null;
+  first_party_rep: string | null;
+  first_party_office: string | null;
+  first_party_city: string | null;
+  second_party_name: string | null;
+  second_party_rep: string | null;
+  second_party_address: string | null;
+  second_party_city: string | null;
+  contract_title: string | null;
+  consideration_amount: number | null;
+  consideration_amount_words: string | null;
+  service_description: string | null;
+  delivery_location: string | null;
+  payment_condition: string | null;
+  job_order_description: string | null;
+  scheduled_days: string | null;
+  liquidated_damages_rate: string | null;
+  contract_date: string | null;
+  commencement_date: string | null;
+  commencement_location: string | null;
+  witness_one: string | null;
+  witness_two: string | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
 // ============================================================
 // Database table map — useful for generic helpers / Supabase
 // ============================================================
@@ -440,6 +471,7 @@ export type Database = {
   public: {
     Tables: {
       aaa_documents: { Row: AaaDocument };
+      contract_documents: { Row: ContractDocument };
       bac_resolution: { Row: BacResolution };
       bac_resolution_prs: { Row: BacResolutionPr };
       canvass_entries: { Row: CanvassEntry };

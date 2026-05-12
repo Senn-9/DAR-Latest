@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { RiAddLine, RiCloseLine, RiFilePdf2Line, RiSaveLine, RiSearchLine } from "react-icons/ri";
+import { RiAddLine, RiFilePdf2Line, RiSaveLine, RiSearchLine, RiCloseLine } from "react-icons/ri";
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 import { createClient } from "@/utils/supabase/client";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO } from "@/utils/print/POPrintBuilder";
+import { buildContractPrintHtml } from "@/utils/print/ContractPrintBuilder";
 import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
 import { RichEditor } from "@/components/RichEditor";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
@@ -39,7 +40,7 @@ type CanvassEntry = {
 type CreatePOModalProps = {
   visible: boolean;
   onClose: () => void;
-  onCreate: (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => Promise<void>;
+  onCreate: (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => Promise<number>;
 };
 
 const inputCls =
@@ -999,6 +1000,297 @@ async function postPrintRemark(fullname: string, documentType: 'PR' | 'PO' | 'OR
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Contract document types & helpers
+// ─────────────────────────────────────────────────────────────────────────────
+type ContractFormState = {
+  contractTitle: string;
+  firstPartyOffice: string;
+  secondPartyRep: string;
+  secondPartyCity: string;
+  serviceDescription: string;
+  deliveryLocation: string;
+  paymentCondition: string;
+  jobOrderDescription: string;
+  scheduledDays: string;
+  liquidatedDamagesRate: string;
+  contractDate: string;
+  commencementDate: string;
+  witnessOne: string;
+  witnessTwo: string;
+  considerationAmountWords: string;
+};
+
+function fmtContractDate(iso: string) {
+  if (!iso) return { day: "", ordDay: "___", month: "___________", year: "____", full: "" };
+  const d = new Date(iso + "T00:00:00");
+  const day = d.getDate().toString();
+  const s = ["th","st","nd","rd"], v = d.getDate() % 100;
+  const ordDay = day + (s[(v-20)%10] || s[v] || s[0]);
+  const month = d.toLocaleDateString("en-PH", { month: "long" });
+  const year = d.getFullYear().toString();
+  const full = d.toLocaleDateString("en-PH", { year:"numeric", month:"long", day:"numeric" });
+  return { day, ordDay, month, year, full };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ContractEditablePreview — editable live preview matching the contract image
+// ─────────────────────────────────────────────────────────────────────────────
+function ContractEditablePreview({
+  firstPartyAgency, firstPartyRep,
+  secondPartyName, considerationAmount, commencementLocation,
+  fields, setFields, onAmountWordsManualEdit,
+}: {
+  firstPartyAgency: string; firstPartyRep: string;
+  secondPartyName: string; considerationAmount: number; commencementLocation: string;
+  fields: ContractFormState;
+  setFields: React.Dispatch<React.SetStateAction<ContractFormState>>;
+  onAmountWordsManualEdit: () => void;
+}) {
+  const set = (k: keyof ContractFormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFields(prev => ({ ...prev, [k]: e.target.value }));
+    if (k === "considerationAmountWords") onAmountWordsManualEdit();
+  };
+  const cd   = fmtContractDate(fields.contractDate);
+  const comd = fmtContractDate(fields.commencementDate);
+  const fmtMoney = (n: number) => "\u20B1" + n.toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+  /* Base document style */
+  const doc: React.CSSProperties = {
+    fontFamily: "'Times New Roman', Times, serif",
+    fontSize: "11pt",
+    lineHeight: 1.55,
+    color: "#000",
+    maxWidth: "720px",
+    margin: "0 auto",
+    padding: "20px 24px",
+  };
+
+  /* PO-wired display span — bold + bottom underline */
+  const fill = (content: string, minW = "140px"): React.CSSProperties => ({
+    display: "inline-block",
+    borderBottom: "1px solid #000",
+    fontWeight: "bold",
+    textAlign: "center",
+    minWidth: minW,
+    padding: "0 4px",
+    verticalAlign: "bottom",
+  });
+
+  /* Editable input — bold + subtle yellow bg + bottom border */
+  const inp: React.CSSProperties = {
+    border: "none",
+    borderBottom: "1px solid #444",
+    background: "#fffde7",
+    fontFamily: "'Times New Roman', Times, serif",
+    fontSize: "11pt",
+    fontWeight: "bold",
+    outline: "none",
+    padding: "0 4px",
+    verticalAlign: "bottom",
+    minWidth: "80px",
+  };
+
+  /* Flex row */
+  const row: React.CSSProperties = {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "4px",
+    marginBottom: "2px",
+  };
+
+  /* Stretch — flex:1 fill inside a row */
+  const stretchFill: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+    borderBottom: "1px solid #000",
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: "0 4px",
+  };
+
+  return (
+    <div style={doc}>
+
+      {/* ── Title ── */}
+      <div style={{ textAlign: "center", marginBottom: "18px" }}>
+        <input
+          type="text"
+          value={fields.contractTitle}
+          onChange={set("contractTitle")}
+          style={{ ...inp, background: "#fffbeb", fontSize: "12pt", textAlign: "center", width: "100%", border: "none", borderBottom: "1px solid #ccc" }}
+          placeholder="CONTRACT FOR SERVICES"
+        />
+      </div>
+
+      {/* ── KNOW ALL MEN ── */}
+      <div style={{ fontWeight: "bold", marginBottom: "16px" }}>KNOW ALL MEN BY THESE PRESENTS:</div>
+
+      {/* ── Party intro ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>This contract, executed by and between</span>
+          <span style={stretchFill}>{firstPartyAgency || "DEPARTMENT OF AGRARIAN REFORM"}</span>
+        </div>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>Provincial Office, represented by</span>
+          <span style={{ ...fill(firstPartyRep || "[Official Name]"), flexShrink: 0 }}>{firstPartyRep || "[Official Name]"}</span>
+          <span style={{ whiteSpace: "nowrap" }}>with office address at</span>
+        </div>
+        <div style={row}>
+          <input type="text" value={fields.firstPartyOffice} onChange={set("firstPartyOffice")}
+            style={{ ...inp, flex: 1, minWidth: 0 }} placeholder="Office address" />
+          <span style={{ whiteSpace: "nowrap" }}>, hereinafter referred to as the party of the FIRST PART;</span>
+        </div>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>and</span>
+          <span style={{ ...fill(secondPartyName || "[Supplier]"), flexShrink: 0 }}>{secondPartyName || "[Supplier]"}</span>
+          <span style={{ whiteSpace: "nowrap" }}>, represented by</span>
+          <input type="text" value={fields.secondPartyRep} onChange={set("secondPartyRep")}
+            style={{ ...inp, flex: "0 0 180px", minWidth: 0 }} placeholder="Supplier representative" />
+        </div>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>Filipino, of legal age and a resident of</span>
+          <input type="text" value={fields.secondPartyCity} onChange={set("secondPartyCity")}
+            style={{ ...inp, flex: "0 0 140px", minWidth: 0 }} placeholder="City" />
+          <span style={{ whiteSpace: "nowrap" }}>hereinafter referred to</span>
+        </div>
+        <div>as the party of the SECOND PART.</div>
+      </div>
+
+      {/* ── WITNESSETH ── */}
+      <div style={{ textAlign: "center", fontWeight: "bold", letterSpacing: "6px", margin: "20px 0" }}>W I T N E S S E T H</div>
+
+      {/* ── Consideration ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>That for and in consideration of the sum of</span>
+          <input type="text" value={fields.considerationAmountWords} onChange={set("considerationAmountWords")}
+            style={{ ...inp, flex: 1, minWidth: 0, textTransform: "uppercase" }}
+            placeholder="AMOUNT IN WORDS" />
+        </div>
+        <div style={{ ...row, flexWrap: "wrap" }}>
+          <span style={{ whiteSpace: "nowrap" }}>({fmtMoney(considerationAmount)})</span>
+          <span>, which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND</span>
+        </div>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>PARTY&nbsp;&nbsp;agrees to deliver/provide the</span>
+          <textarea value={fields.serviceDescription} onChange={set("serviceDescription")} onInput={autoResize}
+            style={{ ...inp, flex: 1, minWidth: 0, resize: "none", height: "22px", overflow: "hidden", textTransform: "uppercase" }}
+            rows={1} placeholder="Service/delivery description…" />
+        </div>
+      </div>
+
+      {/* ── Payment ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <div>That the FIRST PARTY shall pay the full amount to the SECOND PARTY when&nbsp;&nbsp;the</div>
+        <textarea value={fields.paymentCondition} onChange={set("paymentCondition")} onInput={autoResize}
+          style={{ ...inp, width: "100%", display: "block", resize: "none", height: "40px", overflow: "hidden", textTransform: "uppercase", marginTop: "2px" }}
+          rows={2} placeholder="Payment condition (defaults to service description if blank)" />
+      </div>
+
+      {/* ── Job order ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>That the SECOND PARTY agrees to finish the</span>
+          <input type="text" value={fields.jobOrderDescription} onChange={set("jobOrderDescription")}
+            style={{ ...inp, flex: 1, minWidth: 0, textTransform: "uppercase" }}
+            placeholder="JOB ORDER" />
+        </div>
+        <div style={{ ...row, flexWrap: "wrap" }}>
+          <span style={{ whiteSpace: "nowrap" }}>within</span>
+          <input type="text" value={fields.scheduledDays} onChange={set("scheduledDays")}
+            style={{ ...inp, width: "45px", flex: "none", textAlign: "center" }} placeholder="__" />
+          <span style={{ whiteSpace: "nowrap" }}>scheduled days counted from the day the contract for the</span>
+          <span style={{ ...stretchFill, textTransform: "uppercase" }}>
+            {fields.serviceDescription || "[service item]"}
+          </span>
+        </div>
+        <div style={row}>
+          <span style={{ ...fill(comd.full || "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0", "160px"), flexShrink: 0 }}>{comd.full || "\u00a0"}</span>
+          <span>has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish</span>
+        </div>
+        <div style={row}>
+          <span>the job within the said period, the SECOND PARTY shall indemnify the sum of&nbsp;</span>
+          <input type="text" value={fields.liquidatedDamagesRate} onChange={set("liquidatedDamagesRate")}
+            style={{ ...inp, width: "130px", flex: "none" }} placeholder="1/10th of 1%" />
+          <span>&nbsp;for</span>
+        </div>
+        <div>every day of delay of liquidated damages.</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", fontSize: "9pt", color: "#666" }}>
+          <span>Commencement date:</span>
+          <input type="date" value={fields.commencementDate} onChange={set("commencementDate")}
+            style={{ border: "1px solid #bbb", background: "#fffde7", fontSize: "9pt", padding: "1px 4px" }} />
+        </div>
+      </div>
+
+      {/* ── Commencement ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>That this Contract shall commence on</span>
+          <span style={stretchFill}>{comd.full || "\u00a0"}</span>
+        </div>
+        <div style={row}>
+          <span style={{ whiteSpace: "nowrap" }}>at</span>
+          <span style={stretchFill}>{commencementLocation || "[Location]"}</span>
+        </div>
+      </div>
+
+      {/* ── IN WITNESS WHEREOF ── */}
+      <div style={{ paddingLeft: "2em", marginBottom: "20px" }}>
+        <div style={row}>
+          <span>IN WITNESS WHEREOF, the parties signed&nbsp;&nbsp;&nbsp;this contract on the</span>
+          <span style={{ ...fill(cd.ordDay || "___", "50px"), flexShrink: 0 }}>{cd.ordDay || "___"}</span>
+          <span style={{ whiteSpace: "nowrap" }}>day of</span>
+        </div>
+        <div style={row}>
+          <span style={{ ...fill(cd.month || "___________", "130px"), flexShrink: 0 }}>{cd.month || "___________"}</span>
+          <span style={{ whiteSpace: "nowrap" }}>&nbsp;&nbsp;&nbsp;, {cd.year || "____"}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px", fontSize: "9pt", color: "#666" }}>
+            <span>Date:</span>
+            <input type="date" value={fields.contractDate} onChange={set("contractDate")}
+              style={{ border: "1px solid #bbb", background: "#fffde7", fontSize: "9pt", padding: "1px 4px" }} />
+          </span>
+        </div>
+      </div>
+
+      {/* ── Signature block ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px" }}>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{firstPartyAgency || "DEPARTMENT OF AGRARIAN REFORM"}:</div>
+          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>{firstPartyRep || "[Official Name]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginBottom: "4px" }} />
+          <div style={{ fontSize: "9pt" }}>(Signature of the FIRST PARTY)</div>
+        </div>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{secondPartyName || "[Supplier]"}:</div>
+          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>{fields.secondPartyRep || "[Supplier Representative]"}</div>
+          <div style={{ borderBottom: "1px solid #000", marginBottom: "4px" }} />
+          <div style={{ fontSize: "9pt" }}>(Signature of the SECOND PARTY)</div>
+        </div>
+      </div>
+
+      {/* ── Witnesses ── */}
+      <div style={{ textAlign: "center", fontWeight: "bold", margin: "28px 0 16px" }}>WITNESSES:</div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <input type="text" value={fields.witnessOne} onChange={set("witnessOne")}
+            style={{ ...inp, width: "90%", textAlign: "center", textTransform: "uppercase", marginBottom: "4px" }}
+            placeholder="WITNESS NAME" />
+          <div style={{ borderBottom: "1px solid #000" }} />
+        </div>
+        <div style={{ width: "44%", textAlign: "center" }}>
+          <input type="text" value={fields.witnessTwo} onChange={set("witnessTwo")}
+            style={{ ...inp, width: "90%", textAlign: "center", textTransform: "uppercase", marginBottom: "4px" }}
+            placeholder="WITNESS NAME" />
+          <div style={{ borderBottom: "1px solid #000" }} />
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOModalProps) {
   const supabase = createClient();
   
@@ -1037,12 +1329,49 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [accountantDesig, setAccountantDesig] = useState("");
   const [conformeDate, setConformeDate] = useState("");
 
+  // Contract state
+  const [includesContract, setIncludesContract] = useState(false);
+  const [activePreviewTab, setActivePreviewTab] = useState<"po" | "contract">("po");
+  const [amountWordsOverridden, setAmountWordsOverridden] = useState(false);
+  const [contractFields, setContractFields] = useState<ContractFormState>({
+    contractTitle: "CONTRACT FOR SERVICES",
+    firstPartyOffice: "Do\u00f1a Dolores Bldg., Triangulo, Naga City, Camarines Sur",
+    secondPartyRep: "",
+    secondPartyCity: "",
+    serviceDescription: "",
+    deliveryLocation: "",
+    paymentCondition: "",
+    jobOrderDescription: "JOB ORDER",
+    scheduledDays: "",
+    liquidatedDamagesRate: "1/10th of 1%",
+    contractDate: "",
+    commencementDate: "",
+    witnessOne: "",
+    witnessTwo: "",
+    considerationAmountWords: "",
+  });
+
   // Text-only lines state (for printing only - descriptive lines between items)
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
 
   // Current user for print remarks
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  const grandTotal = getGrandTotal(items);
+
+  // Auto-sync considerationAmountWords with grandTotal (unless manually overridden)
+  useEffect(() => {
+    if (!amountWordsOverridden) {
+      setContractFields(prev => ({ ...prev, considerationAmountWords: toWords(grandTotal) }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grandTotal, amountWordsOverridden]);
+
+  // Reset contract tab when contract checkbox is unchecked
+  useEffect(() => {
+    if (!includesContract) setActivePreviewTab("po");
+  }, [includesContract]);
 
   // Load current user from localStorage
   useEffect(() => {
@@ -1259,6 +1588,26 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     setAccountantName("");
     setAccountantDesig("");
     setConformeDate("");
+    setIncludesContract(false);
+    setActivePreviewTab("po");
+    setAmountWordsOverridden(false);
+    setContractFields({
+      contractTitle: "CONTRACT FOR SERVICES",
+      firstPartyOffice: "Do\u00f1a Dolores Bldg., Triangulo, Naga City, Camarines Sur",
+      secondPartyRep: "",
+      secondPartyCity: "",
+      serviceDescription: "",
+      deliveryLocation: "",
+      paymentCondition: "",
+      jobOrderDescription: "JOB ORDER",
+      scheduledDays: "",
+      liquidatedDamagesRate: "1/10th of 1%",
+      contractDate: "",
+      commencementDate: "",
+      witnessOne: "",
+      witnessTwo: "",
+      considerationAmountWords: "",
+    });
   }
 
   function addItem() {
@@ -1297,8 +1646,6 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     });
   }
 
-  const grandTotal = getGrandTotal(items);
-
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!supplier) { setErrorMsg("Supplier is required"); return; }
@@ -1331,7 +1678,39 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         conforme_date: conformeDate || null,
       };
       const cleanItems = items.map((item) => ({ ...item, description: stripHtml(item.description ?? "") }));
-      await onCreate(header, cleanItems);
+      const newPoId = await onCreate(header, cleanItems);
+
+      if (includesContract && newPoId) {
+        const { error: contractError } = await supabase.from("contract_documents").insert({
+          po_id: newPoId,
+          po_no: poNo,
+          contract_title: contractFields.contractTitle || null,
+          first_party_agency: officeSection || "DEPARTMENT OF AGRARIAN REFORM",
+          first_party_rep: officialName || null,
+          first_party_office: contractFields.firstPartyOffice || null,
+          first_party_city: deliveryPlace || null,
+          second_party_name: supplier || null,
+          second_party_rep: contractFields.secondPartyRep || null,
+          second_party_address: address || null,
+          second_party_city: contractFields.secondPartyCity || null,
+          consideration_amount: grandTotal || null,
+          consideration_amount_words: contractFields.considerationAmountWords || null,
+          service_description: contractFields.serviceDescription || null,
+          delivery_location: contractFields.deliveryLocation || null,
+          payment_condition: contractFields.paymentCondition || null,
+          job_order_description: contractFields.jobOrderDescription || null,
+          scheduled_days: contractFields.scheduledDays || null,
+          liquidated_damages_rate: contractFields.liquidatedDamagesRate || null,
+          contract_date: contractFields.contractDate || null,
+          commencement_date: contractFields.commencementDate || null,
+          commencement_location: address || null,
+          witness_one: contractFields.witnessOne || null,
+          witness_two: contractFields.witnessTwo || null,
+          created_by: currentUserId || null,
+        });
+        if (contractError) throw new Error(`Contract save failed: ${contractError.message}`);
+      }
+
       setSuccessMsg(`Purchase Order ${poNo} has been created successfully.`);
     } catch (err) {
       console.error(err);
@@ -1359,58 +1738,15 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Floating action buttons - like livePreview.tsx */}
-      <div className="absolute right-4 top-4 z-20 flex gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            downloadPDF({
-              poNo,
-              supplier,
-              address,
-              tin,
-              procurementMode,
-              deliveryPlace,
-              deliveryTerm,
-              deliveryDate,
-              paymentTerm,
-              officeSection,
-              fundCluster,
-              items,
-              textOnlyLines,
-              hideTotalRow,
-              poDate,
-              officialName,
-              officialDesig,
-              accountantName,
-              accountantDesig,
-              conformeDate,
-              currentUserFullname,
-            })
-          }
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-          aria-label="Print preview"
-          title="Print"
-        >
-          <RiFilePdf2Line size={20} />
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg ring-1 ring-black/10 transition hover:bg-neutral-100"
-          aria-label="Close preview"
-          title="Close"
-        >
-          <RiCloseLine size={20} />
-        </button>
-      </div>
-
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
           <div>
             <h2 className="text-xl font-bold">Create Purchase Order</h2>
             <p className="text-emerald-100 text-sm mt-1">Appendix 61 · Official Government Form</p>
           </div>
+          <button onClick={onClose} className="p-2 hover:bg-emerald-500/50 rounded-lg transition-colors">
+            <RiCloseLine size={24} />
+          </button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
@@ -1658,6 +1994,26 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                 <span>GRAND TOTAL</span>
                 <span className="text-lg">{formatMoney(grandTotal)}</span>
               </div>
+
+              {/* Contract checkbox */}
+              <div className="mt-4 p-4 rounded-lg border border-dashed border-amber-400 bg-amber-50">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includesContract}
+                    onChange={(e) => setIncludesContract(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-sm font-semibold text-amber-800">
+                    This PO involves a Contract for Services
+                  </span>
+                </label>
+                {includesContract && (
+                  <p className="mt-1 ml-7 text-xs text-amber-700">
+                    A contract document tab will appear in the preview panel. Fill in the contract fields before saving.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
@@ -1681,6 +2037,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     officeSection,
                     fundCluster,
                     items,
+                    textOnlyLines,
                     hideTotalRow,
                     poDate,
                     officialName,
@@ -1704,20 +2061,96 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                <button
-                  type="button"
-                  onClick={() => setHideTotalRow((v) => !v)}
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
-                    hideTotalRow
-                      ? "bg-emerald-100 border-emerald-400 text-emerald-700"
-                      : "bg-gray-100 border-gray-300 text-gray-500"
-                  }`}
-                  title="Toggle Total row in the PO document"
-                >
-                  {hideTotalRow ? "Total Row: Hidden" : "Total Row: Visible"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Tab toggle — only when contract is enabled */}
+                  {includesContract && (
+                    <div className="flex rounded-lg border border-gray-300 overflow-hidden text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setActivePreviewTab("po")}
+                        className={`px-3 py-1 transition-colors ${
+                          activePreviewTab === "po"
+                            ? "bg-emerald-700 text-white"
+                            : "bg-white text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        Purchase Order
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActivePreviewTab("contract")}
+                        className={`px-3 py-1 transition-colors ${
+                          activePreviewTab === "contract"
+                            ? "bg-amber-600 text-white"
+                            : "bg-white text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        Contract
+                      </button>
+                    </div>
+                  )}
+                  {/* Total Row toggle — only on PO tab */}
+                  {activePreviewTab === "po" && (
+                    <button
+                      type="button"
+                      onClick={() => setHideTotalRow((v) => !v)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
+                        hideTotalRow
+                          ? "bg-emerald-100 border-emerald-400 text-emerald-700"
+                          : "bg-gray-100 border-gray-300 text-gray-500"
+                      }`}
+                      title="Toggle Total row in the PO document"
+                    >
+                      {hideTotalRow ? "Total Row: Hidden" : "Total Row: Visible"}
+                    </button>
+                  )}
+                  {/* Contract PDF button — only on contract tab */}
+                  {activePreviewTab === "contract" && includesContract && (
+                    <button
+                      type="button"
+                      onClick={() => printWithIframe(buildContractPrintHtml({
+                        contractTitle: contractFields.contractTitle || "CONTRACT FOR SERVICES",
+                        firstPartyAgency: officeSection || "DEPARTMENT OF AGRARIAN REFORM",
+                        firstPartyRep: officialName,
+                        firstPartyOffice: contractFields.firstPartyOffice,
+                        firstPartyCity: deliveryPlace,
+                        secondPartyName: supplier,
+                        secondPartyRep: contractFields.secondPartyRep,
+                        secondPartyCity: contractFields.secondPartyCity,
+                        commencementLocation: address,
+                        considerationAmount: grandTotal,
+                        considerationAmountWords: contractFields.considerationAmountWords,
+                        serviceDescription: contractFields.serviceDescription,
+                        deliveryLocation: contractFields.deliveryLocation,
+                        paymentCondition: contractFields.paymentCondition,
+                        jobOrderDescription: contractFields.jobOrderDescription,
+                        scheduledDays: contractFields.scheduledDays,
+                        liquidatedDamagesRate: contractFields.liquidatedDamagesRate,
+                        contractDate: contractFields.contractDate,
+                        commencementDate: contractFields.commencementDate,
+                        witnessOne: contractFields.witnessOne,
+                        witnessTwo: contractFields.witnessTwo,
+                      }))}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded border bg-amber-600 border-amber-600 text-white hover:bg-amber-700 transition"
+                    >
+                      <RiFilePdf2Line size={13} /> Contract PDF
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-4 text-black">
+                {activePreviewTab === "contract" ? (
+                  <ContractEditablePreview
+                    firstPartyAgency={officeSection || "DEPARTMENT OF AGRARIAN REFORM"}
+                    firstPartyRep={officialName}
+                    secondPartyName={supplier}
+                    considerationAmount={grandTotal}
+                    commencementLocation={address}
+                    fields={contractFields}
+                    setFields={setContractFields}
+                    onAmountWordsManualEdit={() => setAmountWordsOverridden(true)}
+                  />
+                ) : (
                 <POEditablePreview
                   poNo={poNo}
                   setPoNo={setPoNo}
@@ -1762,6 +2195,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                   accountantDesig={accountantDesig}
                   setAccountantDesig={setAccountantDesig}
                 />
+                )}
               </div>
             </div>
           </div>

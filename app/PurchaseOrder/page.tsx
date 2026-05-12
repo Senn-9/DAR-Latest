@@ -720,7 +720,7 @@ export default function PurchaseOrderPage() {
     }
   };
 
-  const handleCreate = async (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => {
+  const handleCreate = async (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]): Promise<number> => {
     setSaving(true);
     try {
       const poId = await createPurchaseOrder(header, items);
@@ -738,6 +738,7 @@ export default function PurchaseOrderPage() {
       } catch (err) {
         // ignore
       }
+      return poId;
     } finally {
       setSaving(false);
     }
@@ -1162,8 +1163,9 @@ export default function PurchaseOrderPage() {
         visible={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={async (header: Partial<PurchaseOrderRow>, items: PurchaseOrderItemRow[]) => {
-          await handleCreate(header, items);
+          const id = await handleCreate(header, items);
           setCreateOpen(false);
+          return id;
         }}
       />
 
