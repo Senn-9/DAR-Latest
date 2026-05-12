@@ -7,6 +7,14 @@ export type RFQMeta = {
 	prNo: string;
 };
 
+// Extended printable metadata (matches runtime meta spread from the preview)
+export type RFQMetaExtended = RFQMeta & {
+	chairpersonName?: string;
+	canvassersLine1?: string;
+	canvassersLine2?: string;
+	deliveryDays?: string | number;
+};
+
 export type RFQItem = {
 	stock_no: string;
 	description: string;
@@ -17,10 +25,43 @@ export type RFQItem = {
 };
 
 export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
+	const m = meta as RFQMetaExtended;
+
 	function escapeHtml(str: string): string {
 		if (!str) return "";
-		return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+		return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 	}
+
+	const numberToWords = (value: number) => {
+		const words: Record<number, string> = {
+			1: "ONE",
+			2: "TWO",
+			3: "THREE",
+			4: "FOUR",
+			5: "FIVE",
+			6: "SIX",
+			7: "SEVEN",
+			8: "EIGHT",
+			9: "NINE",
+			10: "TEN",
+			11: "ELEVEN",
+			12: "TWELVE",
+			13: "THIRTEEN",
+			14: "FOURTEEN",
+			15: "FIFTEEN",
+			16: "SIXTEEN",
+			17: "SEVENTEEN",
+			18: "EIGHTEEN",
+			19: "NINETEEN",
+			20: "TWENTY",
+		};
+		return words[value] ?? String(value);
+	};
+
+	const deliveryDaysNum = (() => {
+		const v = typeof m.deliveryDays === "number" ? m.deliveryDays : Number.parseInt(String(m.deliveryDays || ""), 10);
+		return Number.isFinite(v) && v > 0 ? v : 7;
+	})();
 
 	// Print the exact rows shown in the live preview so added/removed rows are preserved.
 	const printableItems =
@@ -46,10 +87,16 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 <title>Request for Quotation - ${escapeHtml(meta.canvassNo || "Draft")}</title>
 <style>
 	* { box-sizing: border-box; margin: 0; padding: 0; }
+	@font-face {
+		font-family: "Arial Narrow";
+		src: local("Arial Narrow"), local("ArialNarrow");
+	}
+	html, body {
+		font-family: "Arial Narrow";
+	}
 	body {
 		color: #000;
 		background: #fff;
-		font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
 		font-size: 10px;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
@@ -75,7 +122,7 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 	.h12 { width: 56px; height: 56px; object-fit: contain; }
 	.h12.rounded { border-radius: 6px; margin-left: 4px; }
 	.invisible-spacer { width: 56px; height: 56px; margin-left: 12px; }
-	.gov-text { padding-top: 4px; text-align: center; margin: 0 2px; }
+	.gov-text { flex: 1; padding-top: 4px; text-align: center; margin: 0 0 0 18px; min-width: 0; }
 	.gov-text .a { font-size: 11px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; }
 	.gov-text .b { font-size: 10px; font-weight: 400; white-space: nowrap; }
 	.meta-row {
@@ -184,12 +231,19 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 		align-items: flex-start;
 	}
 	.footer-left { width: 60%; }
-	.names { font-weight: 700; text-decoration: underline; font-size: 11px; line-height: 1.25; white-space: nowrap; }
-	.names + .names { margin-top: 16px; white-space: normal; }
-	.canvasser { margin-top: 32px; font-size: 11px; }
+	/* Match CanvassLivePreview: smaller underlined names, allow wrapping and tighter spacing */
+	.names { font-weight: 700; text-decoration: underline; font-size: 9px; line-height: 1.15; white-space: normal; }
+	.names + .names { margin-top: 6px; }
+	/* Reduce canvasser top gap to align with preview */
+	.canvasser { margin-top: 8px; font-size: 11px; }
 	.footer-right { width: 30%; }
 	.sig { text-align: center; margin-bottom: 16px; }
 	.sig .line { border-bottom: 1px solid #000; height: 16px; margin-bottom: 2px; }
+	.sig.sig-top { margin-top: 4px; }
+	.sig.sig-top .line { display: none; }
+	.sig.sig-gap { margin-top: 16px; }
+	.sig-space { margin-bottom: 8px; }
+	.sig-space .line { border-bottom: 1px solid #000; height: 16px; }
 	.sig .label { font-size: 9px; }
 	.vat-box { border: 1px solid #000; padding: 8px; margin-top: 8px; }
 	.vat-options { display: flex; justify-content: space-around; margin-bottom: 4px; font-size: 10px; }
@@ -256,7 +310,7 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 
 	<div class="sign-block">
 		<div class="sign-wrap">
-			<div class="sign-name">ATTY. JAIME G. RESOCO, JR.</div>
+			<div class="sign-name">${escapeHtml((m.chairpersonName as string) || "ATTY. JAIME G. RESOCO, JR.")}</div>
 			<div class="sign-role">BAC Chairperson</div>
 		</div>
 	</div>
@@ -274,7 +328,7 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 			</div>
 		</div>
 		<div class="notes-right">
-			<div class="note-line"><span>5.</span><span>DELIVERY PERIOD WITHIN <ulike>SEVEN (7) DAYS</ulike> UPON RECEIPT<br />OF PURCHASE ORDER.</span></div>
+			<div class="note-line"><span>5.</span><span>DELIVERY PERIOD WITHIN <ulike>${escapeHtml(numberToWords(deliveryDaysNum))} (${escapeHtml(String(deliveryDaysNum))}) DAYS</ulike> UPON RECEIPT<br />OF PURCHASE ORDER.</span></div>
 			<div class="note-line"><span>6.</span><span>WARRANTY SHALL BE FOR A PERIOD OF SIX (6) MONTHS FOR<br />SUPPLIES & MATERIALS, ONE (1) YEAR FOR EQUIPMENT FROM<br />DATE OF ACCEPTANCE BY THE PROCURING ENTITY.</span></div>
 			<div class="note-line"><span>7.</span><span>I / WE ARE BOUND TO DELIVER THE ITEM/S PER OUR QUOTATION<br />PURSUANT TO THE PROVISIONS OR SANCTIONS UNDER RA 9184.<br />PURSUANT TO THE PROVISIONS OR SANCTIONS UNDER RA 9184.</span></div>
 		</div>
@@ -314,8 +368,8 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 	<div class="footer">
 		<div class="footer-left">
 			<div style="margin-bottom:16px; font-size:11px;">Served by:</div>
-			<div class="names">IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III</div>
-			<div class="names">SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA</div>
+			<div class="names">${escapeHtml((m.canvassersLine1 as string) || "IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III")}</div>
+			<div class="names">${escapeHtml((m.canvassersLine2 as string) || "SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA")}</div>
 			<div class="canvasser">
 				<div class="b">CANVASSER</div>
 				<div>ECT/asa</div>
@@ -323,10 +377,11 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 			</div>
 		</div>
 		<div class="footer-right">
-			<div class="sig"><div class="line"></div><div class="label">PRINTED NAME/SIGNATURE</div></div>
+			<div class="sig sig-top"><div class="label">PRINTED NAME/SIGNATURE</div></div>
 			<div class="sig"><div class="line"></div><div class="label">Tel No./Cellphone No./Email Address</div></div>
 			<div class="sig"><div class="line"></div><div class="label">PhilGeps Registration Number</div></div>
-			<div class="sig"><div class="line"></div><div class="label">BIR-TIN</div></div>
+			<div class="sig-space"><div class="line"></div></div>
+			<div class="sig sig-gap"><div class="line"></div><div class="label">BIR-TIN</div></div>
 			<div class="vat-box">
 				<div class="vat-options">
 					<div><span class="chk"></span> VAT</div>

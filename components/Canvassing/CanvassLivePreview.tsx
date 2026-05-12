@@ -32,6 +32,33 @@ const formatDateWithOffset = (dateText: string, dayOffset: number) => {
 	return parsedDate.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 };
 
+const numberToWords = (value: number) => {
+	const words: Record<number, string> = {
+		1: "ONE",
+		2: "TWO",
+		3: "THREE",
+		4: "FOUR",
+		5: "FIVE",
+		6: "SIX",
+		7: "SEVEN",
+		8: "EIGHT",
+		9: "NINE",
+		10: "TEN",
+		11: "ELEVEN",
+		12: "TWELVE",
+		13: "THIRTEEN",
+		14: "FOURTEEN",
+		15: "FIFTEEN",
+		16: "SIXTEEN",
+		17: "SEVENTEEN",
+		18: "EIGHTEEN",
+		19: "NINETEEN",
+		20: "TWENTY",
+	};
+
+	return words[value] ?? String(value);
+};
+
 type DescriptionEditorProps = {
 	index: number;
 	initialValue: string;
@@ -133,6 +160,10 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 		companyName: "",
 		address: "",
 		deadline: "",
+		deliveryDays: "7",
+		chairpersonName: "ATTY. JAIME G. RESOCO, JR.",
+		canvassersLine1: "IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III",
+		canvassersLine2: "SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA",
 	});
 
 	const [items, setItems] = useState<ItemRow[]>([]);
@@ -334,11 +365,14 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 	useEffect(() => {
 		if (!open) return;
 
+		const deliveryDays = Number.parseInt(meta.deliveryDays, 10);
+		const normalizedDays = Number.isFinite(deliveryDays) && deliveryDays > 0 ? deliveryDays : 7;
+
 		setMeta((prev) => ({
 			...prev,
-			deadline: formatDateWithOffset(prev.date, 7),
+			deadline: formatDateWithOffset(prev.date, normalizedDays),
 		}));
-	}, [open, meta.date]);
+	}, [open, meta.date, meta.deliveryDays]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -464,13 +498,16 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 
 				{/* Signature Block */}
 					<div className="flex justify-end mb-4">
-						<div className="text-center mr-2">
-							<div className="font-bold border-b border-black px-4 text-[10px]">ATTY. JAIME G. RESOCO, JR.</div>
-							<div className="text-[10px]">BAC Chairperson</div>
-						</div>
+					<div className="text-center mr-2 w-40">
+						<input
+							type="text"
+							value={meta.chairpersonName}
+							onChange={(e) => setMeta((prev) => ({ ...prev, chairpersonName: e.target.value }))}
+							className="font-bold border-b border-black px-2 text-[10px] w-full text-center outline-none bg-transparent"
+						/>
+						<div className="text-[10px]">BAC Chairperson</div>
 					</div>
-
-					{/* Notes */}
+				</div>
 					<div className="grid grid-cols-2 gap-x-1 text-[8px] mb-6 leading-tight">
 						<div className="space-y-1">
 							<div className="flex gap-2">
@@ -484,7 +521,20 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 							</div>
 						</div>
 						<div className="space-y-1 -ml-13">
-							<div className="flex gap-2"><span>5.</span> <span>DELIVERY PERIOD WITHIN <span className="underline font-bold">SEVEN (7) DAYS</span> UPON RECEIPT<br />OF PURCHASE ORDER.</span></div>
+							<div className="flex gap-2">
+								<span>5.</span>
+								<span>
+									DELIVERY PERIOD WITHIN <span className="underline font-bold">{numberToWords(Number.parseInt(meta.deliveryDays, 10) || 7)} (
+									<input
+										type="number"
+										min="1"
+										value={meta.deliveryDays}
+										onChange={(e) => setMeta((prev) => ({ ...prev, deliveryDays: e.target.value }))}
+										className="w-8 border-b border-black bg-transparent text-center outline-none"
+									/>
+									) DAYS</span> UPON RECEIPT<br />OF PURCHASE ORDER.
+								</span>
+							</div>
 							<div className="flex gap-2"><span>6.</span> <span>WARRANTY SHALL BE FOR A PERIOD OF SIX (6) MONTHS FOR<br />SUPPLIES & MATERIALS, ONE (1) YEAR FOR EQUIPMENT FROM<br />DATE OF ACCEPTANCE BY THE PROCURING ENTITY.</span></div>
 							<div className="flex gap-2"><span>7.</span> <span>I / WE ARE BOUND TO DELIVER THE ITEM/S PER OUR QUOTATION<br />PURSUANT TO THE PROVISIONS OR SANCTIONS UNDER RA 9184.<br />PURSUANT TO THE PROVISIONS OR SANCTIONS UNDER RA 9184.</span></div>
 						</div>
@@ -667,12 +717,18 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						<div className="w-[60%]">
 							<div className="mb-4">Served by:</div>
 							<div className="space-y-4">
-								<div className="font-bold underline text-[9px] leading-tight whitespace-nowrap">
-									IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III
-								</div>
-								<div className="font-bold underline text-[9px] leading-tight">
-									SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA
-								</div>
+									<input
+										type="text"
+										value={meta.canvassersLine1}
+										onChange={(e) => setMeta((prev) => ({ ...prev, canvassersLine1: e.target.value }))}
+										className="font-bold underline text-[9px] leading-tight whitespace-nowrap outline-none bg-transparent w-full"
+									/>
+									<input
+										type="text"
+										value={meta.canvassersLine2}
+										onChange={(e) => setMeta((prev) => ({ ...prev, canvassersLine2: e.target.value }))}
+										className="font-bold underline text-[9px] leading-tight outline-none bg-transparent w-full"
+									/>
 							</div>
 							<div className="mt-8 space-y-1 text-[10px]">
 								<div className="font-bold">CANVASSER</div>
@@ -682,31 +738,31 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						</div>
 
 						{/* Right Footer */}
-						<div className="w-[30%] space-y-4">
-							<div className="text-center">
-								<div className="border-b border-black h-4 w-full mb-0.5"></div>
+						<div className="w-[30%] space-y-2">
+							<div className="text-center mt-0.5">
 								<div className="text-[9px]">PRINTED NAME/SIGNATURE</div>
 							</div>
 							<div className="text-center">
-								<div className="border-b border-black h-4 w-full mb-0.5"></div>
+								<div className="border-b border-black h-3 w-full mb-0.5"></div>
 								<div className="text-[9px]">Tel No./Cellphone No./Email Address</div>
 							</div>
 							<div className="text-center">
-								<div className="border-b border-black h-4 w-full mb-0.5"></div>
+								<div className="border-b border-black h-3 w-full mb-0.5"></div>
 								<div className="text-[9px]">PhilGeps Registration Number</div>
 							</div>
 							<div className="text-center">
-								<div className="border-b border-black h-4 w-full mb-0.5"></div>
-								<div className="text-[9px]">BIR-TIN</div>
+								<div className="border-b border-black h-3 w-full mb-2"></div>
+								<div className="border-b border-black h-3 w-full my-2"></div>
+								<div className="text-[9px] mt-1">BIR-TIN</div>
 							</div>
-							<div className="border border-black p-2 mt-2">
-								<div className="flex justify-around mb-1 text-[10px]">
+							<div className="border border-black p-1.5 mt-1">
+								<div className="flex justify-around mb-0.5 text-[10px]">
 									<div className="flex items-center gap-1"><div className="w-3 h-3 border border-black"></div> VAT</div>
 									<div className="flex items-center gap-1"><div className="w-3 h-3 border border-black"></div> NON-VAT</div>
 								</div>
 								<div className="text-center font-bold text-[9px]">(Please check - VAT or NON-VAT)</div>
 							</div>
-							<div className="text-right font-bold mt-4 text-[9px]">DARCS1-QF-STO-009 Rev 01</div>
+							<div className="text-right font-bold mt-1 text-[9px]">DARCS1-QF-STO-009 Rev 01</div>
 						</div>
 					</div>
 
