@@ -326,7 +326,7 @@ function ORSEditablePreview({
                 onChange={(code, desc) => {
                   setUacsCode(code);
                   if (desc) {
-                    setParticulars(desc);
+                    // Only update Section C Particulars, leave main Particulars unwired
                     setSectionCParticulars(desc);
                   }
                 }}
