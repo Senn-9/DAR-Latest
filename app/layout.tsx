@@ -21,11 +21,47 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   title: "DAR Procurement",
-  description: "DAR Procurement System",
+  description: "DAR Procurement Monitoring and Automation System",
   icons: {
-    icon: '/logo.ico',
-    shortcut: '/logo.ico',
-    apple: '/logo.ico',
+    icon: '/ncf/ccs%20logo.png',
+    shortcut: '/ncf/ccs%20logo.png',
+    apple: '/ncf/ncf%20logo.jpg',
+  },
+  creator: "NCF College of Computer Studies",
+  authors: [
+    {
+      name: "KHANA CORALDE",
+    },
+    {
+      name: "PAMELA MAE CADO",
+    },
+    {
+      name: "FRANC JENTZEN TOTAÑES",
+    },
+    {
+      name: "JAYVEE KEN VILLOTE",
+    },
+    {
+      name: "JETHAN BENEDICT BARCENAS",
+    },
+    {
+      name: "JOHN CHRISTIAN BENAVIDEZ",
+    },
+  ],
+  openGraph: {
+    title: "DAR Procurement",
+    description: "DAR Procurement System",
+    type: "website",
+    images: [
+      {
+        url: '/ncf/ccs%20logo.png',
+        alt: 'College of Computer Studies',
+      },
+      {
+        url: '/ncf/ncf%20logo.jpg',
+        alt: 'Naga College Foundation, Inc.',
+      },
+    ],
   },
 };
 

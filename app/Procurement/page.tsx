@@ -971,24 +971,6 @@ export default function ProcurementPage() {
         </div>
       </div>
 
-      <footer className="border-t border-gray-200 bg-white/80 px-6 py-6 md:px-10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Official Logos</p>
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
-            <img
-              src="/ncf/ncf logo.jpg"
-              alt="Naga College Foundation logo"
-              className="h-20 w-20 rounded-xl border border-emerald-100 bg-white object-contain p-1 shadow-sm md:h-24 md:w-24"
-            />
-            <img
-              src="/ncf/ccs logo.png"
-              alt="College of Computer Studies logo"
-              className="h-20 w-20 rounded-xl border border-emerald-100 bg-white object-contain p-1 shadow-sm md:h-24 md:w-24"
-            />
-          </div>
-        </div>
-      </footer>
-
       {/* ── SUBMIT CONFIRMATION MODAL ── */}
       {submitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
