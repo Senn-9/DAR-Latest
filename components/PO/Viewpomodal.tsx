@@ -690,31 +690,17 @@ function POPreview({
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Fund Cluster :</b> {fundCluster}</div>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Funds Available :</b> {fundsAvailable || ""}</div>
-              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "28px auto 2px" }} />
+              <div style={{ borderBottom: "1px solid #111", width: "80%", margin: "20px auto 0", fontWeight: "bold", fontSize: "9pt", textAlign: "center", paddingBottom: "2px" }}>
+                {accountantName || ""}
+              </div>
               <div style={{ textAlign: "center", fontSize: "9pt" }}>
                 Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit
               </div>
-              {accountantName && (
-                <div style={{ textAlign: "center", fontSize: "9pt", marginTop: "4px" }}>{accountantName}</div>
-              )}
-              {accountantDesig && (
-                <div style={{ textAlign: "center", fontSize: "9pt" }}>{accountantDesig}</div>
-              )}
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", verticalAlign: "top", padding: "10px 8px", height: "135px" }}>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>ORS No. :</b> {orsNo || ""}</div>
               <div style={{ fontSize: "10pt", marginBottom: "8px" }}><b>Date of the ORS:</b> {orsDate || ""}</div>
               <div style={{ fontSize: "10pt" }}><b>Amount :</b> {orsAmount ? formatMoney(orsAmount) : ""}</div>
-              <div style={{ borderBottom: "1px solid #111", width: "45%", margin: "28px auto 2px" }} />
-              <div style={{ textAlign: "center", fontSize: "9pt" }}>
-                Signature over Printed Name of Authorized Official
-              </div>
-              {officialName && (
-                <div style={{ textAlign: "center", fontSize: "9pt", marginTop: "4px" }}>{officialName}</div>
-              )}
-              {officialDesig && (
-                <div style={{ textAlign: "center", fontSize: "9pt" }}>{officialDesig}</div>
-              )}
             </td>
           </tr>
         </tbody>
@@ -912,19 +898,13 @@ function buildPurchaseOrderPrintHtml(data: {
           <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
             <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
             <div style="font-size:10pt;margin-bottom:8px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable || "")}</div>
-            <div style="border-bottom:1px solid #111;width:80%;margin:28px auto 2px"></div>
+            <div style="border-bottom:1px solid #111;width:80%;margin:20px auto 0;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.accountantName || "")}</div>
             <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-            ${data.accountantName ? `<div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.accountantName)}</div>` : ""}
-            ${data.accountantDesig ? `<div style="text-align:center;font-size:9pt">${escapeHtml(data.accountantDesig)}</div>` : ""}
           </td>
           <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
             <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> ${escapeHtml(data.orsNo || "")}</div>
             <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> ${escapeHtml(data.orsDate || "")}</div>
             <div style="font-size:10pt"><b>Amount :</b> ${data.orsAmount ? formatMoney(data.orsAmount) : ""}</div>
-            <div style="border-bottom:1px solid #111;width:45%;margin:28px auto 2px"></div>
-            <div style="text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</div>
-            ${data.officialName ? `<div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.officialName)}</div>` : ""}
-            ${data.officialDesig ? `<div style="text-align:center;font-size:9pt">${escapeHtml(data.officialDesig)}</div>` : ""}
           </td>
         </tr>
       </tbody>
@@ -1569,7 +1549,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
 
           {/* PO Preview — Right */}
           <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">PO PREVIEW</h3>
                 {poHeader && (
@@ -1609,7 +1589,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                 )}
               </div>
               {poHeader && (
-                <div className="bg-white rounded-lg shadow-lg p-8 text-black">
+                <div className="bg-white rounded-lg shadow-lg p-4 text-black">
                   <POPreview
                     poNo={poHeader.po_no || ""}
                     supplier={poHeader.supplier || ""}

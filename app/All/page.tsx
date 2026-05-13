@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import {
   RiFileListLine,
   RiTimeLine,
@@ -287,7 +288,8 @@ export default function AllPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
@@ -478,5 +480,6 @@ export default function AllPage() {
       </div>
       <LivePreview open={isLivePreviewOpen} onClose={() => setIsLivePreviewOpen(false)} prNo={selectedPrNo} />
     </div>
+    </AuthGuard>
   );
 }

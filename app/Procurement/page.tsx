@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
+import { AuthGuard } from "@/components/AuthGuard";
 import { deletePRCascade, fetchPRDeletePreview, type PRDeletePreview } from "@/utils/supabase/deletePR";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
@@ -503,7 +504,8 @@ export default function ProcurementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
@@ -1274,5 +1276,6 @@ export default function ProcurementPage() {
       {/* ── SIGNOUT MODAL ── */}
       <SignoutModal open={signoutModalOpen} onClose={() => setSignoutModalOpen(false)} />
     </div>
+    </AuthGuard>
   );
 }

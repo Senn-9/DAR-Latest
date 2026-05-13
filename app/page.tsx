@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { verifyPassword, hashPassword, isBcryptHash } from "@/utils/auth/password";
+import { useLoginGuard } from "@/hooks/useLoginGuard";
 
 type Division = {
   division_id: number;
@@ -28,6 +29,7 @@ type User = {
 export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { canShowLogin, loading: authLoading } = useLoginGuard();
 
   const [users, setUsers] = useState<User[]>([]);
   const [username, setUsername] = useState("");
@@ -110,6 +112,23 @@ export default function LoginPage() {
     setIsLoading(false);
     router.push("/Dashboard");
   };
+
+  // Auth guard: show loading while checking auth status
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is already logged in, don't show login form (they're being redirected)
+  if (!canShowLogin) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

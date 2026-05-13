@@ -89,11 +89,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
         </tr>`;
   }
 
-  const accountantSig = data.accountantName
-    ? `<div style="border-bottom:1px solid #111;width:80%;margin:28px auto 2px"></div>
-       <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-       <div style="text-align:center;font-size:9pt;margin-top:4px">${escapeHtml(data.accountantName)}</div>`
-    : `<div style="border-bottom:1px solid #111;width:80%;margin:36px auto 2px"></div>
+  const accountantSig = `<div style="border-bottom:1px solid #111;width:80%;margin:20px auto 0;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.accountantName || "")}</div>
        <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>`;
 
   const officialSig = "";
@@ -220,7 +216,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
         <tr>
           <td colspan="3" style="vertical-align:top;padding:10px 8px;height:135px">
             <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
-            <div style="font-size:10pt;margin-bottom:24px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable)}</div>
+            <div style="font-size:10pt;margin-bottom:8px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable || "")}</div>
             ${accountantSig}
           </td>
           <td colspan="3" style="vertical-align:top;padding:10px 8px;height:135px">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AuthGuard } from "@/components/AuthGuard";
 import {
   RiArrowDownLine,
   RiArrowUpLine,
@@ -367,7 +368,8 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <div className="mx-auto w-full max-w-6xl p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -718,6 +720,7 @@ export default function LogsPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }
 

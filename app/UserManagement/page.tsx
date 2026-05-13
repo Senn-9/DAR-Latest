@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import {
   RiAddLine,
   RiCloseLine,
@@ -309,7 +310,8 @@ export default function UserManagementPage() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <div className="mx-auto w-full max-w-6xl p-4 md:p-6 space-y-4">
 
         {/* ── PAGE HEADER ── */}
@@ -770,6 +772,7 @@ export default function UserManagementPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import RemarksTimelineModal from "@/components/RemarksTimelineModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { deletePOCascade, fetchPODeletePreview, type PODeletePreview } from "@/utils/supabase/deletePO";
@@ -787,7 +788,8 @@ export default function PurchaseOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <div className="w-full p-6 md:p-10 space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -1338,6 +1340,7 @@ export default function PurchaseOrderPage() {
         onDismiss={() => setDeleteErrorMsg(null)}
       />
     </div>
+    </AuthGuard>
   );
 
   function SortIcon({ field }: { field: typeof sortField }) {

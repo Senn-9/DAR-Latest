@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import SignoutModal from "@/components/SignOutModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import PrepareBACResolutionModal from "@/components/BACResolution/PrepareBACResolutionModal";
@@ -233,7 +234,8 @@ export default function BACResolutionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
@@ -274,7 +276,7 @@ export default function BACResolutionPage() {
           {([
             { key: "pr", label: "Purchase Request", href: "/Procurement" },
             { key: "canvass", label: "Canvass", href: "/Procurement/Canvass" },
-
+            { key: "bac", label: "BAC Resolution", href: "/Procurement/BACResolution" },
             { key: "abstract", label: "Abstract of Awards", href: "/Procurement/Abstract" },
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery", href: "/Procurement/Delivery" },
@@ -485,5 +487,6 @@ export default function BACResolutionPage() {
         onConfirm={() => confirmTargetId && handleSubmitPR(confirmTargetId)}
       />
     </div>
+    </AuthGuard>
   );
 }

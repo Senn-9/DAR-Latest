@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import {
   RiMoneyDollarCircleLine, RiCheckLine, RiAlertLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine, RiArrowLeftLine, RiArrowRightLine, RiAddLine, RiEditLine,
@@ -371,7 +372,8 @@ export default function BudgetPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AuthGuard>
+      <div className="p-6 space-y-6">
       {/* ─── Page Header ────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 rounded-2xl p-6 text-white">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -818,5 +820,6 @@ export default function BudgetPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

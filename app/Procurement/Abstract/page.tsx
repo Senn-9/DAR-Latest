@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { AuthGuard } from "@/components/AuthGuard";
 import SignoutModal from "@/components/SignOutModal";
 import PrepareAbstractModal, { type SupplierQuotePayload } from "@/components/AbstractOfAwards/PrepareAbstractModal";
 import LivePreview from "@/components/test/livePreview";
@@ -409,7 +410,8 @@ export default function AbstractPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-100 text-gray-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
@@ -823,5 +825,6 @@ export default function AbstractPage() {
             </div>
           )}
     </div>
+    </AuthGuard>
   );
 }
