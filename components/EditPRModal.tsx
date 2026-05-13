@@ -11,6 +11,7 @@ import {
 import { buildPRPrintHtml } from "@/utils/print/PRPrintBuilder";
 import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
 import { RichEditor } from "@/components/RichEditor";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 type ItemDataType = {
   stock_no: string;
@@ -168,6 +169,8 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
   const [items, setItems] = useState<ItemDataType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentUserFullname, setCurrentUserFullname] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
@@ -316,7 +319,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
         .eq("id", prId);
 
       if (formError) {
-        alert("❌ Error updating PR: " + formError.message);
+        setErrorMsg("Error updating PR: " + formError.message);
         setSaving(false);
         return;
       }
@@ -342,7 +345,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
           .insert(itemsToInsert);
 
         if (itemError) {
-          alert("❌ Error saving items: " + itemError.message);
+          setErrorMsg("Error saving items: " + itemError.message);
           setSaving(false);
           return;
         }
@@ -353,18 +356,19 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
         await postEditRemark(currentUserFullname, prId, currentUserId);
       }
 
-      alert("✅ PR updated successfully!");
+      setSuccessMsg("PR updated successfully!");
       if (onSave) onSave();
       onClose();
     } catch (error) {
       console.error("Error saving PR:", error);
-      alert("❌ An unexpected error occurred while saving.");
+      setErrorMsg("An unexpected error occurred while saving.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -660,6 +664,20 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
         </div>
       </div>
     </div>
+
+    <SuccessModal
+      visible={!!successMsg}
+      title="PR Updated"
+      message={successMsg ?? ""}
+      onConfirm={() => setSuccessMsg(null)}
+    />
+    <ErrorModal
+      visible={!!errorMsg}
+      title="Error"
+      message={errorMsg ?? ""}
+      onDismiss={() => setErrorMsg(null)}
+    />
+    </>
   );
 }
 

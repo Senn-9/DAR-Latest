@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { buildPRPrintHtml } from "@/utils/print/PRPrintBuilder";
 import { printWithIframe, stripHtml } from "@/utils/print/printUtils";
 import { RichEditor } from "@/components/RichEditor";
+import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import {
   RiCloseLine,
   RiDeleteBinLine,
@@ -428,9 +429,11 @@ interface PRModalComponentProps {
 export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   const supabase = createClient();
   const [modalOpen, setModalOpen] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    entity_name: "DAR CAMSUR 1",  // ← default value
+    entity_name: "DAR CAMSUR 1",
     fund_cluster: "",
     office_section: "",
     resp_code: "",
@@ -444,7 +447,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
 
   const [items, setItems] = useState<ItemDataType[]>([emptyItem()]);
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
-  const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
@@ -563,7 +565,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         .single();
 
       if (formError) {
-        alert("❌ Error saving PR Form: " + formError.message);
+        setErrorMsg("Error saving PR Form: " + formError.message);
         setLoading(false);
         return;
       }
@@ -584,7 +586,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       console.log("Items to insert:", itemsToInsert);
 
       if (itemsToInsert.length === 0) {
-        alert("⚠️ No items with descriptions to save. PR Form saved but no items added.");
+        setErrorMsg("No items with descriptions to save. PR Form saved but no items added.");
         resetForm();
         setModalOpen(false);
         if (onSave) onSave();
@@ -599,10 +601,10 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       console.log("Item insert response:", { itemData, itemError });
 
       if (itemError) {
-        alert("⚠️ PR Form saved but error saving items: " + itemError.message);
+        setErrorMsg("PR Form saved but error saving items: " + itemError.message);
         console.error("Item insert error details:", itemError);
       } else {
-        alert("✅ PR saved successfully!");
+        setSuccessMsg("PR saved successfully!");
         resetForm();
         setModalOpen(false);
         if (onSave) onSave();
@@ -611,8 +613,8 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         }, 500);
       }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      alert("❌ Error: " + errorMsg);
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
+      setErrorMsg("Error: " + errMsg);
       console.error("Save error:", error);
     } finally {
       setLoading(false);
@@ -904,9 +906,6 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                    <button onClick={() => downloadPDF(formData, items, currentUser)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors">
-                      <RiFilePdf2Line size={16} /> PDF
-                    </button>
                   </div>
                   <div className="bg-white rounded-lg shadow-lg p-8 text-black">
                     <PREditablePreview
@@ -938,6 +937,18 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
           <RiAddLine size={20} /> Create PR
         </button>
       )}
+      <SuccessModal
+        visible={!!successMsg}
+        title="PR Created"
+        message={successMsg ?? ""}
+        onConfirm={() => setSuccessMsg(null)}
+      />
+      <ErrorModal
+        visible={!!errorMsg}
+        title="Error"
+        message={errorMsg ?? ""}
+        onDismiss={() => setErrorMsg(null)}
+      />
     </>
   );
 }

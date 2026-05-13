@@ -115,7 +115,7 @@ export default function AbstractPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .eq("status_id", 10)
+          .in("status_id", [10, 33])
           .order("created_at", { ascending: false });
 
         if (!error) {
@@ -135,18 +135,24 @@ export default function AbstractPage() {
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
       10: { name: "Abstract of Awards", color: "aaa" },
+      33: { name: "Completed (PR Phase)", color: "completed" },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
     aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
+    completed:  "bg-green-50 text-green-800 border border-green-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
+  const aaaCount = list.filter(pr => pr.status_id === 10).length;
+  const completedCount = list.filter(pr => pr.status_id === 33).length;
+
   const STAT_CARDS = [
-    { label: "Total",          value: list.length,               cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600" },
-    { label: "AAA",   value: list.length,        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600"    },
+    { label: "Total",          value: list.length,     cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", statusId: null },
+    { label: "AAA",            value: aaaCount,        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600",    statusId: 10 },
+    { label: "Completed (PR)", value: completedCount,  cardBg: "bg-green-50",   border: "border-green-100",   iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   statusId: 33 },
   ];
 
   const handleSort = (f: typeof sortField) => {
@@ -154,6 +160,8 @@ export default function AbstractPage() {
     else { setSortField(f); setSortDir(f === "created_at" ? "desc" : "asc"); }
     setCurrentPage(1);
   };
+
+  const [statusFilterId, setStatusFilterId] = useState<number | null>(null);
 
   const filteredList = list
     .filter((pr) => {
@@ -163,7 +171,8 @@ export default function AbstractPage() {
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchSection = sectionFilter === null || pr.office_section === sectionFilter;
       const matchYear = pr.created_at ? new Date(pr.created_at).getFullYear() === fiscalYear : true;
-      return matchSearch && matchSection && matchYear;
+      const matchStatus = statusFilterId === null || pr.status_id === statusFilterId;
+      return matchSearch && matchSection && matchYear && matchStatus;
     })
     .sort((a, b) => {
       let aVal: number | string = "";
@@ -464,11 +473,17 @@ export default function AbstractPage() {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STAT_CARDS.map(({ label, value, cardBg, border, iconBg, iconColor, numColor }) => (
-            <div
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {STAT_CARDS.map(({ label, value, cardBg, border, iconBg, iconColor, numColor, statusId }) => (
+            <button
               key={label}
-              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+              onClick={() => {
+                setStatusFilterId(statusId);
+                setCurrentPage(1);
+              }}
+              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 text-left ${
+                statusFilterId === statusId ? 'ring-2 ring-offset-2 ring-emerald-500' : ''
+              }`}
             >
               <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>
                 <RiFileListLine size={20} />
@@ -477,14 +492,21 @@ export default function AbstractPage() {
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
         {/* ── TABLE PANEL ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
           <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">Abstract of Awards Records</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold text-gray-800 shrink-0">Abstract of Awards Records</h2>
+              {statusFilterId !== null && (
+                <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {statusFilterId === 10 ? "AAA Only" : "Completed (PR) Only"}
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />

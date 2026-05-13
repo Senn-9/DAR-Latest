@@ -13,7 +13,7 @@ import type { PurchaseOrderRow, PurchaseOrderItemRow } from "@/utils/supabase/po
 import type { UacsCode } from "@/types/tables";
 import { StatusFlagPicker, FlagButton, type StatusFlag, getFlagId } from "@/components/StatusFlagPicker";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
-import { UacsCombobox } from "@/components/UacsCombobox";
+import { UacsCombobox } from "@/components/PO/UacsCombobox";
 
 interface ORSProcessModalProps {
   visible: boolean;

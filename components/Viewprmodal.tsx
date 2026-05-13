@@ -572,12 +572,6 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
-                <button
-                  onClick={() => downloadPDF(formData, items, currentUserFullname, currentUserId, prId)}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
-                >
-                  <RiFilePdf2Line size={16} /> PDF
-                </button>
               </div>
               <div id="pr-preview-content" className="bg-white rounded-lg shadow-lg p-8 text-black">
                 <PRPreview formData={formData} items={items} />

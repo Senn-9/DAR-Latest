@@ -11,7 +11,7 @@ import ViewPRModal from "@/components/Viewprmodal";
 import EditPRModal from "@/components/EditPRModal";
 import ProcessPRModal from "@/components/ProcessPRModal";
 import BACProcessModal from "@/components/BACProcessModal";
-import PARPOProcessModal from "@/components/PARPOProcessModal";
+import PARPOProcessModal from "@/components/PO/PARPOProcessModal";
 import BudgetProcessModal from "@/components/BudgetProcessModal";
 import { useRouter } from "next/navigation";
 import {

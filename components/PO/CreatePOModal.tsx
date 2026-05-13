@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { RiAddLine, RiFilePdf2Line, RiSaveLine, RiSearchLine, RiCloseLine } from "react-icons/ri";
+import { RiAddLine, RiFilePdf2Line, RiSaveLine, RiSearchLine, RiCloseLine, RiFilter3Line } from "react-icons/ri";
 import type { PurchaseOrderItemRow, PurchaseOrderRow } from "@/utils/supabase/po";
 import { createClient } from "@/utils/supabase/client";
 import { buildPurchaseOrderPrintHtml as sharedBuildPO } from "@/utils/print/POPrintBuilder";
@@ -1277,6 +1277,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [prSortDir, setPrSortDir] = useState<"asc" | "desc">("desc");
   const [prFilterPO, setPrFilterPO] = useState<"all" | "no_po" | "has_po">("all");
   const [prFilterDivision, setPrFilterDivision] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
   
   // PO Form state
   const [poNo, setPoNo] = useState("");
@@ -1830,7 +1831,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
               <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Select Purchase Request</h3>
                 <div className="space-y-3">
-                  {/* Search and Refresh */}
+                  {/* Search, Filter Toggle, and Refresh */}
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -1844,6 +1845,18 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     </div>
                     <button
                       type="button"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+                        showFilters 
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                      }`}
+                    >
+                      <RiFilter3Line size={16} />
+                      {showFilters ? "Hide" : "Filter"}
+                    </button>
+                    <button
+                      type="button"
                       onClick={fetchAvailablePRs}
                       disabled={loadingPRs}
                       className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
@@ -1852,8 +1865,9 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     </button>
                   </div>
 
-                  {/* Sort and Filter Controls */}
-                  <div className="grid grid-cols-4 gap-2">
+                  {/* Sort and Filter Controls - Collapsible */}
+                  {showFilters && (
+                  <div className="grid grid-cols-4 gap-2 p-3 bg-white rounded-lg border border-emerald-200">
                     {/* Sort By */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">Sort By</label>
@@ -1912,6 +1926,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                       </select>
                     </div>
                   </div>
+                  )}
                   
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
