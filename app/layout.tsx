@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       name: "FRANC JENTZEN TOTAÑES",
     },
     {
-      name: "JAYVEE KEN VILLOTE",
+      name: "JAYVEE KENN VILLOTE",
     },
     {
       name: "JETHAN BENEDICT BARCENAS",
