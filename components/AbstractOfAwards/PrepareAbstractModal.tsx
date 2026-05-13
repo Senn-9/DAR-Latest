@@ -435,9 +435,18 @@ export default function PrepareAbstractModal({
 										</div>
 
 										<div className="space-y-3">
+											<div className="grid grid-cols-[minmax(220px,1.3fr)_minmax(0,1fr)_44px] gap-3 items-end rounded-xl bg-emerald-100/70 border border-emerald-100 p-4 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+												<div>Supplier Name</div>
+												<div className="text-center">Quotation per Item</div>
+												<div />
+											</div>
+
 											{supplierQuotes.map((quote, quoteIndex) => (
-												<div key={quote.key} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end rounded-xl bg-white border border-emerald-100 p-4">
-													<div className="md:col-span-5">
+												<div
+													key={quote.key}
+													className="grid grid-cols-[minmax(220px,1.3fr)_minmax(0,1fr)_44px] gap-3 items-start rounded-xl bg-white border border-emerald-100 p-4"
+												>
+													<div>
 														<div className="mb-1.5 ml-1 flex items-center justify-between gap-2">
 															<label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
 																Supplier Name
@@ -461,31 +470,36 @@ export default function PrepareAbstractModal({
 															className={textInputCls}
 														/>
 													</div>
-													<div className="md:col-span-6">
-														<label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
-															Quotation per Item
-														</label>
-														<div className="space-y-2">
-															{items.map((it) => (
-																<div key={it.id} className="flex items-center gap-2">
-																	<div className="flex-1 text-xs text-gray-600 truncate">{it.description}</div>
-																	<div className="w-40">
-																		<div className="relative">
-																			<RiMoneyDollarCircleLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-																			<input
-																				type="text"
-																				value={(quote.prices && quote.prices[it.id]) ?? ""}
-																				onChange={(e) => updateSupplierQuote(quoteIndex, { priceForItem: it.id } as any, e.target.value)}
-																				placeholder="Enter price or quote"
-																				className={`${textInputCls} pl-9`}
-																			/>
-																		</div>
+
+													<div className="min-w-0 overflow-x-auto pb-1">
+														<div
+															className="grid gap-3"
+															style={{
+																gridTemplateColumns: `repeat(${items.length}, minmax(180px, 1fr))`,
+																minWidth: `${Math.max(items.length, 1) * 180}px`,
+															}}
+														>
+															{items.map((item) => (
+																<div key={item.id} className="space-y-1">
+																	<div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
+																		{item.description}
+																	</div>
+																	<div className="relative">
+																		<RiMoneyDollarCircleLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+																		<input
+																			type="text"
+																			value={(quote.prices && quote.prices[item.id]) ?? ""}
+																			onChange={(e) => updateSupplierQuote(quoteIndex, { priceForItem: item.id } as any, e.target.value)}
+																			placeholder="Enter price or quote"
+																			className={`${textInputCls} pl-9`}
+																		/>
 																	</div>
 																</div>
 															))}
 														</div>
 													</div>
-													<div className="md:col-span-1 flex justify-end pb-1">
+
+													<div className="flex justify-end pt-5">
 														<button
 															type="button"
 															onClick={() => removeSupplierQuote(quoteIndex)}
@@ -577,10 +591,10 @@ export default function PrepareAbstractModal({
 			</div>
 
 			{showUploadAOAModal && (
-				<div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+				<div className="fixed inset-0 z-80 flex items-center justify-center p-4">
 					<div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowUploadAOAModal(false)} />
 					<div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-						<div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white flex items-center justify-between">
+						<div className="px-6 py-4 bg-linear-to-r from-emerald-600 to-emerald-700 text-white flex items-center justify-between">
 							<div>
 								<p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Document Upload</p>
 								<h3 className="text-lg font-extrabold mt-1">Upload AOA Link</h3>
