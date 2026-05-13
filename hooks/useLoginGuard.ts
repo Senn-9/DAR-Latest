@@ -27,8 +27,8 @@ export function useLoginGuard() {
             // Admin goes to admin page
             router.push('/admn')
           } else {
-            // Regular users go to end page
-            router.push('/end')
+            // Regular users go to Dashboard
+            router.push('/Dashboard')
           }
           return
         }

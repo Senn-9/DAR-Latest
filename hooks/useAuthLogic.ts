@@ -90,8 +90,8 @@ export function useAuthLogic() {
         // id 1 = admin
         router.push('/admn')
       } else {
-        // All other users go to end page
-        router.push('/end')
+        // All other users go to Dashboard
+        router.push('/Dashboard')
       }
 
       return { success: true }

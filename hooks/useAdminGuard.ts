@@ -26,8 +26,8 @@ export function useAdminGuard() {
         // 4. Check their user id
         // Only user id 1 is admin
         if (user.id !== 1) {
-          // If user is NOT id 1 (admin), send them to the end-user area
-          router.push('/end')
+          // If user is NOT id 1 (admin), send them to the Dashboard
+          router.push('/Dashboard')
           return
         }
 
