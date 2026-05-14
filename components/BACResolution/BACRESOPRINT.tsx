@@ -155,7 +155,7 @@ export function buildBACResoHtml(
 		.gov-text .subtitle {
 			font-size: 10px;
 			font-weight: 400;
-			font-style: italic;
+
 		}
 		.committee-info {
 			text-align: center;

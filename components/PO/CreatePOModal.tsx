@@ -1404,7 +1404,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
     };
   }, [visible]);
 
-  // Fetch PRs with Abstract of Awards status (status_id = 33)
+  // Fetch PRs with Abstract of Awards status (status_id = 37)
   useEffect(() => {
     if (visible) {
       fetchAvailablePRs();
@@ -1422,11 +1422,13 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   async function fetchAvailablePRs() {
     setLoadingPRs(true);
     try {
-      // Fetch PRs with status 33 (Completed PR Phase)
+      // tig pakaray ko na nag fe fetch na 37
+      // tig palitan ko si 33 ning 37
+      // Fetch PRs with status 37 (Completed PR Phase)
       const { data: prsData, error: prsError } = await supabase
         .from("purchase_requests")
         .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost, division_id, created_at")
-        .eq("status_id", 33)
+        .eq("status_id", 37)
         .order("created_at", { ascending: false })
         .limit(500); // Limit to latest 500 PRs for performance
 

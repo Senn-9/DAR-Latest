@@ -375,7 +375,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 								<div className="text-center pt-1">
 									<div style={{ fontSize: "11px", fontWeight: 700 }}>REPUBLIC OF THE PHILIPPINES</div>
 									<div style={{ fontSize: "11px", fontWeight: 700 }}>DEPARTMENT OF AGRARIAN REFORM</div>
-									<div style={{ fontSize: "10px", fontWeight: 400, fontStyle: "italic" }}>Tunay na Pagbabago sa Repormang Agraryo</div>
+									<div style={{ fontSize: "10px", fontWeight: 400 }}>Tunay na Pagbabago sa Repormang Agraryo</div>
 								</div>
 
 								<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO Certified" className="h-14 w-14 object-contain rounded" />

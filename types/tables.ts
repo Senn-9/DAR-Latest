@@ -42,8 +42,8 @@ export type CanvassEntry = {
   total_price: number | null;
   is_winning: boolean | null;
   created_at: string; // ISO timestamp, default now()
-  tin_no: string | null;
-  delivery_days: string | null;
+  ref_no: string | null;
+  date: string | null;
   assignment_id: number | null;
   supplier_address: string | null;
   quotation_no: number | null;

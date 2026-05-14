@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { RiAddLine, RiCloseLine, RiUser2Line, RiMoneyDollarCircleLine } from "react-icons/ri";
+import { RiAddLine, RiCloseLine, RiUser2Line, RiMoneyDollarCircleLine, RiEyeLine } from "react-icons/ri";
+import LivePreview from "../test/livePreview";
 
 type SubmitResult = {
 	ok: boolean;
@@ -27,6 +28,7 @@ type SupplierBlock = {
 	key: string;
 	supplier_name: string;
 	prices: Record<number, string>; // itemId -> price string
+	is_winning: boolean;
 };
 
 export type SupplierQuotePayload = {
@@ -56,18 +58,23 @@ export default function PrepareAbstractModal({
 	const supabase = createClient();
 	const [items, setItems] = useState<ItemWithDealers[]>([]);
 	const [supplierQuotes, setSupplierQuotes] = useState<SupplierBlock[]>([
-		{ key: "supplier-1", supplier_name: "", prices: {} },
+		{ key: "supplier-1", supplier_name: "", prices: {}, is_winning: false },
 	]);
+	const [sessionId, setSessionId] = useState<number | null>(null);
+	const [refNo, setRefNo] = useState("");
+	const [abstractDate, setAbstractDate] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [feedback, setFeedback] = useState<SubmitResult | null>(null);
-	const [showUploadAOAModal, setShowUploadAOAModal] = useState(false);
-	const [aoaLink, setAoaLink] = useState("");
+	const [showPreview, setShowPreview] = useState(false);
 
 	useEffect(() => {
 		if (!open) {
 			setItems([]);
-				setSupplierQuotes([{ key: "supplier-1", supplier_name: "", prices: {} }]);
+				setSupplierQuotes([{ key: "supplier-1", supplier_name: "", prices: {}, is_winning: false }]);
+			setSessionId(null);
+			setRefNo("");
+			setAbstractDate("");
 			setFeedback(null);
 			setLoading(false);
 			return;
@@ -102,17 +109,25 @@ export default function PrepareAbstractModal({
 					.maybeSingle();
 
 				if (sessionError) throw sessionError;
+				setSessionId(sessionRow?.id ?? null);
 
-				let supplierRows: SupplierBlock[] = [{ key: "supplier-1", supplier_name: "", prices: {} }];
+				let supplierRows: SupplierBlock[] = [{ key: "supplier-1", supplier_name: "", prices: {}, is_winning: false }];
 
 				if (sessionRow?.id) {
 					const { data: entriesData, error: entriesError } = await supabase
 						.from("canvass_entries")
-						.select("id, supplier_name, unit_price, pr_items")
+						.select("id, supplier_name, unit_price, pr_items, ref_no, date, is_winning")
 						.eq("session_id", sessionRow.id)
 						.order("created_at", { ascending: true });
 
 					if (entriesError) throw entriesError;
+
+					if (entriesData && entriesData.length > 0) {
+						const existingRefNo = entriesData.find((entry: any) => (entry.ref_no || "").trim() !== "")?.ref_no ?? "";
+						const existingDate = entriesData.find((entry: any) => (entry.date || "").trim() !== "")?.date ?? "";
+						setRefNo(existingRefNo);
+						setAbstractDate(existingDate ? String(existingDate).slice(0, 10) : "");
+					}
 
 					if (entriesData && entriesData.length > 0) {
 						// group by supplier_name
@@ -128,11 +143,13 @@ export default function PrepareAbstractModal({
 						let idx = 0;
 						for (const [supplierName, rows] of bySupplier.entries()) {
 							const prices: Record<number, string> = {};
+							let isWinning = false;
 							for (const r of rows) {
 								const itemId = r.pr_items ?? null;
 								if (itemId != null) prices[itemId] = r.unit_price != null ? String(r.unit_price) : "";
+								if (r.is_winning) isWinning = true;
 							}
-							blocks.push({ key: `supplier-${idx++}`, supplier_name: supplierName, prices });
+							blocks.push({ key: `supplier-${idx++}`, supplier_name: supplierName, prices, is_winning: isWinning });
 						}
 
 						if (blocks.length > 0) supplierRows = blocks;
@@ -182,6 +199,7 @@ export default function PrepareAbstractModal({
 				key: `supplier-${Date.now()}-${prev.length + 1}`,
 				supplier_name: "",
 				prices: {},
+				is_winning: false,
 			},
 		]);
 	};
@@ -193,7 +211,7 @@ export default function PrepareAbstractModal({
 	const updateSupplierQuote = (
 		index: number,
 		field: keyof Omit<SupplierBlock, "key" | "prices"> | { priceForItem: number },
-		value: string,
+		value: any,
 	) => {
 		setSupplierQuotes((prev) =>
 			prev.map((quote, i) => {
@@ -232,14 +250,12 @@ export default function PrepareAbstractModal({
 
 		setIsSaving(true);
 		try {
-			const winningSupplierIndex = getWinningSupplierIndex();
-
 			// Build itemsWithDealers: for each item, collect dealers from supplier blocks
 			const itemsWithDealers = items.map((item) => {
-				const dealers = supplierQuotes.map((s, supplierIndex) => ({
+				const dealers = supplierQuotes.map((s) => ({
 					supplier_name: s.supplier_name,
 					unit_price: s.prices[item.id] && s.prices[item.id] !== "" ? s.prices[item.id] : null,
-					is_winning: winningSupplierIndex === supplierIndex,
+					is_winning: s.is_winning,
 				}));
 				return {
 					id: item.id,
@@ -252,101 +268,23 @@ export default function PrepareAbstractModal({
 			});
 
 			const result = await onSubmit(itemsWithDealers);
+			if (result.ok && sessionId) {
+				const normalizedDate = abstractDate.trim() ? new Date(`${abstractDate.trim()}T00:00:00`).toISOString() : null;
+				const { error: metaError } = await supabase
+					.from("canvass_entries")
+					.update({
+						ref_no: refNo.trim() || null,
+						date: normalizedDate,
+					})
+					.eq("session_id", sessionId);
+
+				if (metaError) throw metaError;
+			}
 			setFeedback(result);
 		} catch (error) {
 			setFeedback({
 				ok: false,
 				message: error instanceof Error ? error.message : "Saving failed.",
-			});
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
-	const getWinningSupplierIndex = (): number | null => {
-		let lowestTotal = Number.POSITIVE_INFINITY;
-		let winningIndex: number | null = null;
-
-		supplierQuotes.forEach((supplier, supplierIndex) => {
-			if (supplier.supplier_name.trim() === "") return;
-
-			let supplierTotal = 0;
-			let hasQuote = false;
-
-			Object.values(supplier.prices).forEach((rawValue) => {
-				if (rawValue == null || rawValue === "") return;
-				const parsedValue = Number(rawValue);
-				
-				// Only sum up valid numbers. If it's a letter (NaN), we don't add it to total.
-				if (!Number.isNaN(parsedValue)) {
-					hasQuote = true;
-					supplierTotal += parsedValue;
-				}
-			});
-
-			if (!hasQuote) return;
-
-			if (supplierTotal < lowestTotal) {
-				lowestTotal = supplierTotal;
-				winningIndex = supplierIndex;
-			}
-		});
-
-		return winningIndex;
-	};
-
-	const handleUploadAOALink = async () => {
-		if (!aoaLink.trim()) {
-			setFeedback({ ok: false, message: "Please enter an AOA link." });
-			return;
-		}
-
-		if (!prId) {
-			setFeedback({ ok: false, message: "PR ID is missing." });
-			return;
-		}
-
-		setIsSaving(true);
-		setFeedback(null);
-
-		try {
-			// Check for existing document
-			const { data: existingDoc, error: checkErr } = await supabase
-				.from("documents")
-				.select("id, pr_id")
-				.eq("pr_id", prId)
-				.maybeSingle();
-
-			if (checkErr) throw checkErr;
-
-			if (existingDoc) {
-				// Update existing document
-				const { error: updateErr } = await supabase
-					.from("documents")
-					.update({ abstract_link: aoaLink.trim() })
-					.eq("pr_id", prId);
-
-				if (updateErr) throw updateErr;
-			} else {
-				// Insert new document
-				const { error: insertErr } = await supabase.from("documents").insert({
-					pr_id: prId,
-					pr_no: prNo,
-					abstract_link: aoaLink.trim(),
-					bac_reso_link: null,
-				});
-
-				if (insertErr) throw insertErr;
-			}
-
-			setFeedback({ ok: true, message: "AOA link uploaded successfully." });
-			setAoaLink("");
-			setShowUploadAOAModal(false);
-		} catch (error) {
-			console.error("Upload error:", error);
-			setFeedback({
-				ok: false,
-				message: error instanceof Error ? error.message : "Could not upload AOA link.",
 			});
 		} finally {
 			setIsSaving(false);
@@ -390,6 +328,36 @@ export default function PrepareAbstractModal({
 				</div>
 
 				<form id="award-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-8 py-6">
+					<div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+						<div className="mb-4 flex items-center justify-between gap-3">
+							<div>
+								<p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Document Details</p>
+								<p className="text-xs text-gray-500 mt-0.5">Reference number and date for the abstract document.</p>
+							</div>
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label className="mb-2 block text-sm font-semibold text-gray-700">Ref. No.</label>
+								<input
+									type="text"
+									placeholder="Enter reference number"
+									value={refNo}
+									onChange={(e) => setRefNo(e.target.value)}
+									className={textInputCls}
+								/>
+							</div>
+							<div>
+								<label className="mb-2 block text-sm font-semibold text-gray-700">Date</label>
+								<input
+									type="date"
+									value={abstractDate}
+									onChange={(e) => setAbstractDate(e.target.value)}
+									className={textInputCls}
+								/>
+							</div>
+						</div>
+					</div>
+
 					{feedback && (
 						<div
 							className={`mb-6 rounded-xl border px-4 py-3 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 ${
@@ -451,13 +419,12 @@ export default function PrepareAbstractModal({
 															<label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
 																Supplier Name
 															</label>
-															<label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 select-none">
+															<label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 select-none cursor-pointer hover:text-emerald-700">
 																<input
 																	type="checkbox"
-																	checked={getWinningSupplierIndex() === quoteIndex}
-																	readOnly
-																	disabled
-																	className="h-3.5 w-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-100 disabled:cursor-default"
+																	checked={quote.is_winning}
+																	onChange={(e) => updateSupplierQuote(quoteIndex, "is_winning", e.target.checked)}
+																	className="h-3.5 w-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
 																/>
 																<span>Winning</span>
 															</label>
@@ -561,10 +528,12 @@ export default function PrepareAbstractModal({
 					</button>
 					<button
 						type="button"
-						onClick={() => window.open("https://docs.google.com/spreadsheets/d/12Q9bRZNMaBlMF7gxNlM62sI1R-Zr9CFZbe_XUiKLxkw/copy", "_blank")}
-						className="px-6 py-2.5 rounded-xl text-sm font-bold text-emerald-50 bg-emerald-700 hover:bg-emerald-100 transition-all"
+						onClick={() => setShowPreview(true)}
+						disabled={!prNo}
+						className="px-6 py-2.5 rounded-xl text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all flex items-center gap-2"
 					>
-						Make Abstract of Awards
+						<RiEyeLine size={18} />
+						Preview
 					</button>
 					<button
 						type="submit"
@@ -579,91 +548,14 @@ export default function PrepareAbstractModal({
 							</>
 						) : "Save AOA Details"}
 					</button>
-					<button
-						type="button"
-						onClick={() => setShowUploadAOAModal(true)}
-						disabled={isSaving}
-						className="px-8 py-2.5 rounded-xl bg-blue-700 text-white text-sm font-bold hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all"
-					>
-						Upload AOA Link
-					</button>
 				</div>
 			</div>
 
-			{showUploadAOAModal && (
-				<div className="fixed inset-0 z-80 flex items-center justify-center p-4">
-					<div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowUploadAOAModal(false)} />
-					<div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-						<div className="px-6 py-4 bg-linear-to-r from-emerald-600 to-emerald-700 text-white flex items-center justify-between">
-							<div>
-								<p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Document Upload</p>
-								<h3 className="text-lg font-extrabold mt-1">Upload AOA Link</h3>
-							</div>
-							<button
-								type="button"
-								onClick={() => setShowUploadAOAModal(false)}
-								className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
-							>
-								<RiCloseLine size={20} />
-							</button>
-						</div>
-
-						<div className="p-6 space-y-4">
-							{feedback && (
-								<div
-									className={`rounded-lg border px-4 py-3 text-sm font-semibold ${
-										feedback.ok
-											? "border-emerald-200 bg-emerald-50 text-emerald-800"
-											: "border-red-200 bg-red-50 text-red-700"
-									}`}
-								>
-									{feedback.message}
-								</div>
-							)}
-
-							<div>
-								<label className="mb-2 block text-sm font-semibold text-gray-700">
-									AOA Link <span className="text-red-500">*</span>
-								</label>
-								<input
-									type="url"
-									placeholder="https://example.com/abstract-of-awards"
-									value={aoaLink}
-									onChange={(e) => setAoaLink(e.target.value)}
-									className={textInputCls}
-								/>
-								<p className="mt-2 text-xs text-gray-500">
-									Enter the complete URL to the Abstract of Awards document
-								</p>
-							</div>
-
-							<div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-								<p className="text-xs text-emerald-700">
-									<span className="font-semibold">PR:</span> {prNo}
-								</p>
-							</div>
-						</div>
-
-						<div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
-							<button
-								type="button"
-								onClick={() => setShowUploadAOAModal(false)}
-								className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={handleUploadAOALink}
-								disabled={isSaving || !aoaLink.trim()}
-								className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:opacity-60"
-							>
-								{isSaving ? "Uploading..." : "Upload Link"}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<LivePreview
+				open={showPreview}
+				onClose={() => setShowPreview(false)}
+				prNo={prNo ?? ""}
+			/>
 		</div>
 	);
 }

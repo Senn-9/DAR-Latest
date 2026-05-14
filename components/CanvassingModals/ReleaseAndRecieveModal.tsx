@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import CanvassLivePreview from "@/components/Canvassing/CanvassLivePreview";
 import {
   RiCloseLine,
   RiCheckboxCircleLine,
   RiTimeLine,
   RiUserLine,
   RiFileListLine,
+  RiEyeLine,
 } from "react-icons/ri";
 
 interface ReleaseAndRecieveModalProps {
@@ -40,6 +42,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalQuotationNo, setModalQuotationNo] = useState<string>("");
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -302,7 +305,7 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
   return (
     <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-80 bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
+      <div className={`relative ${showPreview ? "z-0" : "z-80"} bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]`}>
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-emerald-700 text-white">
@@ -408,6 +411,13 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
             Close
           </button>
           <button
+            onClick={() => setShowPreview(true)}
+            className="px-6 py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-700 transition-all shadow-lg flex items-center gap-2"
+          >
+            <RiEyeLine size={18} />
+            Preview
+          </button>
+          <button
             onClick={handleSaveQuotation}
             disabled={processing || !modalQuotationNo.trim()}
             className="px-6 py-2 bg-blue-700 text-white rounded-lg text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-700/20 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -425,6 +435,12 @@ export default function ReleaseAndRecieveModal({ prId, prNo, onClose, onProcesse
           )}
         </div>
       </div>
+
+      <CanvassLivePreview 
+        open={showPreview} 
+        onClose={() => setShowPreview(false)} 
+        prNo={prNo} 
+      />
     </div>
   );
 }

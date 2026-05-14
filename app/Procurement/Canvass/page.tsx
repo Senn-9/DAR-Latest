@@ -614,7 +614,7 @@ export default function CanvassPage() {
                             <div className="flex items-center justify-center gap-1.5">
 
 
-                              {[8, 9].includes(form.status_id ?? 0) && (
+                              {/* {[8, 9].includes(form.status_id ?? 0) && (
                                 <button
                                   type="button"
                                   onClick={() => setPreviewPrNo(form.pr_no)}
@@ -623,7 +623,7 @@ export default function CanvassPage() {
                                   <RiFileListLine size={14} />
                                   RFQ Preview
                                 </button>
-                              )}
+                              )} */}
 
                               {/* Reception — BAC account, status_id is Canvassing (Reception) */}
                               {!isBudgetAccount && isBACAccount && form.status_id === 6 && (

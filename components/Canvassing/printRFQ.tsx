@@ -108,9 +108,9 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 		padding: 10mm;
 	}
 	.top-grid {
-		display: grid;
-		grid-template-columns: 1fr 3fr 1fr;
-		align-items: start;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
 		margin-bottom: 8px;
 	}
 	.header-center {
@@ -118,12 +118,13 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 		align-items: flex-start;
 		justify-content: center;
 		gap: 12px;
+		flex: 1;
 	}
 	.h12 { width: 56px; height: 56px; object-fit: contain; }
-	.h12.rounded { border-radius: 6px; margin-left: 4px; }
-	.invisible-spacer { width: 56px; height: 56px; margin-left: 12px; }
-	.gov-text { flex: 1; padding-top: 4px; text-align: center; margin: 0 0 0 18px; min-width: 0; }
-	.gov-text .a { font-size: 11px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; }
+	.h12.rounded { border-radius: 6px; }
+	.invisible-spacer { width: 56px; height: 56px; visibility: hidden; flex-shrink: 0; }
+	.gov-text { padding-top: 4px; text-align: center; }
+	.gov-text .a { font-size: 11px; font-weight: 700; white-space: nowrap; }
 	.gov-text .b { font-size: 10px; font-weight: 400; white-space: nowrap; }
 	.meta-row {
 		display: flex;

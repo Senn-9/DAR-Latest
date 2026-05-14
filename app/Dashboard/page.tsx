@@ -206,9 +206,9 @@ export default function DashboardPage() {
         
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [26, 27, 29, 30, 32, 33, 34, 35, 36, 37].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 25].includes(delivery.status_id);
-          const isCompletedDelivery = delivery.status_id === 28; // Payment Pending = completed delivery phase
+          const isPaymentPhase = [25, 28, 29, 30, 32, 33, 34, 35, 36, 40].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24].includes(delivery.status_id);
+          const isCompletedDelivery = delivery.status_id === 39; // Completed (Delivery)
           
           let statusText = 'Unknown';
           let source: 'delivery' | 'payment' = 'delivery';
@@ -341,18 +341,21 @@ export default function DashboardPage() {
         20: { name: "Delivery (IAR)",              color: "delivery"   },
         21: { name: "Delivery (IAR Processing)",   color: "delivery"   },
         22: { name: "Delivery (LOA)",              color: "delivery"   },
-        25: { name: "Delivery (Division Chief)",   color: "delivery"   },
-        26: { name: "Payment (cancelled)",         color: "payment"    },
-        27: { name: "Cancelled",                   color: "rejected"   },
+        23: { name: "Delivery (DV)",               color: "delivery"   },
+        24: { name: "Delivery (Division Chief)",   color: "delivery"   },
+        25: { name: "Payment (Accounting)",        color: "payment"    },
         28: { name: "Payment Pending",             color: "payment"    },
         29: { name: "Voucher Verification",        color: "payment"    },
         30: { name: "Accounting Review",           color: "payment"    },
         32: { name: "PARPO Approval",              color: "payment"    },
-        33: { name: "Completed (PR Phase)",        color: "completed"  },
-        34: { name: "PARPO office signature",      color: "payment"    },
-        35: { name: "Accounting \u2014 Tax",       color: "payment"    },
-        36: { name: "Payment completed",           color: "completed"  },
-        37: { name: "Payment Completed",           color: "completed"  },
+        33: { name: "Forward to Cash",             color: "payment"    },
+        34: { name: "Forward to PARPO signature",  color: "payment"    },
+        35: { name: "Forward to Tax processing",   color: "payment"    },
+        36: { name: "Cash for Release",            color: "payment"    },
+        37: { name: "Completed (PR)",              color: "completed"  },
+        38: { name: "Completed (PO)",              color: "completed"  },
+        39: { name: "Completed (Delivery)",        color: "completed"  },
+        40: { name: "Completed (Payment)",         color: "completed"  },
       };
       if (statusId != null && prById[statusId]) return prById[statusId];
       return { name: status || "Unknown", color: "default" };
@@ -369,7 +372,7 @@ export default function DashboardPage() {
         15: { name: "PO (Accounting)",      color: "po" },
         16: { name: "PO (PARPO)",           color: "po" },
         17: { name: "PO (Serving)",         color: "po" },
-        34: { name: "Completed (PO Phase)", color: "completed" },
+        38: { name: "Completed (PO)",        color: "completed" },
       };
       if (statusId != null && poById[statusId]) return poById[statusId];
       return { name: status || "PO", color: "po" };
@@ -382,27 +385,37 @@ export default function DashboardPage() {
       4:  { name: "Processing (Budget)", color: "processing" },
       5:  { name: "Processing (PARPO)", color: "processing" },
       6:  { name: "Canvassing (Reception)", color: "canvassing" },
-      7:  { name: "Canvassing (Releasing)", color: "canvassing" },
+      7:  { name: "BAC Resolution", color: "bac" },
       8:  { name: "Canvassing (Releasing)", color: "canvassing" },
       9:  { name: "Canvassing (Collection)", color: "canvassing" },
       10: { name: "Abstract of Awards", color: "aaa" },
+      11: { name: "PO (Creation)", color: "po" },
+      12: { name: "PO (Allocation)", color: "po" },
+      13: { name: "ORS (Creation)", color: "po" },
+      14: { name: "ORS (Processing)", color: "po" },
+      15: { name: "PO (Accounting)", color: "po" },
+      16: { name: "PO (PARPO)", color: "po" },
+      17: { name: "PO (Serving)", color: "po" },
       18: { name: "Delivery (Waiting)", color: "delivery" },
       19: { name: "Delivery (Received)", color: "delivery" },
       20: { name: "Delivery (IAR)", color: "delivery" },
       21: { name: "Delivery (IAR Processing)", color: "delivery" },
       22: { name: "Delivery (LOA)", color: "delivery" },
-      25: { name: "Delivery (Division Chief)", color: "delivery" },
-      26: { name: "Payment", color: "payment" },
-      27: { name: "Cancelled", color: "rejected" },
+      23: { name: "Delivery (DV)", color: "delivery" },
+      24: { name: "Delivery (Division Chief)", color: "delivery" },
+      25: { name: "Payment (Accounting)", color: "payment" },
       28: { name: "Payment Pending", color: "payment" },
       29: { name: "Voucher Verification", color: "payment" },
       30: { name: "Accounting Review", color: "payment" },
       32: { name: "PARPO Approval", color: "payment" },
       33: { name: "Forward to Cash", color: "payment" },
-      34: { name: "PARPO signature", color: "payment" },
-      35: { name: "Tax processing", color: "payment" },
-      36: { name: "Completed", color: "completed" },
-      37: { name: "Payment Completed", color: "completed" },
+      34: { name: "Forward to PARPO signature", color: "payment" },
+      35: { name: "Forward to Tax processing", color: "payment" },
+      36: { name: "Cash for Release", color: "payment" },
+      37: { name: "Completed (PR)", color: "completed" },
+      38: { name: "Completed (PO)", color: "completed" },
+      39: { name: "Completed (Delivery)", color: "completed" },
+      40: { name: "Completed (Payment)", color: "completed" },
     };
 
     if (statusId != null && statusById[statusId]) {
@@ -514,23 +527,22 @@ export default function DashboardPage() {
       case 24:
         return "delivery";
       case 25:
-      case 26:
-      case 27:
-        return "cancelled";
       case 28:
       case 29:
       case 30:
-      case 31:
       case 32:
-        return "payment";
       case 33:
-        return "completed-pr";
       case 34:
-        return "completed-po";
       case 35:
-        return "completed-delivery";
       case 36:
+        return "payment";
       case 37:
+        return "completed-pr";
+      case 38:
+        return "completed-po";
+      case 39:
+        return "completed-delivery";
+      case 40:
         return "completed";
       default:
         return "all";

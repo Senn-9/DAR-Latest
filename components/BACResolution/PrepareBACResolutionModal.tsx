@@ -920,22 +920,22 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
           >
             {saving ? "Saving..." : "Save Resolution"}
           </button>
-          <button
+          {/* <button
             type="button"
             onClick={handlePrepare}
             disabled={loading || saving || preparing || selectedPrIds.length === 0}
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
           >
             {preparing ? "Preparing..." : "Prepare BAC Resolution"}
-          </button>
-          <button
+          </button> */}
+          {/* <button
             type="button"
             onClick={() => setShowUploadModal(true)}
             disabled={loading || saving || preparing || selectedPrIds.length === 0}
             className="rounded-lg bg-purple-700 px-5 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-purple-800 disabled:opacity-60"
           >
             Upload Resolution Link
-          </button>
+          </button> */}
         </div>
 
         {showUploadModal && (

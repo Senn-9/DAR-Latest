@@ -431,21 +431,21 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					<div className="text-black" style={{ fontFamily: "Arial Narrow", fontSize: "10px" }}>
 					
 					{/* Top Section */}
-					<div className="grid grid-cols-[1fr_3fr_1fr] items-start mb-2">
+					<div className="flex items-start justify-between mb-2">
 						<div />
 						
 						{/* Center Logos and Text */}
-						<div className="flex items-start justify-center gap-3">
-							<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" className="h-12 w-12 object-contain" />
-							<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" className="h-12 w-12 object-contain" />
-							<div className="pt-1 text-center" style={{ marginLeft: "2px", marginRight: "2px" }}>
-								<div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.01em" }}>REPUBLIC OF THE PHILIPPINES</div>
-								<div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.01em" }}>DEPARTMENT OF AGRARIAN REFORM</div>
-								<div style={{ fontSize: "8px", fontWeight: 400 }}>Tunay na Pagbabago sa Repormang Agraryo</div>
+						<div className="flex items-start justify-center gap-3 flex-1">
+							<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" className="h-14 w-14 object-contain" />
+							<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" className="h-14 w-14 object-contain" />
+							<div className="pt-1 text-center">
+								<div style={{ fontSize: "11px", fontWeight: 700 }}>REPUBLIC OF THE PHILIPPINES</div>
+								<div style={{ fontSize: "11px", fontWeight: 700 }}>DEPARTMENT OF AGRARIAN REFORM</div>
+								<div style={{ fontSize: "10px", fontWeight: 400, fontStyle: "italic" }}>Tunay na Pagbabago sa Repormang Agraryo</div>
 							</div>
-							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="ml-1 h-12 w-12 rounded-md object-contain" />
+							<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" className="h-14 w-14 rounded object-contain" />
 							{/* Invisible spacer to balance the two logos on the left */}
-							<div className="w-12 h-12 ml-3" aria-hidden="true" />
+							<div className="invisible h-14 w-14 shrink-0" aria-hidden="true" />
 						</div>
 
 						<div />
@@ -457,11 +457,21 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 						<div className="text-right">
 							<div className="flex items-end justify-end gap-2 mb-1">
 								<span className="text-[10px] italic">Date:</span>
-								<span className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] inline-block">{meta.date}</span>
+								<input
+									type="text"
+									value={meta.date}
+									onChange={(e) => setMeta((prev) => ({ ...prev, date: e.target.value }))}
+									className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] outline-none bg-transparent"
+								/>
 							</div>
 							<div className="flex items-end justify-end gap-2">
 								<span className="text-[10px] italic">Canvass No.:</span>
-								<span className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] inline-block">{meta.canvassNo}</span>
+								<input
+									type="text"
+									value={meta.canvassNo}
+									onChange={(e) => setMeta((prev) => ({ ...prev, canvassNo: e.target.value }))}
+									className="border-b border-black w-27 text-left px-1 text-[10px] min-h-[14px] outline-none bg-transparent"
+								/>
 							</div>
 						</div>
 					</div>
@@ -475,11 +485,21 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					{/* Company Info */}
 					<div className="w-[25%] mb-6">
 						<div className="mb-4">
-							<div className="border-b border-black w-full text-center py-0.5 min-h-[16px]">{meta.companyName}</div>
+							<input
+								type="text"
+								value={meta.companyName}
+								onChange={(e) => setMeta((prev) => ({ ...prev, companyName: e.target.value }))}
+								className="border-b border-black w-full text-center py-0.5 min-h-[16px] outline-none bg-transparent"
+							/>
 							<div className="text-[9px] text-center mt-0.5">(Company Name)</div>
 						</div>
 						<div>
-							<div className="border-b border-black w-full text-center py-0.5 min-h-[16px]">{meta.address}</div>
+							<input
+								type="text"
+								value={meta.address}
+								onChange={(e) => setMeta((prev) => ({ ...prev, address: e.target.value }))}
+								className="border-b border-black w-full text-center py-0.5 min-h-[16px] outline-none bg-transparent"
+							/>
 							<div className="text-[9px] text-center mt-0.5">(Address)</div>
 						</div>
 					</div>
@@ -492,7 +512,12 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 								<br />
 								delivery and submit your quotation duly signed by you or your duly authorized representative not later than
 							</span>
-							<span className="absolute bottom-0 right-0 w-35 border-b border-black text-center text-[10px] min-h-[14px]">{meta.deadline}</span>
+							<input
+								type="text"
+								value={meta.deadline}
+								onChange={(e) => setMeta((prev) => ({ ...prev, deadline: e.target.value }))}
+								className="absolute bottom-0 right-0 w-35 border-b border-black text-center text-[10px] min-h-[14px] outline-none bg-transparent"
+							/>
 						</div>
 					</div>
 

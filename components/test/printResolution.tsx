@@ -1,27 +1,72 @@
+import { printWithIframe, escapeHtml } from "@/utils/print/printUtils";
+
 /**
- * Opens a new browser window and prints the live‑preview document.
- * The printed output reproduces the exact layout rendered by livePreview.tsx.
- *
- * Every spacing value below is derived 1:1 from the Tailwind classes used in
- * livePreview.tsx (e.g. mt-2 = 8px, gap-3 = 12px, px-6 = 24px, etc.).
+ * Generates the HTML for the Abstract of Price Quotations (Resolution).
  */
-export function printLivePreview(
-	meta: { refNo: string; canvassNo: string; prNo: string; date: string },
-	cells: string[][],
+export function buildResolutionHtml(
+	meta: {
+		refNo: string;
+		canvassNo: string;
+		prNo: string;
+		date: string;
+		bacChair: string;
+		bacViceChair: string;
+		bacMember1: string;
+		bacMember2: string;
+		bacMember3: string;
+		hope: string;
+	},
+	cells: { value: string; isCenter?: boolean }[][],
 	supplierNames: string[],
 	supplierTotals: Record<string, number>,
+	winningItems: string[],
 ) {
 	const dealerCount = Math.max(3, supplierNames.length);
 
-	function formatMoney(value: number) {
+	function formatMoneyLocal(value: number) {
 		return new Intl.NumberFormat("en-US", {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		}).format(value);
 	}
 
+	function formatDateLegal(value: string | null | undefined) {
+		if (!value) return "";
+		const normalized = String(value).trim();
+		if (!normalized) return "";
+
+		let parsed: Date;
+		if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+			const [month, day, year] = normalized.split("/").map(Number);
+			parsed = new Date(year, month - 1, day);
+		} else {
+			// Try parsing directly first, then with T00:00:00 if it fails or if it looks like an ISO date
+			parsed = new Date(normalized);
+			if (Number.isNaN(parsed.getTime())) {
+				parsed = new Date(normalized.includes("T") ? normalized : `${normalized}T00:00:00`);
+			}
+		}
+		if (Number.isNaN(parsed.getTime())) {
+			return normalized;
+		}
+
+		const day = parsed.getDate();
+		const month = parsed.toLocaleString("en-US", { month: "long" });
+		const year = parsed.getFullYear();
+		const suffix =
+			day % 10 === 1 && day % 100 !== 11
+				? "st"
+				: day % 10 === 2 && day % 100 !== 12
+					? "nd"
+					: day % 10 === 3 && day % 100 !== 13
+						? "rd"
+						: "th";
+
+		return `${day}${suffix} day of ${month}, ${year}`;
+	}
+
 	/* ---------- column widths (mirrors livePreview.tsx <colgroup>) ---------- */
-	const fixedWidths = [4.5, 4.5, 5.5, 46]; // ITEM NO, QTY, UNIT, PARTICULARS
+	const fixedWidths = [4.5, 4.5, 9, 46]; // ITEM NO, QTY, UNIT, PARTICULARS
 	const remaining = 100 - fixedWidths.reduce((a, b) => a + b, 0);
 	const dealerColWidth = (remaining / dealerCount).toFixed(4) + "%";
 
@@ -41,9 +86,9 @@ export function printLivePreview(
 	const bodyRows = cells
 		.map((row) => {
 			const tds = row
-				.map((val, c) => {
-					const align = c === 3 ? "text-align:left;" : "text-align:center;";
-					const content = val.trim() ? escapeHtml(val) : "&nbsp;";
+				.map((cell) => {
+					const align = cell.isCenter ? "text-align:center;" : "text-align:left;";
+					const content = cell.value.trim() ? cell.value : "&nbsp;";
 					return `<td class="cell dcell" style="${align}">${content}</td>`;
 				})
 				.join("");
@@ -55,36 +100,33 @@ export function printLivePreview(
 	const totalsCells = Array.from({ length: dealerCount }, (_, i) => {
 		const name = supplierNames[i] || "";
 		const total = supplierTotals[name];
-		const display = typeof total === "number" && total > 0 ? formatMoney(total) : "&nbsp;";
+		const display = typeof total === "number" && total > 0 ? formatMoneyLocal(total) : "&nbsp;";
 		return `<td class="cell" style="text-align:center;font-weight:bold;font-size:10px;">${display}</td>`;
 	}).join("");
 
-	/* ---------- "For item …" blank lines (gap-2 = 8px, w = 300px) ---------- */
-	const forItemLines = Array.from(
-		{ length: 3 },
-		() =>
-			`<div style="display:flex;align-items:center;gap:8px;justify-content:center;width:100%;">
-				<span>For item</span>
-				<span style="display:inline-block;border-bottom:1px solid #000;vertical-align:middle;width:300px;min-height:1px;"></span>
-				<span>offered the lowest price quotation.</span>
-			</div>`,
-	).join("");
+	/* ---------- winning item lines ---------- */
+	const forItemLines = Array.from({ length: 3 })
+		.map((_, index) => {
+			const itemLabel = winningItems[index] || "";
+			return `<div style="display:flex;align-items:center;gap:8px;width:100%;">
+				<span style="width:48px;flex:0 0 auto;text-align:right;">For item</span>
+				<span style="flex:1 1 auto;min-width:0;border-bottom:1px solid #000;text-align:center;line-height:1.1;">${itemLabel ? escapeHtml(itemLabel) : "&nbsp;"}</span>
+				<span style="flex:0 0 auto;white-space:nowrap;">offered the lowest price quotation.</span>
+			</div>`;
+		})
+		.join("");
 
 	/* ---------- full HTML ---------- */
-	const html = `<!DOCTYPE html>
+	return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <title>Abstract of Price Quotations – ${escapeHtml(meta.prNo)}</title>
 <style>
-	@page {
-		size: A4 portrait;
-		margin: 10mm 8mm 8mm 8mm;
-	}
 	* { box-sizing: border-box; margin: 0; padding: 0; }
 	body {
 		font-family: Arial, Helvetica, sans-serif;
-		font-size: 9px;
+		font-size: 10px;
 		line-height: 1.05;
 		color: #000;
 		-webkit-print-color-adjust: exact;
@@ -94,14 +136,14 @@ export function printLivePreview(
 		border-collapse: collapse;
 		table-layout: fixed;
 		width: 100%;
-		font-size: 8px;
+		font-size: 10px;
 		empty-cells: show;
 	}
 	.cell {
 		border: 1px solid #000;
 		padding: 2px 4px;
 		text-align: center;
-		font-size: 8px;
+		font-size: 10px;
 		line-height: 1.15;
 		vertical-align: middle;
 	}
@@ -122,42 +164,45 @@ export function printLivePreview(
 <body>
 <div class="wrapper">
 
-	<!-- Header: gap-3(12px) pt-1(4px) h-12 w-12(48px) -->
-	<div style="display:flex;align-items:flex-start;justify-content:center;gap:12px;padding-top:4px;">
-		<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" style="height:48px;width:48px;object-fit:contain;"/>
-		<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height:48px;width:48px;object-fit:contain;"/>
-		<div style="padding-top:4px;text-align:center;margin-left:2px;margin-right:2px;">
-			<div style="font-size:9px;font-weight:700;letter-spacing:0.01em;">REPUBLIC OF THE PHILIPPINES</div>
-			<div style="font-size:9px;font-weight:700;letter-spacing:0.01em;">DEPARTMENT OF AGRARIAN REFORM</div>
-			<div style="font-size:8px;font-weight:400;">Tunay na Pagbabago sa Repormang Agraryo</div>
+	<!-- Header: match BACRESO layout -->
+	<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+		<div></div>
+		<div style="display:flex;align-items:flex-start;justify-content:center;gap:12px;flex:1 1 auto;">
+			<img src="/temp_pic/image_1195822096_0.jpg" alt="Republic of the Philippines emblem" style="height:56px;width:56px;object-fit:contain;"/>
+			<img src="/temp_pic/image_1195822096_1.jpg" alt="DAR logo" style="height:56px;width:56px;object-fit:contain;"/>
+			<div style="text-align:center;padding-top:4px;">
+				<div style="font-size:11px;font-weight:700;">REPUBLIC OF THE PHILIPPINES</div>
+				<div style="font-size:11px;font-weight:700;">DEPARTMENT OF AGRARIAN REFORM</div>
+				<div style="font-size:10px;font-weight:400;">Tunay na Pagbabago sa Repormang Agraryo</div>
+			</div>
+			<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" style="height:56px;width:56px;object-fit:contain;border-radius:6px;"/>
+			<div style="height:56px;width:56px;visibility:hidden;" aria-hidden="true"></div>
 		</div>
-		<img src="/temp_pic/image_1195822096_2.jpg" alt="ISO certified" style="height:48px;width:48px;object-fit:contain;border-radius:6px;margin-left:4px;"/>
-		<!-- Invisible spacer to balance the two logos on the left -->
-		<div style="height:48px;width:48px;margin-left:12px;"></div>
+		<div></div>
 	</div>
 
 	<!-- Meta fields + title: mt-2(8px) px-3(12px) pb-2(8px) pt-1(4px) -->
 	<div style="margin-top:8px;border:1px solid #000;border-bottom:none;padding:4px 12px 8px;">
 		<!-- flex justify-end, min-height 34px -->
 		<div style="display:flex;justify-content:flex-end;min-height:34px;">
-			<!-- space-y-1(4px) text-right fontSize 8px -->
-			<div style="font-size:8px;text-align:right;">
-				<!-- Each row: flex items-center justify-end gap-2(8px), label fixed-width, input w-20(80px) text-[10px] -->
-				<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px;">
-					<span style="font-style:italic;display:inline-block;width:58px;text-align:right;">Ref. No.:</span>
-					<span style="display:inline-block;width:80px;border-bottom:1px solid #000;text-align:right;font-size:10px;line-height:1.4;">${meta.refNo.trim() ? escapeHtml(meta.refNo) : "&nbsp;"}</span>
+			<!-- space-y-1(4px) text-right fontSize 10px -->
+			<div style="font-size:10px;text-align:right;">
+				<!-- Each row: flex items-center justify-end gap-2(8px), input w-20(80px) text-[10px] -->
+				<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:4px;">
+					<span style="width:80px;text-align:right;margin-right:8px;white-space:nowrap;">Ref. No.:</span>
+					<span style="display:inline-block;width:110px;border-bottom:1px solid #000;text-align:left;padding-left:4px;font-size:10px;line-height:1.4;">${meta.refNo.trim() ? escapeHtml(meta.refNo) : "&nbsp;"}</span>
 				</div>
-				<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px;">
-					<span style="font-style:italic;display:inline-block;width:58px;text-align:right;">Canvass No.:</span>
-					<span style="display:inline-block;width:80px;border-bottom:1px solid #000;text-align:right;font-size:10px;line-height:1.4;">${meta.canvassNo.trim() ? escapeHtml(meta.canvassNo) : "&nbsp;"}</span>
+				<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:4px;">
+					<span style="width:80px;text-align:right;margin-right:8px;white-space:nowrap;">Canvass No.:</span>
+					<span style="display:inline-block;width:110px;border-bottom:1px solid #000;text-align:left;padding-left:4px;font-size:10px;line-height:1.4;">${meta.canvassNo.trim() ? escapeHtml(meta.canvassNo) : "&nbsp;"}</span>
 				</div>
-				<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px;">
-					<span style="font-style:italic;display:inline-block;width:58px;text-align:right;">PR No.:</span>
-					<span style="display:inline-block;width:80px;border-bottom:1px solid #000;text-align:right;font-size:10px;line-height:1.4;">${meta.prNo.trim() ? escapeHtml(meta.prNo) : "&nbsp;"}</span>
+				<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:4px;">
+					<span style="width:80px;text-align:right;margin-right:8px;white-space:nowrap;">PR No.:</span>
+					<span style="display:inline-block;width:110px;border-bottom:1px solid #000;text-align:left;padding-left:4px;font-size:10px;line-height:1.4;">${meta.prNo.trim() ? escapeHtml(meta.prNo) : "&nbsp;"}</span>
 				</div>
-				<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
-					<span style="font-style:italic;display:inline-block;width:58px;text-align:right;">Date:</span>
-					<span style="display:inline-block;width:80px;border-bottom:1px solid #000;text-align:right;font-size:10px;line-height:1.4;">${meta.date.trim() ? escapeHtml(meta.date) : "&nbsp;"}</span>
+				<div style="display:flex;align-items:center;justify-content:flex-end;">
+					<span style="width:80px;text-align:right;margin-right:8px;white-space:nowrap;">Date:</span>
+					<span style="display:inline-block;width:110px;border-bottom:1px solid #000;text-align:left;padding-left:4px;font-size:10px;line-height:1.4;">${meta.date.trim() ? escapeHtml(meta.date) : "________________"}</span>
 				</div>
 			</div>
 		</div>
@@ -169,7 +214,7 @@ export function printLivePreview(
 		</div>
 	</div>
 
-	<!-- Data table: fontSize 8px text-center -->
+	<!-- Data table: fontSize 10px text-center -->
 	<table style="text-align:center;">
 		<colgroup>${colGroupHtml}</colgroup>
 		<tbody>
@@ -194,43 +239,43 @@ export function printLivePreview(
 		</tbody>
 	</table>
 
-	<!-- BAC header: fontSize 8px marginTop 4px -->
-	<div style="text-align:center;font-weight:bold;text-transform:uppercase;font-size:8px;margin-top:4px;">BY THE BIDS AND AWARDS COMMITTEE</div>
+	<!-- BAC header: fontSize 10px marginTop 4px -->
+	<div style="text-align:center;font-weight:bold;text-transform:uppercase;font-size:10px;margin-top:4px;">BY THE BIDS AND AWARDS COMMITTEE</div>
 
-	<!-- Resolution body: mt-3(12px) fontSize 8px lineHeight 1.15 -->
-	<div style="margin-top:12px;font-size:8px;line-height:1.15;">
-		<!-- max-w-140(560px) text-justify -->
-		<div style="max-width:560px;margin:0 auto;text-align:justify;">
+	<!-- Resolution body: mt-3(12px) fontSize 10px lineHeight 1.15 -->
+	<div style="margin-top:12px;font-size:10px;line-height:1.15;">
+		<!-- wider paragraph block for fewer wraps -->
+		<div style="max-width:680px;margin:0 auto;text-align:justify;width:100%;">
 			<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Based on the above abstract of quotation of prices offered by different leading dealers on various materials called for as above,</p>
 			<p style="margin-top:4px;">the Committee found that:</p>
 		</div>
-		<!-- mt-2(8px) space-y-2(8px) -->
-		<div style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+		<!-- winning item line -->
+		<div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto;">
 			${forItemLines}
 		</div>
-		<!-- mt-2(8px) -->
-		<div style="max-width:560px;margin:8px auto 0;text-align:justify;">
-			<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
-			<p style="margin-top:8px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ____ day of ______, 20___</p>
+		<!-- WHEREOF paragraph -->
+		<div style="max-width:720px;margin:8px auto 0;text-align:justify;width:100%;">
+			<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
+			<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ${meta.date.trim() ? escapeHtml(formatDateLegal(meta.date)) : "____ day of ______, 20___"}</p>
 		</div>
 	</div>
 
-	<!-- Chairperson: mt-10(40px) fontSize 8px lineHeight 1.1 -->
-	<div style="margin-top:40px;text-align:center;font-size:8px;line-height:1.1;">
-		<div style="font-weight:bold;text-transform:uppercase;">ATTY. JAIME G. RESOCO, JR.</div>
+	<!-- Chairperson: mt-10(40px) fontSize 10px lineHeight 1.1 -->
+	<div style="margin-top:40px;text-align:center;font-size:10px;line-height:1.1;">
+		<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacChair)}</div>
 		<div>BAC Chairperson</div>
 	</div>
 
 	<!-- Members: mt-5(20px) grid-cols-2 gap-x-10(40px) -->
-	<div style="margin-top:20px;font-size:8px;line-height:1.1;">
+	<div style="margin-top:20px;font-size:10px;line-height:1.1;">
 		<table style="width:100%;border-collapse:collapse;border:none;">
 			<tr>
 				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">GERRY L. MATAMOROSA</div>
+					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacViceChair)}</div>
 					<div>BAC Vice-Chairperson</div>
 				</td>
 				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">ENGR. MA. ELIZABETH N. ARCILLA</div>
+					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember1)}</div>
 					<div>BAC Member</div>
 				</td>
 			</tr>
@@ -238,11 +283,11 @@ export function printLivePreview(
 			<tr><td style="border:none;padding:0;height:32px;" colspan="2"></td></tr>
 			<tr>
 				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">ENGR. JOSE JESUS B. REY, JR.</div>
+					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember2)}</div>
 					<div>BAC Member</div>
 				</td>
 				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">MARIA REBECCA R. TAROG</div>
+					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember3)}</div>
 					<div>BAC Member</div>
 				</td>
 			</tr>
@@ -250,15 +295,15 @@ export function printLivePreview(
 	</div>
 
 	<!-- Approved by: mt-7(28px) -->
-	<div style="margin-top:28px;text-align:center;font-size:8px;">
+	<div style="margin-top:28px;text-align:center;font-size:10px;">
 		<div>APPROVED BY:</div>
 		<!-- mt-6(24px) -->
-		<div style="margin-top:24px;font-weight:bold;text-transform:uppercase;">RICARDO C. GARCIA</div>
+		<div style="margin-top:24px;font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.hope)}</div>
 		<div>HOPE</div>
 	</div>
 
 	<!-- Footer: mt-6(24px) -->
-	<div style="margin-top:24px;display:flex;align-items:flex-end;justify-content:space-between;font-size:8px;">
+	<div style="margin-top:24px;display:flex;align-items:flex-end;justify-content:space-between;font-size:10px;">
 		<div>
 			<div>ASA/LCO</div>
 			<div>PhilGEPS Ref.</div>
@@ -269,23 +314,33 @@ export function printLivePreview(
 </div>
 </body>
 </html>`;
-
-	const printWindow = window.open("", "_blank");
-	if (!printWindow) return;
-	printWindow.document.write(html);
-	printWindow.document.close();
-
-	// Wait for images to load before triggering print
-	printWindow.onload = () => {
-		printWindow.focus();
-		printWindow.print();
-	};
 }
 
-function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
+/**
+ * Opens a new browser window and prints the live‑preview document.
+ * The printed output reproduces the exact layout rendered by livePreview.tsx.
+ *
+ * Every spacing value below is derived 1:1 from the Tailwind classes used in
+ * livePreview.tsx (e.g. mt-2 = 8px, gap-3 = 12px, px-6 = 24px, etc.).
+ */
+export function printLivePreview(
+	meta: {
+		refNo: string;
+		canvassNo: string;
+		prNo: string;
+		date: string;
+		bacChair: string;
+		bacViceChair: string;
+		bacMember1: string;
+		bacMember2: string;
+		bacMember3: string;
+		hope: string;
+	},
+	cells: { value: string; isCenter?: boolean }[][],
+	supplierNames: string[],
+	supplierTotals: Record<string, number>,
+	winningItems: string[],
+) {
+	const html = buildResolutionHtml(meta, cells, supplierNames, supplierTotals, winningItems);
+	printWithIframe(html);
 }

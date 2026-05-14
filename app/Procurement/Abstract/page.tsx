@@ -116,7 +116,7 @@ export default function AbstractPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
-          .in("status_id", [10, 33])
+          .in("status_id", [10, 37])
           .order("created_at", { ascending: false });
 
         if (!error) {
@@ -136,7 +136,7 @@ export default function AbstractPage() {
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
       10: { name: "Abstract of Awards", color: "aaa" },
-      33: { name: "Completed (PR Phase)", color: "completed" },
+      37: { name: "Completed (PR Phase)", color: "completed" },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
@@ -148,12 +148,12 @@ export default function AbstractPage() {
   };
 
   const aaaCount = list.filter(pr => pr.status_id === 10).length;
-  const completedCount = list.filter(pr => pr.status_id === 33).length;
+  const completedCount = list.filter(pr => pr.status_id === 37).length;
 
   const STAT_CARDS = [
     { label: "Total",          value: list.length,     cardBg: "bg-emerald-50", border: "border-emerald-100", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", statusId: null },
     { label: "AAA",            value: aaaCount,        cardBg: "bg-rose-50",    border: "border-rose-100",    iconBg: "bg-rose-100",    iconColor: "text-rose-600",    numColor: "text-rose-600",    statusId: 10 },
-    { label: "Completed (PR)", value: completedCount,  cardBg: "bg-green-50",   border: "border-green-100",   iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   statusId: 33 },
+    { label: "Completed (PR)", value: completedCount,  cardBg: "bg-green-50",   border: "border-green-100",   iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   statusId: 37 },
   ];
 
   const handleSort = (f: typeof sortField) => {
@@ -303,7 +303,7 @@ export default function AbstractPage() {
 
       const { error } = await supabase
         .from("purchase_requests")
-        .update({ status_id: 33 })
+        .update({ status_id: 37 })
         .eq("id", submitTarget.id);
 
       if (error) {
@@ -649,29 +649,31 @@ export default function AbstractPage() {
                           </td>
 
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setPreviewPrNo(form.pr_no)}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                Preview
-                              </button>
-                              {currentUser?.role_id === 3 && (
-                                <button
+                            {form.status_id !== 37 && (
+                              <div className="flex items-center justify-center gap-1.5">
+                                {/* <button
                                   type="button"
-                                  onClick={() => setPrepareAwardingTarget(form)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                  onClick={() => setPreviewPrNo(form.pr_no)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
                                 >
-                                  <RiPlayCircleLine size={14} />
-                                  Awarding
-                                </button>
-                              )}
-                            </div>
+                                  <RiEyeLine size={14} />
+                                  Preview
+                                </button> */}
+                                {currentUser?.role_id === 3 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPrepareAwardingTarget(form)}
+                                    className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                  >
+                                    <RiPlayCircleLine size={14} />
+                                    Awarding
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            {currentUser?.role_id === 3 && (
+                            {currentUser?.role_id === 3 && form.status_id !== 37 && (
                               <button
                                 type="button"
                                 onClick={() => {

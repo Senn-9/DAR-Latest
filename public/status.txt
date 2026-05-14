@@ -1,0 +1,37 @@
+1	Pending
+2	Processing (Division Head)
+3	Processing (BAC)
+4	Processing (Budget)
+5	Processing (PARPO)
+6	Canvassing (Reception)
+7	BAC Resolution
+8	Canvassing (Releasing)
+9	Canvassing (Collection)
+10	Abstract of Awards
+11	PO (Creation)
+12	PO (Allocation)
+13	ORS (Creation)
+14	ORS (Processing)
+15	PO (Accounting)
+16	PO (PARPO)
+17	PO (Serving)
+18	Delivery (Waiting)
+19	Delivery (Received)
+20	Delivery (IAR)
+21	Delivery (IAR Processing)
+22	Delivery (LOA)
+23	Delivery (DV)
+24	Delivery (Division Chief)
+25	Payment (Accounting)
+28	Payment Pending
+29	Voucher Verification
+30	Accounting Review
+32	PARPO Approval
+33	Forward to Cash
+34	Forward to PARPO office for signature
+35	Forward to Accounting for Tax processing
+36	Cash for Release
+37	Completed (PR)
+38	Completed (PO)
+39	Completed (Delivery)
+40	Completed (Payment)

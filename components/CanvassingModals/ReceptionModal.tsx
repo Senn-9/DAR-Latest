@@ -93,7 +93,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
     receivedAt: toDateTimeLocalValue(new Date()),
     remarks: "",
     flagId: 1,
-    attachment: null as File | null,
   });
 
   useEffect(() => {
@@ -153,11 +152,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
   const hasSelectedFlag = selectedFlag.slug !== "no_flag";
   const shouldReturnToPending = hasSelectedFlag && !canProceedToBAC;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setFormData((prev) => ({ ...prev, attachment: file }));
-  };
-
   const handleSubmit = async () => {
     if (readonly) return;
     if (!hasSelectedFlag) {
@@ -184,24 +178,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
 
     try {
       let remarkText = formData.remarks.trim();
-      let attachmentPublicUrl: string | null = null;
-
-      if (canProceedToBAC && formData.attachment) {
-        const ext = formData.attachment.name.split(".").pop() || "bin";
-        const path = `pr_attachments/${prId}_${Date.now()}.${ext}`;
-        const uploadRes = await supabase.storage.from("attachments").upload(path, formData.attachment);
-        if (!uploadRes.error) {
-          const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
-          attachmentPublicUrl = pub.publicUrl;
-          if (attachmentPublicUrl) {
-            remarkText = remarkText ? `${remarkText} Attachment: ${attachmentPublicUrl}` : `Attachment: ${attachmentPublicUrl}`;
-          }
-        } else {
-          setProcessing(false);
-          setErrorModal({ show: true, message: `Attachment upload failed: ${uploadRes.error.message}` });
-          return;
-        }
-      }
 
       const statusFlagId = selectedFlag.id;
       const nextStatusId = shouldReturnToPending ? 1 : 7;
@@ -430,55 +406,6 @@ export default function CanvassingReceptionModal(props: CanvassingReceptionModal
                   disabled={isReadOnly}
                   onChange={(e) => setFormData({ ...formData, receivedAt: e.target.value })}
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-2">
-                  Attachment <span className="text-gray-400 font-normal normal-case">(optional)</span>
-                </label>
-                <label
-                  className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl transition-all group ${
-                    isReadOnly ? "opacity-70 cursor-not-allowed bg-gray-50" : "cursor-pointer hover:border-emerald-400 hover:bg-emerald-50"
-                  }`}
-                >
-                  <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-emerald-100 flex items-center justify-center flex-shrink-0 transition-colors">
-                    <RiAttachmentLine size={18} className="text-gray-400 group-hover:text-emerald-600 transition-colors" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {formData.attachment ? (
-                      <div className="flex items-center gap-2">
-                        <RiFileLine size={14} className="text-emerald-600 flex-shrink-0" />
-                        <span className="text-sm font-semibold text-emerald-700 truncate">{formData.attachment.name}</span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">({(formData.attachment.size / 1024).toFixed(1)} KB)</span>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold text-gray-600">Tap to attach a file</p>
-                        <p className="text-xs text-gray-400">PDF, DOCX, XLS up to 10MB</p>
-                      </>
-                    )}
-                  </div>
-                  {formData.attachment && (
-                    <button
-                      type="button"
-                      disabled={isReadOnly}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setFormData({ ...formData, attachment: null });
-                      }}
-                      className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                    >
-                      <RiCloseLine size={16} />
-                    </button>
-                  )}
-                  <input
-                    type="file"
-                    disabled={isReadOnly}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.xlsx,.xls"
-                    onChange={handleFileChange}
-                  />
-                </label>
               </div>
             </>
           )}
