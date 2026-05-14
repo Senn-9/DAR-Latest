@@ -53,7 +53,7 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
     : `<tbody>
         <tr>
           <td class="side" style="height:28px;font-size:7.5pt">${escapeHtml(displayDate)}</td>
-          <td class="side" style="font-size:7.5pt;word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.sectionCParticulars ?? data.particulars)}</td>
+          <td class="side" style="font-size:7.5pt;word-break:break-word;">${data.sectionCParticulars ?? data.particulars ?? ""}</td>
           <td class="c side" style="font-size:7.5pt">${escapeHtml(data.referenceNo || data.orsNo)}</td>
           <td class="r side" style="font-size:7.5pt">${data.obligationAmount && data.obligationAmount > 0 ? fmt(data.obligationAmount) : ""}</td>
           <td class="r side" style="font-size:7.5pt">${data.payableAmount && data.payableAmount > 0 ? fmt(data.payableAmount) : ""}</td>
@@ -99,7 +99,7 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
       <tr>
         <td style="vertical-align:middle;padding:6px 8px" rowspan="3">
           <div class="b" style="font-size:11pt;text-align:center;margin-bottom:6px">OBLIGATION REQUEST AND STATUS</div>
-          <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
+          <div style="text-align:center"><span class="uline">${data.entityName || ""}</span></div>
           <div class="b" style="text-align:center;font-size:8.5pt;margin-top:2px">Entity Name</div>
         </td>
         <td style="font-size:8.5pt;padding:4px 6px"><span class="b">ORS No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
@@ -112,9 +112,9 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
   <table style="margin-top:-1px">
     <colgroup><col style="width:14%"/><col style="width:86%"/></colgroup>
     <tbody>
-      <tr><td class="b" style="padding:3px 6px">Payee</td><td style="padding:3px 6px">${escapeHtml(data.payee)}</td></tr>
-      <tr><td class="b" style="padding:3px 6px">Office</td><td style="padding:3px 6px">${escapeHtml(data.office)}</td></tr>
-      <tr><td class="b" style="padding:3px 6px">Address</td><td style="padding:3px 6px">${escapeHtml(data.payeeAddress)}</td></tr>
+      <tr><td class="b" style="padding:3px 6px">Payee</td><td style="padding:3px 6px">${data.payee || ""}</td></tr>
+      <tr><td class="b" style="padding:3px 6px">Office</td><td style="padding:3px 6px">${data.office || ""}</td></tr>
+      <tr><td class="b" style="padding:3px 6px">Address</td><td style="padding:3px 6px">${data.payeeAddress || ""}</td></tr>
     </tbody>
   </table>
 
@@ -131,8 +131,8 @@ export function buildORSPrintHtml(data: ORSPrintData): string {
     </thead>
     <tbody>
       <tr>
-        <td class="c side" style="height:90px;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
-        <td class="side" style="word-break:break-word;white-space:pre-wrap;">${escapeHtml(data.particulars)}</td>
+        <td class="c side" style="height:90px;padding-top:4px">${data.responsibilityCenter || ""}</td>
+        <td class="side" style="word-break:break-word;">${data.particulars || ""}</td>
         <td class="c side">${escapeHtml(data.mfoPap)}</td>
         <td class="c side">${escapeHtml(data.uacsCode)}</td>
         <td class="r side">${amt > 0 ? fmt(amt) : ""}</td>

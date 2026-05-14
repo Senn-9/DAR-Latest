@@ -9,6 +9,7 @@ import { buildORSPrintHtml as sharedBuildORS, type ORSPrintData } from "@/utils/
 import { buildPurchaseOrderPrintHtml as sharedBuildPO, type POPrintData } from "@/utils/print/POPrintBuilder";
 import { buildContractPrintHtml } from "@/utils/print/ContractPrintBuilder";
 import { printWithIframe } from "@/utils/print/printUtils";
+import { RichEditor } from "@/components/RichEditor";
 
 type ViewpomodalProps = {
   visible: boolean;
@@ -133,9 +134,9 @@ function ContractPreview({
 
   return (
     <div style={S.root}>
-      <div style={{ ...S.center, ...S.bold, fontSize: "12pt", marginBottom: "20px" }}>
-        {contractTitle || "CONTRACT FOR SERVICES"}
-      </div>
+      <div style={{ ...S.center, ...S.bold, fontSize: "12pt", marginBottom: "20px" }}
+        dangerouslySetInnerHTML={{ __html: contractTitle || "CONTRACT FOR SERVICES" }}
+      />
       <div style={{ ...S.bold, marginBottom: "16px" }}>KNOW ALL MEN BY THESE PRESENTS:</div>
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
         <p style={{ margin: 0, textIndent: "2em" }}>
@@ -152,20 +153,20 @@ function ContractPreview({
         <p style={{ margin: 0, textIndent: "2em" }}>
           That for and in consideration of the sum of {Fill((considerationAmountWords || "").toUpperCase(), "300px")} 
           ({fmtMoney(considerationAmount || 0)}), which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND PARTY 
-          agrees to deliver/provide the {Fill((serviceDescription || "").toUpperCase(), "250px")}.
+          agrees to deliver/provide the <span dangerouslySetInnerHTML={{ __html: serviceDescription || "" }} />.
         </p>
       </div>
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
         <p style={{ margin: 0, textIndent: "2em" }}>
           That the FIRST PARTY shall pay the full amount to the SECOND PARTY when the 
-          {Fill((paymentCondition || serviceDescription || "").toUpperCase(), "300px")}.
+          <span dangerouslySetInnerHTML={{ __html: paymentCondition || serviceDescription || "" }} />.
         </p>
       </div>
       <div style={{ paddingLeft: "2em", marginBottom: "14px" }}>
         <p style={{ margin: 0, textIndent: "2em" }}>
-          That the SECOND PARTY agrees to finish the {Fill((jobOrderDescription || "JOB ORDER").toUpperCase(), "180px")} 
+          That the SECOND PARTY agrees to finish the <span dangerouslySetInnerHTML={{ __html: jobOrderDescription || "JOB ORDER" }} />
           within {Fill(scheduledDays || "", "40px")} scheduled days counted from the day the contract for the 
-          {Fill((serviceDescription || "").toUpperCase(), "200px")} {Fill(comd.full || "", "180px")} 
+          <span dangerouslySetInnerHTML={{ __html: serviceDescription || "" }} /> {Fill(comd.full || "", "180px")} 
           has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish the job within the said period, 
           the SECOND PARTY shall indemnify the sum of {liquidatedDamagesRate || ""} for every day of delay of liquidated damages.
         </p>
@@ -213,7 +214,7 @@ function ContractPreview({
 // ORS Preview - read-only display for ORS document
 function ORSPreview({
   orsNo, orsDate, entityName, payee, payeeAddress, office,
-  fundCluster, responsibilityCenter, particulars, mfoPap, uacsCode,
+  fundCluster, responsibilityCenter, particulars, sectionCParticulars, mfoPap, uacsCode,
   amount, referenceNo, obligationAmount, payableAmount, paymentAmount,
   notYetDueBalance, dueDemandableBalance, preparedByName, preparedByDesig,
   blankStatusSection,
@@ -227,6 +228,7 @@ function ORSPreview({
   fundCluster: string | null;
   responsibilityCenter: string | null;
   particulars: string | null;
+  sectionCParticulars?: string | null;
   mfoPap: string | null;
   uacsCode: string | null;
   amount: number | null;
@@ -266,7 +268,7 @@ function ORSPreview({
           <tr>
             <td style={{ ...S.td, verticalAlign: "middle", padding: "6px 8px" }} rowSpan={3}>
               <div style={{ fontWeight: "bold", fontSize: "11pt", textAlign: "center", marginBottom: "6px" }}>OBLIGATION REQUEST AND STATUS</div>
-              <div style={{ textAlign: "center" }}><span style={S.uline}>{entityName || ""}</span></div>
+              <div style={{ textAlign: "center" }}><span style={S.uline} dangerouslySetInnerHTML={{ __html: entityName || "" }} /></div>
               <div style={{ textAlign: "center", fontSize: "8.5pt", fontWeight: "bold", marginTop: "2px" }}>Entity Name</div>
             </td>
             <td style={{ ...S.td, fontSize: "8.5pt", padding: "4px 6px" }}>
@@ -290,15 +292,15 @@ function ORSPreview({
         <tbody>
           <tr>
             <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Payee</td>
-            <td style={{ ...S.td, padding: "3px 6px" }}>{payee || ""}</td>
+            <td style={{ ...S.td, padding: "3px 6px" }} dangerouslySetInnerHTML={{ __html: payee || "" }} />
           </tr>
           <tr>
             <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Office</td>
-            <td style={{ ...S.td, padding: "3px 6px" }}>{office || ""}</td>
+            <td style={{ ...S.td, padding: "3px 6px" }} dangerouslySetInnerHTML={{ __html: office || "" }} />
           </tr>
           <tr>
             <td style={{ ...S.td, fontWeight: "bold", verticalAlign: "middle", padding: "3px 6px" }}>Address</td>
-            <td style={{ ...S.td, padding: "3px 6px" }}>{payeeAddress || ""}</td>
+            <td style={{ ...S.td, padding: "3px 6px" }} dangerouslySetInnerHTML={{ __html: payeeAddress || "" }} />
           </tr>
         </tbody>
       </table>
@@ -315,8 +317,8 @@ function ORSPreview({
         </thead>
         <tbody>
           <tr>
-            <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", height: "90px", verticalAlign: "top", paddingTop: "4px" }}>{responsibilityCenter || ""}</td>
-            <td style={{ ...S.td, borderTop: "none", borderBottom: "none", verticalAlign: "top", wordBreak: "break-word" }}>{particulars || ""}</td>
+            <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", height: "90px", verticalAlign: "top", paddingTop: "4px" }} dangerouslySetInnerHTML={{ __html: responsibilityCenter || "" }} />
+            <td style={{ ...S.td, borderTop: "none", borderBottom: "none", verticalAlign: "top", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: particulars || "" }} />
             <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{mfoPap || ""}</td>
             <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{uacsCode || ""}</td>
             <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", verticalAlign: "top" }}>{amt > 0 ? fmt(amt) : ""}</td>
@@ -438,7 +440,7 @@ function ORSPreview({
           <tbody>
             <tr>
               <td style={{ ...S.td, borderTop: "none", borderBottom: "none", height: "28px", fontSize: "7.5pt" }}>{displayDate}</td>
-              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }}>{particulars || ""}</td>
+              <td style={{ ...S.td, borderTop: "none", borderBottom: "none", fontSize: "7.5pt", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: sectionCParticulars || particulars || "" }} />
               <td style={{ ...S.tdC, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{referenceNo || orsNo || ""}</td>
               <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{obligationAmount && obligationAmount > 0 ? fmt(obligationAmount) : ""}</td>
               <td style={{ ...S.tdR, borderTop: "none", borderBottom: "none", fontSize: "7.5pt" }}>{payableAmount && payableAmount > 0 ? fmt(payableAmount) : ""}</td>
@@ -565,7 +567,7 @@ function POPreview({
         <tbody>
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Supplier : <span style={{ fontWeight: "normal" }}>{supplier}</span>
+              Supplier : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: supplier }} />
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               P.O. No. : <span style={{ fontWeight: "normal" }}>{poNo}</span>
@@ -573,7 +575,7 @@ function POPreview({
           </tr>
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Address : <span style={{ fontWeight: "normal" }}>{address}</span>
+              Address : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: address }} />
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
               Date : <span style={{ fontWeight: "normal" }}>{displayDate}</span>
@@ -597,18 +599,18 @@ function POPreview({
           </tr>
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Place of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryPlace}</span>
+              Place of Delivery : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: deliveryPlace }} />
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Delivery Term : <span style={{ fontWeight: "normal" }}>{deliveryTerm}</span>
+              Delivery Term : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: deliveryTerm }} />
               <div style={{ fontWeight: "bold", marginTop: "2px" }}>
-                Payment Term : <span style={{ fontWeight: "normal" }}>{paymentTerm}</span>
+                Payment Term : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: paymentTerm }} />
               </div>
             </td>
           </tr>
           <tr>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              Date of Delivery : <span style={{ fontWeight: "normal" }}>{deliveryDate}</span>
+              Date of Delivery : <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: deliveryDate }} />
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "3px 4px", fontSize: "9pt" }} />
           </tr>
@@ -811,11 +813,11 @@ function buildPurchaseOrderPrintHtml(data: {
     </colgroup>
     <tbody>
       <tr>
-        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Supplier : <span style="font-weight:normal">${escapeHtml(data.supplier)}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Supplier : <span style="font-weight:normal">${data.supplier}</span></td>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">P.O. No. : <span style="font-weight:normal">${escapeHtml(data.poNo)}</span></td>
       </tr>
       <tr>
-        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
+        <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${data.address}</span></td>
         <td colSpan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${displayDate}</span></td>
       </tr>
       <tr>
@@ -826,11 +828,11 @@ function buildPurchaseOrderPrintHtml(data: {
         <td colSpan="6" style="padding:3px 4px;font-size:9pt;font-weight:bold;vertical-align:top">Gentlemen:<div style="font-weight:normal;margin-left:52px">Please furnish this Office the following articles subject to the terms and conditions contained herein:</div></td>
       </tr>
       <tr>
-        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Place of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryPlace)}</span></td>
-        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Delivery Term : <span style="font-weight:normal">${escapeHtml(data.deliveryTerm)}</span><div style="font-weight:bold;margin-top:2px">Payment Term : <span style="font-weight:normal">${escapeHtml(data.paymentTerm)}</span></div></td>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Place of Delivery : <span style="font-weight:normal">${data.deliveryPlace}</span></td>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Delivery Term : <span style="font-weight:normal">${data.deliveryTerm}</span><div style="font-weight:bold;margin-top:2px">Payment Term : <span style="font-weight:normal">${data.paymentTerm}</span></div></td>
       </tr>
       <tr>
-        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Date of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryDate)}</span></td>
+        <td colSpan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Date of Delivery : <span style="font-weight:normal">${data.deliveryDate}</span></td>
         <td colSpan="3" style="padding:3px 4px;font-size:9pt"></td>
       </tr>
       <tr>
@@ -1003,7 +1005,7 @@ function buildORSPrintHtml(data: {
       <tr>
         <td style="vertical-align:middle;padding:6px 8px" rowspan="3">
           <div style="font-weight:bold;font-size:11pt;text-align:center;margin-bottom:6px">OBLIGATION REQUEST AND STATUS</div>
-          <div style="text-align:center"><span class="uline">${escapeHtml(data.entityName)}</span></div>
+          <div style="text-align:center"><span class="uline">${data.entityName || ""}</span></div>
           <div style="text-align:center;font-size:8.5pt;font-weight:bold;margin-top:2px">Entity Name</div>
         </td>
         <td style="font-size:8.5pt;padding:4px 6px"><span class="b">Serial No. : </span><span class="uline" style="min-width:100px">${escapeHtml(data.orsNo)}</span></td>
@@ -1016,9 +1018,9 @@ function buildORSPrintHtml(data: {
   <table style="margin-top:-1px">
     <colgroup><col style="width:14%"/><col style="width:86%"/></colgroup>
     <tbody>
-      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Payee</td><td style="padding:3px 6px">${escapeHtml(data.payee)}</td></tr>
-      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Office</td><td style="padding:3px 6px">${escapeHtml(data.office)}</td></tr>
-      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Address</td><td style="padding:3px 6px">${escapeHtml(data.payeeAddress)}</td></tr>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Payee</td><td style="padding:3px 6px">${data.payee || ""}</td></tr>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Office</td><td style="padding:3px 6px">${data.office || ""}</td></tr>
+      <tr><td style="font-weight:bold;vertical-align:middle;padding:3px 6px">Address</td><td style="padding:3px 6px">${data.payeeAddress || ""}</td></tr>
     </tbody>
   </table>
 
@@ -1035,8 +1037,8 @@ function buildORSPrintHtml(data: {
     </thead>
     <tbody>
       <tr>
-        <td class="c side" style="height:90px;vertical-align:top;padding-top:4px">${escapeHtml(data.responsibilityCenter)}</td>
-        <td class="side" style="vertical-align:top;word-break:break-word">${escapeHtml(data.particulars)}</td>
+        <td class="c side" style="height:90px;vertical-align:top;padding-top:4px">${data.responsibilityCenter || ""}</td>
+        <td class="side" style="vertical-align:top;word-break:break-word">${data.particulars || ""}</td>
         <td class="c side" style="vertical-align:top">${escapeHtml(data.mfoPap)}</td>
         <td class="c side" style="vertical-align:top">${escapeHtml(data.uacsCode)}</td>
         <td class="r side" style="vertical-align:top">${amt > 0 ? fmt(amt) : ""}</td>
@@ -1147,6 +1149,7 @@ function downloadORS(data: {
   fundCluster: string | null;
   responsibilityCenter: string | null;
   particulars: string | null;
+  sectionCParticulars?: string | null;
   mfoPap: string | null;
   uacsCode: string | null;
   amount: number | null;
@@ -1248,6 +1251,25 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
   const [contractDoc, setContractDoc] = useState<ContractDocument | null>(null);
   const hasContract = !!contractDoc; // Contract tab visible if contract document exists
 
+  // Editable styled fields for PO (not saved to DB)
+  const [editablePOSupplier, setEditablePOSupplier] = useState<string>("");
+  const [editablePOAddress, setEditablePOAddress] = useState<string>("");
+  const [editablePOItemDescs, setEditablePOItemDescs] = useState<string[]>([]);
+
+  // Editable styled fields for Contract (not saved to DB)
+  const [editableContractTitle, setEditableContractTitle] = useState<string>("");
+  const [editableServiceDesc, setEditableServiceDesc] = useState<string>("");
+  const [editableJobOrderDesc, setEditableJobOrderDesc] = useState<string>("");
+  const [editablePaymentCondition, setEditablePaymentCondition] = useState<string>("");
+
+  // Editable styled fields for ORS (not saved to DB)
+  const [editableORSEntityName, setEditableORSEntityName] = useState<string>("");
+  const [editableORSPayee, setEditableORSPayee] = useState<string>("");
+  const [editableORSOffice, setEditableORSOffice] = useState<string>("");
+  const [editableORSAddress, setEditableORSAddress] = useState<string>("");
+  const [editableORSParticulars, setEditableORSParticulars] = useState<string>("");
+  const [editableORSSectionC, setEditableORSSectionC] = useState<string>("");
+
   // Load current user from localStorage
   useEffect(() => {
     if (currentUser?.fullname) {
@@ -1282,6 +1304,43 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
       .then(({ data }) => { if (data) setContractDoc(data as ContractDocument); });
   }, [visible, poId]);
 
+  // Initialize editable Contract fields when contract document is loaded
+  useEffect(() => {
+    if (contractDoc) {
+      setEditableContractTitle(contractDoc.contract_title || "CONTRACT FOR SERVICES");
+      setEditableServiceDesc(contractDoc.service_description || "");
+      setEditableJobOrderDesc(contractDoc.job_order_description || "");
+      setEditablePaymentCondition(contractDoc.payment_condition || "");
+    }
+  }, [contractDoc]);
+
+  // Initialize editable ORS fields when ORS entry or poHeader is loaded
+  useEffect(() => {
+    if (!orsEntry && !poHeader) return;
+    setEditableORSEntityName(orsEntry?.entity_name || poHeader?.office_section || "");
+    setEditableORSPayee(orsEntry?.payee || poHeader?.supplier || "");
+    setEditableORSOffice(orsEntry?.office || poHeader?.office_section || "");
+    setEditableORSAddress(orsEntry?.payee_address || poHeader?.address || "");
+    setEditableORSParticulars(orsEntry?.particulars || "");
+
+    // Section C particulars: use saved value, or look up UACS description if absent
+    if (orsEntry?.section_c_particulars) {
+      setEditableORSSectionC(orsEntry.section_c_particulars);
+    } else if (orsEntry?.uacs_code) {
+      const supabase = createClient();
+      supabase
+        .from("uacs_codes")
+        .select("description")
+        .eq("uacs_code", orsEntry.uacs_code)
+        .maybeSingle()
+        .then(({ data }) => {
+          setEditableORSSectionC(data?.description || "");
+        });
+    } else {
+      setEditableORSSectionC("");
+    }
+  }, [orsEntry, poHeader]);
+
   useEffect(() => {
     if (!visible || !poId) return;
 
@@ -1293,6 +1352,10 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
         if (isMounted) {
           setPoHeader(header);
           setPoItems(items);
+          // Initialize editable PO fields
+          setEditablePOSupplier(header?.supplier || "");
+          setEditablePOAddress(header?.address || "");
+          setEditablePOItemDescs((items ?? []).map(item => item.description || ""));
         }
       })
       .catch((err) => {
@@ -1384,9 +1447,9 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   <>
                     <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
 
-                      {/* View-only notice */}
-                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
-                        <span>👁</span> Viewing PO details. {hasORS ? "Switch to ORS tab for ORS information." : "ORS not yet created."}
+                      {/* Styling notice */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
+                        <span>✏️</span> Style fields below for print. Changes are <strong>not saved</strong> to the database.
                       </div>
 
                   {/* Header Information */}
@@ -1399,8 +1462,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Supplier</label>
-                          <input className={readonlyCls} value={poHeader.supplier || ""} readOnly tabIndex={-1} />
+                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Supplier <span className="text-emerald-600">(Editable)</span></label>
+                          <RichEditor value={editablePOSupplier} onChange={setEditablePOSupplier} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">TIN</label>
@@ -1409,8 +1472,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address</label>
-                          <input className={readonlyCls} value={poHeader.address || ""} readOnly tabIndex={-1} />
+                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address <span className="text-emerald-600">(Editable)</span></label>
+                          <RichEditor value={editablePOAddress} onChange={setEditablePOAddress} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Procurement Mode</label>
@@ -1477,7 +1540,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         Items <span className="text-gray-400 font-normal normal-case ml-1">({poItems.length})</span>
                       </h3>
                     </div>
-                    <div className="space-y-3 max-h-72 overflow-y-auto">
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
                       {poItems.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-6">No items on this PO.</p>
                       ) : (
@@ -1485,8 +1548,16 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                           <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
-                              <div className={readonlyCls} style={{ minHeight: "38px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description || "" }} />
+                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description <span className="text-emerald-600 normal-case">(Editable)</span></label>
+                              <RichEditor
+                                value={editablePOItemDescs[index] ?? item.description ?? ""}
+                                onChange={(html) => {
+                                  const updated = [...editablePOItemDescs];
+                                  updated[index] = html;
+                                  setEditablePOItemDescs(updated);
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white"
+                              />
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div>
@@ -1558,8 +1629,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       downloadPDF({
                         poNo: poHeader.po_no || "",
                         poId: poHeader.id,
-                        supplier: poHeader.supplier || "",
-                        address: poHeader.address || "",
+                        supplier: editablePOSupplier,
+                        address: editablePOAddress,
                         tin: poHeader.tin || "",
                         procurementMode: poHeader.procurement_mode || "",
                         deliveryPlace: poHeader.delivery_place || "",
@@ -1567,7 +1638,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         deliveryDate: poHeader.delivery_date || "",
                         paymentTerm: poHeader.payment_term || "",
                         fundCluster: poHeader.fund_cluster || "",
-                        items: poItems,
+                        items: poItems.map((item, i) => ({ ...item, description: editablePOItemDescs[i] ?? item.description })),
                         officialName: poHeader.official_name,
                         officialDesig: poHeader.official_desig,
                         accountantName: poHeader.accountant_name,
@@ -1592,8 +1663,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                 <div className="bg-white rounded-lg shadow-lg p-4 text-black">
                   <POPreview
                     poNo={poHeader.po_no || ""}
-                    supplier={poHeader.supplier || ""}
-                    address={poHeader.address || ""}
+                    supplier={editablePOSupplier}
+                    address={editablePOAddress}
                     tin={poHeader.tin || ""}
                     procurementMode={poHeader.procurement_mode || ""}
                     deliveryPlace={poHeader.delivery_place || ""}
@@ -1601,7 +1672,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                     deliveryDate={poHeader.delivery_date || ""}
                     paymentTerm={poHeader.payment_term || ""}
                     fundCluster={poHeader.fund_cluster || ""}
-                    items={poItems}
+                    items={poItems.map((item, i) => ({ ...item, description: editablePOItemDescs[i] ?? item.description }))}
                     officialName={poHeader.official_name}
                     officialDesig={poHeader.official_desig}
                     accountantName={poHeader.accountant_name}
@@ -1641,8 +1712,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   <>
                     <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
                       {/* ORS Notice */}
-                      <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700 font-medium">
-                        <span>📄</span> Viewing ORS details for PO #{poHeader.po_no}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
+                        <span>✏️</span> Style fields below for print. Changes are <strong>not saved</strong> to the database.
                       </div>
 
                       {/* ORS Header Info */}
@@ -1660,8 +1731,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name</label>
-                            <input className={readonlyCls} value={orsEntry?.entity_name || poHeader.office_section || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name <span className="text-emerald-600">(Editable)</span></label>
+                            <RichEditor value={editableORSEntityName} onChange={setEditableORSEntityName} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1681,16 +1752,16 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Payee Information</h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Payee Name</label>
-                            <input className={readonlyCls} value={poHeader.supplier || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Payee Name <span className="text-emerald-600">(Editable)</span></label>
+                            <RichEditor value={editableORSPayee} onChange={setEditableORSPayee} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office</label>
-                            <input className={readonlyCls} value={orsEntry?.office || poHeader.office_section || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office <span className="text-emerald-600">(Editable)</span></label>
+                            <RichEditor value={editableORSOffice} onChange={setEditableORSOffice} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address</label>
-                            <input className={readonlyCls} value={orsEntry?.payee_address || poHeader.address || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Address <span className="text-emerald-600">(Editable)</span></label>
+                            <RichEditor value={editableORSAddress} onChange={setEditableORSAddress} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                           </div>
                         </div>
                       </div>
@@ -1700,8 +1771,21 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Obligation Details</h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Particulars</label>
-                            <textarea className={`${readonlyCls} min-h-[80px]`} value={orsEntry?.particulars || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Particulars <span className="text-xs text-emerald-600">(Editable for styling)</span></label>
+                            <RichEditor 
+                              value={editableORSParticulars} 
+                              onChange={setEditableORSParticulars}
+                              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Section C Particulars <span className="text-xs text-emerald-600">(Editable for styling)</span></label>
+                            <RichEditor 
+                              value={editableORSSectionC} 
+                              onChange={setEditableORSSectionC}
+                              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white"
+                              compact
+                            />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1752,13 +1836,14 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                           downloadORS({
                             orsNo: orsEntry?.ors_no || poHeader.ors_no,
                             orsDate: orsEntry?.date_created || poHeader.ors_date,
-                            entityName: orsEntry?.entity_name || poHeader.office_section,
-                            payee: poHeader.supplier,
-                            payeeAddress: orsEntry?.payee_address || poHeader.address,
-                            office: orsEntry?.office || poHeader.office_section,
+                            entityName: editableORSEntityName,
+                            payee: editableORSPayee,
+                            payeeAddress: editableORSAddress,
+                            office: editableORSOffice,
                             fundCluster: orsEntry?.fund_cluster || poHeader.fund_cluster,
                             responsibilityCenter: orsEntry?.responsibility_center || null,
-                            particulars: orsEntry?.particulars || null,
+                            particulars: editableORSParticulars || null,
+                            sectionCParticulars: editableORSSectionC || null,
                             mfoPap: orsEntry?.mfo_pap || null,
                             uacsCode: orsEntry?.uacs_code || null,
                             amount: orsEntry?.obligation_amount || poHeader.ors_amount,
@@ -1787,13 +1872,14 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       <ORSPreview
                         orsNo={orsEntry?.ors_no || poHeader.ors_no}
                         orsDate={orsEntry?.date_created || poHeader.ors_date}
-                        entityName={orsEntry?.entity_name || poHeader.office_section}
-                        payee={poHeader.supplier}
-                        payeeAddress={orsEntry?.payee_address || poHeader.address}
-                        office={orsEntry?.office || poHeader.office_section}
+                        entityName={editableORSEntityName}
+                        payee={editableORSPayee}
+                        payeeAddress={editableORSAddress}
+                        office={editableORSOffice}
                         fundCluster={orsEntry?.fund_cluster || poHeader.fund_cluster}
                         responsibilityCenter={orsEntry?.responsibility_center || null}
-                        particulars={orsEntry?.particulars || null}
+                        particulars={editableORSParticulars || null}
+                        sectionCParticulars={editableORSSectionC || null}
                         mfoPap={orsEntry?.mfo_pap || null}
                         uacsCode={orsEntry?.uacs_code || null}
                         amount={orsEntry?.obligation_amount || poHeader.ors_amount}
@@ -1835,8 +1921,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   <>
                     <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
                       {/* Contract Notice */}
-                      <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 font-medium">
-                        <span>📜</span> Viewing Contract details for PO #{poHeader.po_no}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
+                        <span>✏️</span> Style fields below for print. Changes are <strong>not saved</strong> to the database.
                       </div>
 
                       {/* Contract Header Info */}
@@ -1844,8 +1930,13 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Contract Information</h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Contract Title</label>
-                            <input className={readonlyCls} value={contractDoc.contract_title || "CONTRACT FOR SERVICES"} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Contract Title <span className="text-xs text-emerald-600">(Editable for styling)</span></label>
+                            <RichEditor 
+                              value={editableContractTitle} 
+                              onChange={setEditableContractTitle}
+                              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white"
+                              compact
+                            />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1888,8 +1979,12 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Contract Details</h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Service Description</label>
-                            <textarea className={`${readonlyCls} min-h-[60px]`} value={contractDoc.service_description || ""} readOnly tabIndex={-1} />
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Service Description <span className="text-xs text-emerald-600">(Editable for styling)</span></label>
+                            <RichEditor 
+                              value={editableServiceDesc} 
+                              onChange={setEditableServiceDesc}
+                              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white"
+                            />
                           </div>
                           <div>
                             <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Consideration Amount</label>
@@ -1940,7 +2035,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       <button
                         onClick={() =>
                           downloadContractPDF({
-                            contractTitle: contractDoc.contract_title || "CONTRACT FOR SERVICES",
+                            contractTitle: editableContractTitle || "CONTRACT FOR SERVICES",
                             firstPartyAgency: contractDoc.first_party_agency || "",
                             firstPartyRep: contractDoc.first_party_rep || "",
                             firstPartyOffice: contractDoc.first_party_office || "",
@@ -1951,10 +2046,10 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                             commencementLocation: contractDoc.commencement_location || "",
                             considerationAmount: contractDoc.consideration_amount || 0,
                             considerationAmountWords: contractDoc.consideration_amount_words || "",
-                            serviceDescription: contractDoc.service_description || "",
+                            serviceDescription: editableServiceDesc || "",
                             deliveryLocation: contractDoc.delivery_location || "",
-                            paymentCondition: contractDoc.payment_condition || "",
-                            jobOrderDescription: contractDoc.job_order_description || "",
+                            paymentCondition: editablePaymentCondition || "",
+                            jobOrderDescription: editableJobOrderDesc || "",
                             scheduledDays: contractDoc.scheduled_days || "",
                             liquidatedDamagesRate: contractDoc.liquidated_damages_rate || "",
                             contractDate: contractDoc.contract_date || "",
@@ -1975,7 +2070,7 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                   {poHeader && contractDoc && (
                     <div className="bg-white rounded-lg shadow-lg p-8 text-black">
                       <ContractPreview
-                        contractTitle={contractDoc.contract_title}
+                        contractTitle={editableContractTitle}
                         firstPartyAgency={contractDoc.first_party_agency}
                         firstPartyRep={contractDoc.first_party_rep}
                         firstPartyOffice={contractDoc.first_party_office}
@@ -1985,9 +2080,9 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                         commencementLocation={contractDoc.commencement_location}
                         considerationAmount={contractDoc.consideration_amount}
                         considerationAmountWords={contractDoc.consideration_amount_words}
-                        serviceDescription={contractDoc.service_description}
-                        paymentCondition={contractDoc.payment_condition}
-                        jobOrderDescription={contractDoc.job_order_description}
+                        serviceDescription={editableServiceDesc}
+                        paymentCondition={editablePaymentCondition}
+                        jobOrderDescription={editableJobOrderDesc}
                         scheduledDays={contractDoc.scheduled_days}
                         liquidatedDamagesRate={contractDoc.liquidated_damages_rate}
                         contractDate={contractDoc.contract_date}

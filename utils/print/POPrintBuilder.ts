@@ -130,11 +130,11 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
     </colgroup>
     <tbody>
       <tr>
-        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Supplier : <span style="font-weight:normal">${escapeHtml(data.supplier)}</span></td>
+        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Supplier : <span style="font-weight:normal">${data.supplier}</span></td>
         <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">P.O. No. : <span style="font-weight:normal">${escapeHtml(data.poNo)}</span></td>
       </tr>
       <tr>
-        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${escapeHtml(data.address)}</span></td>
+        <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Address : <span style="font-weight:normal">${data.address}</span></td>
         <td colspan="3" style="padding:2px 4px;font-size:9pt;font-weight:bold">Date : <span style="font-weight:normal">${displayDate}</span></td>
       </tr>
       <tr>
@@ -145,11 +145,11 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
         <td colspan="6" style="padding:3px 4px;font-size:9pt;font-weight:bold;vertical-align:top">Gentlemen:<div style="font-weight:normal;margin-left:52px">Please furnish this Office the following articles subject to the terms and conditions contained herein:</div></td>
       </tr>
       <tr>
-        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Place of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryPlace)}</span></td>
-        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Delivery Term : <span style="font-weight:normal">${escapeHtml(data.deliveryTerm)}</span><div style="font-weight:bold;margin-top:2px">Payment Term : <span style="font-weight:normal">${escapeHtml(data.paymentTerm)}</span></div></td>
+        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Place of Delivery : <span style="font-weight:normal">${data.deliveryPlace}</span></td>
+        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Delivery Term : <span style="font-weight:normal">${data.deliveryTerm}</span><div style="font-weight:bold;margin-top:2px">Payment Term : <span style="font-weight:normal">${data.paymentTerm}</span></div></td>
       </tr>
       <tr>
-        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Date of Delivery : <span style="font-weight:normal">${escapeHtml(data.deliveryDate)}</span></td>
+        <td colspan="3" style="padding:3px 4px;font-size:9pt;font-weight:bold">Date of Delivery : <span style="font-weight:normal">${data.deliveryDate}</span></td>
         <td colspan="3" style="padding:3px 4px;font-size:9pt"></td>
       </tr>
       <tr>
@@ -192,7 +192,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
               </tr>
               <tr>
                 <td style="border:none;padding:24px 8px 0;text-align:center">
-                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
+                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${data.supplier}</div>
                 </td>
                 <td style="border:none;padding:24px 8px 0;text-align:center">
                   <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>

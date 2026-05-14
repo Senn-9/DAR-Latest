@@ -82,7 +82,7 @@ export function buildContractPrintHtml(data: ContractPrintData): string {
 
 <!-- Title -->
 <div class="center bold section" style="font-size:12pt;margin-bottom:20px;">
-  ${escapeHtml(data.contractTitle || "CONTRACT FOR SERVICES")}
+  ${data.contractTitle || "CONTRACT FOR SERVICES"}
 </div>
 
 <!-- KNOW ALL MEN -->
@@ -108,7 +108,7 @@ export function buildContractPrintHtml(data: ContractPrintData): string {
   <p style="margin:0;text-indent:2em;">
     That for and in consideration of the sum of ${F(escapeHtml(data.considerationAmountWords).toUpperCase(), "300px", "text-transform:uppercase;")} 
     (${fmtMoney(data.considerationAmount)}), which the FIRST PARTY agreed to pay unto the SECOND PARTY, the SECOND PARTY 
-    agrees to deliver/provide the ${F(escapeHtml(data.serviceDescription), "250px", "text-transform:uppercase;")}.
+    agrees to deliver/provide the ${F(data.serviceDescription || "", "250px")}.  
   </p>
 </div>
 
@@ -116,16 +116,16 @@ export function buildContractPrintHtml(data: ContractPrintData): string {
 <div class="indent section">
   <p style="margin:0;text-indent:2em;">
     That the FIRST PARTY shall pay the full amount to the SECOND PARTY when the 
-    ${F(escapeHtml(paymentText), "300px", "text-transform:uppercase;")}.
+    ${F(data.paymentCondition || data.serviceDescription || "", "300px")}.  
   </p>
 </div>
 
 <!-- Job order -->
 <div class="indent section">
   <p style="margin:0;text-indent:2em;">
-    That the SECOND PARTY agrees to finish the ${F(escapeHtml(data.jobOrderDescription || "JOB ORDER"), "180px", "text-transform:uppercase;")} 
+    That the SECOND PARTY agrees to finish the ${F(data.jobOrderDescription || "JOB ORDER", "180px")} 
     within ${F(escapeHtml(data.scheduledDays), "40px")} scheduled days counted from the day the contract for the 
-    ${F(escapeHtml(data.serviceDescription), "200px", "text-transform:uppercase;")} ${F(comd.full || "", "180px")} 
+    ${F(data.serviceDescription || "", "200px")} ${F(comd.full || "", "180px")} 
     has been issued by the FIRST PARTY; and should the SECOND PARTY fail to finish the job within the said period, 
     the SECOND PARTY shall indemnify the sum of ${escapeHtml(data.liquidatedDamagesRate)} for every day of delay of liquidated damages.
   </p>

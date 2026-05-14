@@ -14,7 +14,9 @@ export function RichEditor({ value, onChange, className, style, compact = false 
   const isFocused = useRef(false);
   const savedRange = useRef<Range | null>(null);
   const [boldActive, setBoldActive] = useState(false);
-  const [centerActive, setCenterActive] = useState(false);
+  const [italicActive, setItalicActive] = useState(false);
+  const [underlineActive, setUnderlineActive] = useState(false);
+  const [alignState, setAlignState] = useState<"left" | "center" | "right">("left");
 
   useEffect(() => {
     if (editorRef.current && !isFocused.current) {
@@ -42,7 +44,11 @@ export function RichEditor({ value, onChange, className, style, compact = false 
   const updateToolbarState = () => {
     try {
       setBoldActive(document.queryCommandState("bold"));
-      setCenterActive(document.queryCommandState("justifyCenter"));
+      setItalicActive(document.queryCommandState("italic"));
+      setUnderlineActive(document.queryCommandState("underline"));
+      if (document.queryCommandState("justifyCenter")) setAlignState("center");
+      else if (document.queryCommandState("justifyRight")) setAlignState("right");
+      else setAlignState("left");
     } catch { /* ignore */ }
   };
 
@@ -61,23 +67,20 @@ export function RichEditor({ value, onChange, className, style, compact = false 
 
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("bold"); }}
-          title="Bold selected text"
-          className={`${btnBase} ${btnSize} font-bold ${boldActive ? btnOn : btnOff}`}
-        >
-          B
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd(centerActive ? "justifyLeft" : "justifyCenter"); }}
-          title="Center / left-align current line"
-          className={`${btnBase} ${btnSize} ${centerActive ? btnOn : btnOff}`}
-        >
-          ≡
-        </button>
+      <div className="flex gap-1 flex-wrap">
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("bold"); }}
+          title="Bold" className={`${btnBase} ${btnSize} font-bold ${boldActive ? btnOn : btnOff}`}>B</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("italic"); }}
+          title="Italic" className={`${btnBase} ${btnSize} italic ${italicActive ? btnOn : btnOff}`}>I</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("underline"); }}
+          title="Underline" className={`${btnBase} ${btnSize} underline ${underlineActive ? btnOn : btnOff}`}>U</button>
+        {!compact && <div className="w-px bg-gray-200 mx-0.5" />}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("justifyLeft"); }}
+          title="Align Left" className={`${btnBase} ${btnSize} ${alignState === "left" ? btnOn : btnOff}`}>⬅</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("justifyCenter"); }}
+          title="Center" className={`${btnBase} ${btnSize} ${alignState === "center" ? btnOn : btnOff}`}>≡</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); saveSelection(); execCmd("justifyRight"); }}
+          title="Align Right" className={`${btnBase} ${btnSize} ${alignState === "right" ? btnOn : btnOff}`}>➡</button>
       </div>
       <div
         ref={editorRef}
