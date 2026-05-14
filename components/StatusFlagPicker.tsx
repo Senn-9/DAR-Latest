@@ -30,11 +30,7 @@ export type StatusFlag =
   | "all"
   | "no_flag"
   | "complete"
-  | "incomplete_info"
-  | "wrong_information"
-  | "needs_revision"
-  | "on_hold"
-  | "urgent";
+  | "incomplete_info";
 
 // Helper to convert flag name to slug
 const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
@@ -42,18 +38,10 @@ const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
 // Icon mapper for flag slugs
 function iconForSlug(slug: string) {
   switch (slug) {
-    case "complete":
+    case "completed":
       return <RiCheckboxCircleLine size={18} />;
-    case "incomplete_info":
+    case "incomplete":
       return <RiAlertLine size={18} />;
-    case "wrong_information":
-      return <RiCloseCircleLine size={18} />;
-    case "needs_revision":
-      return <RiErrorWarningLine size={18} />;
-    case "on_hold":
-      return <RiPauseLine size={18} />;
-    case "urgent":
-      return <RiTimeLine size={18} />;
     case "no_flag":
       return <RiFlagLine size={18} />;
     default:
@@ -64,24 +52,16 @@ function iconForSlug(slug: string) {
 // Color config for flag slugs
 const FLAG_COLORS: Record<string, { color: string; bgColor: string }> = {
   no_flag: { color: "text-gray-500", bgColor: "bg-gray-50" },
-  complete: { color: "text-green-600", bgColor: "bg-green-50" },
-  incomplete_info: { color: "text-yellow-600", bgColor: "bg-yellow-50" },
-  wrong_information: { color: "text-red-600", bgColor: "bg-red-50" },
-  needs_revision: { color: "text-orange-600", bgColor: "bg-orange-50" },
-  on_hold: { color: "text-blue-600", bgColor: "bg-blue-50" },
-  urgent: { color: "text-purple-600", bgColor: "bg-purple-50" },
+  completed: { color: "text-green-600", bgColor: "bg-green-50" },
+  incomplete: { color: "text-yellow-600", bgColor: "bg-yellow-50" },
 };
 
 // Legacy FLAG_CONFIG for backward compatibility
 export const FLAG_CONFIG: Record<StatusFlag, { label: string; color: string; bgColor: string }> = {
   all: { label: "All Flags", color: "text-gray-600", bgColor: "bg-gray-100" },
   no_flag: { label: "No Flag", color: "text-gray-500", bgColor: "bg-gray-50" },
-  complete: { label: "Complete", color: "text-green-600", bgColor: "bg-green-50" },
-  incomplete_info: { label: "Incomplete Info", color: "text-yellow-600", bgColor: "bg-yellow-50" },
-  wrong_information: { label: "Wrong Information", color: "text-red-600", bgColor: "bg-red-50" },
-  needs_revision: { label: "Needs Revision", color: "text-orange-600", bgColor: "bg-orange-50" },
-  on_hold: { label: "On Hold", color: "text-blue-600", bgColor: "bg-blue-50" },
-  urgent: { label: "Urgent", color: "text-purple-600", bgColor: "bg-purple-50" },
+  complete: { label: "Completed", color: "text-green-600", bgColor: "bg-green-50" },
+  incomplete_info: { label: "Incomplete", color: "text-yellow-600", bgColor: "bg-yellow-50" },
 };
 
 // Legacy STATUS_FLAGS for backward compatibility
@@ -90,10 +70,6 @@ export const STATUS_FLAGS: StatusFlag[] = [
   "no_flag",
   "complete",
   "incomplete_info",
-  "wrong_information",
-  "needs_revision",
-  "on_hold",
-  "urgent",
 ];
 
 // Legacy getFlagId for backward compatibility
@@ -104,10 +80,6 @@ export function getFlagId(flag: StatusFlag | null): number | null {
     no_flag: 1,
     complete: 2,
     incomplete_info: 3,
-    wrong_information: 4,
-    needs_revision: 5,
-    on_hold: 6,
-    urgent: 7,
   };
   return FLAG_TO_ID[flag];
 }
@@ -135,18 +107,10 @@ export function useFlagOptions() {
           label: row.flag_name || "Unknown",
           slug,
           description:
-            row.flag_name === "Complete"
+            row.flag_name === "Completed"
               ? "All information is correct and complete."
-              : row.flag_name === "Incomplete Info"
+              : row.flag_name === "Incomplete"
               ? "Required fields or attachments are missing."
-              : row.flag_name === "Wrong Information"
-              ? "Submitted data contains errors that must be corrected."
-              : row.flag_name === "Needs Revision"
-              ? "Minor corrections needed before forwarding."
-              : row.flag_name === "On Hold"
-              ? "Processing paused pending clarification."
-              : row.flag_name === "Urgent"
-              ? "Requires immediate attention."
               : "Leave flag unset",
           icon: iconForSlug(slug),
           iconBg: colors.bgColor,

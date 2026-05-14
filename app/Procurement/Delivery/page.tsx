@@ -796,7 +796,12 @@ export default function DeliveryPage() {
       fetchDVByDelivery(delivery.id),
     ]);
 
-    setIar(iarDoc);
+    // Always initialize checkbox fields to null when opening modal to ensure unchecked state
+    setIar(iarDoc ? { 
+      ...iarDoc, 
+      items_complete: null,
+      inspection_verified: null
+    } : null);
 
     setLoa(loaDoc);
 

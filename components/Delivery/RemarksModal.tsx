@@ -22,12 +22,8 @@ interface RemarksModalProps {
 
 const FLAG_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
   1: { label: "No Flag", color: "text-gray-500", bg: "bg-gray-100" },
-  2: { label: "Complete", color: "text-green-600", bg: "bg-green-50" },
-  3: { label: "Incomplete Info", color: "text-yellow-600", bg: "bg-yellow-50" },
-  4: { label: "Wrong Information", color: "text-red-600", bg: "bg-red-50" },
-  5: { label: "Needs Revision", color: "text-orange-600", bg: "bg-orange-50" },
-  6: { label: "On Hold", color: "text-blue-600", bg: "bg-blue-50" },
-  7: { label: "Urgent", color: "text-purple-600", bg: "bg-purple-50" },
+  2: { label: "Completed", color: "text-green-600", bg: "bg-green-50" },
+  3: { label: "Incomplete", color: "text-yellow-600", bg: "bg-yellow-50" },
 };
 
 export default function RemarksModal({ visible, deliveryId, onClose }: RemarksModalProps) {

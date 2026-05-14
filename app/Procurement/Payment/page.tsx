@@ -389,8 +389,26 @@ export default function PaymentPage() {
     setRemarksModalOpen(true);
   };
 
-  const handleViewPayment = (delivery: DeliveryRow) => {
+  const handleViewPayment = async (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
+    
+    // Fetch DV, IAR, LOA, and PO data
+    try {
+      const [dv, iar, loa, poDataResult] = await Promise.all([
+        fetchDVByDelivery(delivery.id),
+        fetchIARByDelivery(delivery.id),
+        fetchLOAByDelivery(delivery.id),
+        delivery.po_id ? fetchPOWithItemsById(delivery.po_id) : Promise.resolve(null)
+      ]);
+      
+      setDvData(dv);
+      setIarData(iar);
+      setLoaData(loa);
+      setPoData(poDataResult);
+    } catch (error) {
+      console.error("Error fetching payment documents:", error);
+    }
+    
     setPaymentViewModalOpen(true);
   };
 

@@ -718,10 +718,23 @@ export async function updateDeliveryStatusOnly(id: number, statusId: number, pre
         updateDataWithTimestamps.tax_processing_completed_at = currentTimestamp;
         console.log("Setting tax_processing_completed_at timestamp for previous status 35");
         break;
-      case 36: // Cash for Release completed
-        updateDataWithTimestamps.cash_processing_completed_at = currentTimestamp;
-        console.log("Setting cash_processing_completed_at timestamp for previous status 36");
+      case 36: { // Cash for Release completed -> Payment Completed
+        // For Payment Completed, use the same timestamp as Cash for Release
+        const { data: deliveryData, error: fetchError } = await supabase
+          .from("deliveries")
+          .select("cash_processing_completed_at")
+          .eq("id", id)
+          .single();
+        
+        if (!fetchError && deliveryData?.cash_processing_completed_at) {
+          updateDataWithTimestamps.payment_completed_at = deliveryData.cash_processing_completed_at;
+          console.log("Setting payment_completed_at to match cash_processing_completed_at");
+        } else {
+          updateDataWithTimestamps.payment_completed_at = currentTimestamp;
+          console.log("cash_processing_completed_at not found, using current timestamp for payment_completed_at");
+        }
         break;
+      }
       case 37: // Payment Completed
         updateDataWithTimestamps.payment_completed_at = currentTimestamp;
         console.log("Setting payment_completed_at timestamp for status 37");

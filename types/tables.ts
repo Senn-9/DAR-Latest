@@ -203,8 +203,8 @@ export type IarDocument = {
   received_at: string | null;
   inspector_name: string | null;
   supply_officer_name: string | null;
-  inspection_verified: boolean; // default false
-  items_complete: boolean; // default false
+  inspection_verified: boolean | null; // null = not yet selected
+  items_complete: boolean | null; // null = not yet selected, true = Complete, false = Partial
   created_by: number | null;
   created_at: string; // ISO timestamp
   updated_at: string | null;

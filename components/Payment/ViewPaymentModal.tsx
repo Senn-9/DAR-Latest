@@ -3,11 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { RiCloseLine, RiFileListLine, RiMoneyDollarCircleLine, RiUserLine, RiCalendarLine, RiCheckLine, RiTimeLine, RiArrowRightLine } from "react-icons/ri";
 import { fetchRemarksThread } from "@/utils/supabase/logs";
+import DVPreview from "@/components/Delivery/DVPreview";
 
 interface ViewPaymentModalProps {
   visible: boolean;
   delivery: any;
   poData?: any;
+  dv?: any;
+  ors?: any;
+  voucher?: any;
   onClose: () => void;
 }
 
@@ -15,9 +19,12 @@ export default function ViewPaymentModal({
   visible,
   delivery,
   poData,
+  dv,
+  ors,
+  voucher,
   onClose,
 }: ViewPaymentModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "timeline">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "dv">("overview");
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [remarks, setRemarks] = useState<any[]>([]);
   
@@ -35,6 +42,19 @@ export default function ViewPaymentModal({
   ];
 
   const currentStatus = paymentStatuses.find(s => s.id === delivery?.status_id) || paymentStatuses[0];
+
+  // Debug logging
+  useEffect(() => {
+    if (visible) {
+      console.log("ViewPaymentModal received:", {
+        delivery: delivery?.id,
+        dv: dv ? Object.keys(dv) : "null",
+        poData: poData?.id,
+        ors: ors ? Object.keys(ors) : "null",
+        voucher: voucher ? Object.keys(voucher) : "null",
+      });
+    }
+  }, [visible, delivery, dv, poData, ors, voucher]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -166,7 +186,7 @@ export default function ViewPaymentModal({
     { step: 4, title: "Forward to Cash", status: getStepStatus(33, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 33, delivery?.status_id) },
     { step: 5, title: "Accounting — Tax processing", status: getStepStatus(35, delivery?.status_id || 0, delivery?.tax_processing_completed_at), date: getStepTimestamp(delivery?.tax_processing_completed_at, 35, delivery?.status_id) },
     { step: 6, title: "Cash for Release", status: getStepStatus(36, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 36, delivery?.status_id) },
-    { step: 7, title: "Payment Completed", status: getStepStatus(37, delivery?.status_id || 0, delivery?.payment_completed_at), date: getStepTimestamp(delivery?.payment_completed_at, 37, delivery?.status_id) },
+    { step: 7, title: "Payment Completed", status: getStepStatus(37, delivery?.status_id || 0, delivery?.cash_processing_completed_at), date: getStepTimestamp(delivery?.cash_processing_completed_at, 37, delivery?.status_id) },
   ];
 
   useEffect(() => {
@@ -209,6 +229,7 @@ export default function ViewPaymentModal({
             {[
               { id: "overview", label: "Overview", icon: RiFileListLine },
               { id: "timeline", label: "Timeline", icon: RiTimeLine },
+              { id: "dv", label: "DV Document", icon: RiFileListLine },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -332,6 +353,26 @@ export default function ViewPaymentModal({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === "dv" && (
+            <div className="h-full overflow-auto">
+              {dv && Object.keys(dv).length > 0 ? (
+                <DVPreview 
+                  delivery={delivery} 
+                  dv={dv} 
+                  poData={poData || {}}
+                  className="w-full"
+                  containerHeight="800px"
+                  showPrintButton={true}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
+                  <p className="text-sm">No DV data available</p>
+                  <p className="text-xs mt-2">Process the payment to generate DV data</p>
+                </div>
+              )}
             </div>
           )}
         </div>
