@@ -56,6 +56,12 @@ export default function DashboardPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const [summaryReportOpen, setSummaryReportOpen] = useState(false);
+
+  type LatestRemarkInfo = { remark: string | null; created_at: string; status_flag_id: number | null; user_id: number | null };
+  type UserInfo = { fullname: string; division_name: string | null };
+  const [flagNameById, setFlagNameById] = useState<Record<number, string>>({});
+  const [latestRemarkByKey, setLatestRemarkByKey] = useState<Record<string, LatestRemarkInfo>>({});
+  const [userInfoById, setUserInfoById] = useState<Record<number, UserInfo>>({});
   const CURRENT_YEAR = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -90,6 +96,75 @@ export default function DashboardPage() {
   const isCashAccount =
     currentUser?.username?.toLowerCase() === "cash" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("cash") ?? false);
+
+  useEffect(() => {
+    supabase.from("status_flag").select("id, flag_name").then(({ data }) => {
+      const map: Record<number, string> = {};
+      (data || []).forEach((r: { id: number; flag_name: string | null }) => { map[r.id] = r.flag_name ?? ""; });
+      setFlagNameById(map);
+    });
+  }, []);
+
+  useEffect(() => {
+    const fetchRemarks = async () => {
+      if (list.length === 0) { setLatestRemarkByKey({}); return; }
+      const prIds  = list.filter(i => i.source === 'pr').map(i => i.id);
+      const poIds  = list.filter(i => i.source === 'po').map(i => i.id);
+      const delIds = list.filter(i => i.source === 'delivery' || i.source === 'payment').map(i => i.id);
+      const map: Record<string, LatestRemarkInfo> = {};
+
+      if (prIds.length > 0) {
+        const { data } = await supabase.from("remarks")
+          .select("pr_id, status_flag_id, remark, created_at, user_id")
+          .in("pr_id", prIds).order("created_at", { ascending: false });
+        (data || []).forEach((r: any) => {
+          const key = `pr-${r.pr_id}`;
+          if (!map[key]) map[key] = { remark: r.remark, created_at: r.created_at, status_flag_id: r.status_flag_id, user_id: r.user_id ?? null };
+        });
+      }
+
+      if (poIds.length > 0) {
+        const { data } = await supabase.from("remarks")
+          .select("po_id, status_flag_id, remark, created_at, user_id")
+          .in("po_id", poIds).order("created_at", { ascending: false });
+        (data || []).forEach((r: any) => {
+          const key = `po-${r.po_id}`;
+          if (!map[key]) map[key] = { remark: r.remark, created_at: r.created_at, status_flag_id: r.status_flag_id, user_id: r.user_id ?? null };
+        });
+      }
+
+      if (delIds.length > 0) {
+        const { data } = await supabase.from("remarks")
+          .select("delivery_id, status_flag_id, remark, created_at, user_id")
+          .in("delivery_id", delIds).order("created_at", { ascending: false });
+        (data || []).forEach((r: any) => {
+          const item = list.find(i => (i.source === 'delivery' || i.source === 'payment') && i.id === r.delivery_id);
+          if (item) {
+            const key = item.row_key ?? `${item.source}-${item.id}`;
+            if (!map[key]) map[key] = { remark: r.remark, created_at: r.created_at, status_flag_id: r.status_flag_id, user_id: r.user_id ?? null };
+          }
+        });
+      }
+
+      setLatestRemarkByKey(map);
+      const userIds = [...new Set(Object.values(map).map(r => r.user_id).filter((id): id is number => id != null))];
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase.from("users").select("id, fullname, division_id").in("id", userIds);
+        const divIds = [...new Set((usersData || []).map((u: any) => u.division_id).filter((id: any): id is number => id != null))];
+        const divMap: Record<number, string> = {};
+        if (divIds.length > 0) {
+          const { data: divsData } = await supabase.from("divisions").select("division_id, division_name").in("division_id", divIds);
+          (divsData || []).forEach((d: any) => { divMap[d.division_id] = d.division_name ?? ""; });
+        }
+        const uMap: Record<number, UserInfo> = {};
+        (usersData || []).forEach((u: any) => {
+          uMap[u.id] = { fullname: u.fullname ?? "", division_name: u.division_id != null ? (divMap[u.division_id] ?? null) : null };
+        });
+        setUserInfoById(uMap);
+      }
+    };
+    fetchRemarks();
+  }, [list]);
 
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
@@ -876,9 +951,35 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
-                              {displayStatusName}
-                            </span>
+                            <div className="relative group inline-flex">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                                {displayStatusName}
+                              </span>
+                              {(() => {
+                                const key = form.row_key ?? `${form.source ?? 'pr'}-${form.id}`;
+                                const info = latestRemarkByKey[key];
+                                if (!info?.status_flag_id) return null;
+                                const fname = flagNameById[info.status_flag_id] || "Unknown";
+                                const tooltipDir = index < 2 ? "top-full mt-2" : "bottom-full mb-2";
+                                const caretDir   = index < 2 ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900";
+                                const dateStr = new Date(info.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                                const userInfo = info.user_id != null ? (userInfoById[info.user_id] ?? null) : null;
+                                return (
+                                  <div className={`absolute ${tooltipDir} left-1/2 -translate-x-1/2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150 bg-gray-900 text-white rounded-xl shadow-xl px-3 py-2.5 z-[9999] w-60 text-left pointer-events-none`}>
+                                    <p className="text-[11px] whitespace-nowrap"><span className="text-gray-400">Status Flag:</span> {fname}</p>
+                                    <p className="text-[11px] mt-1 text-gray-200 break-words whitespace-normal"><span className="text-gray-400">Remark:</span> {info.remark || "—"}</p>
+                                    {userInfo && (
+                                      <div className="mt-2 pt-1.5 border-t border-gray-700 space-y-0.5">
+                                        <p className="text-[10px] text-gray-300"><span className="text-gray-500">By:</span> {userInfo.fullname}</p>
+                                        {userInfo.division_name && <p className="text-[10px] text-gray-300"><span className="text-gray-500">Division:</span> {userInfo.division_name}</p>}
+                                      </div>
+                                    )}
+                                    <p className="text-[10px] text-gray-400 mt-1.5">{dateStr}</p>
+                                    <div className={`absolute ${caretDir} left-1/2 -translate-x-1/2 border-[5px] border-transparent`} />
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </td>
                           <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
                             {cost > 0
