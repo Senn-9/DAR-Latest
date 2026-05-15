@@ -9,6 +9,7 @@ import {
   RiFilePdf2Line,
   RiEditLine,
 } from "react-icons/ri";
+import { RichEditor } from "@/components/RichEditor";
 
 type ItemDataType = {
   stock_no: string;
@@ -99,7 +100,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "21px" }}>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000", whiteSpace: "nowrap", overflow: "hidden" }}>
-              Entity Name: <span style={{ fontWeight: "normal" }}>{formData.entity_name}</span>
+              Entity Name: <span style={{ fontWeight: "normal" }} dangerouslySetInnerHTML={{ __html: formData.entity_name || "" }} />
             </td>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
               Fund Cluster: <span style={{ fontWeight: "normal" }}>{formData.fund_cluster}</span>
@@ -138,7 +139,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               <tr key={idx} style={{ height: "16px" }}>
                 <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-                <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px" }}>{item.description}</td>
+                <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px" }} dangerouslySetInnerHTML={{ __html: item.description || "" }} />
                 <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>{item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}</td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>{total > 0 ? "₱" + total.toFixed(2) : ""}</td>
@@ -155,7 +156,7 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "17px" }}>
             <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
-              <b>Purpose:</b> {formData.purpose}
+              <b>Purpose:</b> <span dangerouslySetInnerHTML={{ __html: formData.purpose || "" }} />
             </td>
           </tr>
           <tr style={{ height: "30px" }}>
@@ -283,6 +284,11 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [status, setStatus] = useState<string>("");
 
+  // Editable styled fields for print (not saved to DB)
+  const [editablePREntityName, setEditablePREntityName] = useState<string>("");
+  const [editablePRPurpose, setEditablePRPurpose] = useState<string>("");
+  const [editablePRItemDescs, setEditablePRItemDescs] = useState<string[]>([]);
+
   // Load current user from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -344,6 +350,8 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
         app_desig:    form.app_desig     || "",
         created_at:   form.created_at?.slice(0, 10) || "",
       });
+      setEditablePREntityName(form.entity_name || "");
+      setEditablePRPurpose(form.purpose || "");
 
       const { data: itemData, error: itemErr } = await supabase
         .from("purchase_request_items")
@@ -353,8 +361,7 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
       if (itemErr) {
         console.error("Error fetching PR items:", itemErr?.message || itemErr);
       } else if (itemData) {
-        setItems(
-          itemData.map((i: any) => ({
+        const mappedItems = itemData.map((i: any) => ({
             stock_no:   i.stock_no    || "",
             unit:       i.unit        || "",
             description: i.description || "",
@@ -362,8 +369,9 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
             unit_price: String(i.unit_price ?? ""),
             subtotal:   String(i.subtotal   ?? ""),
             created_at: i.created_at  || new Date().toISOString(),
-          }))
-        );
+          }));
+        setItems(mappedItems);
+        setEditablePRItemDescs(mappedItems.map(item => item.description));
       }
 
       setLoading(false);
@@ -427,13 +435,18 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
                     <span>👁</span> This PR is in <b>{status || "Unknown"}</b> status. {status === "Pending" ? "Click 'Edit PR' to make changes." : "Editing is disabled."}
                   </div>
 
+                  {/* Print styling notice */}
+                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
+                    <span>🎨</span> <b>Print Styling:</b> Fields marked <span className="text-emerald-600">(Editable)</span> support Bold, Italic, Underline, and alignment for the printed document only. Changes are not saved.
+                  </div>
+
                   {/* Header Information */}
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Header Information</h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name</label>
-                        <input className={readonlyCls} value={formData.entity_name} readOnly tabIndex={-1} />
+                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name <span className="text-emerald-600">(Editable)</span></label>
+                        <RichEditor value={editablePREntityName} onChange={setEditablePREntityName} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -469,7 +482,7 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
                         Items <span className="text-gray-400 font-normal normal-case ml-1">({items.length})</span>
                       </h3>
                     </div>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
                       {items.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-6">No items on this PR.</p>
                       ) : (
@@ -477,8 +490,16 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
                           <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                             <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
                             <div className="mb-2">
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Item Description</label>
-                              <input className={readonlyCls} value={item.description} readOnly tabIndex={-1} />
+                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description <span className="text-emerald-600 normal-case">(Editable)</span></label>
+                              <RichEditor
+                                value={editablePRItemDescs[index] ?? item.description ?? ""}
+                                onChange={(html) => {
+                                  const updated = [...editablePRItemDescs];
+                                  updated[index] = html;
+                                  setEditablePRItemDescs(updated);
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white"
+                              />
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div>
@@ -537,21 +558,19 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
 
                   {/* Purpose */}
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Purpose</h3>
-                    <textarea
-                      className={`${readonlyCls} resize-none`}
-                      rows={2}
-                      value={formData.purpose}
-                      readOnly
-                      tabIndex={-1}
-                    />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Purpose <span className="text-emerald-600 normal-case text-xs font-normal">(Editable)</span></h3>
+                    <RichEditor value={editablePRPurpose} onChange={setEditablePRPurpose} className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white" />
                   </div>
                 </div>
 
                 {/* Footer — PDF only, no Save */}
                 <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
                   <button
-                    onClick={() => downloadPDF(formData, items, currentUserFullname, currentUserId, prId)}
+                    onClick={() => downloadPDF(
+                      { ...formData, entity_name: editablePREntityName, purpose: editablePRPurpose },
+                      items.map((item, i) => ({ ...item, description: editablePRItemDescs[i] ?? item.description })),
+                      currentUserFullname, currentUserId, prId
+                    )}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
                   >
                     <RiFilePdf2Line size={18} /> Download PDF
@@ -574,7 +593,10 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
               </div>
               <div id="pr-preview-content" className="bg-white rounded-lg shadow-lg p-8 text-black">
-                <PRPreview formData={formData} items={items} />
+                <PRPreview
+                  formData={{ ...formData, entity_name: editablePREntityName, purpose: editablePRPurpose }}
+                  items={items.map((item, i) => ({ ...item, description: editablePRItemDescs[i] ?? item.description }))}
+                />
               </div>
             </div>
           </div>

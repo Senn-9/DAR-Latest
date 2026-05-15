@@ -89,7 +89,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       </tr>
       <tr style="height:21px">
         <td colspan="3" style="border-bottom:1px solid black;border-top:none;border-left:none;border-right:none;font-size:calc(8pt + 2px);padding:2px 4px;font-weight:bold;white-space:nowrap;overflow:hidden">
-          Entity Name: <span style="font-weight:normal">${escapeHtml(data.entityName)}</span>
+          Entity Name: <span style="font-weight:normal">${data.entityName}</span>
         </td>
         <td colspan="3" style="border-bottom:1px solid black;border-top:none;border-left:none;border-right:none;font-size:calc(8pt + 2px);padding:2px 4px;font-weight:bold">
           Fund Cluster: <span style="font-weight:normal">${escapeHtml(data.fundCluster)}</span>
@@ -126,7 +126,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       </tr>
       <tr style="height:17px">
         <td colspan="6" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;border-bottom:none;font-size:calc(8.5pt + 2px);padding:2px 4px;vertical-align:top">
-          <b>Purpose:</b> ${escapeHtml(data.purpose)}
+          <b>Purpose:</b> ${data.purpose}
         </td>
       </tr>
       <tr style="height:30px">
