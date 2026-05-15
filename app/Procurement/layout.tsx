@@ -3,9 +3,11 @@
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine, RiMenuLine, RiCloseLine } from "react-icons/ri";
+import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine, RiMenuLine, RiCloseLine, RiCalendarLine } from "react-icons/ri";
 import { MdLogout } from "react-icons/md";
 import SignoutModal from "@/components/SignOutModal";
+import WebCalendarModal from "@/components/WebCalendarModal";
+import { createClient } from "@/utils/supabase/client";
 
 type CurrentUser = {
   fullname: string;
@@ -28,6 +30,11 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [signoutModalOpen, setSignoutModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [prDates, setPrDates] = useState<Date[]>([]);
+  const [poDates, setPoDates] = useState<Date[]>([]);
+  const [deliveryDates, setDeliveryDates] = useState<Date[]>([]);
+  const [paymentDates, setPaymentDates] = useState<Date[]>([]);
   const buttons =
     currentUser?.role_id === 1
       ? [
@@ -38,14 +45,27 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    // Load stored user
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
     }
-    // Set sidebar open on desktop by default
     setSidebarOpen(window.innerWidth >= 768);
+
+    const fetchCalendarData = async () => {
+      const supabase = createClient();
+      const [prs, pos, dels] = await Promise.all([
+        supabase.from("purchase_requests").select("created_at"),
+        supabase.from("purchase_orders").select("created_at"),
+        supabase.from("deliveries").select("created_at, status_id"),
+      ]);
+      setPrDates((prs.data || []).map((r: any) => new Date(r.created_at)));
+      setPoDates((pos.data || []).map((r: any) => new Date(r.created_at)));
+      const allDels = dels.data || [];
+      setDeliveryDates(allDels.map((r: any) => new Date(r.created_at)));
+      setPaymentDates(allDels.filter((r: any) => r.status_id >= 28).map((r: any) => new Date(r.created_at)));
+    };
+    fetchCalendarData();
   }, []);
 
   return (
@@ -113,10 +133,17 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="text-white w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-xl font-bold shrink-0">
                   {currentUser.fullname.charAt(0)}
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col min-w-0 flex-1">
                   <p className="text-white font-medium text-sm truncate">{currentUser.fullname}</p>
                   <p className="text-emerald-200 text-xs">{currentUser.username}</p>
                 </div>
+                <button
+                  onClick={() => setCalendarOpen(true)}
+                  title="Activity Calendar"
+                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/25 transition-colors shrink-0"
+                >
+                  <RiCalendarLine size={17} className="text-emerald-200" />
+                </button>
               </div>
 
               <div className="border-t border-emerald-700 mb-3" />
@@ -168,6 +195,15 @@ export default function Layout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </div>
+
+      <WebCalendarModal
+        visible={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        prCreationDates={prDates}
+        poCreationDates={poDates}
+        deliveryCreationDates={deliveryDates}
+        paymentCreationDates={paymentDates}
+      />
     </div>
   );
 }
