@@ -36,12 +36,12 @@ export function buildIARHtml(data: any): string {
 
     itemRows += `
       <tr style="height:24px;">
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.stock_no || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:9px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px; font-size:9px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:9px;">${quantity || ""}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px;">${amount ? amount.toFixed(2) : ""}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${escapeHtml(item.stock_no || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${escapeHtml(item.unit || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px; font-size:12px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${quantity || ""}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:10px; font-weight:bold;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:10px; font-weight:bold;">${amount ? amount.toFixed(2) : ""}</td>
       </tr>`;
   });
 
@@ -96,13 +96,13 @@ export function buildIARHtml(data: any): string {
 
     <!-- Title -->
     <div style="text-align: center; margin-bottom: 24px;">
-      <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px; font-family: "Times New Roman", serif;">INSPECTION AND ACCEPTANCE REPORT</div>
+      <div style="font-size: 16px; font-weight: 700; letter-spacing: 1px; font-family: "Times New Roman", serif;">INSPECTION AND ACCEPTANCE REPORT</div>
     </div>
 
     <!-- Entity Name and Fund Cluster Row -->
     <div style="margin-bottom: 12px; font-size: 10px; font-family: "Times New Roman", serif; display: flex; align-items: baseline;">
       <span style="font-weight: 600;">Entity Name :</span>
-      <span style="flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
+      <span style="font-size: 12px; flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
       <span style="font-weight: 600;">Fund Cluster :</span>
       <span style="padding: 0 8px;">${escapeHtml(data.fund_cluster || "")}</span>
     </div>
@@ -206,7 +206,7 @@ export function buildIARHtml(data: any): string {
 
               <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
                 <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: "Times New Roman", serif;">${escapeHtml(data.inspection_officer || "")}</div>
-                <div style="font-size: 9px; margin-top: 4px; font-family: "Times New Roman", serif;">Inspection Officer/Inspection Committee</div>
+                <div style="font-size: 12px; margin-top: 4px; font-family: "Times New Roman", serif;">Inspection Officer/Inspection Committee</div>
               </div>
             </div>
           </td>
@@ -252,7 +252,7 @@ export function buildIARHtml(data: any): string {
 
               <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
                 <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: "Times New Roman", serif;">${escapeHtml(data.supply_officer || "")}</div>
-                <div style="font-size: 9px; margin-top: 4px; font-family: "Times New Roman", serif;">ARPT/SUPPLY OFFICER</div>
+                <div style="font-size: 12px; margin-top: 4px; font-family: "Times New Roman", serif;">ARPT/SUPPLY OFFICER</div>
               </div>
             </div>
           </td>

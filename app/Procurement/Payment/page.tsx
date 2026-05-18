@@ -222,7 +222,7 @@ export default function PaymentPage() {
       text: "text-emerald-900",
       label: "Cash for Release",
     },
-    37: {
+    40: {
       bg: "bg-emerald-100",
       text: "text-emerald-900",
       label: "Payment completed",
@@ -322,7 +322,7 @@ export default function PaymentPage() {
     // Map status IDs to filter categories - only payment phase statuses (28+)
     if ([28, 29, 30, 32, 33, 34, 35].includes(statusId))
       return "pending-review";
-    if ([36, 37].includes(statusId)) return "completed";
+    if ([36, 40].includes(statusId)) return "completed";
     if ([26, 27].includes(statusId)) return "cancelled"; // Cancelled
     return "other"; // Other statuses (including delivery phase)
   };
@@ -786,7 +786,7 @@ async function buildLOAHtml(d: any): Promise<string> {
             },
             {
               label: "Completed",
-              value: deliveries.filter((d) => d.status_id === 37).length,
+              value: deliveries.filter((d) => d.status_id === 40).length,
               icon: <RiCheckboxCircleLine />,
               bg: "bg-emerald-50",
               border: "border-emerald-200",
@@ -1272,7 +1272,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                   nextStatusId = 36;
                   break;
                 case 36:
-                  nextStatusId = 37;
+                  nextStatusId = 40;
                   break;
                 default:
                   console.error("Invalid status for payment processing");
@@ -1337,7 +1337,7 @@ async function buildLOAHtml(d: any): Promise<string> {
                 selectedDelivery.status_id === 34 ? "Forward to PARPO office for signature" :
                 selectedDelivery.status_id === 35 ? "Forward to Accounting for Tax processing" :
                 selectedDelivery.status_id === 36 ? "Cash for Release" :
-                selectedDelivery.status_id === 37 ? "Payment Completed" :
+                selectedDelivery.status_id === 40 ? "Payment Completed" :
                 "Unknown Step";
               
               const remarkText = data.notes 

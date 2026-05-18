@@ -73,31 +73,31 @@ export function buildDVHtml(data: any): string {
   </style>
 </head>
 <body>
-  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px;">
+  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px; font-family: 'Times New Roman', serif; font-size: 9px; color: #000;">
     <!-- Appendix -->
-    <div style="text-align: right; font-style: italic; margin-bottom: 2px;">Appendix 32</div>
+    <div style="text-align: right; font-style: italic; margin-bottom: 2px; font-family: 'Times New Roman', serif;">Appendix 32</div>
 
     <!-- HEADER: Logo | Title | Fund Cluster/Date/DV No -->
-    <table style="border: 1px solid #000;">
+    <table style="border: 1px solid #000; border-collapse: collapse;">
       <tr>
         <td style="width: 90px; padding: 4px; vertical-align: middle;">
           <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR Logo" style="width: 72px; height: 44px; object-fit: contain;" />
         </td>
         <td style="border-right: 1px solid #000; padding: 4px; vertical-align: top;">
-          <div style="font-size: 12px; font-weight: bold; text-align: center;">DEPARTMENT OF AGRARIAN REFORM</div>
-          <div style="font-size: 10px; text-align: center; margin-bottom: 4px;">Camarines Sur Provincial Office</div>
-          <div style="font-size: 11px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px;">DISBURSEMENT VOUCHER</div>
+          <div style="font-size: 12px; font-weight: bold; text-align: center; font-family: 'Times New Roman', serif;">DEPARTMENT OF AGRARIAN REFORM</div>
+          <div style="font-size: 10px; text-align: center; margin-bottom: 4px; font-family: 'Times New Roman', serif;">Camarines Sur Provincial Office</div>
+          <div style="font-size: 14px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px; font-family: 'Times New Roman', serif;">DISBURSEMENT VOUCHER</div>
         </td>
         <td style="width: 160px; padding: 0; vertical-align: top;">
-          <table style="width: 100%; height: 100%;">
+          <table style="width: 100%; height: 100%; border-collapse: collapse;">
             <tr>
-              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b>Fund:</b> ${escapeHtml(data.fund_cluster || "")}</td>
+              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">Fund:</b> ${escapeHtml(data.fund_cluster || "")}</td>
             </tr>
             <tr>
-              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date:</b> ${escapeHtml(data.dv_date || "")}</td>
+              <td style="border-bottom: 1px solid #000; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">Date:</b> ${escapeHtml(data.dv_date || "")}</td>
             </tr>
             <tr>
-              <td style="padding: 3px 4px;"><b>DV No.:</b> ${escapeHtml(data.dv_no || "")}</td>
+              <td style="padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">DV No.:</b> ${escapeHtml(data.dv_no || "")}</td>
             </tr>
           </table>
         </td>
@@ -105,21 +105,21 @@ export function buildDVHtml(data: any): string {
     </table>
 
     <!-- MODE OF PAYMENT -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 6px; vertical-align: top;"><b>Mode of<br/>payment</b></td>
-        <td style="padding: 3px 6px; vertical-align: top;">
+        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 6px; vertical-align: top;"><b style="font-family: 'Times New Roman', serif;">Mode of <br /> payment</b></td>
+        <td style="padding: 3px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
           <div style="display: flex; gap: 35px; margin-top: 3px;">
-            <label style="display: flex; align-items: center; gap: 3px;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "MDS Check" ? "checked" : ""} style="margin: 0;" />MDS Check
             </label>
-            <label style="display: flex; align-items: center; gap: 3px;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "Commercial Check" ? "checked" : ""} style="margin: 0;" />Commercial Check
             </label>
-            <label style="display: flex; align-items: center; gap: 3px;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "ADA" ? "checked" : ""} style="margin: 0;" />ADA
             </label>
-            <label style="display: flex; align-items: center; gap: 3px;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "Others" ? "checked" : ""} style="margin: 0;" />Others (Please specify)
             </label>
           </div>
@@ -128,82 +128,82 @@ export function buildDVHtml(data: any): string {
     </table>
 
     <!-- PAYEE / TIN / ORS / ADDRESS -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 4px;"><b>Payee</b></td>
-        <td style="border-right: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee || data.supplier || "")}</td>
-        <td style="width: 140px; border-right: 1px solid #000; padding: 3px 4px;"><b>Tin/Employee No.</b></td>
-        <td style="width: 120px; padding: 3px 4px;"><b>ORS/BURS No.</b></td>
+        <td style="width: 50px; border-right: 1px solid #000; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">Payee</b></td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(data.payee || data.supplier || "")}</td>
+        <td style="width: 140px; border-right: 1px solid #000; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">Tin/Employee No.</b></td>
+        <td style="width: 120px; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">ORS/BURS No.</b></td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;"><b>Address</b></td>
-        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.address || "")}</td>
-        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.payee_tin || data.tin || "")}</td>
-        <td style="border-top: 1px solid #000; padding: 3px 4px;">${escapeHtml(data.ors_no || "")}</td>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px;"><b style="font-family: 'Times New Roman', serif;">Address</b></td>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(data.address || "")}</td>
+        <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(data.payee_tin || data.tin || "")}</td>
+        <td style="border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(data.ors_no || "")}</td>
       </tr>
     </table>
 
     <!-- PARTICULARS TABLE -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Particulars</th>
-          <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Responsibility Center</th>
-          <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">MFO/PAP</th>
-          <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Amount</th>
+          <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Particulars</th>
+          <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Responsibility Center</th>
+          <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">MFO/PAP</th>
+          <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Amount</th>
         </tr>
       </thead>
       <tbody>
-        <tr style="height: 120px;">
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; white-space: pre-wrap;">${escapeHtml(data.particulars || "")}</td>
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.responsibility_center || "")}</td>
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top;">${escapeHtml(data.mfo_pap || "")}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+        <tr style="height: 0px;">
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; white-space: pre-wrap;">${escapeHtml(data.particulars || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif;">${escapeHtml(data.responsibility_center || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif;">${escapeHtml(data.mfo_pap || "")}</td>
+          <td style="padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
         </tr>
         ${[...Array(7)].map(() => `
-        <tr style="height: 20px;">
+        <tr style="height: 0px;">
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td>&nbsp;</td>
         </tr>`).join("")}
         <tr>
-          <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold;">Amount Due</td>
-          <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+          <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold; font-family: 'Times New Roman', serif;">Amount Due</td>
+          <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right; font-family: 'Times New Roman', serif;">${escapeHtml(data.amount_due || "")}</td>
         </tr>
       </tbody>
     </table>
 
     <!-- SECTION A -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="padding: 4px 6px;"><b>A.</b> Certified: Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</td>
+        <td style="padding: 4px 6px; font-family: 'Times New Roman', serif;"><b>A.</b> Certified: Expenses/Cash Advance necessary, lawful and incurred under my direct supervision.</td>
       </tr>
       <tr>
-        <td style="padding: 4px 6px; text-align: center;">
+        <td style="padding: 4px 6px; font-family: 'Times New Roman', serif; text-align: center;">
           <div style="margin-bottom: 4px; margin-top: 20px;">
-            <span style="font-weight: bold; font-size: 10px;">${escapeHtml(data.certified_by_name || "")}</span>
+            <span style="font-weight: bold; font-size: 10px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_name || "")}</span>
           </div>
           <div style="margin-bottom: 20px;">
-            <span style="font-size: 10px;">${escapeHtml(data.certified_by_position || "")}</span>
+            <span style="font-size: 10px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_position || "")}</span>
           </div>
         </td>
       </tr>
     </table>
 
     <!-- SECTION B: Accounting Entry -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px;"><b>B.</b> Accounting Entry:</td>
+        <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px; font-family: 'Times New Roman', serif;"><b>B.</b> Accounting Entry:</td>
       </tr>
       <tr>
-        <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Account Title</th>
-        <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">UACS Code</th>
-        <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Debit</th>
-        <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold;">Credit</th>
+        <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Account Title</th>
+        <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">UACS Code</th>
+        <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Debit</th>
+        <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Credit</th>
       </tr>
       ${[...Array(6)].map(() => `
-      <tr style="height: 20px;">
+      <tr style="height: 24px;">
         <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
         <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
         <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
@@ -218,84 +218,86 @@ export function buildDVHtml(data: any): string {
     </table>
 
     <!-- SECTIONS C & D -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 52.5%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top;">
-          <div style="font-weight: bold; margin-bottom: 4px;">C. Certified:</div>
+        <td style="width: 52.5%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
+          <div style="font-weight: bold; margin-bottom: 4px; font-family: 'Times New Roman', serif;">C. Certified:</div>
           <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
             <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-            <span>Cash available</span>
+            <span style="font-family: 'Times New Roman', serif;">Cash available</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
             <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-            <span>Subject to Authority to Debit Account (when applicable)</span>
+            <span style="font-family: 'Times New Roman', serif;">Subject to Authority to Debit Account (when applicable)</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
             <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
-            <span>Supporting documents complete and amount claimed proper</span>
+            <span style="font-family: 'Times New Roman', serif;">Supporting documents complete and amount claimed proper</span>
           </div>
           <div style="height: 20px;"></div>
         </td>
-        <td style="padding: 4px 6px; vertical-align: top;">
-          <div style="font-weight: bold; margin-bottom: 4px;">D. Approved for Payment</div>
+        <td style="padding: 4px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
+          <b style="font-family: 'Times New Roman', serif;">D. Approved for Payment</b>
           <div style="height: 70px;"></div>
         </td>
       </tr>
     </table>
 
     <!-- SIGNATURES -->
-    <table style="border: 1px solid #000; border-top: none;">
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 68px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px;">&nbsp;</td>
-        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 28px;">&nbsp;</td>
+        <td style="width: 68px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Signature</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Signature</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif;">&nbsp;</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Printed Name</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Printed Name</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Printed Name</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Printed Name</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;" rowspan="2">Position</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;" rowspan="2">Position</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;" rowspan="2">Position</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;" rowspan="2">Position</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">Head, Accounting Unit/Authorized Representative</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px;">Agency Head/Authorized Representative</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">Head, Accounting Unit/Authorized Representative</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">Agency Head/Authorized Representative</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; padding: 3px 4px;">Date</td>
-        <td style="border-right: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; padding: 3px 4px;">Date</td>
-        <td style="padding: 3px 4px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Date</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Date</td>
+        <td style="padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
       </tr>
     </table>
 
     <!-- SECTION E: Receipt of Payment -->
-    <table style="border: 1px solid #000; border-top: none;">
-      <tr>
-        <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px;"><b>E. Receipt of Payment</b></td>
-        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 6px;"><b>JEV No.</b></td>
-      </tr>
-      <tr>
-        <td style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Check/<br/>ADA No.</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date :</b></td>
-        <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Bank Name &amp; Account Number:</b></td>
-        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px;">&nbsp;</td>
-      </tr>
-      <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;">Signature</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Date :</b></td>
-        <td colspan="2" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px;"><b>Printed Name:</b></td>
-        <td style="border-bottom: 1px solid #000; border-left: 1px solid #000; padding: 3px 4px;"><b>Date</b></td>
-      </tr>
-      <tr>
-        <td colspan="5" style="padding: 3px 6px;"><b>Official Receipt No. &amp; Date/Other Documents</b></td>
-      </tr>
+    <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
+      <tbody>
+        <tr>
+          <td colspan="3" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 6px; font-weight: bold; font-family: 'Times New Roman', serif;">E. Receipt of Payment</td>
+          <td rowspan="2" style="padding: 3px 6px; font-family: 'Times New Roman', serif; vertical-align: top;"><b style="font-family: 'Times New Roman', serif;">JEV No.</b></td>
+        </tr>
+        <tr>
+          <td style="width: 100px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Check/<br/>ADA No.:</td>
+          <td style="width: 120px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date:</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Bank Name &amp; Account Number:</td>
+        </tr>
+        <tr>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; height: 44px;">Signature</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date:</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;"><div style="font-family: 'Times New Roman', serif;">Printed Name:</div><div style="text-align: center; font-family: 'Times New Roman', serif; margin-top: 6px; font-size: 9px;">${escapeHtml(data.payee || data.supplier || "")}</div></td>
+          <td style="border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding: 6px 6px; font-family: 'Times New Roman', serif; height: 40px; vertical-align: top; border-right: 1px solid #000;">Official Receipt No. &amp; Date/Other Documents</td>
+          <td style="padding: 6px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">&nbsp;</td>
+        </tr>
+      </tbody>
     </table>
   </div>
 </body>
@@ -508,7 +510,7 @@ export default function DVPreview({
                     </div>
                     <div
                       style={{
-                        fontSize: "11px",
+                        fontSize: "14px",
                         fontWeight: "bold",
                         textAlign: "center",
                         letterSpacing: "1px",
@@ -786,7 +788,7 @@ export default function DVPreview({
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ height: "120px" }}>
+                <tr style={{ height: "80px" }}>
                   <td
                     style={{
                       borderRight: "1px solid #000",
@@ -1306,21 +1308,23 @@ export default function DVPreview({
               <tbody>
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={3}
                     style={{
+                      borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 6px",
+                      fontWeight: "bold",
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>E. Receipt of Payment</b>
+                    E. Receipt of Payment
                   </td>
                   <td
+                    rowSpan={2}
                     style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
                       padding: "3px 6px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
                     <b style={{ fontFamily: "Times New Roman, serif" }}>JEV No.</b>
@@ -1329,16 +1333,29 @@ export default function DVPreview({
                 <tr>
                   <td
                     style={{
-                      width: "90px",
+                      width: "100px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
                     Check/
                     <br />
-                    ADA No.
+                    ADA No.:
+                  </td>
+                  <td
+                    style={{
+                      width: "120px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    Date:
                   </td>
                   <td
                     style={{
@@ -1346,30 +1363,10 @@ export default function DVPreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
-                  </td>
-                  <td
-                    colSpan={2}
-                    style={{
-                      borderRight: "1px solid #000",
-                      borderBottom: "1px solid #000",
-                      padding: "3px 4px",
-                      fontFamily: "Times New Roman, serif",
-                    }}
-                  >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Bank Name &amp; Account Number:</b>
-                  </td>
-                  <td
-                    style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
-                      padding: "3px 4px",
-                      fontFamily: "Times New Roman, serif",
-                    }}
-                  >
-                    &nbsp;
+                    Bank Name &amp; Account Number:
                   </td>
                 </tr>
                 <tr>
@@ -1379,6 +1376,8 @@ export default function DVPreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                      height: "44px",
                     }}
                   >
                     Signature
@@ -1389,35 +1388,64 @@ export default function DVPreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                    Date:
                   </td>
                   <td
-                    colSpan={2}
                     style={{
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Printed Name:</b>
+                    <div style={{ fontFamily: "Times New Roman, serif" }}>Printed Name:</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontFamily: "Times New Roman, serif",
+                        marginTop: "6px",
+                        fontSize: "9px",
+                      }}
+                    >
+                      {mergedData.payee || mergedData.supplier || ""}
+                    </div>
                   </td>
                   <td
                     style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
+                      borderTop: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date</b>
+                    Date
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan={5} style={{ padding: "3px 6px", fontFamily: "Times New Roman, serif" }}>
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Official Receipt No. &amp; Date/Other Documents</b>
+                  <td
+                    colSpan={3}
+                    style={{
+                      padding: "6px 6px",
+                      fontFamily: "Times New Roman, serif",
+                      height: "40px",
+                      verticalAlign: "top",
+                      borderRight: "1px solid #000",
+                    }}
+                  >
+                    Official Receipt No. &amp; Date/Other Documents
+                  </td>
+                  <td
+                    style={{
+                      padding: "6px 4px",
+                      fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    &nbsp;
                   </td>
                 </tr>
               </tbody>

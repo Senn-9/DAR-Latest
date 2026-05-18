@@ -24,6 +24,8 @@ import { buildDVHtml } from "../Delivery/DVPreview";
 const editableInputCls =
   "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
 
+const editableInputClsDV =
+  "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-full text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden text-center";
 const editableInputCenterCls =
   "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-center whitespace-pre-wrap break-words resize-none overflow-hidden";
 
@@ -261,10 +263,10 @@ function DVEditablePreview({
   // Transform poData to have the correct structure
   const transformedPoData = poData
     ? {
-        ...poData,
-        po_items: poData.purchase_order_items || [],
-        po_date: poData.date,
-      }
+      ...poData,
+      po_items: poData.purchase_order_items || [],
+      po_date: poData.date,
+    }
     : {};
 
   const mergedData = { ...delivery, ...transformedPoData, ...dv };
@@ -1140,8 +1142,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <div style={{ fontWeight: "bold", marginBottom: "4px",                       fontFamily: "Times New Roman, serif",
- }}>
+                    <div style={{
+                      fontWeight: "bold", marginBottom: "4px", fontFamily: "Times New Roman, serif",
+                    }}>
                       C. Certified:
                     </div>
                     {[
@@ -1166,7 +1169,7 @@ function DVEditablePreview({
                             border: "1px solid #000",
                             flexShrink: 0,
                             marginTop: "1px",
-                            
+
                           }}
                         ></span>
                         <span style={{ fontFamily: "Times New Roman, serif" }}>{item}</span>
@@ -1269,7 +1272,7 @@ function DVEditablePreview({
                           certified_printed_name: e.target.value,
                         })
                       }
-                      className={editableInputCls}
+                      className={editableInputClsDV}
                       placeholder="Certified by name"
                       rows={1}
                       style={{
@@ -1304,7 +1307,7 @@ function DVEditablePreview({
                           approved_printed_name: e.target.value,
                         })
                       }
-                      className={editableInputCls}
+                      className={editableInputClsDV}
                       placeholder="Approved by name"
                       rows={1}
                       style={{
@@ -1340,7 +1343,7 @@ function DVEditablePreview({
                       onChange={(e) =>
                         setDv({ ...dv, certified_position: e.target.value })
                       }
-                      className={editableInputCls}
+                      className={editableInputClsDV}
                       placeholder="Position/Role"
                       rows={1}
                       style={{
@@ -1373,7 +1376,7 @@ function DVEditablePreview({
                       onChange={(e) =>
                         setDv({ ...dv, approved_position: e.target.value })
                       }
-                      className={editableInputCls}
+                      className={editableInputClsDV}
                       placeholder="Position/Role"
                       rows={1}
                       style={{
@@ -1467,41 +1470,57 @@ function DVEditablePreview({
               }}
             >
               <tbody>
+                {/* Row 1: E. Receipt of Payment | JEV No. (rowSpan=2, no bottom border) */}
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={3}
                     style={{
+                      borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 6px",
+                      fontWeight: "bold",
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>E. Receipt of Payment</b>
+                    E. Receipt of Payment
                   </td>
                   <td
+                    rowSpan={2}
                     style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
                       padding: "3px 6px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>JEV No.</b>
+                    JEV No.
                   </td>
                 </tr>
+
+                {/* Row 2: Check/ADA No. | Date: | Bank Name & Account Number: */}
                 <tr>
                   <td
                     style={{
-                      width: "90px",
+                      width: "100px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    Check/
-                    <br />
-                    ADA No.
+                    Check/<br />ADA No.:
+                  </td>
+                  <td
+                    style={{
+                      width: "120px",
+                      borderRight: "1px solid #000",
+                      borderBottom: "1px solid #000",
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    Date:
                   </td>
                   <td
                     style={{
@@ -1509,32 +1528,14 @@ function DVEditablePreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
-                  </td>
-                  <td
-                    colSpan={2}
-                    style={{
-                      borderRight: "1px solid #000",
-                      borderBottom: "1px solid #000",
-                      padding: "3px 4px",
-                      fontFamily: "Times New Roman, serif",
-                    }}
-                  >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Bank Name &amp; Account Number:</b>
-                  </td>
-                  <td
-                    style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
-                      padding: "3px 4px",
-                      fontFamily: "Times New Roman, serif",
-                    }}
-                  >
-                    &nbsp;
+                    Bank Name &amp; Account Number:
                   </td>
                 </tr>
+
+                {/* Row 3: Signature | Date: | Printed Name: | Date (borderTop marks end of JEV rowspan) */}
                 <tr>
                   <td
                     style={{
@@ -1542,6 +1543,8 @@ function DVEditablePreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                      height: "44px",
                     }}
                   >
                     Signature
@@ -1552,35 +1555,68 @@ function DVEditablePreview({
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                    Date:
                   </td>
                   <td
-                    colSpan={2}
                     style={{
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Printed Name:</b>
+                    <div style={{
+                      fontFamily: "Times New Roman, serif",
+                    }}>Printed Name:</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontFamily: "Times New Roman, serif",
+                        marginTop: "6px",
+                        fontSize: "9px",
+                      }}
+                    >
+                      {mergedData.payee || transformedPoData.supplier || ""}
+                    </div>
                   </td>
                   <td
                     style={{
-                      borderBottom: "1px solid #000",
-                      borderLeft: "1px solid #000",
+                      borderTop: "1px solid #000",
                       padding: "3px 4px",
                       fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date</b>
+                    Date
                   </td>
                 </tr>
+
+                {/* Row 4: Official Receipt No. — taller to fill remaining space */}
                 <tr>
-                  <td colSpan={5} style={{ padding: "3px 6px", fontFamily: "Times New Roman, serif" }}>
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Official Receipt No. &amp; Date/Other Documents</b>
+                  <td
+                    colSpan={3}
+                    style={{
+                      padding: "6px 6px",
+                      fontFamily: "Times New Roman, serif",
+                      height: "40px",
+                      verticalAlign: "top",
+                      borderRight: "1px solid #000",
+                    }}
+                  >
+                    Official Receipt No. &amp; Date/Other Documents
+                  </td>
+                  <td
+                    style={{
+                      padding: "6px 4px",
+                      fontFamily: "Times New Roman, serif",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    &nbsp;
                   </td>
                 </tr>
               </tbody>
@@ -1591,1819 +1627,6 @@ function DVEditablePreview({
     </div>
   );
 }
-
-
-// function DVEditablePreview({
-//   delivery,
-
-//   dv,
-
-//   poData,
-
-//   setDv,
-
-//   accountingEntries,
-
-//   onUpdateAccountingEntry,
-// }: {
-//   delivery: any;
-
-//   dv: any;
-
-//   poData: any;
-
-//   setDv: (data: any) => void;
-
-//   accountingEntries?: Array<{
-//     account_title: string;
-
-//     uacs_code: string;
-
-//     debit: string;
-
-//     credit: string;
-//   }>;
-
-//   onUpdateAccountingEntry?: (
-//     index: number,
-
-//     field: string,
-
-//     value: string,
-//   ) => void;
-// }) {
-//   const [zoomLevel, setZoomLevel] = useState(0.85);
-
-//   const handleZoomIn = () => {
-//     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
-//   };
-
-//   const handleZoomOut = () => {
-//     setZoomLevel((prev) => Math.max(prev - 0.1, 0.3));
-//   };
-
-//   const handleReset = () => {
-//     setZoomLevel(0.85);
-//   };
-
-//   const scalePercentage = Math.round(zoomLevel * 100);
-
-//   const updateDvField = (field: string, value: string) => {
-//     setDv({ ...dv, [field]: value });
-//   };
-
-//   // Transform poData to have the correct structure
-
-//   const transformedPoData = poData
-//     ? {
-//       ...poData,
-
-//       po_items: poData.purchase_order_items || [],
-
-//       po_date: poData.date,
-//     }
-//     : {};
-
-//   const mergedData = { ...delivery, ...transformedPoData, ...dv };
-
-//   mergedData.po_items = transformedPoData.po_items;
-
-//   // Ensure DV-specific fields are available in mergedData
-
-//   if (!mergedData.dv_no && dv?.dv_no) mergedData.dv_no = dv.dv_no;
-
-//   if (!mergedData.dv_date && dv?.dv_date) mergedData.dv_date = dv.dv_date;
-
-//   // Use provided accounting entries or default empty rows
-
-//   const entries =
-//     accountingEntries && accountingEntries.length > 0
-//       ? accountingEntries
-//       : [
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-//         { account_title: "", uacs_code: "", debit: "", credit: "" },
-//       ];
-
-//   return (
-//     <div className="space-y-2">
-//       {/* Zoom Controls */}
-
-//       <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-//         <div className="flex items-center gap-2">
-//           <button
-//             onClick={handleZoomOut}
-//             className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-//             title="Zoom Out"
-//           >
-//             <RiZoomOutLine className="w-4 h-4" />
-//           </button>
-
-//           <button
-//             onClick={handleReset}
-//             className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-//             title="Reset Zoom"
-//           >
-//             <RiRefreshLine className="w-4 h-4" />
-//           </button>
-
-//           <button
-//             onClick={handleZoomIn}
-//             className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-//             title="Zoom In"
-//           >
-//             <RiZoomInLine className="w-4 h-4" />
-//           </button>
-//         </div>
-
-//         <span className="text-sm text-gray-600 font-medium">
-//           {scalePercentage}%
-//         </span>
-//       </div>
-
-//       {/* Preview Container */}
-
-//       <div className="overflow-auto bg-white" style={{ maxHeight: "600px" }}>
-//         <div
-//           style={{
-//             transform: `scale(${zoomLevel})`,
-
-//             transformOrigin: "top left",
-
-//             width: `${100 / zoomLevel}%`,
-//           }}
-//         >
-//           <div
-//             className="bg-white p-4"
-//             style={{
-//               width: "600px",
-
-//               minHeight: "1056px",
-
-//               margin: "0 auto",
-
-//               fontFamily: "Times New Roman, serif",
-
-//               fontSize: "9px",
-
-//               color: "#000",
-//             }}
-//           >
-//             {/* Appendix */}
-
-//             <div
-//               style={{
-//                 textAlign: "right",
-
-//                 fontStyle: "italic",
-
-//                 marginBottom: "2px",
-//               }}
-//             >
-//               Appendix 32
-//             </div>
-
-//             {/* HEADER: Logo | Title | Fund Cluster/Date/DV No */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "90px",
-
-//                       padding: "4px",
-
-//                       verticalAlign: "middle",
-//                     }}
-//                   >
-//                     <img
-//                       src="/temp_pic/image_1195822096_1.jpg"
-//                       alt="DAR Logo"
-//                       style={{
-//                         width: "72px",
-
-//                         height: "44px",
-
-//                         objectFit: "contain",
-//                       }}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "4px",
-
-//                       verticalAlign: "top",
-//                     }}
-//                   >
-//                     <div
-//                       style={{
-//                         fontSize: "12px",
-
-//                         fontWeight: "bold",
-
-//                         textAlign: "center",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     >
-//                       DEPARTMENT OF AGRARIAN REFORM
-//                     </div>
-
-//                     <div
-//                       style={{
-//                         fontSize: "10px",
-
-//                         textAlign: "center",
-
-//                         marginBottom: "4px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     >
-//                       Camarines Sur Provincial Office
-//                     </div>
-
-//                     <div
-//                       style={{
-//                         fontSize: "11px",
-
-//                         fontWeight: "bold",
-
-//                         textAlign: "center",
-
-//                         letterSpacing: "1px",
-
-//                         paddingTop: "4px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     >
-//                       DISBURSEMENT VOUCHER
-//                     </div>
-//                   </td>
-
-//                   <td
-//                     style={{ width: "160px", padding: 0, verticalAlign: "top" }}
-//                   >
-//                     <table
-//                       style={{
-//                         width: "100%",
-
-//                         borderCollapse: "collapse",
-
-//                         height: "100%",
-//                       }}
-//                     >
-//                       <tbody>
-//                         <tr>
-//                           <td
-//                             style={{
-//                               borderBottom: "1px solid #000",
-
-//                               padding: "3px 4px",
-//                             }}
-//                           >
-//                             <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                               Fund:
-//                             </b>{" "}
-//                             <input
-//                               type="text"
-//                               value={mergedData.fund_cluster || ""}
-//                               onChange={(e) =>
-//                                 updateDvField("fund_cluster", e.target.value)
-//                               }
-//                               className={editableInputCls}
-//                               style={{
-//                                 width: "60px",
-
-//                                 fontSize: "9px",
-
-//                                 fontFamily: "Times New Roman, serif",
-//                               }}
-//                             />
-//                           </td>
-//                         </tr>
-
-//                         <tr>
-//                           <td
-//                             style={{
-//                               borderBottom: "1px solid #000",
-
-//                               padding: "3px 4px",
-//                             }}
-//                           >
-//                             <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                               Date:
-//                             </b>{" "}
-//                             <input
-//                               type="text"
-//                               value={mergedData.dv_date || ""}
-//                               onChange={(e) =>
-//                                 updateDvField("dv_date", e.target.value)
-//                               }
-//                               className={editableInputCls}
-//                               style={{
-//                                 width: "80px",
-
-//                                 fontSize: "9px",
-
-//                                 fontFamily: "Times New Roman, serif",
-//                               }}
-//                             />
-//                           </td>
-//                         </tr>
-
-//                         <tr>
-//                           <td style={{ padding: "3px 4px" }}>
-//                             <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                               DV No.:
-//                             </b>{" "}
-//                             <input
-//                               type="text"
-//                               value={mergedData.dv_no || ""}
-//                               onChange={(e) =>
-//                                 updateDvField("dv_no", e.target.value)
-//                               }
-//                               className={editableInputCls}
-//                               style={{
-//                                 width: "100px",
-
-//                                 fontSize: "9px",
-
-//                                 fontFamily: "Times New Roman, serif",
-//                               }}
-//                             />
-//                           </td>
-//                         </tr>
-//                       </tbody>
-//                     </table>
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* MODE OF PAYMENT */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "50px",
-
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 6px",
-
-//                       verticalAlign: "top",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Mode of <br /> payment
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       padding: "3px 6px",
-
-//                       verticalAlign: "top",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <div
-//                       style={{ display: "flex", gap: "35px", marginTop: "3px" }}
-//                     >
-//                       <label
-//                         style={{
-//                           display: "flex",
-
-//                           alignItems: "center",
-
-//                           gap: "3px",
-
-//                           fontSize: "9px",
-
-//                           fontFamily: "Times New Roman, serif",
-//                         }}
-//                       >
-//                         <input
-//                           type="checkbox"
-//                           checked={mergedData.mode_of_payment === "MDS Check"}
-//                           onChange={(e) =>
-//                             updateDvField(
-//                               "mode_of_payment",
-
-//                               e.target.checked ? "MDS Check" : "",
-//                             )
-//                           }
-//                           style={{ margin: 0 }}
-//                         />
-//                         MDS Check
-//                       </label>
-
-//                       <label
-//                         style={{
-//                           display: "flex",
-
-//                           alignItems: "center",
-
-//                           gap: "3px",
-
-//                           fontSize: "9px",
-
-//                           fontFamily: "Times New Roman, serif",
-//                         }}
-//                       >
-//                         <input
-//                           type="checkbox"
-//                           checked={
-//                             mergedData.mode_of_payment === "Commercial Check"
-//                           }
-//                           onChange={(e) =>
-//                             updateDvField(
-//                               "mode_of_payment",
-
-//                               e.target.checked ? "Commercial Check" : "",
-//                             )
-//                           }
-//                           style={{ margin: 0 }}
-//                         />
-//                         Commercial Check
-//                       </label>
-
-//                       <label
-//                         style={{
-//                           display: "flex",
-
-//                           alignItems: "center",
-
-//                           gap: "3px",
-
-//                           fontSize: "9px",
-
-//                           fontFamily: "Times New Roman, serif",
-//                         }}
-//                       >
-//                         <input
-//                           type="checkbox"
-//                           checked={mergedData.mode_of_payment === "ADA"}
-//                           onChange={(e) =>
-//                             updateDvField(
-//                               "mode_of_payment",
-
-//                               e.target.checked ? "ADA" : "",
-//                             )
-//                           }
-//                           style={{ margin: 0 }}
-//                         />
-//                         ADA
-//                       </label>
-
-//                       <label
-//                         style={{
-//                           display: "flex",
-
-//                           alignItems: "center",
-
-//                           gap: "3px",
-
-//                           fontSize: "9px",
-
-//                           fontFamily: "Times New Roman, serif",
-//                         }}
-//                       >
-//                         <input
-//                           type="checkbox"
-//                           checked={mergedData.mode_of_payment === "Others"}
-//                           onChange={(e) =>
-//                             updateDvField(
-//                               "mode_of_payment",
-
-//                               e.target.checked ? "Others" : "",
-//                             )
-//                           }
-//                           style={{ margin: 0 }}
-//                         />
-//                         Others (Please specify)
-//                       </label>
-//                     </div>
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* PAYEE / TIN / ORS / ADDRESS */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "50px",
-
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Payee
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={
-//                         mergedData.payee || transformedPoData.supplier || ""
-//                       }
-//                       onChange={(e) => updateDvField("payee", e.target.value)}
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       width: "140px",
-
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Tin/Employee No.
-//                     </b>
-//                   </td>
-
-//                   <td style={{ width: "120px", padding: "3px 4px" }}>
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       ORS/BURS No.
-//                     </b>
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderTop: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Address
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderTop: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={
-//                         mergedData.address || transformedPoData.address || ""
-//                       }
-//                       onChange={(e) => updateDvField("address", e.target.value)}
-//                       className={editableInputCls}
-//                       style={{ width: "95%", fontSize: "9px" }}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderTop: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={
-//                         mergedData.payee_tin || transformedPoData.tin || ""
-//                       }
-//                       onChange={(e) =>
-//                         updateDvField("payee_tin", e.target.value)
-//                       }
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                       placeholder="VAT 766-956-523-000"
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderTop: "1px solid #000",
-
-//                       padding: "3px 4px",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={mergedData.ors_no || ""}
-//                       onChange={(e) => updateDvField("ors_no", e.target.value)}
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* PARTICULARS TABLE */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <thead>
-//                 <tr>
-//                   <th
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Particulars
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "130px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Responsibility Center
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "90px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     MFO/PAP
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "100px",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Amount
-//                   </th>
-//                 </tr>
-//               </thead>
-
-//               <tbody>
-//                 <tr style={{ height: "30px" }}>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       verticalAlign: "top",
-//                     }}
-//                   >
-//                     <textarea
-//                       value={mergedData.particulars || ""}
-//                       onChange={(e) =>
-//                         updateDvField("particulars", e.target.value)
-//                       }
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         minHeight: "110px",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                       rows={6}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       verticalAlign: "top",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={mergedData.responsibility_center || ""}
-//                       onChange={(e) =>
-//                         updateDvField("responsibility_center", e.target.value)
-//                       }
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       verticalAlign: "top",
-//                     }}
-//                   >
-//                     <input
-//                       type="text"
-//                       value={mergedData.mfo_pap || ""}
-//                       onChange={(e) => updateDvField("mfo_pap", e.target.value)}
-//                       className={editableInputCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-
-//                   <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
-//                     <input
-//                       type="text"
-//                       value={mergedData.amount_due || ""}
-//                       onChange={(e) =>
-//                         updateDvField("amount_due", e.target.value)
-//                       }
-//                       className={editableInputRightCls}
-//                       style={{
-//                         width: "95%",
-
-//                         fontSize: "9px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-//                 </tr>
-
-//                 {[...Array(3)].map((_, i) => (
-//                   <tr key={i} style={{ height: "10px" }}>
-//                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-
-//                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-
-//                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-
-//                     <td>&nbsp;</td>
-//                   </tr>
-//                 ))}
-
-//                 <tr>
-//                   <td
-//                     colSpan={3}
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderTop: "1px solid #000",
-
-//                       textAlign: "right",
-
-//                       padding: "3px 4px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Amount Due
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderTop: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       textAlign: "right",
-//                     }}
-//                   >
-//                     {mergedData.amount_due || ""}
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* SECTION A */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       padding: "4px 6px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b>A.</b> Certified: Expenses/Cash Advance necessary, lawful
-//                     and incurred under my direct supervision.
-//                   </td>
-//                 </tr>
-
-//                 <tr style={{ height: "36px" }}>
-//                   <td>&nbsp;</td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* SECTION B: Accounting Entry */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     colSpan={4}
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 6px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b>B.</b> Accounting Entry:
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <th
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Account Title
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "110px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     UACS Code
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "80px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Debit
-//                   </th>
-
-//                   <th
-//                     style={{
-//                       width: "80px",
-
-//                       borderBottom: "1px solid #000",
-
-//                       textAlign: "center",
-
-//                       padding: "3px",
-
-//                       fontWeight: "bold",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Credit
-//                   </th>
-//                 </tr>
-
-//                 {entries.map((entry, i) => (
-//                   <tr key={i} style={{ height: "20px" }}>
-//                     <td
-//                       style={{
-//                         borderRight: "1px solid #000",
-
-//                         borderBottom:
-//                           i < entries.length - 1 ? "1px solid #000" : "none",
-
-//                         padding: "2px 4px",
-//                       }}
-//                     >
-//                       {onUpdateAccountingEntry ? (
-//                         <input
-//                           type="text"
-//                           value={entry.account_title || ""}
-//                           onChange={(e) =>
-//                             onUpdateAccountingEntry(
-//                               i,
-
-//                               "account_title",
-
-//                               e.target.value,
-//                             )
-//                           }
-//                           className="w-full bg-transparent border-none outline-none text-[9px] px-1"
-//                           style={{ fontFamily: "Times New Roman, serif" }}
-//                         />
-//                       ) : (
-//                         <span
-//                           style={{
-//                             fontSize: "9px",
-
-//                             fontFamily: "Times New Roman, serif",
-//                           }}
-//                         >
-//                           {entry.account_title || "\u00A0"}
-//                         </span>
-//                       )}
-//                     </td>
-
-//                     <td
-//                       style={{
-//                         borderRight: "1px solid #000",
-
-//                         borderBottom:
-//                           i < entries.length - 1 ? "1px solid #000" : "none",
-
-//                         padding: "2px 4px",
-//                       }}
-//                     >
-//                       {onUpdateAccountingEntry ? (
-//                         <input
-//                           type="text"
-//                           value={entry.uacs_code || ""}
-//                           onChange={(e) =>
-//                             onUpdateAccountingEntry(
-//                               i,
-
-//                               "uacs_code",
-
-//                               e.target.value,
-//                             )
-//                           }
-//                           className="w-full bg-transparent border-none outline-none text-[9px] px-1"
-//                           style={{ fontFamily: "Times New Roman, serif" }}
-//                         />
-//                       ) : (
-//                         <span
-//                           style={{
-//                             fontSize: "9px",
-
-//                             fontFamily: "Times New Roman, serif",
-//                           }}
-//                         >
-//                           {entry.uacs_code || "\u00A0"}
-//                         </span>
-//                       )}
-//                     </td>
-
-//                     <td
-//                       style={{
-//                         borderRight: "1px solid #000",
-
-//                         borderBottom:
-//                           i < entries.length - 1 ? "1px solid #000" : "none",
-
-//                         padding: "2px 4px",
-
-//                         textAlign: "right",
-//                       }}
-//                     >
-//                       {onUpdateAccountingEntry ? (
-//                         <input
-//                           type="text"
-//                           value={entry.debit || ""}
-//                           onChange={(e) =>
-//                             onUpdateAccountingEntry(i, "debit", e.target.value)
-//                           }
-//                           className="w-full bg-transparent border-none outline-none text-[9px] px-1 text-right"
-//                           style={{ fontFamily: "Times New Roman, serif" }}
-//                         />
-//                       ) : (
-//                         <span
-//                           style={{
-//                             fontSize: "9px",
-
-//                             fontFamily: "Times New Roman, serif",
-//                           }}
-//                         >
-//                           {entry.debit || "\u00A0"}
-//                         </span>
-//                       )}
-//                     </td>
-
-//                     <td
-//                       style={{
-//                         borderBottom:
-//                           i < entries.length - 1 ? "1px solid #000" : "none",
-
-//                         padding: "2px 4px",
-
-//                         textAlign: "right",
-//                       }}
-//                     >
-//                       {onUpdateAccountingEntry ? (
-//                         <input
-//                           type="text"
-//                           value={entry.credit || ""}
-//                           onChange={(e) =>
-//                             onUpdateAccountingEntry(i, "credit", e.target.value)
-//                           }
-//                           className="w-full bg-transparent border-none outline-none text-[9px] px-1 text-right"
-//                           style={{ fontFamily: "Times New Roman, serif" }}
-//                         />
-//                       ) : (
-//                         <span
-//                           style={{
-//                             fontSize: "9px",
-
-//                             fontFamily: "Times New Roman, serif",
-//                           }}
-//                         >
-//                           {entry.credit || "\u00A0"}
-//                         </span>
-//                       )}
-//                     </td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-
-//             {/* SECTIONS C & D */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "52.4%",
-
-//                       borderRight: "1px solid #000",
-
-//                       padding: "4px 5px",
-
-//                       verticalAlign: "top",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <div
-//                       style={{
-//                         fontWeight: "bold",
-
-//                         marginBottom: "4px",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     >
-//                       C. Certified:
-//                     </div>
-
-//                     {[
-//                       "Cash available",
-
-//                       "Subject to Authority to Debit Account (when applicable)",
-
-//                       "Supporting documents complete and amount claimed proper",
-//                     ].map((item) => (
-//                       <div
-//                         key={item}
-//                         style={{
-//                           display: "flex",
-
-//                           alignItems: "flex-start",
-
-//                           gap: "4px",
-
-//                           marginBottom: "3px",
-//                         }}
-//                       >
-//                         <span
-//                           style={{
-//                             display: "inline-block",
-
-//                             width: "10px",
-
-//                             height: "10px",
-
-//                             border: "1px solid #000",
-
-//                             flexShrink: 0,
-
-//                             marginTop: "1px",
-//                           }}
-//                         ></span>
-
-//                         <span style={{ fontFamily: "Times New Roman, serif" }}>
-//                           {item}
-//                         </span>
-//                       </div>
-//                     ))}
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       padding: "5px 5px",
-
-//                       verticalAlign: "top",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       D. Approved for Payment
-//                     </b>
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* SIGNATURES */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "80px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Signature
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     &nbsp;
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       width: "91px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Signature
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     &nbsp;
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Printed Name
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       height: "28px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <textarea
-//                       value={dv?.certified_printed_name || ""}
-//                       onChange={(e) =>
-//                         setDv({
-//                           ...dv,
-
-//                           certified_printed_name: e.target.value,
-//                         })
-//                       }
-//                       className={editableInputCls}
-//                       placeholder="Certified by name"
-//                       rows={1}
-//                       style={{
-//                         fontWeight: "bold",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Printed Name
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <textarea
-//                       value={dv?.approved_printed_name || ""}
-//                       onChange={(e) =>
-//                         setDv({
-//                           ...dv,
-
-//                           approved_printed_name: e.target.value,
-//                         })
-//                       }
-//                       className={editableInputCls}
-//                       placeholder="Approved by name"
-//                       rows={1}
-//                       style={{
-//                         fontWeight: "bold",
-
-//                         fontFamily: "Times New Roman, serif",
-//                       }}
-//                     />
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Position
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Head, Accounting Unit/Authorized Representative
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Position
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Agency Head/Authorized Representative
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Date
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <textarea
-//                       value={dv?.certified_date || ""}
-//                       onChange={(e) =>
-//                         setDv({ ...dv, certified_date: e.target.value })
-//                       }
-//                       className={editableInputCls}
-//                       placeholder="MM/DD/YYYY"
-//                       rows={1}
-//                     />
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Date
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <textarea
-//                       value={dv?.approved_date || ""}
-//                       onChange={(e) =>
-//                         setDv({ ...dv, approved_date: e.target.value })
-//                       }
-//                       className={editableInputCls}
-//                       placeholder="MM/DD/YYYY"
-//                       rows={1}
-//                     />
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* SECTION E: Receipt of Payment */}
-
-//             <table
-//               style={{
-//                 width: "100%",
-
-//                 borderCollapse: "collapse",
-
-//                 border: "1px solid #000",
-
-//                 borderTop: "none",
-//               }}
-//             >
-//               <tbody>
-//                 <tr>
-//                   <td
-//                     colSpan={4}
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 6px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       E. Receipt of Payment
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       borderLeft: "1px solid #000",
-
-//                       padding: "3px 6px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       JEV No.
-//                     </b>
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       width: "90px",
-
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Check/
-//                     <br />
-//                     ADA No.
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Date :
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     colSpan={2}
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Bank Name &amp; Account Number:
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       borderLeft: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     &nbsp;
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     Signature
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Date :
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     colSpan={2}
-//                     style={{
-//                       borderRight: "1px solid #000",
-
-//                       borderBottom: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Printed Name:
-//                     </b>
-//                   </td>
-
-//                   <td
-//                     style={{
-//                       borderBottom: "1px solid #000",
-
-//                       borderLeft: "1px solid #000",
-
-//                       padding: "3px 4px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>Date</b>
-//                   </td>
-//                 </tr>
-
-//                 <tr>
-//                   <td
-//                     colSpan={5}
-//                     style={{
-//                       padding: "3px 6px",
-
-//                       fontFamily: "Times New Roman, serif",
-//                     }}
-//                   >
-//                     <b style={{ fontFamily: "Times New Roman, serif" }}>
-//                       Official Receipt No. &amp; Date/Other Documents
-//                     </b>
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
 
 export type PaymentProcessDocType = "iar" | "loa" | "ors" | "dv";
 

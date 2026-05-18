@@ -12,6 +12,7 @@ import {
 } from "react-icons/ri";
 import AnalyticsDashboard from "../analytics/analytics";
 import SummaryReportModal from "@/components/Reporting/SummaryReportModal";
+import ProcurementTimeline from "./procurementtimeline";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -43,16 +44,16 @@ export default function DashboardPage() {
     roles?: { role_name: string };
   };
 
-  const [loading, setLoading]           = useState(true);
-  const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null);
-  const [isAdmin, setIsAdmin]           = useState(false);
-  const [list, setList]                 = useState<PRListRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [list, setList] = useState<PRListRow[]>([]);
   const [statusNameById, setStatusNameById] = useState<Record<number, string>>({});
-  const [searchQuery, setSearchQuery]   = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField]       = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
-  const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
-  const [currentPage, setCurrentPage]   = useState(1);
+  const [sortField, setSortField] = useState<"pr_no" | "office_section" | "total_cost" | "created_at">("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const [summaryReportOpen, setSummaryReportOpen] = useState(false);
@@ -89,9 +90,9 @@ export default function DashboardPage() {
   const isSupplyAccount =
     currentUser?.username?.toLowerCase() === "supply" ||
     (currentUser?.roles?.role_name?.toLowerCase().includes("supply") ?? false);
-  const isBudgetAccount = 
+  const isBudgetAccount =
     currentUser?.roles?.role_name?.toLowerCase().includes("budget") ?? false;
-  const isAccountingAccount = 
+  const isAccountingAccount =
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
   const isCashAccount =
     currentUser?.username?.toLowerCase() === "cash" ||
@@ -108,8 +109,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchRemarks = async () => {
       if (list.length === 0) { setLatestRemarkByKey({}); return; }
-      const prIds  = list.filter(i => i.source === 'pr').map(i => i.id);
-      const poIds  = list.filter(i => i.source === 'po').map(i => i.id);
+      const prIds = list.filter(i => i.source === 'pr').map(i => i.id);
+      const poIds = list.filter(i => i.source === 'po').map(i => i.id);
       const delIds = list.filter(i => i.source === 'delivery' || i.source === 'payment').map(i => i.id);
       const map: Record<string, LatestRemarkInfo> = {};
 
@@ -182,7 +183,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      
+
       try {
         console.log('Starting dashboard data fetch...');
 
@@ -200,15 +201,15 @@ export default function DashboardPage() {
           }, {} as Record<number, string>);
           setStatusNameById(statusMap);
         }
-        
+
         // Fetch purchase requests (PR data)
         const { data: prData, error: prError } = await supabase
           .from("purchase_requests")
           .select("id, entity_name, pr_no, office_section, status, status_id, created_at, updated_at, total_cost, req_name, purchase_request_items (*)")
           .order("created_at", { ascending: false });
-        
+
         console.log('PR fetch result:', { prData: prData?.length, prError });
-        
+
         if (prError) {
           console.error('PR fetch error details:', {
             message: prError.message,
@@ -218,7 +219,7 @@ export default function DashboardPage() {
           });
           throw prError;
         }
-        
+
         // Fetch purchase orders (separate table)
         let poData: any[] = [];
         try {
@@ -244,7 +245,7 @@ export default function DashboardPage() {
             .from("deliveries")
             .select("id, delivery_no, po_no, supplier, office_section, division_id, status_id, created_at, updated_at")
             .order("created_at", { ascending: false });
-          
+
           if (deliveryError) {
             console.warn('Delivery fetch failed:', deliveryError);
           } else {
@@ -254,7 +255,7 @@ export default function DashboardPage() {
         } catch (err) {
           console.warn('Delivery fetch exception:', err);
         }
-        
+
         // Process purchase requests
         const processedPRs = (prData || []).map(pr => ({
           ...pr,
@@ -278,29 +279,33 @@ export default function DashboardPage() {
           source: 'po' as const,
           supplier: po.supplier,
         }));
-        
+
         // Process deliveries - convert to dashboard format
         const processedDeliveries = deliveryData.map(delivery => {
-          const isPaymentPhase = [25, 28, 29, 30, 32, 33, 34, 35, 36, 40].includes(delivery.status_id);
-          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24].includes(delivery.status_id);
           const isCompletedDelivery = delivery.status_id === 39; // Completed (Delivery)
-          
+          const isCompletedPayment = [37, 40].includes(delivery.status_id); // Status 37 = Payment completed (from Payment page logic), 40 = Completed Payment
+          const isPaymentPhase = [29, 30, 32, 33, 34, 35, 37].includes(delivery.status_id);
+          const isDeliveryPhase = [18, 19, 20, 21, 22, 23, 24, 25].includes(delivery.status_id);
+
           let statusText = 'Unknown';
           let source: 'delivery' | 'payment' = 'delivery';
-          
-          if (isPaymentPhase) {
-            statusText = 'Payment';
-            source = 'payment';
-          } else if (isCompletedDelivery) {
+
+          if (isCompletedDelivery) {
             statusText = 'Completed';
             source = 'delivery'; // Keep as delivery source to show in delivery dashboard
+          } else if (isCompletedPayment) {
+            statusText = 'Completed';
+            source = 'payment'; // Completed payment items
+          } else if (isPaymentPhase) {
+            statusText = 'Payment';
+            source = 'payment';
           } else if (isDeliveryPhase) {
             statusText = 'Delivery';
             source = 'delivery';
           }
-          
+
           console.log(`Processing delivery ${delivery.id}: status_id=${delivery.status_id}, mapped to ${statusText}`);
-          
+
           return {
             id: delivery.id,
             row_key: `${source}-${delivery.id}`,
@@ -318,32 +323,32 @@ export default function DashboardPage() {
             supplier: delivery.supplier
           };
         });
-        
+
         console.log(`Status breakdown: PR=${processedPRs.length}, PO=${processedPOs.length}, Delivery=${processedDeliveries.filter(d => d.source === 'delivery').length}, Payment=${processedDeliveries.filter(d => d.source === 'payment').length}`);
-        
+
         // Combine and filter data
         const allData = [...processedPRs, ...processedPOs, ...processedDeliveries];
         console.log('Combined data before filtering:', allData.length);
-        
+
         const filteredData = allData.filter(item => {
           // Admin and specialized roles see all procurement data
           if (isAdmin || isBACAccount || isPARPOAccount || isBudgetAccount || isSupplyAccount || isAccountingAccount || isCashAccount) {
             return true;
           }
-          
+
           // Division heads see ALL procurement stages (PR to Payment) from their division
           if (isDivisionHead) {
             return item.office_section === currentUser?.divisions?.division_name;
           }
-          
+
           // End users see ALL procurement stages (PR to Payment) from their division
           // This includes PRs they created plus all subsequent stages (PO, Delivery, Payment) for their division
           return item.office_section === currentUser?.divisions?.division_name;
         });
-        
+
         console.log('Final filtered data:', filteredData.length);
         console.log('User role:', { isAdmin, isDivisionHead, isBACAccount, isPARPOAccount, isSupplyAccount, isBudgetAccount, isAccountingAccount, isCashAccount, userDivision: currentUser?.divisions?.division_name });
-        
+
         setList(filteredData as PRListRow[]);
       } catch (error) {
         console.error('Critical error in dashboard data fetch:', {
@@ -352,7 +357,7 @@ export default function DashboardPage() {
           errorDetails: (error as any)?.details || 'No details available',
           errorStack: error instanceof Error ? error.stack : 'No stack available'
         });
-        
+
         // Final fallback - try minimal PR fetch
         try {
           console.log('Attempting minimal PR fetch as final fallback...');
@@ -360,7 +365,7 @@ export default function DashboardPage() {
             .from("purchase_requests")
             .select("id, pr_no, office_section, status, created_at")
             .limit(10);
-          
+
           if (!minimalError && minimalPRData) {
             const minimalData = minimalPRData.map(pr => ({
               ...pr,
@@ -381,7 +386,7 @@ export default function DashboardPage() {
           setList([]);
         }
       }
-      
+
       setLoading(false);
     };
     fetchData();
@@ -394,43 +399,43 @@ export default function DashboardPage() {
     // Mirrors app/Procurement/page.tsx getStatusInfo exactly.
     if (source === 'pr') {
       const prById: Record<number, { name: string; color: string }> = {
-        1:  { name: "Pending",                    color: "pending"    },
-        2:  { name: "Processing (Division Head)",  color: "processing" },
-        3:  { name: "Processing (BAC)",            color: "processing" },
-        4:  { name: "Processing (Budget)",         color: "processing" },
-        5:  { name: "Processing (PARPO)",          color: "processing" },
-        6:  { name: "Canvassing (Reception)",      color: "canvassing" },
-        7:  { name: "BAC Resolution",              color: "bac"        },
-        8:  { name: "Canvassing (Releasing)",      color: "canvassing" },
-        9:  { name: "Canvassing (Collection)",     color: "canvassing" },
-        10: { name: "Abstract of Awards",          color: "aaa"        },
-        11: { name: "PO (Creation)",               color: "po"         },
-        12: { name: "PO (Allocation)",             color: "po"         },
-        13: { name: "ORS (Creation)",              color: "approved"   },
-        14: { name: "ORS (Processing)",            color: "approved"   },
-        15: { name: "PO (Accounting)",             color: "po"         },
-        16: { name: "PO (PARPO)",                  color: "po"         },
-        17: { name: "PO (Serving)",                color: "po"         },
-        18: { name: "Delivery (Waiting)",          color: "delivery"   },
-        19: { name: "Delivery (Received)",         color: "delivery"   },
-        20: { name: "Delivery (IAR)",              color: "delivery"   },
-        21: { name: "Delivery (IAR Processing)",   color: "delivery"   },
-        22: { name: "Delivery (LOA)",              color: "delivery"   },
-        23: { name: "Delivery (DV)",               color: "delivery"   },
-        24: { name: "Delivery (Division Chief)",   color: "delivery"   },
-        25: { name: "Payment (Accounting)",        color: "payment"    },
-        28: { name: "Payment Pending",             color: "payment"    },
-        29: { name: "Voucher Verification",        color: "payment"    },
-        30: { name: "Accounting Review",           color: "payment"    },
-        32: { name: "PARPO Approval",              color: "payment"    },
-        33: { name: "Forward to Cash",             color: "payment"    },
-        34: { name: "Forward to PARPO signature",  color: "payment"    },
-        35: { name: "Forward to Tax processing",   color: "payment"    },
-        36: { name: "Cash for Release",            color: "payment"    },
-        37: { name: "Completed (PR)",              color: "completed"  },
-        38: { name: "Completed (PO)",              color: "completed"  },
-        39: { name: "Completed (Delivery)",        color: "completed"  },
-        40: { name: "Completed (Payment)",         color: "completed"  },
+        1: { name: "Pending", color: "pending" },
+        2: { name: "Processing (Division Head)", color: "processing" },
+        3: { name: "Processing (BAC)", color: "processing" },
+        4: { name: "Processing (Budget)", color: "processing" },
+        5: { name: "Processing (PARPO)", color: "processing" },
+        6: { name: "Canvassing (Reception)", color: "canvassing" },
+        7: { name: "BAC Resolution", color: "bac" },
+        8: { name: "Canvassing (Releasing)", color: "canvassing" },
+        9: { name: "Canvassing (Collection)", color: "canvassing" },
+        10: { name: "Abstract of Awards", color: "aaa" },
+        11: { name: "PO (Creation)", color: "po" },
+        12: { name: "PO (Allocation)", color: "po" },
+        13: { name: "ORS (Creation)", color: "approved" },
+        14: { name: "ORS (Processing)", color: "approved" },
+        15: { name: "PO (Accounting)", color: "po" },
+        16: { name: "PO (PARPO)", color: "po" },
+        17: { name: "PO (Serving)", color: "po" },
+        18: { name: "Delivery (Waiting)", color: "delivery" },
+        19: { name: "Delivery (Received)", color: "delivery" },
+        20: { name: "Delivery (IAR)", color: "delivery" },
+        21: { name: "Delivery (IAR Processing)", color: "delivery" },
+        22: { name: "Delivery (LOA)", color: "delivery" },
+        23: { name: "Delivery (DV)", color: "delivery" },
+        24: { name: "Delivery (Division Chief)", color: "delivery" },
+        25: { name: "Payment (Accounting)", color: "payment" },
+        28: { name: "Payment Pending", color: "payment" },
+        29: { name: "Voucher Verification", color: "payment" },
+        30: { name: "Accounting Review", color: "payment" },
+        32: { name: "PARPO Approval", color: "payment" },
+        33: { name: "Forward to Cash", color: "payment" },
+        34: { name: "Forward to PARPO signature", color: "payment" },
+        35: { name: "Forward to Tax processing", color: "payment" },
+        36: { name: "Cash for Release", color: "payment" },
+        37: { name: "Completed (PR)", color: "completed" },
+        38: { name: "Completed (PO)", color: "completed" },
+        39: { name: "Completed (Delivery)", color: "completed" },
+        40: { name: "Completed (Payment)", color: "completed" },
       };
       if (statusId != null && prById[statusId]) return prById[statusId];
       return { name: status || "Unknown", color: "default" };
@@ -440,29 +445,29 @@ export default function DashboardPage() {
     // (e.g. status_id 34 = "Completed (PO Phase)" for POs, "PARPO signature" for deliveries)
     if (source === 'po') {
       const poById: Record<number, { name: string; color: string }> = {
-        11: { name: "PO (Creation)",        color: "po" },
-        12: { name: "PO (Allocation)",      color: "po" },
-        13: { name: "ORS (Creation)",       color: "po" },
-        14: { name: "ORS (Processing)",     color: "po" },
-        15: { name: "PO (Accounting)",      color: "po" },
-        16: { name: "PO (PARPO)",           color: "po" },
-        17: { name: "PO (Serving)",         color: "po" },
-        38: { name: "Completed (PO)",        color: "completed" },
+        11: { name: "PO (Creation)", color: "po" },
+        12: { name: "PO (Allocation)", color: "po" },
+        13: { name: "ORS (Creation)", color: "po" },
+        14: { name: "ORS (Processing)", color: "po" },
+        15: { name: "PO (Accounting)", color: "po" },
+        16: { name: "PO (PARPO)", color: "po" },
+        17: { name: "PO (Serving)", color: "po" },
+        38: { name: "Completed (PO)", color: "completed" },
       };
       if (statusId != null && poById[statusId]) return poById[statusId];
       return { name: status || "PO", color: "po" };
     }
 
     const statusById: Record<number, { name: string; color: string }> = {
-      1:  { name: "Pending", color: "pending" },
-      2:  { name: "Processing (Division Head)", color: "processing" },
-      3:  { name: "Processing (BAC)", color: "processing" },
-      4:  { name: "Processing (Budget)", color: "processing" },
-      5:  { name: "Processing (PARPO)", color: "processing" },
-      6:  { name: "Canvassing (Reception)", color: "canvassing" },
-      7:  { name: "BAC Resolution", color: "bac" },
-      8:  { name: "Canvassing (Releasing)", color: "canvassing" },
-      9:  { name: "Canvassing (Collection)", color: "canvassing" },
+      1: { name: "Pending", color: "pending" },
+      2: { name: "Processing (Division Head)", color: "processing" },
+      3: { name: "Processing (BAC)", color: "processing" },
+      4: { name: "Processing (Budget)", color: "processing" },
+      5: { name: "Processing (PARPO)", color: "processing" },
+      6: { name: "Canvassing (Reception)", color: "canvassing" },
+      7: { name: "BAC Resolution", color: "bac" },
+      8: { name: "Canvassing (Releasing)", color: "canvassing" },
+      9: { name: "Canvassing (Collection)", color: "canvassing" },
       10: { name: "Abstract of Awards", color: "aaa" },
       11: { name: "PO (Creation)", color: "po" },
       12: { name: "PO (Allocation)", color: "po" },
@@ -503,46 +508,46 @@ export default function DashboardPage() {
     // Text-based fallback for PRs
     const k = (status || "unknown").toLowerCase();
     if (exactStatusName) {
-      if (k.includes("pending"))        return { name: exactStatusName, color: "pending" };
-      if (k.includes("processing"))     return { name: exactStatusName, color: "processing" };
-      if (k.includes("canvassing"))     return { name: exactStatusName, color: "canvassing" };
+      if (k.includes("pending")) return { name: exactStatusName, color: "pending" };
+      if (k.includes("processing")) return { name: exactStatusName, color: "processing" };
+      if (k.includes("canvassing")) return { name: exactStatusName, color: "canvassing" };
       if (k.includes("bac resolution")) return { name: exactStatusName, color: "bac" };
-      if (k.includes("aaa issuance"))   return { name: exactStatusName, color: "aaa" };
-      if (k.includes("delivery"))       return { name: exactStatusName, color: "delivery" };
-      if (k.includes("payment"))        return { name: exactStatusName, color: "payment" };
-      if (k.includes("po"))             return { name: exactStatusName, color: "po" };
-      if (k.includes("approve"))        return { name: exactStatusName, color: "approved" };
-      if (k.includes("reject"))         return { name: exactStatusName, color: "rejected" };
-      if (k.includes("completed"))      return { name: exactStatusName, color: "completed" };
+      if (k.includes("aaa issuance")) return { name: exactStatusName, color: "aaa" };
+      if (k.includes("delivery")) return { name: exactStatusName, color: "delivery" };
+      if (k.includes("payment")) return { name: exactStatusName, color: "payment" };
+      if (k.includes("po")) return { name: exactStatusName, color: "po" };
+      if (k.includes("approve")) return { name: exactStatusName, color: "approved" };
+      if (k.includes("reject")) return { name: exactStatusName, color: "rejected" };
+      if (k.includes("completed")) return { name: exactStatusName, color: "completed" };
       return { name: exactStatusName, color: "default" };
     }
-    if (k.includes("pending"))        return { name: status || "Unknown", color: "pending" };
-    if (k.includes("processing"))     return { name: status || "Unknown", color: "processing" };
-    if (k.includes("canvassing"))     return { name: status || "Unknown", color: "canvassing" };
+    if (k.includes("pending")) return { name: status || "Unknown", color: "pending" };
+    if (k.includes("processing")) return { name: status || "Unknown", color: "processing" };
+    if (k.includes("canvassing")) return { name: status || "Unknown", color: "canvassing" };
     if (k.includes("bac resolution")) return { name: status || "Unknown", color: "bac" };
-    if (k.includes("aaa issuance"))   return { name: status || "Unknown", color: "aaa" };
-    if (k.includes("delivery"))       return { name: status || "Unknown", color: "delivery" };
-    if (k.includes("payment"))        return { name: status || "Unknown", color: "payment" };
-    if (k.includes("po"))             return { name: status || "Unknown", color: "po" };
-    if (k.includes("approve"))        return { name: status || "Unknown", color: "approved" };
-    if (k.includes("reject"))         return { name: status || "Unknown", color: "rejected" };
-    if (k.includes("completed"))      return { name: status || "Unknown", color: "completed" };
+    if (k.includes("aaa issuance")) return { name: status || "Unknown", color: "aaa" };
+    if (k.includes("delivery")) return { name: status || "Unknown", color: "delivery" };
+    if (k.includes("payment")) return { name: status || "Unknown", color: "payment" };
+    if (k.includes("po")) return { name: status || "Unknown", color: "po" };
+    if (k.includes("approve")) return { name: status || "Unknown", color: "approved" };
+    if (k.includes("reject")) return { name: status || "Unknown", color: "rejected" };
+    if (k.includes("completed")) return { name: status || "Unknown", color: "completed" };
     return { name: exactStatusName || status || "Unknown", color: "default" };
   };
 
   const BADGE_CLASS: Record<string, string> = {
-    pending:    "bg-amber-50 text-amber-800 border border-amber-200",
+    pending: "bg-amber-50 text-amber-800 border border-amber-200",
     processing: "bg-blue-50 text-blue-800 border border-blue-200",
     canvassing: "bg-violet-50 text-violet-800 border border-violet-200",
-    bac:        "bg-purple-50 text-purple-800 border border-purple-200",
-    aaa:        "bg-rose-50 text-rose-800 border border-rose-200",
-    delivery:   "bg-cyan-50 text-cyan-800 border border-cyan-200",
-    payment:    "bg-orange-50 text-orange-800 border border-orange-200",
-    po:         "bg-teal-50 text-teal-800 border border-teal-200",
-    approved:   "bg-emerald-50 text-emerald-800 border border-emerald-200",
-    rejected:   "bg-red-50 text-red-800 border border-red-200",
-    completed:  "bg-green-50 text-green-800 border border-green-200",
-    default:    "bg-gray-100 text-gray-700 border border-gray-200",
+    bac: "bg-purple-50 text-purple-800 border border-purple-200",
+    aaa: "bg-rose-50 text-rose-800 border border-rose-200",
+    delivery: "bg-cyan-50 text-cyan-800 border border-cyan-200",
+    payment: "bg-orange-50 text-orange-800 border border-orange-200",
+    po: "bg-teal-50 text-teal-800 border border-teal-200",
+    approved: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    rejected: "bg-red-50 text-red-800 border border-red-200",
+    completed: "bg-green-50 text-green-800 border border-green-200",
+    default: "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
   // Calculate aging in days based on updated_at or created_at
@@ -568,7 +573,85 @@ export default function DashboardPage() {
     list.reduce((n, i) => (getStatusInfo(i.status, i.status_id, i.source).color === color ? n + 1 : n), 0);
 
   const getStatusFilterKey = (item: PRListRow) => {
-    switch (item.status_id) {
+    // Get the status ID
+    const statusId = item.status_id;
+    
+    // Delivery phase defined statuses - matching procurement page delivery tab
+    const definedDeliveryPhaseStatuses = [18, 19, 20, 21, 22, 23, 25, 27];
+    const paymentPhaseStatuses = [29, 30, 32, 33, 34, 35, 36, 37]; // Payment phase statuses
+    
+    // For delivery source items: Check if still in delivery phase or completed
+    if (item.source === 'delivery' && statusId != null) {
+      // Still in active delivery phase
+      if (definedDeliveryPhaseStatuses.includes(statusId)) {
+        return "delivery";
+      }
+      // Don't treat payment phase items as completed delivery
+      if (paymentPhaseStatuses.includes(statusId)) {
+        return "payment";
+      }
+      // Completed delivery phase (status not in delivery phase and not in payment phase)
+      // This matches the procurement delivery page "completed" tab
+      if (!definedDeliveryPhaseStatuses.includes(statusId) && !paymentPhaseStatuses.includes(statusId)) {
+        return "completed-delivery";
+      }
+    }
+    
+    // For payment source items: Check if in payment phase or completed
+    if (item.source === 'payment' && statusId != null) {
+      // Fully completed payment
+      if ([36, 37, 40].includes(statusId)) {
+        return "completed"; // Treat payment completion statuses as completed
+      }
+      // In payment phase but not completed
+      return "payment";
+    }
+    
+    // For PO source items: always treat as PO-related unless explicitly completed PO (38)
+    // This prevents PO rows with payment-phase status IDs from being shown in Payment tab.
+    if (item.source === 'po') {
+      if (statusId === 38) return "completed-po";
+      return "po";
+    }
+    
+    // Handle PR source items
+    if (item.source === 'pr') {
+      switch (statusId) {
+        case 1:
+          return "pending";
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+          return "processing";
+        case 6:
+        case 8:
+        case 9:
+          return "canvassing";
+        case 7:
+          return "bac-resolution";
+        case 10:
+          return "aaa";
+        case 11:
+        case 12:
+        case 15:
+        case 16:
+        case 17:
+          return "po";
+        case 13:
+        case 14:
+          return "ors";
+        case 37:
+          return "completed-pr"; // PR phase completion
+        case 38:
+          return "completed-po"; // PO phase completion
+        default:
+          return "all";
+      }
+    }
+    
+    // Fallback to status-based mapping
+    switch (statusId) {
       case 1:
         return "pending";
       case 2:
@@ -599,12 +682,16 @@ export default function DashboardPage() {
       case 21:
       case 22:
       case 23:
-      case 24:
-        return "delivery";
       case 25:
+      case 27:
+        return "delivery"; // Delivery phase defined statuses matching delivery page
+      case 24:
+      case 26:
+        return "delivery"; // Additional delivery-related statuses
       case 28:
       case 29:
       case 30:
+      case 31: // Skipped in sequence but handle if present
       case 32:
       case 33:
       case 34:
@@ -612,7 +699,7 @@ export default function DashboardPage() {
       case 36:
         return "payment";
       case 37:
-        return "completed-pr";
+        return "completed"; // Payment completed or PR completed based on context
       case 38:
         return "completed-po";
       case 39:
@@ -624,8 +711,12 @@ export default function DashboardPage() {
     }
   };
 
-  // Filter list by fiscal year
-  const listByFiscalYear = list.filter(item => getFiscalYear(item.created_at) === selectedYear);
+  // Filter list by fiscal year (check both creation and update dates for completed items)
+  const listByFiscalYear = list.filter(item => {
+    const createdYear = getFiscalYear(item.created_at);
+    const updatedYear = item.updated_at ? getFiscalYear(item.updated_at) : createdYear;
+    return createdYear === selectedYear || updatedYear === selectedYear;
+  });
 
   // Count by source type (filtered by fiscal year)
   const allCount = listByFiscalYear.length;
@@ -635,11 +726,11 @@ export default function DashboardPage() {
   const paymentsCount = listByFiscalYear.filter(i => i.source === 'payment').length;
 
   // Legacy counts (for reference if needed)
-  const pendingCount    = countByColor("pending");
+  const pendingCount = countByColor("pending");
   const processingCount = countByColor("processing");
   const canvassingCount = countByColor("canvassing");
-  const approvedCount   = countByColor("approved");
-  const rejectedCount   = countByColor("rejected");
+  const approvedCount = countByColor("approved");
+  const rejectedCount = countByColor("rejected");
 
   const handleSort = (f: typeof sortField) => {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -654,7 +745,13 @@ export default function DashboardPage() {
         (pr.office_section || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (pr.entity_name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const statusKey = getStatusFilterKey(pr);
-      const matchYear = getFiscalYear(pr.created_at) === selectedYear;
+      
+      // For year filter: check both created_at and updated_at
+      // This ensures completed items show in the year they were completed, not just created
+      const createdYear = getFiscalYear(pr.created_at);
+      const updatedYear = pr.updated_at ? getFiscalYear(pr.updated_at) : createdYear;
+      const matchYear = createdYear === selectedYear || updatedYear === selectedYear;
+      
       return matchSearch && (statusFilter === "all" || statusKey === statusFilter) && matchYear;
     })
     .sort((a, b) => {
@@ -676,7 +773,7 @@ export default function DashboardPage() {
     });
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
-  const pagedList  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pagedList = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const SortIcon = ({ field }: { field: typeof sortField }) => (
     <span className={`inline-flex ml-1 ${sortField === field ? "opacity-100" : "opacity-30"}`}>
@@ -704,11 +801,11 @@ export default function DashboardPage() {
   ];
 
   const STAT_CARDS = [
-    { label: "All",               value: allCount,               icon: <RiFileListLine size={20} />,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
-    { label: "Purchase Requests", value: purchaseRequestsCount,  icon: <RiFileListLine size={20} />,        iconBg: "bg-blue-100",    iconColor: "text-blue-600",    numColor: "text-blue-600",    cardBg: "bg-blue-50",    border: "border-blue-100"    },
-    { label: "Purchase Orders",   value: purchaseOrdersCount,    icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-violet-100",  iconColor: "text-violet-600",  numColor: "text-violet-600",  cardBg: "bg-violet-50",  border: "border-violet-100"  },
-    { label: "Deliveries",        value: deliveriesCount,        icon: <RiTimeLine size={20} />,            iconBg: "bg-amber-100",   iconColor: "text-amber-600",   numColor: "text-amber-600",   cardBg: "bg-amber-50",   border: "border-amber-100"   },
-    { label: "Payments",          value: paymentsCount,          icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100",   iconColor: "text-green-600",   numColor: "text-green-600",   cardBg: "bg-green-50",   border: "border-green-100"   },
+    { label: "All", value: allCount, icon: <RiFileListLine size={20} />, iconBg: "bg-emerald-100", iconColor: "text-emerald-600", numColor: "text-emerald-600", cardBg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Purchase Requests", value: purchaseRequestsCount, icon: <RiFileListLine size={20} />, iconBg: "bg-blue-100", iconColor: "text-blue-600", numColor: "text-blue-600", cardBg: "bg-blue-50", border: "border-blue-100" },
+    { label: "Purchase Orders", value: purchaseOrdersCount, icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-violet-100", iconColor: "text-violet-600", numColor: "text-violet-600", cardBg: "bg-violet-50", border: "border-violet-100" },
+    { label: "Deliveries", value: deliveriesCount, icon: <RiTimeLine size={20} />, iconBg: "bg-amber-100", iconColor: "text-amber-600", numColor: "text-amber-600", cardBg: "bg-amber-50", border: "border-amber-100" },
+    { label: "Payments", value: paymentsCount, icon: <RiCheckboxCircleLine size={20} />, iconBg: "bg-green-100", iconColor: "text-green-600", numColor: "text-green-600", cardBg: "bg-green-50", border: "border-green-100" },
   ];
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -762,472 +859,478 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-100 text-gray-900">
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .tr-row:hover td { background-color: #f0fdf4 !important; }
         .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
       `}</style>
 
-      <div className="w-full p-6 md:p-10 space-y-6">
+        <div className="w-full p-6 md:p-10 space-y-6">
 
-        {/* ── HEADER ── */}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            {currentUser && (
-              <p className="text-sm text-gray-400 mt-1">
-                Signed in as <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
-                {currentUser.divisions?.division_name && (
-                  <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                    {currentUser.divisions.division_name}
-                  </span>
-                )}
+          {/* ── HEADER ── */}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              {currentUser && (
+                <p className="text-sm text-gray-400 mt-1">
+                  Signed in as <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+                  {currentUser.divisions?.division_name && (
+                    <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                      {currentUser.divisions.division_name}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              <button
+                onClick={() => setSummaryReportOpen(true)}
+                className="mb-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 text-sm font-medium"
+              >
+                <RiFileTextLine size={16} />
+                Summary Report
+              </button>
+              <p className="mono text-xs text-gray-400">Total Budget Tracked</p>
+              <p className="mono text-2xl font-bold text-emerald-700">
+                ₱{totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </p>
+            </div>
+          </div>
+
+          {/* ── STAT CARDS ── */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
+              <div
+                key={label}
+                className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
+              >
+                <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>
+                  {icon}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">{label}</p>
+                  <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── TABLE PANEL ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
+
+            {/* Header row: title + FY button */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Procurement Records</h2>
+              <button
+                onClick={() => setShowYearPicker(true)}
+                className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
+              >
+                <RiCalendarLine size={16} className="text-emerald-600" />
+                <span className="font-semibold text-gray-700 text-sm">FY {selectedYear}</span>
+                <RiArrowDownLine size={13} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Status pills + search row */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {STATUS_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
+                  ${statusFilter === value
+                      ? "bg-emerald-700 text-white border-emerald-700"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+              <div className="relative flex items-center">
+                <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search PR/PO, supplier, or section…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            {filteredList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <RiFileListLine size={38} className="opacity-30 mb-3" />
+                <p className="text-sm font-medium">No procurement records found.</p>
+                <p className="text-xs mt-1">Try adjusting your search or filter.</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                  <table className="w-full text-xs border-collapse table-fixed">
+                    <thead>
+                      <tr className="bg-emerald-700 text-white uppercase tracking-widest">
+                        {([
+                          { label: "PR #", field: "pr_no" as const, align: "text-left", width: "w-[120px]" },
+                          { label: "Section", field: "office_section" as const, align: "text-left", width: "w-[90px]" },
+                          { label: "Description", field: null, align: "text-left", width: "w-[130px]" },
+                          { label: "Date", field: "created_at" as const, align: "text-left", width: "w-[90px]" },
+                          { label: "Age", field: null, align: "text-center", width: "w-[60px]" },
+                          { label: "Status", field: null, align: "text-center", width: "w-[160px]" },
+                          { label: "Cost", field: "total_cost" as const, align: "text-right", width: "w-[90px]" },
+                          { label: "Actions", field: null, align: "text-center", width: "" },
+                        ] as const).map(({ label, field, align, width }) => (
+                          <th
+                            key={label}
+                            onClick={field ? () => handleSort(field) : undefined}
+                            className={`px-2 py-2 font-semibold ${align} ${field ? "th-sort select-none cursor-pointer" : ""} ${width}`}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {label}
+                              {field && <SortIcon field={field} />}
+                            </span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedList.map((form, index) => {
+                        const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.status_id, form.source);
+                        // PR/PO: use the source-aware procurement-page names (matches PR/PO views exactly).
+                        // Delivery/Payment: prefer the DB status_name, fall back to getStatusInfo output.
+                        const displayStatusName =
+                          (form.source === 'pr' || form.source === 'po')
+                            ? statusName
+                            : (form.status_id != null ? statusNameById[form.status_id] : null) ?? statusName;
+                        const cost = form.total_cost || 0;
+                        const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                        const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") ||
+                          (form.source === 'delivery' || form.source === 'payment' || form.source === 'po' ? `Supplier: ${form.supplier || form.entity_name || 'N/A'}` : '');
+                        const agingDays = getAgingDays(form);
+                        const agingStyle = getAgingStyle(agingDays);
+                        return (
+                          <tr key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
+                            <td className={`mono px-2 py-2 font-semibold text-gray-800 overflow-hidden ${rowBg}`}>
+                              <div className="truncate" title={form.source === 'delivery' || form.source === 'payment' ? (form.delivery_no || form.pr_no || '') : (form.pr_no || '')}>
+                                {form.source === 'delivery' || form.source === 'payment'
+                                  ? form.delivery_no || form.pr_no
+                                  : form.pr_no}
+                              </div>
+                            </td>
+                            <td className={`px-2 py-2 text-gray-600 overflow-hidden ${rowBg}`}>
+                              <div className="truncate">{form.office_section || <span className="text-gray-300">—</span>}</div>
+                            </td>
+                            <td className={`px-2 py-2 text-gray-500 overflow-hidden max-w-xs ${rowBg}`}>
+                              <div className="truncate" title={desc || ""}>{desc || <span className="text-gray-300">—</span>}</div>
+                            </td>
+                            <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
+                              <div className="truncate">
+                                {form.created_at
+                                  ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                                  : <span className="text-gray-300">—</span>}
+                              </div>
+                            </td>
+                            <td className={`px-2 py-2 text-center ${rowBg}`}>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${agingStyle.className}`}
+                                title={form.updated_at
+                                  ? `Updated: ${new Date(form.updated_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                                  : form.created_at
+                                    ? `Created: ${new Date(form.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} (no updates yet)`
+                                    : "No timestamp available"
+                                }
+                              >
+                                {agingStyle.text}
+                              </span>
+                            </td>
+                            <td className={`px-2 py-2 text-center ${rowBg}`}>
+                              <div className="relative group inline-flex">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                                  {displayStatusName}
+                                </span>
+                                {(() => {
+                                  const key = form.row_key ?? `${form.source ?? 'pr'}-${form.id}`;
+                                  const info = latestRemarkByKey[key];
+                                  if (!info?.status_flag_id) return null;
+                                  const fname = flagNameById[info.status_flag_id] || "Unknown";
+                                  const tooltipDir = index < 2 ? "top-full mt-2" : "bottom-full mb-2";
+                                  const caretDir = index < 2 ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900";
+                                  const dateStr = new Date(info.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                                  const userInfo = info.user_id != null ? (userInfoById[info.user_id] ?? null) : null;
+                                  return (
+                                    <div className={`absolute ${tooltipDir} left-1/2 -translate-x-1/2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150 bg-gray-900 text-white rounded-xl shadow-xl px-3 py-2.5 z-[9999] w-60 text-left pointer-events-none`}>
+                                      <p className="text-[11px] whitespace-nowrap"><span className="text-gray-400">Status Flag:</span> {fname}</p>
+                                      <p className="text-[11px] mt-1 text-gray-200 break-words whitespace-normal"><span className="text-gray-400">Remark:</span> {info.remark || "—"}</p>
+                                      {userInfo && (
+                                        <div className="mt-2 pt-1.5 border-t border-gray-700 space-y-0.5">
+                                          <p className="text-[10px] text-gray-300"><span className="text-gray-500">By:</span> {userInfo.fullname}</p>
+                                          {userInfo.division_name && <p className="text-[10px] text-gray-300"><span className="text-gray-500">Division:</span> {userInfo.division_name}</p>}
+                                        </div>
+                                      )}
+                                      <p className="text-[10px] text-gray-400 mt-1.5">{dateStr}</p>
+                                      <div className={`absolute ${caretDir} left-1/2 -translate-x-1/2 border-[5px] border-transparent`} />
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </td>
+                            <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
+                              {cost > 0
+                                ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                                : <span className="text-gray-300 font-normal">—</span>}
+                            </td>
+                            <td className={`px-2 py-2 text-center ${rowBg}`}>
+                              <div className="flex items-center justify-center gap-1">
+                                {/* Edit button - only for End Users and PR in pending status */}
+                                {form.source === 'pr' && (() => {
+                                  const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
+                                  return isEndUser && form.status_id === 1;
+                                })() && (
+                                    <button
+                                      onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
+                                      className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+
+                                {/* View button */}
+                                <button
+                                  onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <RiEyeLine size={14} />
+                                  View
+                                </button>
+
+                                {/* Process button - for all roles except End Users */}
+                                {(() => {
+                                  const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
+                                  return !isEndUser;
+                                })() && (
+                                    <button
+                                      onClick={() => {
+                                        if (form.source === 'pr') {
+                                          // Navigate to specific tab based on PR status
+                                          if (form.status_id === 1) {
+                                            router.push(`/Procurement?id=${form.id}`);
+                                          } else if ([6, 7, 8, 9].includes(form.status_id!)) {
+                                            router.push(`/Procurement/Canvass?id=${form.id}`);
+                                          } else if (form.status_id === 10) {
+                                            router.push(`/Procurement/Abstract?id=${form.id}`);
+                                          } else if ([11, 12, 13, 14, 15, 16, 17].includes(form.status_id!)) {
+                                            router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                          } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
+                                            router.push(`/Procurement/Delivery?id=${form.id}`);
+                                          } else if ([26, 28, 29, 30, 32, 33, 34, 35, 36].includes(form.status_id!)) {
+                                            router.push(`/Procurement/Payment?id=${form.id}`);
+                                          } else {
+                                            router.push(`/Procurement?id=${form.id}`);
+                                          }
+                                        } else if (form.source === 'po') {
+                                          router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
+                                        } else if (form.source === 'payment') {
+                                          router.push(`/Procurement/Payment?id=${form.id}`);
+                                        } else if (form.source === 'delivery') {
+                                          router.push(`/Procurement/Delivery?id=${form.id}`);
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      <RiPlayCircleLine size={14} />
+                                      Process
+                                    </button>
+                                  )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── PAGINATION FOOTER ── */}
+                <div className="mt-4 -mx-6 px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                  <span>
+                    Showing{" "}
+                    <span className="font-semibold text-gray-700">
+                      {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
+                    </span>{" "}
+                    of <span className="font-semibold text-gray-700">{filteredList.length}</span> requests
+                    {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <RiArrowLeftLine size={14} />
+                    </button>
+                    {pageNums.map((p, i) =>
+                      p === "…" ? (
+                        <span key={`e${i}`} className="px-1 text-gray-400">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p as number)}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all
+                          ${currentPage === p
+                              ? "bg-emerald-700 text-white border-emerald-700"
+                              : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <RiArrowRightLine size={14} />
+                    </button>
+                  </div>
+                  <span className="mono">
+                    Filtered total:{" "}
+                    <span className="font-semibold text-emerald-700">
+                      ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </span>
+                  </span>
+                </div>
+              </>
             )}
           </div>
-          <div className="text-right">
-            <button
-              onClick={() => setSummaryReportOpen(true)}
-              className="mb-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 text-sm font-medium"
-            >
-              <RiFileTextLine size={16} />
-              Summary Report
-            </button>
-            <p className="mono text-xs text-gray-400">Total Budget Tracked</p>
-            <p className="mono text-2xl font-bold text-emerald-700">
-              ₱{totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
 
-        {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
-            <div
-              key={label}
-              className={`${cardBg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-150`}
-            >
-              <div className={`${iconBg} ${iconColor} rounded-xl w-10 h-10 flex items-center justify-center shrink-0`}>
-                {icon}
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">{label}</p>
-                <p className={`mono text-xl font-bold ${numColor}`}>{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
-
-          {/* Header row: title + FY button */}
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800 shrink-0">Recent Procurement Records</h2>
-            <button
-              onClick={() => setShowYearPicker(true)}
-              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"
-            >
-              <RiCalendarLine size={16} className="text-emerald-600" />
-              <span className="font-semibold text-gray-700 text-sm">FY {selectedYear}</span>
-              <RiArrowDownLine size={13} className="text-gray-400" />
-            </button>
-          </div>
-
-          {/* Status pills + search row */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {STATUS_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => { setStatusFilter(value); setCurrentPage(1); }}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap
-                  ${statusFilter === value
-                    ? "bg-emerald-700 text-white border-emerald-700"
-                    : "bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
-                  }`}
-              >
-                {label}
-              </button>
-            ))}
-            <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-            <div className="relative flex items-center">
-              <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search PR/PO, supplier, or section…"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-52"
-              />
-            </div>
-          </div>
-
-          {/* Table */}
-          {filteredList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <RiFileListLine size={38} className="opacity-30 mb-3" />
-              <p className="text-sm font-medium">No procurement records found.</p>
-              <p className="text-xs mt-1">Try adjusting your search or filter.</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto rounded-xl border border-gray-100">
-                <table className="w-full text-xs border-collapse table-fixed">
-                <thead>
-                  <tr className="bg-emerald-700 text-white uppercase tracking-widest">
-                    {([
-                      { label: "PR #",         field: "pr_no" as const,         align: "text-left",   width: "w-[120px]" },
-                      { label: "Section",      field: "office_section" as const, align: "text-left",   width: "w-[90px]" },
-                      { label: "Description",  field: null,                       align: "text-left",   width: "w-[130px]" },
-                      { label: "Date",         field: "created_at" as const,     align: "text-left",   width: "w-[90px]" },
-                      { label: "Age",          field: null,                       align: "text-center", width: "w-[60px]" },
-                      { label: "Status",       field: null,                       align: "text-center", width: "w-[160px]" },
-                      { label: "Cost",         field: "total_cost" as const,     align: "text-right",  width: "w-[90px]" },
-                      { label: "Actions",      field: null,                       align: "text-center", width: "" },
-                    ] as const).map(({ label, field, align, width }) => (
-                      <th
-                        key={label}
-                        onClick={field ? () => handleSort(field) : undefined}
-                        className={`px-2 py-2 font-semibold ${align} ${field ? "th-sort select-none cursor-pointer" : ""} ${width}`}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {label}
-                          {field && <SortIcon field={field} />}
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedList.map((form, index) => {
-                    const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.status_id, form.source);
-                    // PR/PO: use the source-aware procurement-page names (matches PR/PO views exactly).
-                    // Delivery/Payment: prefer the DB status_name, fall back to getStatusInfo output.
-                    const displayStatusName =
-                      (form.source === 'pr' || form.source === 'po')
-                        ? statusName
-                        : (form.status_id != null ? statusNameById[form.status_id] : null) ?? statusName;
-                    const cost = form.total_cost || 0;
-                    const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                    const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || 
-                                (form.source === 'delivery' || form.source === 'payment' || form.source === 'po' ? `Supplier: ${form.supplier || form.entity_name || 'N/A'}` : '');
-                    const agingDays = getAgingDays(form);
-                    const agingStyle = getAgingStyle(agingDays);
-                      return (
-                        <tr key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 overflow-hidden ${rowBg}`}>
-                            <div className="truncate" title={form.source === 'delivery' || form.source === 'payment' ? (form.delivery_no || form.pr_no || '') : (form.pr_no || '')}>
-                              {form.source === 'delivery' || form.source === 'payment'
-                                ? form.delivery_no || form.pr_no
-                                : form.pr_no}
-                            </div>
-                          </td>
-                          <td className={`px-2 py-2 text-gray-600 overflow-hidden ${rowBg}`}>
-                            <div className="truncate">{form.office_section || <span className="text-gray-300">—</span>}</div>
-                          </td>
-                          <td className={`px-2 py-2 text-gray-500 overflow-hidden max-w-xs ${rowBg}`}>
-                            <div className="truncate" title={desc || ""}>{desc || <span className="text-gray-300">—</span>}</div>
-                          </td>
-                          <td className={`px-2 py-2 text-gray-500 overflow-hidden ${rowBg}`}>
-                            <div className="truncate">
-                              {form.created_at
-                                ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
-                                : <span className="text-gray-300">—</span>}
-                            </div>
-                          </td>
-                          <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${agingStyle.className}`}
-                              title={form.updated_at
-                                ? `Updated: ${new Date(form.updated_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
-                                : form.created_at
-                                  ? `Created: ${new Date(form.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} (no updates yet)`
-                                  : "No timestamp available"
-                              }
-                            >
-                              {agingStyle.text}
-                            </span>
-                          </td>
-                          <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <div className="relative group inline-flex">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
-                                {displayStatusName}
-                              </span>
-                              {(() => {
-                                const key = form.row_key ?? `${form.source ?? 'pr'}-${form.id}`;
-                                const info = latestRemarkByKey[key];
-                                if (!info?.status_flag_id) return null;
-                                const fname = flagNameById[info.status_flag_id] || "Unknown";
-                                const tooltipDir = index < 2 ? "top-full mt-2" : "bottom-full mb-2";
-                                const caretDir   = index < 2 ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900";
-                                const dateStr = new Date(info.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-                                const userInfo = info.user_id != null ? (userInfoById[info.user_id] ?? null) : null;
-                                return (
-                                  <div className={`absolute ${tooltipDir} left-1/2 -translate-x-1/2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150 bg-gray-900 text-white rounded-xl shadow-xl px-3 py-2.5 z-[9999] w-60 text-left pointer-events-none`}>
-                                    <p className="text-[11px] whitespace-nowrap"><span className="text-gray-400">Status Flag:</span> {fname}</p>
-                                    <p className="text-[11px] mt-1 text-gray-200 break-words whitespace-normal"><span className="text-gray-400">Remark:</span> {info.remark || "—"}</p>
-                                    {userInfo && (
-                                      <div className="mt-2 pt-1.5 border-t border-gray-700 space-y-0.5">
-                                        <p className="text-[10px] text-gray-300"><span className="text-gray-500">By:</span> {userInfo.fullname}</p>
-                                        {userInfo.division_name && <p className="text-[10px] text-gray-300"><span className="text-gray-500">Division:</span> {userInfo.division_name}</p>}
-                                      </div>
-                                    )}
-                                    <p className="text-[10px] text-gray-400 mt-1.5">{dateStr}</p>
-                                    <div className={`absolute ${caretDir} left-1/2 -translate-x-1/2 border-[5px] border-transparent`} />
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </td>
-                          <td className={`mono px-2 py-2 text-right font-semibold text-gray-800 ${rowBg}`}>
-                            {cost > 0
-                              ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                              : <span className="text-gray-300 font-normal">—</span>}
-                          </td>
-                          <td className={`px-2 py-2 text-center ${rowBg}`}>
-                            <div className="flex items-center justify-center gap-1">
-                              {/* Edit button - only for End Users and PR in pending status */}
-                              {form.source === 'pr' && (() => {
-                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
-                                return isEndUser && form.status_id === 1;
-                              })() && (
-                                <button 
-                                  onClick={() => router.push(`/Procurement?edit=pr&id=${form.id}`)}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              
-                              {/* View button */}
-                              <button 
-                                onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }}
-                                className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <RiEyeLine size={14} />
-                                View
-                              </button>
-                              
-                              {/* Process button - for all roles except End Users */}
-                              {(() => {
-                                const isEndUser = !isDivisionHead && !isBACAccount && !isPARPOAccount && !isSupplyAccount && !isBudgetAccount && !isAccountingAccount && !isCashAccount && !isAdmin;
-                                return !isEndUser;
-                              })() && (
-                                <button 
-                                  onClick={() => {
-                                    if (form.source === 'pr') {
-                                      // Navigate to specific tab based on PR status
-                                      if (form.status_id === 1) {
-                                        router.push(`/Procurement?id=${form.id}`);
-                                      } else if ([6, 7, 8, 9].includes(form.status_id!)) {
-                                        router.push(`/Procurement/Canvass?id=${form.id}`);
-                                      } else if (form.status_id === 10) {
-                                        router.push(`/Procurement/Abstract?id=${form.id}`);
-                                      } else if ([11, 12, 13, 14, 15, 16, 17].includes(form.status_id!)) {
-                                        router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
-                                      } else if ([18, 19, 20, 21, 22, 23, 24, 25].includes(form.status_id!)) {
-                                        router.push(`/Procurement/Delivery?id=${form.id}`);
-                                      } else if ([26, 28, 29, 30, 32, 33, 34, 35, 36].includes(form.status_id!)) {
-                                        router.push(`/Procurement/Payment?id=${form.id}`);
-                                      } else {
-                                        router.push(`/Procurement?id=${form.id}`);
-                                      }
-                                    } else if (form.source === 'po') {
-                                      router.push(`/Procurement/PurchaseOrder?id=${form.id}`);
-                                    } else if (form.source === 'payment') {
-                                      router.push(`/Procurement/Payment?id=${form.id}`);
-                                    } else if (form.source === 'delivery') {
-                                      router.push(`/Procurement/Delivery?id=${form.id}`);
-                                    }
-                                  }}
-                                  className="px-2 py-1 text-xs font-semibold rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
-                                >
-                                  <RiPlayCircleLine size={14} />
-                                  Process
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* ── PAGINATION FOOTER ── */}
-              <div className="mt-4 -mx-6 px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-                <span>
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}
-                  </span>{" "}
-                  of <span className="font-semibold text-gray-700">{filteredList.length}</span> requests
-                  {statusFilter !== "all" && <span className="text-gray-400 ml-1">(filtered from {list.length})</span>}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((p) => p - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <RiArrowLeftLine size={14} />
-                  </button>
-                  {pageNums.map((p, i) =>
-                    p === "…" ? (
-                      <span key={`e${i}`} className="px-1 text-gray-400">…</span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => setCurrentPage(p as number)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all
-                          ${currentPage === p
-                            ? "bg-emerald-700 text-white border-emerald-700"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
-                          }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <RiArrowRightLine size={14} />
+          {/* ── YEAR PICKER MODAL ── */}
+          {showYearPicker && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+                <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
+                    <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+                  </div>
+                  <button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                    <RiCloseLine size={22} className="text-gray-500" />
                   </button>
                 </div>
-                <span className="mono">
-                  Filtered total:{" "}
-                  <span className="font-semibold text-emerald-700">
-                    ₱{filteredList.reduce((s, pr) => s + (pr.total_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </span>
-                </span>
+                <div className="max-h-72 overflow-y-auto py-2">
+                  {yearOptions.map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => { setSelectedYear(year); setShowYearPicker(false); setCurrentPage(1); }}
+                      className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${selectedYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+                    >
+                      <span className={`font-semibold ${selectedYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
+                      {selectedYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </>
+            </div>
+          )}
+
+          {/* ── ANALYTICS SECTION ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <AnalyticsDashboard />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <ProcurementTimeline />
+          </div>
+
+
+
+          {/* ── DETAILS MODAL ── */}
+          {viewModalOpen && selectedRecord && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {selectedRecord.source === 'pr' ? 'Purchase Request' :
+                      selectedRecord.source === 'po' ? 'Purchase Order' :
+                        selectedRecord.source === 'delivery' ? 'Delivery' : 'Payment'} Details
+                  </h3>
+                  <button
+                    onClick={() => setViewModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="px-6 py-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Document Number</p>
+                      <p className="text-sm font-semibold text-gray-800">{selectedRecord.pr_no || selectedRecord.delivery_no || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Status</p>
+                      <p className="text-sm font-semibold text-gray-800">{getStatusInfo(selectedRecord.status, selectedRecord.status_id, selectedRecord.source).name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Office Section</p>
+                      <p className="text-sm font-semibold text-gray-800">{selectedRecord.office_section || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Date Created</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {selectedRecord.created_at ? new Date(selectedRecord.created_at).toLocaleDateString("en-PH") : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">Total Cost</p>
+                      <p className="text-sm font-semibold text-emerald-700">
+                        ₱{(selectedRecord.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    {selectedRecord.source !== 'pr' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">Supplier</p>
+                        <p className="text-sm font-semibold text-gray-800">{selectedRecord.supplier || selectedRecord.entity_name || 'N/A'}</p>
+                      </div>
+                    )}
+                  </div>
+                  {selectedRecord.purchase_request_items && selectedRecord.purchase_request_items.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold mb-2">Items</p>
+                      <div className="space-y-2">
+                        {selectedRecord.purchase_request_items.map((item: any, idx: number) => (
+                          <div key={idx} className="text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                            <p className="font-semibold text-gray-700">{item.description || 'N/A'}</p>
+                            <p className="text-gray-600">Qty: {item.quantity} | ₱{(item.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}/unit</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-gray-50 border-t border-gray-100 px-6 py-3 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setViewModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* ── YEAR PICKER MODAL ── */}
-        {showYearPicker && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
-              <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select</p>
-                  <h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
-                </div>
-                <button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                  <RiCloseLine size={22} className="text-gray-500" />
-                </button>
-              </div>
-              <div className="max-h-72 overflow-y-auto py-2">
-                {yearOptions.map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => { setSelectedYear(year); setShowYearPicker(false); setCurrentPage(1); }}
-                    className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${selectedYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
-                  >
-                    <span className={`font-semibold ${selectedYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
-                    {selectedYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── ANALYTICS SECTION ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <AnalyticsDashboard />
-        </div>
-
-        {/* ── DETAILS MODAL ── */}
-        {viewModalOpen && selectedRecord && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {selectedRecord.source === 'pr' ? 'Purchase Request' : 
-                   selectedRecord.source === 'po' ? 'Purchase Order' :
-                   selectedRecord.source === 'delivery' ? 'Delivery' : 'Payment'} Details
-                </h3>
-                <button 
-                  onClick={() => setViewModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="px-6 py-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">Document Number</p>
-                    <p className="text-sm font-semibold text-gray-800">{selectedRecord.pr_no || selectedRecord.delivery_no || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">Status</p>
-                    <p className="text-sm font-semibold text-gray-800">{getStatusInfo(selectedRecord.status, selectedRecord.status_id, selectedRecord.source).name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">Office Section</p>
-                    <p className="text-sm font-semibold text-gray-800">{selectedRecord.office_section || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">Date Created</p>
-                    <p className="text-sm font-semibold text-gray-800">
-                      {selectedRecord.created_at ? new Date(selectedRecord.created_at).toLocaleDateString("en-PH") : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">Total Cost</p>
-                    <p className="text-sm font-semibold text-emerald-700">
-                      ₱{(selectedRecord.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  {selectedRecord.source !== 'pr' && (
-                    <div>
-                      <p className="text-xs text-gray-500 font-semibold">Supplier</p>
-                      <p className="text-sm font-semibold text-gray-800">{selectedRecord.supplier || selectedRecord.entity_name || 'N/A'}</p>
-                    </div>
-                  )}
-                </div>
-                {selectedRecord.purchase_request_items && selectedRecord.purchase_request_items.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold mb-2">Items</p>
-                    <div className="space-y-2">
-                      {selectedRecord.purchase_request_items.map((item: any, idx: number) => (
-                        <div key={idx} className="text-xs bg-gray-50 p-2 rounded border border-gray-100">
-                          <p className="font-semibold text-gray-700">{item.description || 'N/A'}</p>
-                          <p className="text-gray-600">Qty: {item.quantity} | ₱{(item.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}/unit</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="bg-gray-50 border-t border-gray-100 px-6 py-3 flex items-center justify-end gap-2">
-                <button 
-                  onClick={() => setViewModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Summary Report Modal */}
+        <SummaryReportModal
+          open={summaryReportOpen}
+          onClose={() => setSummaryReportOpen(false)}
+        />
       </div>
-
-      {/* Summary Report Modal */}
-      <SummaryReportModal
-        open={summaryReportOpen}
-        onClose={() => setSummaryReportOpen(false)}
-      />
-    </div>
     </AuthGuard>
   );
 }

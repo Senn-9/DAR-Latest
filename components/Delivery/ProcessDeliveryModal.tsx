@@ -1371,7 +1371,7 @@ function DVEditablePreview({
                     </div>
                     <div
                       style={{
-                        fontSize: "11px",
+                        fontSize: "14px",
                         fontWeight: "bold",
                         textAlign: "center",
                         letterSpacing: "1px",
@@ -1877,7 +1877,7 @@ function DVEditablePreview({
                   </td>
                 </tr>
                 {[...Array(7)].map((_, i) => (
-                  <tr key={i} style={{ height: "12  px" }}>
+                  <tr key={i} style={{ height: "20px" }}>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
@@ -2107,6 +2107,7 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "52.3%",
+                      width: "52.5%",
                       borderRight: "1px solid #000",
                       padding: "4px 6px",
                       verticalAlign: "top",
@@ -2145,6 +2146,7 @@ function DVEditablePreview({
                         <span style={{ fontFamily: "Times New Roman, serif" }}>{item}</span>
                       </div>
                     ))}
+                    <div style={{ height: "20px" }}></div>
                   </td>
                   <td
                     style={{
@@ -2154,6 +2156,10 @@ function DVEditablePreview({
                     }}
                   >
                     <b style={{ fontFamily: "Times New Roman, serif" }}>D. Approved for Payment</b>
+                    <div style={{ fontWeight: "bold", marginBottom: "4px", fontFamily: "Times New Roman, serif" }}>
+                      D. Approved for Payment
+                    </div>
+                    <div style={{ height: "70px" }}></div>
                   </td>
                 </tr>
               </tbody>
@@ -2173,6 +2179,7 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "65px",
+                      width: "68px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
