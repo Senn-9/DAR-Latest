@@ -16,8 +16,8 @@ import {
 } from "react-icons/ri";
 
 import { type StatusFlag } from "../StatusFlagPicker";
-import { IARPreview, buildIARHtml } from "../Delivery/IARPreview";
-import { LOAPreview, buildLOAHtml } from "../Delivery/LOAPreview";
+import IARPreview, { buildIARHtml } from "../Delivery/IARPreview";
+import LOAPreview, { buildLOAHtml } from "../Delivery/LOAPreview";
 import { buildDVHtml } from "../Delivery/DVPreview";
 // Editable input styles for live preview
 
@@ -189,9 +189,6 @@ function escapeHtml(value: string) {
 }
 
 
-
-
-
 function downloadPDF(html: string) {
   try {
     const printWindow = window.open("", "_blank", "height=800,width=1200");
@@ -233,11 +230,20 @@ function DVEditablePreview({
   dv,
   poData,
   setDv,
+  accountingEntries,
+  updateAccountingEntry,
 }: {
   delivery: any;
   dv: any;
   poData: any;
   setDv: (data: any) => void;
+  accountingEntries?: Array<{
+    account_title: string;
+    uacs_code: string;
+    debit: string;
+    credit: string;
+  }>;
+  updateAccountingEntry?: (index: number, field: string, value: string) => void;
 }) {
   const [zoomLevel, setZoomLevel] = useState(0.85);
 
@@ -906,7 +912,7 @@ function DVEditablePreview({
                   </td>
                 </tr>
                 {[...Array(7)].map((_, i) => (
-                  <tr key={i} style={{ height: "12  px" }}>
+                  <tr key={i} style={{ height: "20px" }}>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
                     <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
@@ -1084,7 +1090,7 @@ function DVEditablePreview({
                     Credit
                   </th>
                 </tr>
-                {[...Array(6)].map((_, i) => (
+                {(accountingEntries || []).slice(0, 6).map((entry, i) => (
                   <tr key={i} style={{ height: "24px" }}>
                     <td
                       style={{
@@ -1092,7 +1098,19 @@ function DVEditablePreview({
                         borderBottom: "1px solid #000",
                       }}
                     >
-                      &nbsp;
+                      <input
+                        type="text"
+                        value={entry.account_title || ""}
+                        onChange={(e) =>
+                          updateAccountingEntry?.(i, "account_title", e.target.value)
+                        }
+                        className={editableInputCls}
+                        style={{
+                          width: "95%",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      />
                     </td>
                     <td
                       style={{
@@ -1100,7 +1118,19 @@ function DVEditablePreview({
                         borderBottom: "1px solid #000",
                       }}
                     >
-                      &nbsp;
+                      <input
+                        type="text"
+                        value={entry.uacs_code || ""}
+                        onChange={(e) =>
+                          updateAccountingEntry?.(i, "uacs_code", e.target.value)
+                        }
+                        className={editableInputCls}
+                        style={{
+                          width: "95%",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      />
                     </td>
                     <td
                       style={{
@@ -1108,9 +1138,35 @@ function DVEditablePreview({
                         borderBottom: "1px solid #000",
                       }}
                     >
-                      &nbsp;
+                      <input
+                        type="text"
+                        value={entry.debit || ""}
+                        onChange={(e) =>
+                          updateAccountingEntry?.(i, "debit", e.target.value)
+                        }
+                        className={editableInputRightCls}
+                        style={{
+                          width: "95%",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      />
                     </td>
-                    <td style={{ borderBottom: "1px solid #000" }}>&nbsp;</td>
+                    <td style={{ borderBottom: "1px solid #000" }}>
+                      <input
+                        type="text"
+                        value={entry.credit || ""}
+                        onChange={(e) =>
+                          updateAccountingEntry?.(i, "credit", e.target.value)
+                        }
+                        className={editableInputRightCls}
+                        style={{
+                          width: "95%",
+                          fontSize: "9px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      />
+                    </td>
                   </tr>
                 ))}
                 <tr style={{ height: "20px" }}>
@@ -1136,6 +1192,7 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "52.3%",
+                      width: "52.5%",
                       borderRight: "1px solid #000",
                       padding: "4px 6px",
                       verticalAlign: "top",
@@ -1175,6 +1232,7 @@ function DVEditablePreview({
                         <span style={{ fontFamily: "Times New Roman, serif" }}>{item}</span>
                       </div>
                     ))}
+                    <div style={{ height: "20px" }}></div>
                   </td>
                   <td
                     style={{
@@ -1183,7 +1241,10 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>D. Approved for Payment</b>
+                    <div style={{ fontWeight: "bold", marginBottom: "4px", fontFamily: "Times New Roman, serif" }}>
+                        D. Approved for Payment
+                    </div>
+                    <div style={{ height: "70px" }}></div>
                   </td>
                 </tr>
               </tbody>
@@ -1203,6 +1264,7 @@ function DVEditablePreview({
                   <td
                     style={{
                       width: "65px",
+                      width: "68px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
@@ -3213,7 +3275,7 @@ export default function ProcessPaymentModal({
             poData={poData}
             setDv={setDvData}
             accountingEntries={accountingEntries}
-            onUpdateAccountingEntry={updateAccountingEntry}
+            updateAccountingEntry={updateAccountingEntry}
           />
         );
 

@@ -224,11 +224,18 @@ function IAREditablePreview({
 
             {/* Main Info Box */}
             <div
-              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif", border: "0.5px solid #000" }}
+              style={{
+                fontSize: "10px",
+                fontFamily: "Times New Roman, serif",
+                border: "0.5px solid #000",
+              }}
             >
               <div className="grid grid-cols-2">
                 {/* Left Section */}
-                <div className="p-2 space-y-1" style={{ borderRight: "0.5px solid #000" }}>
+                <div
+                  className="p-2 space-y-1"
+                  style={{ borderRight: "0.5px solid #000" }}
+                >
                   <div>
                     <span className="font-semibold">Supplier :</span>
                     <span className="ml-2">
@@ -332,31 +339,50 @@ function IAREditablePreview({
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "50px", fontStyle: "italic", border: "0.5px solid #000" }}
+                      style={{
+                        width: "50px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                      }}
                     >
                       Unit
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ fontStyle: "italic", border: "0.5px solid #000" }}
+                      style={{
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                      }}
                     >
                       Description
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "70px", fontStyle: "italic", border: "0.5px solid #000" }}
+                      style={{
+                        width: "70px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                      }}
                     >
                       Quantity
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "80px", fontStyle: "italic", border: "0.5px solid #000" }}
+                      style={{
+                        width: "80px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                      }}
                     >
                       Unit Cost
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "90px", fontStyle: "italic", border: "0.5px solid #000" }}
+                      style={{
+                        width: "90px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                      }}
                     >
                       Amount
                     </th>
@@ -365,7 +391,10 @@ function IAREditablePreview({
                 <tbody>
                   {items.map((item: any, i: number) => (
                     <tr key={i}>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{ border: "0.5px solid #000" }}
+                      >
                         <textarea
                           value={item.stock_no || ""}
                           onChange={(e) =>
@@ -381,7 +410,10 @@ function IAREditablePreview({
                           rows={1}
                         />
                       </td>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{ border: "0.5px solid #000" }}
+                      >
                         <textarea
                           value={item.unit || ""}
                           onChange={(e) =>
@@ -421,7 +453,10 @@ function IAREditablePreview({
                           rows={1}
                         />
                       </td>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{ border: "0.5px solid #000" }}
+                      >
                         <textarea
                           value={item.quantity || ""}
                           onChange={(e) =>
@@ -437,7 +472,10 @@ function IAREditablePreview({
                           rows={1}
                         />
                       </td>
-                      <td className="p-1 text-right pr-2" style={{ border: "0.5px solid #000" }}>
+                      <td
+                        className="p-1 text-right pr-2"
+                        style={{ border: "0.5px solid #000" }}
+                      >
                         <textarea
                           value={item.unit_cost || ""}
                           onChange={(e) =>
@@ -453,7 +491,10 @@ function IAREditablePreview({
                           rows={1}
                         />
                       </td>
-                      <td className="p-1 text-right pr-2" style={{ border: "0.5px solid #000" }}>
+                      <td
+                        className="p-1 text-right pr-2"
+                        style={{ border: "0.5px solid #000" }}
+                      >
                         {item.quantity && item.unit_cost
                           ? (
                               Number(item.quantity) * Number(item.unit_cost)
@@ -465,12 +506,42 @@ function IAREditablePreview({
                   {/* Fill empty rows */}
                   {[...Array(Math.max(0, 15 - items.length))].map((_, i) => (
                     <tr key={`empty-${i}`} style={{ height: "24px" }}>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000" }}>&nbsp;</td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{ border: "0.5px solid #000" }}
+                      >
+                        &nbsp;
+                      </td>
                     </tr>
                   ))}
                   {/* Total Amount Row */}
@@ -493,7 +564,7 @@ function IAREditablePreview({
                             (item.quantity && item.unit_cost
                               ? Number(item.quantity) * Number(item.unit_cost)
                               : 0),
-                          0
+                          0,
                         )
                         .toFixed(2)}
                     </td>
@@ -504,11 +575,18 @@ function IAREditablePreview({
 
             {/* Inspection and Acceptance Section */}
             <div
-              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif", border: "0.5px solid #000" }}
+              style={{
+                fontSize: "10px",
+                fontFamily: "Times New Roman, serif",
+                border: "0.5px solid #000",
+              }}
             >
               <div className="flex" style={{ minHeight: "200px" }}>
                 {/* Inspection Column */}
-                <div className="flex-1 h-full" style={{ borderRight: "0.5px solid #000" }}>
+                <div
+                  className="flex-1 h-full"
+                  style={{ borderRight: "0.5px solid #000" }}
+                >
                   <div
                     className="p-2 text-center font-bold"
                     style={{
@@ -772,8 +850,10 @@ function LOAEditablePreview({
 
   const mergedData = { ...delivery, ...transformedPoData, ...loa };
   mergedData.po_items = transformedPoData.po_items;
-  if (transformedPoData.po_no && !loa?.po_no) mergedData.po_no = transformedPoData.po_no;
-  if (transformedPoData.po_date && !loa?.po_date) mergedData.po_date = transformedPoData.po_date;
+  if (transformedPoData.po_no && !loa?.po_no)
+    mergedData.po_no = transformedPoData.po_no;
+  if (transformedPoData.po_date && !loa?.po_date)
+    mergedData.po_date = transformedPoData.po_date;
 
   const items = mergedData.po_items || [];
 
@@ -1246,8 +1326,10 @@ function DVEditablePreview({
   // Ensure DV-specific fields are available in mergedData
   if (!mergedData.dv_no && dv?.dv_no) mergedData.dv_no = dv.dv_no;
   if (!mergedData.dv_date && dv?.dv_date) mergedData.dv_date = dv.dv_date;
-  if (!mergedData.certified_by_name && dv?.certified_by_name) mergedData.certified_by_name = dv.certified_by_name;
-  if (!mergedData.certified_by_position && dv?.certified_by_position) mergedData.certified_by_position = dv.certified_by_position;
+  if (!mergedData.certified_by_name && dv?.certified_by_name)
+    mergedData.certified_by_name = dv.certified_by_name;
+  if (!mergedData.certified_by_position && dv?.certified_by_position)
+    mergedData.certified_by_position = dv.certified_by_position;
 
   return (
     <div className="space-y-2">
@@ -1719,7 +1801,9 @@ function DVEditablePreview({
                   >
                     <input
                       type="text"
-                      value={mergedData.ors_no || transformedPoData.ors_no || ""}
+                      value={
+                        mergedData.ors_no || transformedPoData.ors_no || ""
+                      }
                       onChange={(e) => updateDvField("ors_no", e.target.value)}
                       className={editableInputCls}
                       style={{
@@ -2114,8 +2198,13 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <div style={{ fontWeight: "bold", marginBottom: "4px",                       fontFamily: "Times New Roman, serif",
- }}>
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: "4px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
                       C. Certified:
                     </div>
                     {[
@@ -2140,10 +2229,11 @@ function DVEditablePreview({
                             border: "1px solid #000",
                             flexShrink: 0,
                             marginTop: "1px",
-                            
                           }}
                         ></span>
-                        <span style={{ fontFamily: "Times New Roman, serif" }}>{item}</span>
+                        <span style={{ fontFamily: "Times New Roman, serif" }}>
+                          {item}
+                        </span>
                       </div>
                     ))}
                     <div style={{ height: "20px" }}></div>
@@ -2155,8 +2245,16 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>D. Approved for Payment</b>
-                    <div style={{ fontWeight: "bold", marginBottom: "4px", fontFamily: "Times New Roman, serif" }}>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      D. Approved for Payment
+                    </b>
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: "4px",
+                        fontFamily: "Times New Roman, serif",
+                      }}
+                    >
                       D. Approved for Payment
                     </div>
                     <div style={{ height: "70px" }}></div>
@@ -2360,7 +2458,14 @@ function DVEditablePreview({
                   >
                     Date
                   </td>
-                  <td style={{ padding: "3px 4px", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
+                  <td
+                    style={{
+                      padding: "3px 4px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    &nbsp;
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -2384,7 +2489,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>E. Receipt of Payment</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      E. Receipt of Payment
+                    </b>
                   </td>
                   <td
                     style={{
@@ -2394,7 +2501,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>JEV No.</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      JEV No.
+                    </b>
                   </td>
                 </tr>
                 <tr>
@@ -2419,7 +2528,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Date :
+                    </b>
                   </td>
                   <td
                     colSpan={2}
@@ -2430,7 +2541,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Bank Name &amp; Account Number:</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Bank Name &amp; Account Number:
+                    </b>
                   </td>
                   <td
                     style={{
@@ -2462,7 +2575,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Date :</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Date :
+                    </b>
                   </td>
                   <td
                     colSpan={2}
@@ -2473,7 +2588,9 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Printed Name:</b>
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Printed Name:
+                    </b>
                   </td>
                   <td
                     style={{
@@ -2487,8 +2604,16 @@ function DVEditablePreview({
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan={5} style={{ padding: "3px 6px", fontFamily: "Times New Roman, serif" }}>
-                    <b style={{ fontFamily: "Times New Roman, serif" }}>Official Receipt No. &amp; Date/Other Documents</b>
+                  <td
+                    colSpan={5}
+                    style={{
+                      padding: "3px 6px",
+                      fontFamily: "Times New Roman, serif",
+                    }}
+                  >
+                    <b style={{ fontFamily: "Times New Roman, serif" }}>
+                      Official Receipt No. &amp; Date/Other Documents
+                    </b>
                   </td>
                 </tr>
               </tbody>
@@ -4704,10 +4829,9 @@ export default function ProcessDeliveryModal({
           </h3>
 
           <h2 className="text-xs font-semibold text-gray-700 mb-5">
-            Payee, Address and other data are pre-filled from PO/ORS, input if there are any discrepancies or changes.
+            Payee, Address and other data are pre-filled from PO/ORS, input if
+            there are any discrepancies or changes.
           </h2>
-
-
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -4747,8 +4871,6 @@ export default function ProcessDeliveryModal({
                 />
               </div>
             </div>
-
-        
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">

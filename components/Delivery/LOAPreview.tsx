@@ -159,7 +159,7 @@ function downloadPDF(html: string) {
   }
 }
 
-export function LOAPreview({
+export default function LOAPreview({
   delivery = {},
   loa = {},
   poData = {},

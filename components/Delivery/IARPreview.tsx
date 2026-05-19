@@ -225,7 +225,6 @@ export function buildIARHtml(data: any): string {
                   <tr>
                     <td style="width: 18px; vertical-align: middle; padding: 0;">
                       <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
-                        ${data.items_complete === true ? "✓" : ""}
                       </div>
                     </td>
                     <td style="padding-left: 8px; vertical-align: middle;">
@@ -240,7 +239,6 @@ export function buildIARHtml(data: any): string {
                   <tr>
                     <td style="width: 18px; vertical-align: middle; padding: 0;">
                       <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
-                        ${data.items_complete === false ? "✓" : ""}
                       </div>
                     </td>
                     <td style="padding-left: 8px; vertical-align: middle;">
@@ -293,8 +291,8 @@ function downloadPDF(html: string) {
   }
 }
 
-export function IARPreview({
-  delivery = {},
+export default function IARPreview({
+  delivery = {},  
   iar = {},
   poData = {},
   className = "",
@@ -699,14 +697,6 @@ export function IARPreview({
                           flexShrink: 0,
                         }}
                       >
-                        {mergedData.items_complete === true && (
-                          <div
-                            className="text-center"
-                            style={{ lineHeight: "14px" }}
-                          >
-                            ✓
-                          </div>
-                        )}
                       </div>
                       <span
                         style={{
@@ -727,14 +717,6 @@ export function IARPreview({
                           flexShrink: 0,
                         }}
                       >
-                        {mergedData.items_complete === false && (
-                          <div
-                            className="text-center"
-                            style={{ lineHeight: "14px" }}
-                          >
-                            ✓
-                          </div>
-                        )}
                       </div>
                       <span
                         style={{
