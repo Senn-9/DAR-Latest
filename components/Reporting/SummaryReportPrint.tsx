@@ -21,6 +21,7 @@ export type SummaryReportRow = {
 	section: string;
 	date: string;
 	status: string;
+	statusAge: string;
 	cost: string;
 };
 
@@ -206,6 +207,7 @@ export function buildSummaryReportHtml(
 			<td>${escapeHtml(row.prNo)}</td>
 			<td>${escapeHtml(row.section)}</td>
 			<td>${escapeHtml(row.date)}</td>
+			<td class="text-center">${escapeHtml(row.statusAge)}</td>
 			<td>${escapeHtml(row.status)}</td>
 			<td class="text-right">${escapeHtml(row.cost)}</td>
 		</tr>
@@ -226,6 +228,7 @@ export function buildSummaryReportHtml(
 								<th>PR/PO #</th>
 								<th>Section</th>
 								<th>Date</th>
+								<th class="text-center">Status Age</th>
 								<th>Status</th>
 								<th class="text-right">Cost</th>
 							</tr>

@@ -210,6 +210,17 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 	const [statusNameById, setStatusNameById] = useState<Record<number, string>>({});
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 	const [selectedStatus, setSelectedStatus] = useState("all");
+	const [selectedSection, setSelectedSection] = useState("all");
+	const [sectionOptions, setSectionOptions] = useState<string[]>([]);
+
+	const getStatusAgeDays = (item: PRData): number => {
+		const referenceDate = item.updated_at || item.created_at;
+		if (!referenceDate) return 0;
+		const date = new Date(referenceDate);
+		const now = new Date();
+		const diffTime = now.getTime() - date.getTime();
+		return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+	};
 
 	useEffect(() => {
 		if (!open) return;
@@ -310,9 +321,22 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 				const allData = [...processedPRs, ...processedPOs, ...processedDeliveries];
 				const filteredByYear = allData.filter(item => new Date(item.created_at).getFullYear() === selectedYear);
 
-				const filteredData = selectedStatus === "all"
+				const sections = Array.from(
+					new Set(filteredByYear.map(item => item.office_section || "Unassigned"))
+				).sort((a, b) => a.localeCompare(b));
+				setSectionOptions(sections);
+
+				if (selectedSection !== "all" && !sections.includes(selectedSection)) {
+					setSelectedSection("all");
+				}
+
+				const filteredByStatus = selectedStatus === "all"
 					? filteredByYear
 					: filteredByYear.filter(item => getStatusFilterKey(item.status_id) === selectedStatus);
+
+				const filteredData = selectedSection === "all"
+					? filteredByStatus
+					: filteredByStatus.filter(item => (item.office_section || "Unassigned") === selectedSection);
 
 				filteredData.sort((a, b) => {
 					const sectionA = a.office_section || "Unassigned";
@@ -329,7 +353,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 		};
 
 		fetchData();
-	}, [open, selectedYear, selectedStatus, supabase]);
+	}, [open, selectedYear, selectedStatus, selectedSection, supabase]);
 
 	const handlePrint = () => {
 		const meta: SummaryReportMeta = {
@@ -384,6 +408,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 				entityName: item.entity_name || "Unknown",
 				date: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown",
 				status: displayStatusName,
+				statusAge: `${getStatusAgeDays(item)}d`,
 				cost: `₱${(item.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
 			};
 		});
@@ -486,6 +511,16 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 										<option value="completed-delivery">Completed Delivery Phase</option>
 										<option value="completed">Completed Payment Phase</option>
 									</select>
+									<select
+										value={selectedSection}
+										onChange={(e) => setSelectedSection(e.target.value)}
+										className="rounded border border-gray-300 px-3 py-2"
+									>
+										<option value="all">All Sections/Divisions</option>
+										{sectionOptions.map((section) => (
+											<option key={section} value={section}>{section}</option>
+										))}
+									</select>
 								</div>
 
 								<div className="mb-8 grid grid-cols-3 gap-4">
@@ -552,6 +587,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 												<th className="border border-gray-300 p-2 text-left">PR/PO #</th>
 												<th className="border border-gray-300 p-2 text-left">Section</th>
 												<th className="border border-gray-300 p-2 text-left">Date</th>
+													<th className="border border-gray-300 p-2 text-center">Status Age</th>
 												<th className="border border-gray-300 p-2 text-left">Status</th>
 												<th className="border border-gray-300 p-2 text-right">Cost</th>
 											</tr>
@@ -567,6 +603,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 														<td className="border border-gray-300 p-2">{item.pr_no}</td>
 														<td className="border border-gray-300 p-2">{item.office_section}</td>
 														<td className="border border-gray-300 p-2">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown"}</td>
+																	<td className="border border-gray-300 p-2 text-center">{getStatusAgeDays(item)}d</td>
 														<td className="border border-gray-300 p-2">{displayStatusName}</td>
 														<td className="border border-gray-300 p-2 text-right">₱{(item.total_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
 													</tr>
