@@ -334,7 +334,7 @@ export async function fetchPoCandidatesForDelivery() {
 
     /** PO phase complete — served POs are eligible for delivery logging */
 
-    .eq("status_id", 34)
+    .eq("status_id", 38)
 
     .order("updated_at", { ascending: false });
 

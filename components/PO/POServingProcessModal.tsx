@@ -77,8 +77,8 @@ export default function POServingProcessModal({
       const fullRemarks = `Serving Date: ${servingDate} | Received By: ${receivedBy || "N/A"}\n${remarks}`;
       
       const flagId = selectedFlag ? getFlagId(selectedFlag) : null;
-      await onSubmit(34, fullRemarks, flagId); // Move to status 34 (Completed PO Phase)
-      setSuccessMsg(`PO ${po?.po_no ?? ""} has been completed and moved to Completed PO Phase.`);
+      await onSubmit(38, fullRemarks, flagId); // Move to status 38 (Completed PO)
+      setSuccessMsg(`PO ${po?.po_no ?? ""} has been completed.`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       setErrorModal({ show: true, message: errorMsg });

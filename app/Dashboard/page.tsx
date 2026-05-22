@@ -442,7 +442,7 @@ export default function DashboardPage() {
     }
 
     // PO entries use a separate status_id space — check source first to avoid conflicts
-    // (e.g. status_id 34 = "Completed (PO Phase)" for POs, "PARPO signature" for deliveries)
+    // (e.g. status_id 38 = "Completed (PO)" for POs, 34 = "PARPO signature" for deliveries)
     if (source === 'po') {
       const poById: Record<number, { name: string; color: string }> = {
         11: { name: "PO (Creation)", color: "po" },

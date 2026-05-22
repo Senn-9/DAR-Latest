@@ -85,7 +85,7 @@ function getStatusInfo(status: string | null, statusId?: number | null, source?:
 			15: { name: "PO (Accounting)", color: "po" },
 			16: { name: "PO (PARPO)", color: "po" },
 			17: { name: "PO (Serving)", color: "po" },
-			34: { name: "Completed (PO Phase)", color: "completed" },
+			38: { name: "Completed (PO)", color: "completed" },
 		};
 		if (statusId != null && poById[statusId]) return poById[statusId];
 		return { name: status || "PO", color: "po" };

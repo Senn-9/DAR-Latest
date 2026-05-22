@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import SignoutModal from "@/components/SignOutModal";
-import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import RemarksModal from "@/components/RemarksModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { AuthGuard } from "@/components/AuthGuard";
 import { deletePRCascade, fetchPRDeletePreview, type PRDeletePreview } from "@/utils/supabase/deletePR";
@@ -46,6 +46,7 @@ export default function ProcurementPage() {
   };
 
   type CurrentUser = {
+    id?: number;
     fullname: string;
     username: string;
     role_id: number;
@@ -1167,19 +1168,19 @@ export default function ProcurementPage() {
 
       {/* ── DELETE PR CONFIRM MODAL ── */}
       {deletePrTarget && (() => {
-        const rows: { label: string; count: number }[] = deletePreview ? [
+        const rows: { label: string; count: number; refs?: string[] }[] = deletePreview ? [
           { label: "PR Line Items",          count: deletePreview.prItems },
-          { label: "Purchase Orders",        count: deletePreview.purchaseOrders },
+          { label: "Purchase Orders",        count: deletePreview.purchaseOrders,       refs: deletePreview.poNos },
           { label: "PO Line Items",          count: deletePreview.poItems },
-          { label: "Deliveries",             count: deletePreview.deliveries },
+          { label: "Deliveries",             count: deletePreview.deliveries,           refs: deletePreview.deliveryNos },
           { label: "Delivery Documents",     count: deletePreview.deliveryDocs },
-          { label: "Canvass Sessions",       count: deletePreview.canvassSessions },
+          { label: "Canvass Sessions",       count: deletePreview.canvassSessions,      refs: deletePreview.bacNos },
           { label: "Canvass Entries",        count: deletePreview.canvassEntries },
           { label: "Canvasser Assignments",  count: deletePreview.canvasserAssignments },
           { label: "AAA Documents",          count: deletePreview.aaaDocs },
-          { label: "ORS Entries",            count: deletePreview.orsEntries },
-          { label: "BAC Resolution Links",   count: deletePreview.bacLinks },
-          { label: "Proposals",              count: deletePreview.proposals },
+          { label: "ORS Entries",            count: deletePreview.orsEntries,           refs: deletePreview.orsNos },
+          { label: "BAC Resolution Links",   count: deletePreview.bacLinks,             refs: deletePreview.resolutionNos },
+          { label: "Proposals",              count: deletePreview.proposals,            refs: deletePreview.proposalNos },
           { label: "Remarks",                count: deletePreview.remarks },
         ].filter((r) => r.count > 0) : [];
 
@@ -1221,11 +1222,18 @@ export default function ProcurementPage() {
                       <p className="px-4 py-3 text-sm text-gray-500">No connected records found.</p>
                     ) : (
                       rows.map((row, i) => (
-                        <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50">
-                          <span className="text-sm text-gray-700">{row.label}</span>
-                          <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full">
-                            {row.count}
-                          </span>
+                        <div key={i} className="border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50">
+                          <div className="flex items-center justify-between px-4 py-2">
+                            <span className="text-sm text-gray-700">{row.label}</span>
+                            <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full">
+                              {row.count}
+                            </span>
+                          </div>
+                          {row.refs && row.refs.length > 0 && (
+                            <p className="px-4 pb-2 -mt-0.5 text-[11px] text-gray-400 font-mono leading-relaxed truncate">
+                              {row.refs.join(", ")}
+                            </p>
+                          )}
                         </div>
                       ))
                     )}
@@ -1267,7 +1275,13 @@ export default function ProcurementPage() {
                   disabled={deleteConfirming || deletePreviewLoading || deleteConfirmInput !== deletePrTarget.prNo}
                   onClick={async () => {
                     setDeleteConfirming(true);
-                    const { error } = await deletePRCascade(deletePrTarget.prId);
+                    const { error } = await deletePRCascade(
+                      deletePrTarget.prId,
+                      {
+                        userId: currentUser?.id ?? null,
+                        deletedBy: currentUser?.fullname ?? "Admin",
+                      },
+                    );
                     setDeleteConfirming(false);
                     setDeletePrTarget(null);
                     setDeletePreview(null);
@@ -1304,13 +1318,15 @@ export default function ProcurementPage() {
         onDismiss={() => setDeleteErrorMsg(null)}
       />
 
-      {/* ── REMARKS TIMELINE MODAL ── */}
+      {/* ── REMARKS MODAL ── */}
       {remarksTarget && (
-        <RemarksTimelineModal
+        <RemarksModal
           visible={true}
           target={{ prId: remarksTarget.prId }}
+          phase="pr"
           title={`Remarks · PR ${remarksTarget.prNo}`}
           subtitle="PR procurement remarks history"
+          currentUserId={currentUser?.id ?? null}
           onClose={() => setRemarksTarget(null)}
         />
       )}

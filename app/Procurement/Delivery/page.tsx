@@ -37,7 +37,7 @@ import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
 
 import DeleteDeliveryModal from "@/components/Delivery/DeleteDeliveryModal";
 
-import RemarksModal from "@/components/Delivery/RemarksModal";
+import RemarksModal from "@/components/RemarksModal";
 
 import {
   fetchPoCandidatesForDelivery,
@@ -1965,10 +1965,16 @@ export default function DeliveryPage() {
       />
 
       {/* Remarks Modal */}
-
       <RemarksModal
         visible={remarksModalOpen}
-        deliveryId={selectedDelivery?.id ?? null}
+        target={{
+          poId:       selectedDelivery?.po_id       ?? null,
+          deliveryId: selectedDelivery?.id          ?? null,
+        }}
+        phase="delivery"
+        title={selectedDelivery?.delivery_no ? `Remarks · ${selectedDelivery.delivery_no}` : "Delivery Remarks"}
+        subtitle={selectedDelivery?.po_no ?? "Delivery remarks history"}
+        currentUserId={currentUser?.id ?? null}
         onClose={() => setRemarksModalOpen(false)}
       />
     </div>

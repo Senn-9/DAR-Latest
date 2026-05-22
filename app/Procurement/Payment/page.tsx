@@ -28,7 +28,7 @@ import {
 } from "react-icons/ri";
 import ViewDeliveryModal from "@/components/Delivery/ViewDeliveryModal";
 import ProcessDeliveryModal from "@/components/Delivery/ProcessDeliveryModal";
-import RemarksModal from "@/components/Delivery/RemarksModal";
+import RemarksModal from "@/components/RemarksModal";
 import ProcessPaymentModal, {
   type PaymentProcessDocType,
 } from "@/components/Payment/ProcessPaymentModal";
@@ -1202,11 +1202,18 @@ async function buildLOAHtml(d: any): Promise<string> {
         />
       )}
 
-      
+
       {selectedDelivery && remarksModalOpen && (
         <RemarksModal
           visible={remarksModalOpen}
-          deliveryId={selectedDelivery.id}
+          target={{
+            poId:       selectedDelivery.po_id ?? null,
+            deliveryId: selectedDelivery.id,
+          }}
+          phase="payment"
+          title={selectedDelivery.po_no ? `Remarks · ${selectedDelivery.po_no}` : "Payment Remarks"}
+          subtitle="Payment phase remarks history"
+          currentUserId={currentUser?.id ?? null}
           onClose={() => setRemarksModalOpen(false)}
         />
       )}

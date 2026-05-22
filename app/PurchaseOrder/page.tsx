@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { AuthGuard } from "@/components/AuthGuard";
-import RemarksTimelineModal from "@/components/RemarksTimelineModal";
+import RemarksModal from "@/components/RemarksModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { deletePOCascade, fetchPODeletePreview, type PODeletePreview } from "@/utils/supabase/deletePO";
 import CreatePOModal from "../../components/PO/CreatePOModal";
@@ -86,7 +86,7 @@ const PO_STATUS_CFG: Record<number, POStatusMeta> = {
   15: { label: "PO (Accounting)", color: "accounting", bg: "bg-yellow-50", text: "text-yellow-800" },
   16: { label: "PO (PARPO)", color: "parpo", bg: "bg-fuchsia-50", text: "text-fuchsia-800" },
   17: { label: "PO (Serving)", color: "serving", bg: "bg-emerald-50", text: "text-emerald-800" },
-  34: { label: "Completed (PO Phase)", color: "completed", bg: "bg-green-50", text: "text-green-800" },
+  38: { label: "Completed (PO)", color: "completed", bg: "bg-green-50", text: "text-green-800" },
 };
 
 const STATUS_FILTERS = [
@@ -115,7 +115,7 @@ function getPhase(statusId: number | null | undefined): "po" | "ors" | "accounti
   if (statusId === 15) return "accounting";
   if (statusId === 16) return "parpo";
   if (statusId === 17) return "serving";
-  if (statusId === 34) return "completed";
+  if (statusId === 38) return "completed";
   return "unknown";
 }
 
@@ -155,13 +155,13 @@ function nextStatusOptions(statusId: number, user: POUserContext, divisionName?:
   const roleId = user?.role_id ?? 0;
 
   if (roleId === 1) {
-    return [11, 12, 13, 14, 15, 16, 17, 34].filter((s) => s !== statusId);
+    return [11, 12, 13, 14, 15, 16, 17, 38].filter((s) => s !== statusId);
   }
 
   if (isSupplyUser(user)) {
     if (statusId === 11) return [12];
     if (statusId === 16) return [17];
-    if (statusId === 17) return [34];
+    if (statusId === 17) return [38];
     return [];
   }
 
@@ -193,8 +193,8 @@ function nextStatusOptions(statusId: number, user: POUserContext, divisionName?:
 
 function canProcessPO(user: POUserContext, statusId: number | null, divisionName?: string | null) {
   if (statusId == null) return false;
-  // Completed POs (status 34) cannot be processed further
-  if (statusId === 34) return false;
+  // Completed POs (status 38) cannot be processed further
+  if (statusId === 38) return false;
   return nextStatusOptions(statusId, user, divisionName).length > 0;
 }
 
@@ -1270,11 +1270,13 @@ export default function PurchaseOrderPage() {
         }}
       />
 
-      <RemarksTimelineModal
+      <RemarksModal
         visible={remarksOpen}
         target={{ poId: selectedPo ? Number(selectedPo.id) : null }}
+        phase="po"
         title={selectedPo?.po_no ? `Remarks · ${selectedPo.po_no}` : "Purchase Order Remarks"}
         subtitle={selectedPo?.supplier ?? "PO history and phase notes"}
+        currentUserId={currentUser?.id ?? null}
         onClose={() => setRemarksOpen(false)}
       />
 
