@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { AuthGuard } from "@/components/AuthGuard";
 import RemarksModal from "@/components/RemarksModal";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { deletePOCascade, fetchPODeletePreview, type PODeletePreview } from "@/utils/supabase/deletePO";
 import CreatePOModal from "../../components/PO/CreatePOModal";
@@ -577,6 +578,7 @@ export default function PurchaseOrderPage() {
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
   const [deleteErrorMsg, setDeleteErrorMsg] = useState<string | null>(null);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleteRemarkText, setDeleteRemarkText] = useState("");
   const yearOptions = useMemo(() => {
     const years: number[] = [];
     for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
@@ -717,6 +719,12 @@ export default function PurchaseOrderPage() {
       .finally(() => setDeletePreviewLoading(false));
   }, [deletePoTarget]);
 
+  useEffect(() => {
+    if (!deletePreview || !deletePoTarget) { setDeleteRemarkText(""); return; }
+    const actor = currentUser?.fullname ?? "Admin";
+    setDeleteRemarkText(`[DELETED by ${actor}] PO: ${deletePoTarget.poNo}`);
+  }, [deletePreview, deletePoTarget, currentUser]);
+
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const pagedList = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
@@ -838,7 +846,13 @@ export default function PurchaseOrderPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="w-full p-6 md:p-10 space-y-6">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { font-family: 'Sora', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tr-row:hover td { background-color: #f0fdf4 !important; }
+      `}</style>
+      <div className="w-full px-4 py-4 sm:p-6 space-y-4 md:space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Purchase Order Portal</p>
@@ -866,7 +880,7 @@ export default function PurchaseOrderPage() {
             {(isSupply || isAdmin) && (
               <button
                 onClick={() => setCreateOpen(true)}
-                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-bold text-base transition-colors"
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-semibold sm:font-bold text-sm sm:text-base transition-colors"
               >
                 <RiAddLine size={20} /> Create PO
               </button>
@@ -875,7 +889,7 @@ export default function PurchaseOrderPage() {
         </div>
 
         {pathname?.startsWith("/Procurement") && (
-          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-full sm:w-fit overflow-x-auto">
             {([
               { key: "pr", label: "Purchase Request", href: "/Procurement" },
               { key: "canvass", label: "Canvass", href: "/Procurement/Canvass" },
@@ -889,7 +903,7 @@ export default function PurchaseOrderPage() {
                 <button
                   key={key}
                   onClick={() => router.push(href)}
-                  className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                  className={`flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
                     isActive
                       ? "bg-emerald-700 text-white shadow-sm"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
@@ -919,9 +933,9 @@ export default function PurchaseOrderPage() {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-6xl mx-auto">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden px-4 py-4 sm:p-6 max-w-6xl mx-auto">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-800">All Purchase Orders</h2>
+            <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Orders</h2>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex items-center">
                 <RiSearchLine size={14} className="absolute left-2.5 text-gray-400 pointer-events-none" />
@@ -930,7 +944,7 @@ export default function PurchaseOrderPage() {
                   placeholder="Search PO, PR, supplier or section…"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-72"
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-full sm:w-64"
                 />
               </div>
               <button
@@ -1004,14 +1018,89 @@ export default function PurchaseOrderPage() {
           )}
 
           {filteredList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 lg:hidden">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
               <p className="text-sm font-medium">No purchase orders found.</p>
               <p className="text-xs mt-1">Try adjusting your search or filter.</p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto -mx-6 px-6">
+              {/* ── Mobile stacked cards (hidden on desktop) ── */}
+              <div className="space-y-3 lg:hidden">
+                {pagedList.map((po) => {
+                  const meta = getStatusMeta(po.status_id);
+                  const canProcess = canProcessPO(currentUser, po.status_id, getDivisionName(po.division_id));
+                  return (
+                    <div key={po.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{po.po_no ?? "—"}</p>
+                          <p className="mt-0.5 text-xs text-gray-500 truncate">{po.pr_no ? `PR: ${po.pr_no}` : "—"}</p>
+                        </div>
+                        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${meta.bg} ${meta.text}`}>
+                          {meta.label}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs text-gray-500 truncate">{po.supplier ?? "—"}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Amount</p>
+                          <p className="text-sm font-semibold text-gray-800">{fmtMoney(po.total_amount)}</p>
+                        </div>
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Date</p>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {po.created_at ? new Date(po.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                          </p>
+                        </div>
+                        {po.office_section && (
+                          <div className="col-span-2 rounded-xl bg-white p-2 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold">Section</p>
+                            <p className="text-sm font-semibold text-gray-800 truncate">{po.office_section}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setSelectedViewPoId(po.id); setViewPoModalVisible(true); }}
+                          className="px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition-colors inline-flex items-center gap-1.5 text-xs"
+                        >
+                          <RiEyeLine size={14} />
+                          View
+                        </button>
+                        <button
+                          onClick={() => { setSelectedPo(po); setRemarksOpen(true); }}
+                          className="px-3 py-2 rounded-xl border border-purple-200 bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors inline-flex items-center gap-1.5 text-xs"
+                        >
+                          <RiChat3Line size={14} />
+                          Remarks
+                        </button>
+                        {canProcess && (
+                          <button
+                            onClick={() => { setSelectedPo(po); setProcessOpen(true); }}
+                            className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors inline-flex items-center gap-1.5 text-xs"
+                          >
+                            <RiPlayCircleLine size={14} />
+                            Process
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() => setDeletePoTarget({ poId: po.id, poNo: po.po_no ?? "" })}
+                            className="px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors inline-flex items-center gap-1.5 text-xs"
+                          >
+                            <RiDeleteBinLine size={14} />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Desktop table (hidden on mobile/tablet) ── */}
+              <div className="hidden lg:block overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-emerald-700 text-white uppercase tracking-widest">
@@ -1120,7 +1209,7 @@ export default function PurchaseOrderPage() {
                 </table>
               </div>
 
-              <div className="mt-4 -mx-6 px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+              <div className="mt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
                 <span>
                   Showing <span className="font-semibold text-gray-700">{Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)}</span> of <span className="font-semibold text-gray-700">{filteredList.length}</span> purchase orders
                 </span>
@@ -1281,127 +1370,51 @@ export default function PurchaseOrderPage() {
       />
 
       {/* ── DELETE CONFIRMATION MODAL ── */}
-      {deletePoTarget && (() => {
-        const rows = deletePreview
-          ? [
-              { label: "Purchase Order Items", count: deletePreview.poItems },
-              { label: "Deliveries", count: deletePreview.deliveries },
-              { label: "IAR Documents", count: deletePreview.iarDocuments },
-              { label: "LOA Documents", count: deletePreview.loaDocuments },
-              { label: "DV Documents", count: deletePreview.dvDocuments },
-              { label: "Contract Documents", count: deletePreview.contractDocuments },
-              { label: "Remarks", count: deletePreview.remarks },
-            ].filter((r) => r.count > 0)
-          : [];
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteConfirming) { setDeletePoTarget(null); setDeleteConfirmInput(""); } }} />
-            <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-
-              {/* Header */}
-              <div className="bg-red-600 px-6 py-5 text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <RiDeleteBinLine size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold leading-tight">Delete Purchase Order?</h3>
-                    <p className="text-sm text-red-100 mt-0.5">PO {deletePoTarget.poNo}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="px-6 py-5">
-                <p className="text-sm text-gray-600 mb-3">
-                  The following records will be <span className="font-semibold text-red-600">permanently deleted</span>:
-                </p>
-
-                {deletePreviewLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    <span className="text-sm">Counting connected records…</span>
-                  </div>
-                ) : deletePreview ? (
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    {rows.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-gray-500">No connected records found.</p>
-                    ) : (
-                      rows.map((row, i) => (
-                        <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50">
-                          <span className="text-sm text-gray-700">{row.label}</span>
-                          <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full">
-                            {row.count}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                    <div className="flex items-center justify-between px-4 py-3 bg-red-50 border-t border-red-200">
-                      <span className="text-sm font-bold text-red-800">Total Records</span>
-                      <span className="text-sm font-extrabold text-red-800">{deletePreview.total}</span>
-                    </div>
-                  </div>
-                ) : null}
-
-                <p className="text-xs text-red-600 font-semibold mt-3">This action cannot be undone.</p>
-
-                <div className="mt-4">
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Type <span className="font-mono text-red-600">{deletePoTarget.poNo}</span> to confirm
-                  </label>
-                  <input
-                    type="text"
-                    value={deleteConfirmInput}
-                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                    placeholder={deletePoTarget.poNo}
-                    disabled={deleteConfirming}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 font-mono placeholder-gray-300 disabled:opacity-50"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 pb-5 flex gap-3">
-                <button
-                  onClick={() => { setDeletePoTarget(null); setDeleteConfirmInput(""); }}
-                  disabled={deleteConfirming}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={deleteConfirming || deletePreviewLoading || deleteConfirmInput !== deletePoTarget.poNo}
-                  onClick={async () => {
-                    setDeleteConfirming(true);
-                    const { error } = await deletePOCascade(deletePoTarget.poId);
-                    setDeleteConfirming(false);
-                    setDeletePoTarget(null);
-                    setDeletePreview(null);
-                    setDeleteConfirmInput("");
-                    if (error) {
-                      setDeleteErrorMsg("Delete failed: " + error);
-                    } else {
-                      setList((prev) => prev.filter((p) => p.id !== deletePoTarget.poId));
-                      setDeleteSuccessMsg(`PO ${deletePoTarget.poNo} and all connected records have been deleted.`);
-                    }
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {deleteConfirming ? (
-                    <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Deleting…</>
-                  ) : "Confirm Delete"}
-                </button>
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
+      {deletePoTarget && (
+        <DeleteConfirmModal
+          visible={true}
+          onClose={() => { setDeletePoTarget(null); setDeleteConfirmInput(""); setDeleteRemarkText(""); }}
+          title="Delete Purchase Order?"
+          subtitle={`PO ${deletePoTarget.poNo}`}
+          rows={deletePreview ? [
+            { label: "Purchase Order Items",  count: deletePreview.poItems },
+            { label: "Deliveries",            count: deletePreview.deliveries },
+            { label: "IAR Documents",         count: deletePreview.iarDocuments },
+            { label: "LOA Documents",         count: deletePreview.loaDocuments },
+            { label: "DV Documents",          count: deletePreview.dvDocuments },
+            { label: "Contract Documents",    count: deletePreview.contractDocuments },
+            { label: "Remarks",               count: deletePreview.remarks },
+          ].filter((r) => r.count > 0) : []}
+          totalCount={deletePreview?.total}
+          loadingPreview={deletePreviewLoading}
+          remarkText={deleteRemarkText}
+          onRemarkChange={setDeleteRemarkText}
+          confirmTarget={deletePoTarget.poNo}
+          confirmInput={deleteConfirmInput}
+          onConfirmInputChange={setDeleteConfirmInput}
+          confirming={deleteConfirming}
+          onDelete={async () => {
+            setDeleteConfirming(true);
+            const target = deletePoTarget;
+            const { error } = await deletePOCascade(target.poId, {
+              userId: currentUser?.id ?? null,
+              deletedBy: currentUser?.fullname ?? "Admin",
+              customRemark: deleteRemarkText,
+            });
+            setDeleteConfirming(false);
+            setDeletePoTarget(null);
+            setDeletePreview(null);
+            setDeleteConfirmInput("");
+            setDeleteRemarkText("");
+            if (error) {
+              setDeleteErrorMsg("Delete failed: " + error);
+            } else {
+              setList((prev) => prev.filter((p) => p.id !== target.poId));
+              setDeleteSuccessMsg(`PO ${target.poNo} and all connected records have been deleted.`);
+            }
+          }}
+        />
+      )}
 
       <SuccessModal
         visible={!!deleteSuccessMsg}

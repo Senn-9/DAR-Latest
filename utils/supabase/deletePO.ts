@@ -73,11 +73,27 @@ export async function fetchPODeletePreview(poId: number): Promise<PODeletePrevie
  *   purchase_order_items, deliveries, iar_documents, loa_documents,
  *   dv_documents, contract_documents, remarks.
  */
-export async function deletePOCascade(poId: number): Promise<{ error: string | null }> {
+export async function deletePOCascade(
+  poId: number,
+  auditContext?: { userId?: number | null; deletedBy?: string; customRemark?: string },
+): Promise<{ error: string | null }> {
   const supabase = createClient();
 
   try {
     /* ── 1. Delivery chain ─────────────────────────── */
+    /* 0. Audit remark — saved before cascade so it is never lost */
+    const { data: poRow } = await supabase
+      .from("purchase_orders").select("po_no").eq("id", poId).single();
+    const poNo = (poRow as any)?.po_no ?? `#${poId}`;
+    const actor = auditContext?.deletedBy ?? "Admin";
+    const remarkText =
+      auditContext?.customRemark ?? `[DELETED by ${actor}] PO: ${poNo}`;
+    await supabase.from("remarks").insert({
+      remark: remarkText,
+      user_id: auditContext?.userId ?? null,
+      phase: "system",
+    });
+
     const { data: deliveryRows } = await supabase
       .from("deliveries")
       .select("id")

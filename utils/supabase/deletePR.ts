@@ -114,7 +114,7 @@ export async function fetchPRDeletePreview(prId: number): Promise<PRDeletePrevie
  */
 export async function deletePRCascade(
   prId: number,
-  auditContext?: { userId?: number | null; deletedBy?: string },
+  auditContext?: { userId?: number | null; deletedBy?: string; customRemark?: string },
 ): Promise<{ error: string | null }> {
   const supabase = createClient();
 
@@ -186,8 +186,9 @@ export async function deletePRCascade(
     if (deliveryNos.length > 0)   auditParts.push(`Delivery: ${deliveryNos.join(", ")}`);
     if (proposalNos.length > 0)   auditParts.push(`Proposals: ${proposalNos.join(", ")}`);
     const actor = auditContext?.deletedBy ?? "Admin";
+    const remarkText = auditContext?.customRemark ?? `[DELETED by ${actor}] ${auditParts.join(" | ")}`;
     await supabase.from("remarks").insert({
-      remark: `[DELETED by ${actor}] ${auditParts.join(" | ")}`,
+      remark: remarkText,
       user_id: auditContext?.userId ?? null,
       phase: "system",
     });
