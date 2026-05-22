@@ -358,8 +358,8 @@ export default function LogsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
-        <div className="mx-auto w-full max-w-6xl p-6 md:p-10 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="mx-auto w-full max-w-6xl px-4 py-4 space-y-4 md:p-10 md:space-y-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6">
             <p className="text-gray-500">Loading procurement logs...</p>
           </div>
         </div>
@@ -370,13 +370,13 @@ export default function LogsPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="mx-auto w-full max-w-6xl p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="mx-auto w-full max-w-6xl px-4 py-4 md:p-6 space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">
               Procurement Portal
             </p>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 leading-tight">
               <RiFileTextLine className="text-emerald-700" />
               Procurement Logs
             </h1>
@@ -402,7 +402,7 @@ export default function LogsPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1 w-fit flex-wrap">
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1 w-full sm:w-fit flex-wrap overflow-x-auto">
           {([
             { key: "all", label: "All" },
             { key: "pr", label: "PR" },
@@ -430,9 +430,9 @@ export default function LogsPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="font-bold text-gray-800">Log Entries</p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
               <div className="relative">
                 <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -458,7 +458,7 @@ export default function LogsPage() {
 
           {filtersOpen && (
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <div className="flex flex-wrap items-end gap-4">
+              <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-end gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
                     Flag
@@ -552,7 +552,75 @@ export default function LogsPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-4 lg:hidden">
+            {pageRows.length === 0 ? (
+              <div className="py-8 text-center text-gray-400">
+                No log entries found.
+              </div>
+            ) : (
+              pageRows.map((r) => (
+                <div key={r.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{r.ref}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {new Date(r.created_at).toLocaleDateString("en-PH", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${phaseChip(r.phase)}`}>
+                      {r.phase.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white border border-gray-100 p-2.5">
+                      <p className="text-gray-400 uppercase tracking-wide font-semibold text-[10px]">User</p>
+                      <p className="mt-1 font-semibold text-gray-800">{r.actor}</p>
+                    </div>
+                    <div className="rounded-xl bg-white border border-gray-100 p-2.5">
+                      <p className="text-gray-400 uppercase tracking-wide font-semibold text-[10px]">Flag</p>
+                      <p className="mt-1 font-semibold text-gray-800">
+                        {r.status_flag_id ? (FLAG_OPTIONS.find((f) => f.id === r.status_flag_id)?.label ?? `Flag ${r.status_flag_id}`) : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white border border-gray-100 p-2.5">
+                      <p className="text-gray-400 uppercase tracking-wide font-semibold text-[10px]">Status</p>
+                      <p className="mt-1 font-semibold text-gray-800">{r.statusName ?? "—"}</p>
+                    </div>
+                    <div className="rounded-xl bg-white border border-gray-100 p-2.5">
+                      <p className="text-gray-400 uppercase tracking-wide font-semibold text-[10px]">Reference</p>
+                      <p className="mt-1 font-semibold text-gray-800 break-words">{r.ref}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-xl bg-white border border-gray-100 p-3 text-sm text-gray-700">
+                    <p className="text-[10px] uppercase tracking-wide font-semibold text-gray-400 mb-1">Remark</p>
+                    <p className="leading-relaxed">
+                      {(r.remark ?? "").replace(/\[(PR|PO|DELIVERY|PAYMENT|SYSTEM)\]\s*/i, "") || "—"}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => openThread(r)}
+                      className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors inline-flex items-center gap-2"
+                    >
+                      <RiEyeLine />
+                      View
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead className="bg-emerald-900 text-white">
                 <tr>
