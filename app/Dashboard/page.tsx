@@ -866,7 +866,7 @@ export default function DashboardPage() {
         .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
       `}</style>
 
-        <div className="w-full p-6 md:p-10 space-y-6">
+        <div className="w-full px-4 py-4 sm:p-6 space-y-4 md:space-y-6">
 
           {/* ── HEADER ── */}
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -900,7 +900,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── STAT CARDS ── */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
               <div
                 key={label}
@@ -961,16 +961,69 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Table */}
+            {/* Table (cards on small screens, table on lg+) */}
             {filteredList.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400 lg:hidden">
                 <RiFileListLine size={38} className="opacity-30 mb-3" />
                 <p className="text-sm font-medium">No procurement records found.</p>
                 <p className="text-xs mt-1">Try adjusting your search or filter.</p>
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                {/* Mobile stacked cards */}
+                <div className="space-y-3 p-4 lg:hidden">
+                  {pagedList.map((form) => {
+                    const { name: statusName, color: statusColor } = getStatusInfo(form.status, form.status_id, form.source);
+                    const displayStatusName = (form.source === 'pr' || form.source === 'po') ? statusName : (form.status_id != null ? statusNameById[form.status_id] : null) ?? statusName;
+                    const cost = form.total_cost || 0;
+                    const agingDays = getAgingDays(form);
+                    const agingStyle = getAgingStyle(agingDays);
+                    const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || (form.source === 'delivery' || form.source === 'payment' || form.source === 'po' ? `Supplier: ${form.supplier || form.entity_name || 'N/A'}` : '');
+                    return (
+                      <div key={form.row_key ?? `${form.source ?? 'pr'}-${form.id}`} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate" title={form.pr_no || form.delivery_no || ''}>{form.source === 'delivery' || form.source === 'payment' ? form.delivery_no || form.pr_no : form.pr_no}</p>
+                            <p className="mt-1 text-xs text-gray-500 truncate">{form.office_section || '—'}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                              {displayStatusName}
+                            </div>
+                            <div className="mt-2 text-xs">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${agingStyle.className}`}>{agingStyle.text}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                          <div className="rounded-xl bg-white p-2 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold">Cost</p>
+                            <p className="font-semibold text-gray-800">{cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : '—'}</p>
+                          </div>
+                          <div className="rounded-xl bg-white p-2 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold">Date</p>
+                            <p className="font-semibold text-gray-800">{form.created_at ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : '—'}</p>
+                          </div>
+                          <div className="col-span-2 mt-1 rounded-xl bg-white p-2 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold">Description</p>
+                            <p className="mt-1 text-sm text-gray-700 truncate" title={desc}>{desc || '—'}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex justify-end">
+                          <button onClick={() => { setSelectedRecord(form); setViewModalOpen(true); }} className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors inline-flex items-center gap-2">
+                            <RiEyeLine size={14} />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop table for lg and up */}
+                <div className="hidden lg:block overflow-x-auto rounded-xl border border-gray-100">
                   <table className="w-full text-xs border-collapse table-fixed">
                     <thead>
                       <tr className="bg-emerald-700 text-white uppercase tracking-widest">
