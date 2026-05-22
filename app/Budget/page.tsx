@@ -345,7 +345,7 @@ export default function BudgetPage() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="px-4 py-4 space-y-4 sm:p-6 sm:space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
@@ -373,9 +373,9 @@ export default function BudgetPage() {
 
   return (
     <AuthGuard>
-      <div className="p-6 space-y-6">
+      <div className="px-4 py-4 space-y-4 sm:p-6 sm:space-y-6">
       {/* ─── Page Header ────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 rounded-2xl p-4 sm:p-6 text-white">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p className="text-xs font-semibold tracking-widest uppercase text-white/50 mb-1">
@@ -488,7 +488,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Budget by Division Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 max-w-full">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-4 sm:p-6 max-w-full">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900 mb-1">Budget Breakdown by Division</h2>
@@ -528,7 +528,72 @@ export default function BudgetPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto -mx-6 px-6">
+            <div className="space-y-3 lg:hidden">
+              {pagedList.map((item) => (
+                <div key={item.budget_id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{item.division_name}</p>
+                      {item.notes && (
+                        <p className="mt-1 max-h-10 overflow-hidden text-xs text-gray-500" title={item.notes}>
+                          {item.notes}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border whitespace-nowrap ${getStatusColor(item.status)}`}>
+                      {item.status === "on-track"
+                        ? <RiCheckLine size={11} />
+                        : <RiAlertLine size={11} />}
+                      {item.status === "on-track" ? "On Track" : item.status === "warning" ? "Warning" : "Critical"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl bg-white p-3 border border-gray-100">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Allocated</p>
+                      <p className="mt-1 font-bold text-gray-800">₱{formatCompact(item.total_allocated)}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 border border-gray-100">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Obligated</p>
+                      <p className="mt-1 font-bold text-gray-800">₱{formatCompact(item.total_earmarked)}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 border border-gray-100">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Remaining</p>
+                      <p className={`mt-1 font-bold ${item.total_remaining < 0 ? 'text-red-600' : item.remainingPercent < 25 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                        ₱{formatCompact(Math.abs(item.total_remaining))}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 border border-gray-100">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Utilization</p>
+                      <p className="mt-1 font-bold text-gray-800">{item.utilizationPercent.toFixed(1)}%</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 text-xs text-gray-500">
+                    <div>
+                      <p className="font-medium text-gray-700">{item.updated_at
+                        ? new Date(item.updated_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                        : new Date(item.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}</p>
+                      <p>{item.updated_at ? "modified" : "created"}</p>
+                    </div>
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          setSelectedBudget(item);
+                          setShowEditModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 font-semibold text-emerald-700"
+                      >
+                        <RiEditLine size={14} />
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden lg:block overflow-x-auto -mx-6 px-6">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="bg-emerald-700 text-white uppercase tracking-widest">
