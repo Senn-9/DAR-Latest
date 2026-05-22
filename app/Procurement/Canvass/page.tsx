@@ -408,7 +408,7 @@ export default function CanvassPage() {
         </div>
 
         {/* ── TABS ── */}
-        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-full sm:w-fit overflow-x-auto">
           {([
             { key: "pr",       label: "Purchase Request",   href: "/Procurement"          },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"  },
@@ -422,7 +422,7 @@ export default function CanvassPage() {
             <button
               key={key}
               onClick={() => router.push(href)}
-              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
                 key === "canvass"
                   ? "bg-emerald-700 text-white shadow-sm"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
@@ -463,7 +463,7 @@ export default function CanvassPage() {
                   placeholder="Search PR, entity or section…"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-56"
+                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-full sm:w-56"
                 />
               </div>
               <button
@@ -536,14 +536,101 @@ export default function CanvassPage() {
           )}
 
           {filteredList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 lg:hidden">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
               <p className="text-sm font-medium">No canvass records found.</p>
               <p className="text-xs mt-1">Try adjusting your search or filter.</p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto -mx-6 px-6">
+              {/* Mobile stacked cards */}
+              <div className="space-y-3 p-4 lg:hidden">
+                {pagedList.map((form) => {
+                  const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
+                  const cost = form.total_cost || 0;
+                  const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || "";
+                  return (
+                    <div key={form.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate" title={form.pr_no}>{form.pr_no}</p>
+                          <p className="mt-1 text-xs text-gray-500 truncate">{form.office_section || '—'}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                            {statusName}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Cost</p>
+                          <p className="font-semibold text-gray-800">{cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : '—'}</p>
+                        </div>
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Date</p>
+                          <p className="font-semibold text-gray-800">{form.created_at ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : '—'}</p>
+                        </div>
+                        <div className="col-span-2 mt-1 rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Description</p>
+                          <p className="mt-1 text-sm text-gray-700 truncate" title={desc}>{desc || '—'}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                        {/* Reception — BAC account, status_id is Canvassing (Reception) */}
+                        {!isBudgetAccount && isBACAccount && form.status_id === 6 && (
+                          <button
+                            onClick={() => setReceptionTarget(form)}
+                            className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-2 text-sm font-semibold"
+                          >
+                            <RiPlayCircleLine size={14} />
+                            Reception
+                          </button>
+                        )}
+
+                        {/* Resolution Button */}
+                        {isBACAccount && form.status_id === 7 && (
+                          <button
+                            type="button"
+                            onClick={() => setResolutionPrNo(form.pr_no)}
+                            className="px-3 py-2 rounded-xl border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100 transition-colors inline-flex items-center gap-2 text-sm font-semibold"
+                          >
+                            <RiFileTextLine size={14} />
+                            Resolution
+                          </button>
+                        )}
+
+                        {isBACAccount && form.status_id === 7 && (
+                          <button
+                            type="button"
+                            onClick={() => requestSubmit(form.id)}
+                            disabled={processingIds.includes(form.id)}
+                            className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-flex items-center gap-2 text-sm font-semibold"
+                          >
+                            {processingIds.includes(form.id) ? "Submitting..." : "Submit"}
+                          </button>
+                        )}
+
+                        {/* Release and Recieve */}
+                        {isBACAccount && [8, 9].includes(form.status_id ?? 0) && (
+                          <button
+                            onClick={() => setReleaseAndRecieveTarget(form)}
+                            className="px-3 py-2 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors inline-flex items-center gap-2 text-sm font-semibold"
+                          >
+                            <RiPlayCircleLine size={14} />
+                            Release & Receive
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table for lg and up */}
+              <div className="hidden lg:block overflow-x-auto -mx-6 px-6">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-emerald-700 text-white uppercase tracking-widest">

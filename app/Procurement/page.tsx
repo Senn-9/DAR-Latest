@@ -104,7 +104,7 @@ export default function ProcurementPage() {
   const [deleteErrorMsg,   setDeleteErrorMsg]   = useState<string | null>(null);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "purchase order" |"delivery" | "Payment">("pr"); //added tabs
+  const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "purchase order" | "delivery" | "payment">("pr"); //added tabs
   const router = useRouter();
 
   const PAGE_SIZE = 10;
@@ -536,7 +536,7 @@ export default function ProcurementPage() {
         .th-sort:hover { background-color: #065f46 !important; cursor: pointer; }
       `}</style>
 
-      <div className="w-full p-6 md:p-10 space-y-6">
+      <div className="w-full px-4 py-4 sm:p-6 space-y-4 md:space-y-6">
 
         {/* ── HEADER ── */}
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -568,7 +568,7 @@ export default function ProcurementPage() {
         </div>
 
         {/* ── TABS ── */}
-        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+        <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-full sm:w-fit overflow-x-auto">
           {([
             { key: "pr",       label: "Purchase Request",   href: null                        },
             { key: "canvass",  label: "Canvass",            href: "/Procurement/Canvass"      },
@@ -581,9 +581,12 @@ export default function ProcurementPage() {
           ] as const).map(({ key, label, href }) => (
             <button
               key={key}
-              onClick={() => href && router.push(href)}
-              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-                key === "pr"
+              onClick={() => {
+                if (href) router.push(href);
+                else setActiveTab(key as typeof activeTab);
+              }}
+              className={`flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                activeTab === key
                   ? "bg-emerald-700 text-white shadow-sm"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }`}
@@ -597,7 +600,7 @@ export default function ProcurementPage() {
         {activeTab === "pr" && (
           <>
             {/* ── STAT CARDS ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {STAT_CARDS.map(({ label, value, icon, iconBg, iconColor, numColor, cardBg, border }) => (
                 <div
                   key={label}
@@ -615,7 +618,7 @@ export default function ProcurementPage() {
         )}
 
         {/* ── TABLE PANEL ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden px-4 py-4 sm:p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-800 shrink-0">All Purchase Requests</h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -698,15 +701,68 @@ export default function ProcurementPage() {
             </div>
           )}
 
+          {/* Table: show stacked cards on small screens, keep table on lg+ */}
           {filteredList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 lg:hidden">
               <RiFileListLine size={38} className="opacity-30 mb-3" />
               <p className="text-sm font-medium">No purchase requests found.</p>
               <p className="text-xs mt-1">Try adjusting your search or filter.</p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-gray-100">
+              {/* Mobile stacked cards */}
+              <div className="space-y-3 p-4 lg:hidden">
+                {pagedList.map((form, index) => {
+                  const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
+                  const cost  = form.total_cost || 0;
+                  const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || "";
+                  return (
+                    <div key={form.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate" title={form.pr_no}>{form.pr_no}</p>
+                          <p className="mt-1 text-xs text-gray-500 truncate">{form.office_section || '—'}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${BADGE_CLASS[statusColor] ?? BADGE_CLASS.default}`}>
+                            {statusName}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Cost</p>
+                          <p className="font-semibold text-gray-800">{cost > 0 ? `₱${cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : '—'}</p>
+                        </div>
+                        <div className="rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Date</p>
+                          <p className="font-semibold text-gray-800">{form.created_at ? new Date(form.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : '—'}</p>
+                        </div>
+                        <div className="col-span-2 mt-1 rounded-xl bg-white p-2 border border-gray-100">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold">Description</p>
+                          <p className="mt-1 text-sm text-gray-700 truncate" title={desc}>{desc || '—'}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                        <button onClick={() => setViewPrId(form.id)} className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors inline-flex items-center gap-2">
+                          <RiEyeLine size={14} />
+                          View
+                        </button>
+                        {isBudgetAccount && form.status_id === 4 && (
+                          <button onClick={() => setBudgetProcessTarget({ prId: form.id, prNo: form.pr_no, prData: { office_section: form.office_section, purpose: form.purpose, total_cost: form.total_cost, status: form.status, entity_name: form.entity_name, fund_cluster: form.fund_cluster, req_name: form.req_name, app_name: form.app_name, app_no: form.app_no, resp_code: form.resp_code } })} className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition-colors">
+                            Budget
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table for lg and up */}
+              <div className="hidden lg:block overflow-x-auto rounded-xl border border-gray-100">
                 <table className="w-full text-xs border-collapse table-fixed">
                   <thead>
                     <tr className="bg-emerald-700 text-white uppercase tracking-widest">
