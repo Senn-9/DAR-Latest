@@ -180,7 +180,7 @@ export default function LOAPreview({
   mergedData.po_items = transformedPoData.po_items;
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-
+      
   const items = mergedData.po_items || [];
 
   // Handle print

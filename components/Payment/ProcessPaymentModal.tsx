@@ -19,6 +19,8 @@ import { type StatusFlag } from "../StatusFlagPicker";
 import IARPreview, { buildIARHtml } from "../Delivery/IARPreview";
 import LOAPreview, { buildLOAHtml } from "../Delivery/LOAPreview";
 import { buildDVHtml } from "../Delivery/DVPreview";
+import PaymentDocumentFullPreview from "./PaymentDocumentFullPreview";
+import { buildORSPrintHtml } from "@/utils/print/ORSPrintBuilder";
 // Editable input styles for live preview
 
 const editableInputCls =
@@ -1941,6 +1943,8 @@ export default function ProcessPaymentModal({
     null,
   );
 
+  const [isFullPreviewOpen, setIsFullPreviewOpen] = useState(false);
+
   const [orsData, setOrsData] = useState(ors || {});
 
   const [dvData, setDvData] = useState(dv || {});
@@ -3330,7 +3334,7 @@ export default function ProcessPaymentModal({
                   : "Unknown";
 
   const canOpenFullTemplate =
-    previewTab === "iar" || previewTab === "loa" || previewTab === "dv";
+    previewTab === "iar" || previewTab === "loa" || previewTab === "dv" || previewTab === "ors";
 
   return (
     <div
@@ -3538,45 +3542,87 @@ export default function ProcessPaymentModal({
                   </div>
 
                   {canOpenFullTemplate && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (previewTab === "dv") {
-                          const transformedPoData = poData
-                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
-                            : {};
-                          const mergedData = { ...active, ...transformedPoData, ...dvData };
-                          mergedData.po_items = transformedPoData.po_items;
-                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
-                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-                          mergedData.accounting_entries = accountingEntries;
-                          downloadPDF(buildDVHtml(mergedData));
-                        } else if (previewTab === "iar") {
-                          const transformedPoData = poData
-                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
-                            : {};
-                          const mergedData = { ...active, ...transformedPoData, ...iarData };
-                          mergedData.po_items = iarData?.iar_po_items || transformedPoData.po_items;
-                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
-                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-                          downloadPDF(buildIARHtml(mergedData));
-                        } else if (previewTab === "loa") {
-                          const transformedPoData = poData
-                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
-                            : {};
-                          const mergedData = { ...active, ...transformedPoData, ...loaData };
-                          mergedData.po_items = transformedPoData.po_items;
-                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
-                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-                          downloadPDF(buildLOAHtml(mergedData));
-                        }
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors mr-1"
-                      title="Print document"
-                    >
-                      <RiFilePdf2Line className="size-3.5" />
-                      Print
-                    </button>
+                    <div className="flex items-center gap-1 mr-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsFullPreviewOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                        title="Open full page live preview and editor"
+                      >
+                        <RiEyeLine className="size-3.5" />
+                        Live Preview / Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (previewTab === "dv") {
+                            const transformedPoData = poData
+                              ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
+                              : {};
+                            const mergedData = { ...active, ...transformedPoData, ...dvData };
+                            mergedData.po_items = transformedPoData.po_items;
+                            if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                            if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+                            mergedData.accounting_entries = accountingEntries;
+                            downloadPDF(buildDVHtml(mergedData));
+                          } else if (previewTab === "iar") {
+                            const transformedPoData = poData
+                              ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
+                              : {};
+                            const mergedData = { ...active, ...transformedPoData, ...iarData };
+                            mergedData.po_items = iarData?.iar_po_items || transformedPoData.po_items;
+                            if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                            if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+                            downloadPDF(buildIARHtml(mergedData));
+                          } else if (previewTab === "loa") {
+                            const transformedPoData = poData
+                              ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
+                              : {};
+                            const mergedData = { ...active, ...transformedPoData, ...loaData };
+                            mergedData.po_items = transformedPoData.po_items;
+                            if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                            if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+                            downloadPDF(buildLOAHtml(mergedData));
+                          } else if (previewTab === "ors") {
+                            const amt = Number(orsData.amount || orsData.obligation_amount || active?.amount || 0);
+                            const html = buildORSPrintHtml({
+                              orsNo: orsData.ors_no || null,
+                              orsDate: orsData.ors_date || null,
+                              entityName: orsData.entity_name || "Department of Agrarian Reform - Camarines Sur 1",
+                              payee: orsData.payee || active?.supplier_name || active?.supplier || null,
+                              payeeAddress: orsData.payee_address || active?.payee_address || null,
+                              office: orsData.office || active?.office_section || null,
+                              fundCluster: orsData.fund_cluster || "01",
+                              responsibilityCenter: orsData.responsibility_center || null,
+                              particulars: orsData.particulars || null,
+                              mfoPap: orsData.mfo_pap || null,
+                              uacsCode: orsData.uacs_code || null,
+                              amount: amt,
+                              referenceNo: orsData.reference_no || orsData.ors_no || null,
+                              obligationAmount: Number(orsData.obligation_amount || amt),
+                              payableAmount: Number(orsData.payable_amount || 0),
+                              paymentAmount: Number(orsData.payment_amount || 0),
+                              notYetDueBalance: Number(orsData.not_yet_due_balance || 0),
+                              dueDemandableBalance: Number(orsData.due_demandable_balance || 0),
+                              preparedByName: orsData.prepared_by_name || null,
+                              preparedByDesig: orsData.prepared_by_desig || null,
+                              certifiedByName: orsData.certified_by_name || null,
+                              certifiedByDesig: orsData.certified_by_desig || null,
+                              preparedByDate: orsData.prepared_by_date || null,
+                              certifiedByDate: orsData.certified_by_date || null,
+                              sectionCParticulars: orsData.section_c_particulars || null,
+                            });
+                            downloadPDF(html);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Print document"
+                      >
+                        <RiFilePdf2Line className="size-3.5" />
+                        Print
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -3588,6 +3634,25 @@ export default function ProcessPaymentModal({
             </div>
         </div>
       </div>
+
+      <PaymentDocumentFullPreview
+        open={isFullPreviewOpen}
+        onClose={() => setIsFullPreviewOpen(false)}
+        initialTab={previewTab || undefined}
+        docTabs={docTabs}
+        active={active}
+        poData={poData}
+        iarData={iarData}
+        setIarData={setIarData}
+        loaData={loaData}
+        setLoaData={setLoaData}
+        orsData={orsData}
+        setOrsData={setOrsData}
+        dvData={dvData}
+        setDvData={setDvData}
+        accountingEntries={accountingEntries}
+        setAccountingEntries={setAccountingEntries}
+      />
     </div>
   );
 }
