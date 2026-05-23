@@ -452,7 +452,15 @@ export default function PaymentPage() {
       setDvData(dv);
       setIarData(iar);
       setLoaData(loa);
-      setPoData(poDataResult);
+      // Transform PO data to flat shape so ViewPaymentModal can read poData.total_amount etc.
+      if (poDataResult) {
+        setPoData({
+          ...poDataResult.header,
+          purchase_order_items: poDataResult.items,
+        });
+      } else {
+        setPoData(null);
+      }
     } catch (error) {
       console.error("Error fetching payment documents:", error);
     }

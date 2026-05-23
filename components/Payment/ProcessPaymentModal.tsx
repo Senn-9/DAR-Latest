@@ -2060,6 +2060,10 @@ export default function ProcessPaymentModal({
       case 36:
         return { label: "Complete Cash for Release", nextStatus: 37 };
 
+      case 40:
+        // Payment already completed — no further transitions
+        return { label: "Payment Completed", nextStatus: 40 };
+
       default:
         return { label: "Complete Voucher Verification", nextStatus: 30 };
     }
@@ -3329,198 +3333,204 @@ export default function ProcessPaymentModal({
     previewTab === "iar" || previewTab === "loa" || previewTab === "dv";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex flex-col max-h-[85vh] w-full max-w-7xl overflow-hidden rounded-xl shadow-xl">
-        {/* Header */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .ppm-root * { font-family: 'Inter', sans-serif; }
+        .ppm-scroll::-webkit-scrollbar { width: 4px; }
+        .ppm-scroll::-webkit-scrollbar-thumb { background: #d1fae5; border-radius: 99px; }
+      `}</style>
 
-        <header className="flex items-center justify-between border-b bg-emerald-700  border-gray-200 px-6 py-4">
-          <div>
-            <p className="text-xs font-medium text-white/60 uppercase tracking-wide">
-              {statusLabel}
+      <div
+        className="ppm-root flex flex-col max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl"
+        style={{ boxShadow: "0 25px 60px -10px rgba(0,0,0,0.4)" }}
+      >
+        {/* ── HEADER ─────────────────────────────────────────── */}
+        <header
+          className="relative overflow-hidden flex shrink-0 items-start justify-between gap-4 px-6 py-5"
+          style={{ background: "linear-gradient(135deg,#064e3b 0%,#065f46 55%,#047857 100%)" }}
+        >
+          {/* decorative blobs */}
+          <div className="pointer-events-none absolute -top-10 -right-10 w-48 h-48 rounded-full"
+               style={{ background: "radial-gradient(circle,rgba(167,243,208,0.15),transparent)" }} />
+          <div className="pointer-events-none absolute -bottom-6 left-16 w-32 h-32 rounded-full"
+               style={{ background: "radial-gradient(circle,rgba(110,231,183,0.12),transparent)" }} />
+
+          <div className="relative flex-1 min-w-0">
+            <p className="text-emerald-300 text-xs font-bold tracking-widest uppercase mb-1 flex items-center gap-1.5">
+              <RiTruckLine size={13} /> {statusLabel}
             </p>
-
-            <h1 className="text-xl font-semibold text-white mt-1">
+            <h1 className="text-xl font-bold text-white leading-tight">
               Process Payment
             </h1>
-
-            <div className="flex items-center gap-4 mt-2 text-sm text-white">
-              <span className="flex items-center gap-1">
-                <RiTruckLine className="size-4" />
-
-                {active?.delivery_no}
-              </span>
-
-              <span>·</span>
-
-              <span className="font-mono">{active?.po_no}</span>
+            <div className="flex items-center gap-3 mt-1.5 text-sm">
+              <span className="text-emerald-200 font-medium">{active?.delivery_no}</span>
+              <span className="text-emerald-400">·</span>
+              <span className="text-white font-mono font-semibold">{active?.po_no}</span>
+              {active?.supplier && (
+                <>
+                  <span className="text-emerald-400">·</span>
+                  <span className="text-emerald-100 truncate max-w-[200px]">{active.supplier}</span>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
+          <div className="relative flex items-center gap-3 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white ring-1 ring-white/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
               {statusBadge}
             </span>
-
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1.5 rounded-lg text-emerald-300 hover:text-white hover:bg-white/10 transition-colors"
             >
               <RiCloseLine size={20} />
             </button>
           </div>
         </header>
 
-        {/* Progress Steps */}
-
-        <div className="flex items-center gap-1 px-6 py-3 bg-gray-50 border-b border-gray-200">
-          {PAYMENT_FLOW_STRIP.map((step) => {
+        {/* ── PROGRESS STRIP ──────────────────────────────────── */}
+        <div className="flex shrink-0 items-center gap-0 px-6 py-3 bg-white border-b border-gray-100 overflow-x-auto"
+             style={{ scrollbarWidth: "none" }}>
+          {PAYMENT_FLOW_STRIP.map((step, idx) => {
             const isActive = active?.status_id === step.id;
-
-            const isPast =
-              PAYMENT_FLOW_STRIP.findIndex((s) => s.id === active?.status_id) >
-              PAYMENT_FLOW_STRIP.findIndex((s) => s.id === step.id);
+            const currentIdx = PAYMENT_FLOW_STRIP.findIndex(s => s.id === active?.status_id);
+            const stepIdx    = PAYMENT_FLOW_STRIP.findIndex(s => s.id === step.id);
+            const isPast     = currentIdx > stepIdx;
+            const isLast     = idx === PAYMENT_FLOW_STRIP.length - 1;
 
             return (
-              <div
-                key={step.id}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${isActive
-                  ? "bg-emerald-600 text-white"
-                  : isPast
-                    ? "bg-white text-gray-600 border border-gray-200"
-                    : "bg-gray-100 text-gray-400"
-                  }`}
-              >
-                {step.label}
+              <div key={step.id} className="flex items-center shrink-0">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+                  ${isActive
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : isPast
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                    : "bg-gray-50 text-gray-400"}`}>
+                  {isPast && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  {step.label}
+                </div>
+                {!isLast && (
+                  <div className={`h-px w-3 mx-0.5 shrink-0 ${isPast ? "bg-emerald-300" : "bg-gray-200"}`} />
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Main Content */}
+        {/* ── MAIN CONTENT ────────────────────────────────────── */}
+        <div className="flex flex-1 min-h-0 overflow-hidden bg-gray-50 divide-x divide-gray-100">
 
-        <div className="flex-1 min-h-0 overflow-auto bg-gray-50 p-4">
-          <div className="grid grid-cols-2 gap-4 h-full">
-            {/* Left Column - Form */}
+            {/* ── LEFT PANEL: Form ─────────────────────────── */}
+            <div className="flex flex-col min-h-0" style={{ width: "50%", flexShrink: 0 }}>
+              <div className="ppm-scroll flex-1 min-h-0 overflow-y-auto p-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
 
-            <div className="flex flex-col min-h-0">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Next Action */}
+                  {/* Step description card */}
+                  <div className="bg-white rounded-xl border border-gray-100 px-4 py-3.5 flex items-center gap-3 shadow-sm">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                      <RiCheckLine size={16} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-medium">Next Action</p>
+                      <p className="text-sm font-semibold text-gray-800 mt-0.5">{currentStepInfo.label}</p>
+                    </div>
+                  </div>
 
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">
-                    Next Action
-                  </h3>
+                  {/* Step-specific checklist / form */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    {renderFormContent()}
+                  </div>
 
-                  <p className="text-sm text-gray-600">
-                    {currentStepInfo.label}
-                  </p>
-                </div>
+                  {/* Status Flag */}
+                  <div className={`bg-white rounded-xl border shadow-sm p-4
+                    ${statusFlag ? "border-emerald-200" : "border-gray-100"}`}>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">
+                      Status Flag {!statusFlag && <span className="text-red-400 normal-case font-semibold tracking-normal">*required</span>}
+                    </label>
+                    <select
+                      value={statusFlag ?? ""}
+                      onChange={e =>
+                        onSelectStatusFlag(
+                          e.target.value === "" ? null : (e.target.value as StatusFlag)
+                        )
+                      }
+                      className={`w-full px-3 py-2.5 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors
+                        ${statusFlag
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                          : "border-gray-200 bg-white text-gray-700"}`}
+                    >
+                      <option value="">Select status flag…</option>
+                      <option value="complete">✓ Complete</option>
+                      <option value="incomplete_info">⚠ Incomplete info</option>
+                    </select>
+                    {!statusFlag && (
+                      <p className="mt-1.5 text-xs text-gray-400">Select a flag to enable the submit button.</p>
+                    )}
+                  </div>
 
-                {/* Form Content */}
+                  {/* Notes */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Notes <span className="normal-case font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="Add remarks for this step…"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none transition-colors"
+                    />
+                  </div>
 
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  {renderFormContent()}
-                </div>
-
-                {/* Status Flag */}
-
-                <div
-                  className={`bg-white rounded-lg border p-4 ${statusFlag
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-gray-200"
-                    }`}
-                >
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Status Flag{" "}
-                    {!statusFlag && <span className="text-red-500">*</span>}
-                  </label>
-
-                  <select
-                    value={statusFlag ?? ""}
-                    onChange={(e) =>
-                      onSelectStatusFlag(
-                        e.target.value === ""
-                          ? null
-                          : (e.target.value as StatusFlag),
-                      )
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select status flag</option>
-
-                    <option value="complete">Complete</option>
-
-                    <option value="incomplete_info">Incomplete info</option>
-
-
-                  </select>
-
-                  {!statusFlag && (
-                    <p className="mt-2 text-xs text-gray-500">
-                      Required together with the step checklist.
-                    </p>
-                  )}
-                </div>
-
-                {/* Notes */}
-
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Notes
-                  </label>
-
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Optional remarks for this step…"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
-                  />
-                </div>
-
-                {/* Submit Button */}
-
-                <div className="pt-4">
-                  {!isFormValid && (
-                    <p className="text-xs text-amber-600 mb-3 text-center">
-                      {getValidationErrorMessage()}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={!isFormValid}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isFormValid
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                  >
-                    <RiCheckLine size={18} />
-
-                    {currentStepInfo.label}
-                  </button>
-                </div>
-              </form>
+                  {/* Submit */}
+                  <div className="pt-1 pb-2">
+                    {!isFormValid && (
+                      <div className="mb-3 flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
+                        <span className="text-amber-500 text-xs shrink-0 mt-0.5">⚠</span>
+                        <p className="text-xs text-amber-700">{getValidationErrorMessage()}</p>
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={!isFormValid}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold rounded-xl transition-all
+                        ${isFormValid
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow-md active:scale-[0.99]"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                    >
+                      <RiCheckLine size={16} />
+                      {currentStepInfo.label}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
 
-            {/* Right Column - Document Preview */}
-
-            <div className="flex flex-col min-h-0 bg-white rounded-lg border border-gray-200">
-              {/* Document Tabs */}
-
+            {/* ── RIGHT PANEL: Document Preview ───────────── */}
+            <div className="flex flex-col flex-1 min-h-0 bg-white">
+              {/* Doc Tabs + Print */}
               {docTabs.length > 0 && (
-                <div className="flex items-center justify-between border-b border-gray-200">
-                  <div className="flex">
-                    {docTabs.map((tab) => (
+                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4">
+                  <div className="flex gap-0">
+                    {docTabs.map(tab => (
                       <button
                         key={tab}
                         type="button"
                         onClick={() => setPreviewTab(tab)}
-                        className={`px-4 py-2.5 text-sm font-medium transition-colors ${previewTab === tab
-                          ? "text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                          }`}
+                        className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all whitespace-nowrap
+                          ${previewTab === tab
+                            ? "text-emerald-700 border-emerald-600 bg-white"
+                            : "text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100"}`}
                       >
                         {docTabLabel(tab)}
                       </button>
@@ -3532,125 +3542,50 @@ export default function ProcessPaymentModal({
                       type="button"
                       onClick={() => {
                         if (previewTab === "dv") {
-                          // Transform poData to have the correct structure
-
                           const transformedPoData = poData
-                            ? {
-                              ...poData,
-
-                              po_items: poData.purchase_order_items || [],
-
-                              po_date: poData.date,
-                            }
+                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
                             : {};
-
-                          const mergedData = {
-                            ...active,
-
-                            ...transformedPoData,
-
-                            ...dvData,
-                          };
-
+                          const mergedData = { ...active, ...transformedPoData, ...dvData };
                           mergedData.po_items = transformedPoData.po_items;
-
-                          if (transformedPoData.po_no)
-                            mergedData.po_no = transformedPoData.po_no;
-
-                          if (transformedPoData.po_date)
-                            mergedData.po_date = transformedPoData.po_date;
-
-                          // Add accounting entries to merged data
-
+                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
                           mergedData.accounting_entries = accountingEntries;
-
-                          const html = buildDVHtml(mergedData);
-
-                          downloadPDF(html);
+                          downloadPDF(buildDVHtml(mergedData));
                         } else if (previewTab === "iar") {
-                          // Transform poData to have the correct structure
-
                           const transformedPoData = poData
-                            ? {
-                              ...poData,
-
-                              po_items: poData.purchase_order_items || [],
-
-                              po_date: poData.date,
-                            }
+                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
                             : {};
-
-                          const mergedData = {
-                            ...active,
-
-                            ...transformedPoData,
-
-                            ...iarData,
-                          };
-
-                          mergedData.po_items =
-                            iarData?.iar_po_items || transformedPoData.po_items;
-
-                          if (transformedPoData.po_no)
-                            mergedData.po_no = transformedPoData.po_no;
-
-                          if (transformedPoData.po_date)
-                            mergedData.po_date = transformedPoData.po_date;
-
-                          const html = buildIARHtml(mergedData);
-
-                          downloadPDF(html);
+                          const mergedData = { ...active, ...transformedPoData, ...iarData };
+                          mergedData.po_items = iarData?.iar_po_items || transformedPoData.po_items;
+                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+                          downloadPDF(buildIARHtml(mergedData));
                         } else if (previewTab === "loa") {
-                          // Transform poData to have the correct structure
-
                           const transformedPoData = poData
-                            ? {
-                              ...poData,
-
-                              po_items: poData.purchase_order_items || [],
-
-                              po_date: poData.date,
-                            }
+                            ? { ...poData, po_items: poData.purchase_order_items || [], po_date: poData.date }
                             : {};
-
-                          const mergedData = {
-                            ...active,
-
-                            ...transformedPoData,
-
-                            ...loaData,
-                          };
-
+                          const mergedData = { ...active, ...transformedPoData, ...loaData };
                           mergedData.po_items = transformedPoData.po_items;
-
-                          if (transformedPoData.po_no)
-                            mergedData.po_no = transformedPoData.po_no;
-
-                          if (transformedPoData.po_date)
-                            mergedData.po_date = transformedPoData.po_date;
-
-                          const html = buildLOAHtml(mergedData);
-
-                          downloadPDF(html);
+                          if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
+                          if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
+                          downloadPDF(buildLOAHtml(mergedData));
                         }
                       }}
-                      className="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors mr-1"
                       title="Print document"
                     >
-                      <RiFilePdf2Line className="size-4" />
+                      <RiFilePdf2Line className="size-3.5" />
                       Print
                     </button>
                   )}
                 </div>
               )}
 
-              {/* Preview Content */}
-
-              <div className="flex-1 min-h-0 overflow-auto">
+              {/* Preview content */}
+              <div className="ppm-scroll flex-1 min-h-0 overflow-auto">
                 {renderPreviewContent()}
               </div>
             </div>
-          </div>
         </div>
       </div>
     </div>

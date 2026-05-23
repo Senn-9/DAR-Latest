@@ -348,7 +348,7 @@ export async function fetchPoCandidatesForDelivery() {
 
 const PAYMENT_PHASE_STATUS_IDS = [
 
-  26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37,
+  26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 40,
 
 ] as const;
 
@@ -718,26 +718,15 @@ export async function updateDeliveryStatusOnly(id: number, statusId: number, pre
         updateDataWithTimestamps.tax_processing_completed_at = currentTimestamp;
         console.log("Setting tax_processing_completed_at timestamp for previous status 35");
         break;
-      case 36: { // Cash for Release completed -> Payment Completed
-        // For Payment Completed, use the same timestamp as Cash for Release
-        const { data: deliveryData, error: fetchError } = await supabase
-          .from("deliveries")
-          .select("cash_processing_completed_at")
-          .eq("id", id)
-          .single();
-        
-        if (!fetchError && deliveryData?.cash_processing_completed_at) {
-          updateDataWithTimestamps.payment_completed_at = deliveryData.cash_processing_completed_at;
-          console.log("Setting payment_completed_at to match cash_processing_completed_at");
-        } else {
-          updateDataWithTimestamps.payment_completed_at = currentTimestamp;
-          console.log("cash_processing_completed_at not found, using current timestamp for payment_completed_at");
-        }
+      case 36: { // Cash for Release completed -> status 40 (Completed Payment)
+        // Advancing from status 36 means the payment is now fully completed
+        updateDataWithTimestamps.cash_processing_completed_at = currentTimestamp;
+        updateDataWithTimestamps.payment_completed_at = currentTimestamp;
+        console.log("Setting cash_processing_completed_at and payment_completed_at for previous status 36");
         break;
       }
-      case 37: // Payment Completed
-        updateDataWithTimestamps.payment_completed_at = currentTimestamp;
-        console.log("Setting payment_completed_at timestamp for status 37");
+      case 40: // Already at Payment Completed — no further timestamp needed
+        console.log("Already at Completed Payment status (40), no timestamp update needed");
         break;
     }
   } else {
