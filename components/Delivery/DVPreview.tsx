@@ -202,13 +202,24 @@ export function buildDVHtml(data: any): string {
         <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Debit</th>
         <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Credit</th>
       </tr>
-      ${(data.accounting_entries || []).map((entry: any) => `
-      <tr style="height: 24px;">
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.account_title || "")}</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.uacs_code || "")}</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.debit || "")}</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.credit || "")}</td>
-      </tr>`).join("")}
+      ${(() => {
+        const accountingEntries = data.accounting_entries || [];
+        const rows = accountingEntries.slice(0, accountingEntries.length).map((entry: any) => `
+          <tr style="height: 24px;">
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.account_title || "")}</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.uacs_code || "")}</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.debit || "")}</td>
+            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.credit || "")}</td>
+          </tr>`).join("");
+        const blankRows = Math.max(4 - accountingEntries.length, 0);
+        return rows + Array.from({ length: blankRows }, () => `
+          <tr style="height: 24px;">
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">&nbsp;</td>
+            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">&nbsp;</td>
+          </tr>`).join("");
+      })()}
       <tr style="height: 20px;">
         <td style="border-right: 1px solid #000;">&nbsp;</td>
         <td style="border-right: 1px solid #000;">&nbsp;</td>
@@ -996,7 +1007,7 @@ export default function DVPreview({
                     Credit
                   </th>
                 </tr>
-                {[...Array(6)].map((_, i) => (
+                {[...Array(4)].map((_, i) => (
                   <tr key={i} style={{ height: "20px" }}>
                     <td
                       style={{
@@ -1025,12 +1036,6 @@ export default function DVPreview({
                     <td style={{ borderBottom: "1px solid #000" }}>&nbsp;</td>
                   </tr>
                 ))}
-                <tr style={{ height: "20px" }}>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td>&nbsp;</td>
-                </tr>
               </tbody>
             </table>
 

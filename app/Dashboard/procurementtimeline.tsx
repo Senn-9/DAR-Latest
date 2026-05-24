@@ -614,12 +614,13 @@ const LEGEND = [
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-export default function ProcurementTimeline() {
+export default function ProcurementTimeline({ modalView = false }: { modalView?: boolean }) {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailModal, setDetailModal] = useState<Step | null>(null);
 
   const totalSteps = PHASES.reduce((s, p) => s + p.steps.length, 0);
+  const maxStatusId = Math.max(...PHASES.flatMap((phase) => phase.steps.map((step) => step.id)));
 
   const handleStepToggle = (id: number) => {
     setActiveStep((prev) => (prev === id ? null : id));
@@ -639,8 +640,10 @@ export default function ProcurementTimeline() {
       })).filter((p) => p.steps.length > 0)
     : PHASES;
 
+  const displayedStepCount = filteredPhases.reduce((s, p) => s + p.steps.length, 0);
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={modalView ? "min-h-[72vh]" : "min-h-screen"}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
@@ -656,9 +659,14 @@ export default function ProcurementTimeline() {
             </p>
             <h1 className="text-2xl font-bold text-gray-900">Procurement Workflow</h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              <span className="mono font-semibold text-gray-600">{totalSteps}</span> steps across{" "}
+              <span className="mono font-semibold text-gray-600">{displayedStepCount}</span> steps across{" "}
               <span className="mono font-semibold text-gray-600">{PHASES.length}</span> phases
             </p>
+            {!searchQuery.trim() && maxStatusId !== totalSteps && (
+              <p className="text-[11px] text-gray-400 mt-1">
+                Status IDs run through <span className="font-mono font-semibold text-gray-600">{maxStatusId}</span>.
+              </p>
+            )}
           </div>
         </div>
 

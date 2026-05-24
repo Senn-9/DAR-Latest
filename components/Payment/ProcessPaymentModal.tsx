@@ -19,7 +19,6 @@ import { type StatusFlag } from "../StatusFlagPicker";
 import IARPreview, { buildIARHtml } from "../Delivery/IARPreview";
 import LOAPreview, { buildLOAHtml } from "../Delivery/LOAPreview";
 import { buildDVHtml } from "../Delivery/DVPreview";
-import PaymentDocumentFullPreview from "./PaymentDocumentFullPreview";
 import { buildORSPrintHtml } from "@/utils/print/ORSPrintBuilder";
 // Editable input styles for live preview
 
@@ -1092,91 +1091,101 @@ function DVEditablePreview({
                     Credit
                   </th>
                 </tr>
-                {(accountingEntries || []).slice(0, 6).map((entry, i) => (
-                  <tr key={i} style={{ height: "24px" }}>
-                    <td
-                      style={{
-                        borderRight: "1px solid #000",
-                        borderBottom: "1px solid #000",
-                      }}
-                    >
-                      <input
-                        type="text"
-                        value={entry.account_title || ""}
-                        onChange={(e) =>
-                          updateAccountingEntry?.(i, "account_title", e.target.value)
-                        }
-                        className={editableInputCls}
+                {Array.from({ length: 4 }).map((_, index) => {
+                  const entry = accountingEntries?.[index] ?? {
+                    account_title: "",
+                    uacs_code: "",
+                    debit: "",
+                    credit: "",
+                  };
+                  return (
+                    <tr key={index} style={{ height: "24px" }}>
+                      <td
                         style={{
-                          width: "95%",
-                          fontSize: "9px",
-                          fontFamily: "Times New Roman, serif",
+                          borderRight: "1px solid #000",
+                          borderBottom: "1px solid #000",
                         }}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        borderRight: "1px solid #000",
-                        borderBottom: "1px solid #000",
-                      }}
-                    >
-                      <input
-                        type="text"
-                        value={entry.uacs_code || ""}
-                        onChange={(e) =>
-                          updateAccountingEntry?.(i, "uacs_code", e.target.value)
-                        }
-                        className={editableInputCls}
+                      >
+                        <input
+                          type="text"
+                          value={entry.account_title || ""}
+                          onChange={(e) =>
+                            updateAccountingEntry
+                              ? updateAccountingEntry(index, "account_title", e.target.value)
+                              : undefined
+                          }
+                          className={editableInputCls}
+                          style={{
+                            width: "95%",
+                            fontSize: "9px",
+                            fontFamily: "Times New Roman, serif",
+                          }}
+                        />
+                      </td>
+                      <td
                         style={{
-                          width: "95%",
-                          fontSize: "9px",
-                          fontFamily: "Times New Roman, serif",
+                          borderRight: "1px solid #000",
+                          borderBottom: "1px solid #000",
                         }}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        borderRight: "1px solid #000",
-                        borderBottom: "1px solid #000",
-                      }}
-                    >
-                      <input
-                        type="text"
-                        value={entry.debit || ""}
-                        onChange={(e) =>
-                          updateAccountingEntry?.(i, "debit", e.target.value)
-                        }
-                        className={editableInputRightCls}
+                      >
+                        <input
+                          type="text"
+                          value={entry.uacs_code || ""}
+                          onChange={(e) =>
+                            updateAccountingEntry
+                              ? updateAccountingEntry(index, "uacs_code", e.target.value)
+                              : undefined
+                          }
+                          className={editableInputCls}
+                          style={{
+                            width: "95%",
+                            fontSize: "9px",
+                            fontFamily: "Times New Roman, serif",
+                          }}
+                        />
+                      </td>
+                      <td
                         style={{
-                          width: "95%",
-                          fontSize: "9px",
-                          fontFamily: "Times New Roman, serif",
+                          borderRight: "1px solid #000",
+                          borderBottom: "1px solid #000",
                         }}
-                      />
-                    </td>
-                    <td style={{ borderBottom: "1px solid #000" }}>
-                      <input
-                        type="text"
-                        value={entry.credit || ""}
-                        onChange={(e) =>
-                          updateAccountingEntry?.(i, "credit", e.target.value)
-                        }
-                        className={editableInputRightCls}
-                        style={{
-                          width: "95%",
-                          fontSize: "9px",
-                          fontFamily: "Times New Roman, serif",
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-                <tr style={{ height: "20px" }}>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td style={{ borderRight: "1px solid #000" }}>&nbsp;</td>
-                  <td>&nbsp;</td>
-                </tr>
+                      >
+                        <input
+                          type="text"
+                          value={entry.debit || ""}
+                          onChange={(e) =>
+                            updateAccountingEntry
+                              ? updateAccountingEntry(index, "debit", e.target.value)
+                              : undefined
+                          }
+                          className={editableInputRightCls}
+                          style={{
+                            width: "95%",
+                            fontSize: "9px",
+                            fontFamily: "Times New Roman, serif",
+                          }}
+                        />
+                      </td>
+                      <td style={{ borderBottom: "1px solid #000" }}>
+                        <input
+                          type="text"
+                          value={entry.credit || ""}
+                          onChange={(e) =>
+                            updateAccountingEntry
+                              ? updateAccountingEntry(index, "credit", e.target.value)
+                              : undefined
+                          }
+                          className={editableInputRightCls}
+                          style={{
+                            width: "95%",
+                            fontSize: "9px",
+                            fontFamily: "Times New Roman, serif",
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -1193,7 +1202,6 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "52.3%",
                       width: "52.5%",
                       borderRight: "1px solid #000",
                       padding: "4px 6px",
@@ -1265,7 +1273,6 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "65px",
                       width: "68px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
@@ -1709,6 +1716,9 @@ function documentsForStatus(
     case 33:
       return ["dv"];
 
+    case 34:
+      return ["dv"];
+
     case 35:
       return ["dv"];
 
@@ -1859,6 +1869,8 @@ const PAYMENT_FLOW_STRIP: { id: number; label: string }[] = [
 
   { id: 33, label: "Cash" },
 
+  { id: 34, label: "PARPO Signature" },
+
   { id: 35, label: "Tax" },
 
   { id: 36, label: "Cash Release" },
@@ -1963,6 +1975,8 @@ export default function ProcessPaymentModal({
 
   const [cashRouted, setCashRouted] = useState(false);
 
+  const [parpoSignatureDone, setParpoSignatureDone] = useState(false);
+
   const [bir2307Done, setBir2307Done] = useState(false);
 
   const [jevDone, setJevDone] = useState(false);
@@ -1996,15 +2010,8 @@ export default function ProcessPaymentModal({
     }>
   >([
     { account_title: "", uacs_code: "", debit: "", credit: "" },
-
     { account_title: "", uacs_code: "", debit: "", credit: "" },
-
     { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-    { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-    { account_title: "", uacs_code: "", debit: "", credit: "" },
-
     { account_title: "", uacs_code: "", debit: "", credit: "" },
   ]);
 
@@ -2056,7 +2063,10 @@ export default function ProcessPaymentModal({
         return { label: "Complete PARPO Approval", nextStatus: 33 };
 
       case 33:
-        return { label: "Complete Forward to Cash", nextStatus: 35 };
+        return { label: "Complete Forward to Cash", nextStatus: 34 };
+
+      case 34:
+        return { label: "Complete PARPO Office Signature", nextStatus: 35 };
 
       case 35:
         return { label: "Complete Tax processing handoff", nextStatus: 36 };
@@ -2089,6 +2099,9 @@ export default function ProcessPaymentModal({
 
       case 33:
         return cashRouted;
+
+      case 34:
+        return parpoSignatureDone;
 
       case 35:
         return bir2307Done && jevDone;
@@ -2132,15 +2145,8 @@ export default function ProcessPaymentModal({
 
     setAccountingEntries([
       { account_title: "", uacs_code: "", debit: "", credit: "" },
-
       { account_title: "", uacs_code: "", debit: "", credit: "" },
-
       { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-      { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-      { account_title: "", uacs_code: "", debit: "", credit: "" },
-
       { account_title: "", uacs_code: "", debit: "", credit: "" },
     ]);
   };
@@ -2181,15 +2187,8 @@ export default function ProcessPaymentModal({
 
         setAccountingEntries([
           { account_title: "", uacs_code: "", debit: "", credit: "" },
-
           { account_title: "", uacs_code: "", debit: "", credit: "" },
-
           { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-          { account_title: "", uacs_code: "", debit: "", credit: "" },
-
-          { account_title: "", uacs_code: "", debit: "", credit: "" },
-
           { account_title: "", uacs_code: "", debit: "", credit: "" },
         ]);
       }
@@ -2427,14 +2426,6 @@ export default function ProcessPaymentModal({
                   <label className="block text-xs font-semibold text-gray-700">
                     Accounting Entries (Section B)
                   </label>
-
-                  <button
-                    type="button"
-                    onClick={addAccountingEntry}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    + Add Row
-                  </button>
                 </div>
 
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -2457,102 +2448,96 @@ export default function ProcessPaymentModal({
                           Credit
                         </th>
 
-                        <th className="px-2 py-2 border-b border-gray-200 w-10"></th>
-                      </tr>
+                                              </tr>
                     </thead>
 
                     <tbody>
-                      {accountingEntries.map((entry, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.account_title || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                      {Array.from({ length: 4 }).map((_, index) => {
+                        const entry = accountingEntries[index] || {
+                          account_title: "",
+                          uacs_code: "",
+                          debit: "",
+                          credit: "",
+                        };
+                        return (
+                          <tr
+                            key={index}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.account_title || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "account_title",
+                                    "account_title",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
-                              placeholder="Account title"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
+                                placeholder="Account title"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.uacs_code || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.uacs_code || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "uacs_code",
+                                    "uacs_code",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
-                              placeholder="Code"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
+                                placeholder="Code"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.debit || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.debit || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "debit",
+                                    "debit",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
-                              placeholder="0.00"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
+                                placeholder="0.00"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.credit || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.credit || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "credit",
+                                    "credit",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
-                              placeholder="0.00"
-                            />
-                          </td>
-
-                          <td className="px-2 py-1.5 text-center">
-                            {accountingEntries.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeAccountingEntry(index)}
-                                className="text-red-500 hover:text-red-700"
-                                title="Remove row"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300"
+                                placeholder="0.00"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -2813,14 +2798,6 @@ export default function ProcessPaymentModal({
                   <label className="block text-xs font-semibold text-gray-700">
                     Accounting Entries (Section B)
                   </label>
-
-                  <button
-                    type="button"
-                    onClick={addAccountingEntry}
-                    className="text-xs text-purple-600 hover:text-purple-700 font-medium"
-                  >
-                    + Add Row
-                  </button>
                 </div>
 
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -2843,102 +2820,96 @@ export default function ProcessPaymentModal({
                           Credit
                         </th>
 
-                        <th className="px-2 py-2 border-b border-gray-200 w-10"></th>
-                      </tr>
+                                              </tr>
                     </thead>
 
                     <tbody>
-                      {accountingEntries.map((entry, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.account_title || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                      {Array.from({ length: 4 }).map((_, index) => {
+                        const entry = accountingEntries[index] || {
+                          account_title: "",
+                          uacs_code: "",
+                          debit: "",
+                          credit: "",
+                        };
+                        return (
+                          <tr
+                            key={index}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.account_title || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "account_title",
+                                    "account_title",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
-                              placeholder="Account title"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
+                                placeholder="Account title"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.uacs_code || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.uacs_code || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "uacs_code",
+                                    "uacs_code",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
-                              placeholder="Code"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
+                                placeholder="Code"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.debit || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.debit || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "debit",
+                                    "debit",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
-                              placeholder="0.00"
-                            />
-                          </td>
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
+                                placeholder="0.00"
+                              />
+                            </td>
 
-                          <td className="px-2 py-1.5">
-                            <input
-                              type="text"
-                              value={entry.credit || ""}
-                              onChange={(e) =>
-                                updateAccountingEntry(
-                                  index,
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={entry.credit || ""}
+                                onChange={(e) =>
+                                  updateAccountingEntry(
+                                    index,
 
-                                  "credit",
+                                    "credit",
 
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
-                              placeholder="0.00"
-                            />
-                          </td>
-
-                          <td className="px-2 py-1.5 text-center">
-                            {accountingEntries.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeAccountingEntry(index)}
-                                className="text-red-500 hover:text-red-700"
-                                title="Remove row"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-xs text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-300"
+                                placeholder="0.00"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -3068,83 +3039,29 @@ export default function ProcessPaymentModal({
               checked={cashRouted}
               onChange={setCashRouted}
               title="Routed to Cash / classification logged"
-              subtitle="DV and ORS handed off for  Cash processing."
+              subtitle="DV and ORS handed off for Cash processing."
             />
+          </div>
+        );
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  A. Certified: Expenses/Cash Advance necessary, lawful and
-                  incurred under my direct supervision.
-                </label>
-                <input
-                  type="text"
-                  value={dvCertificationName}
-                  onChange={(e) => setDvCertificationName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  placeholder="Enter name"
-                />
-              </div>
+      case 34:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-sky-800">
+              PARPO office signature
+            </p>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  C. Certified:
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={cashAvailable}
-                      onChange={(e) => {
-                        setCashAvailable(e.target.checked);
-                        setDvData({
-                          ...dvData,
-                          certified_cash_available: e.target.checked,
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Cash available
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={authorityToDebit}
-                      onChange={(e) => {
-                        setAuthorityToDebit(e.target.checked);
-                        setDvData({
-                          ...dvData,
-                          certified_subject_to_authority: e.target.checked,
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Subject to Authority to Debit Account (when applicable)
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={supportingDocumentsComplete}
-                      onChange={(e) => {
-                        setSupportingDocumentsComplete(e.target.checked);
-                        setDvData({
-                          ...dvData,
-                          certified_proper: e.target.checked,
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Supporting documents complete and amount claimed proper
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Forwarded payment documents are provided to PARPO for signature.
+              Confirm the signature process is ready before moving to tax processing.
+            </p>
+
+            <ChecklistRow
+              checked={parpoSignatureDone}
+              onChange={setParpoSignatureDone}
+              title="PARPO signature acknowledged"
+              subtitle="The payment package has been sent for PARPO co-signature."
+            />
           </div>
         );
 
@@ -3279,7 +3196,7 @@ export default function ProcessPaymentModal({
         return (
           <DVEditablePreview
             delivery={active}
-            dv={{ ...dvData, ...jevData } || {}}
+            dv={{ ...dvData, ...jevData }}
             poData={poData}
             setDv={setDvData}
             accountingEntries={accountingEntries}
@@ -3325,13 +3242,15 @@ export default function ProcessPaymentModal({
           ? "PARPO Approval"
           : active?.status_id === 33
             ? "Forward to Cash"
-            : active?.status_id === 35
-              ? "Tax processing"
-              : active?.status_id === 36
-                ? "Cash for Release"
-                : active?.status_id === 37
-                  ? "Payment Completed"
-                  : "Unknown";
+            : active?.status_id === 34
+              ? "Forward to PARPO Signature"
+              : active?.status_id === 35
+                ? "Tax processing"
+                : active?.status_id === 36
+                  ? "Cash for Release"
+                  : active?.status_id === 37
+                    ? "Payment Completed"
+                    : "Unknown";
 
   const canOpenFullTemplate =
     previewTab === "iar" || previewTab === "loa" || previewTab === "dv" || previewTab === "ors";
@@ -3635,24 +3554,7 @@ export default function ProcessPaymentModal({
         </div>
       </div>
 
-      <PaymentDocumentFullPreview
-        open={isFullPreviewOpen}
-        onClose={() => setIsFullPreviewOpen(false)}
-        initialTab={previewTab || undefined}
-        docTabs={docTabs}
-        active={active}
-        poData={poData}
-        iarData={iarData}
-        setIarData={setIarData}
-        loaData={loaData}
-        setLoaData={setLoaData}
-        orsData={orsData}
-        setOrsData={setOrsData}
-        dvData={dvData}
-        setDvData={setDvData}
-        accountingEntries={accountingEntries}
-        setAccountingEntries={setAccountingEntries}
-      />
+      {/* Full-document live preview component removed — use modal preview in parent modal */}
     </div>
   );
 }

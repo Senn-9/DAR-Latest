@@ -8,7 +8,7 @@ import {
   RiFileListLine, RiTimeLine, RiCheckboxCircleLine, RiCloseCircleLine,
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine, RiEyeLine, RiPlayCircleLine,
-  RiCalendarLine, RiCheckLine, RiCloseLine, RiFileTextLine,
+  RiCalendarLine, RiCheckLine, RiCloseLine, RiFileTextLine, RiInformationLine,
 } from "react-icons/ri";
 import AnalyticsDashboard from "../analytics/analytics";
 import SummaryReportModal from "@/components/Reporting/SummaryReportModal";
@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const [summaryReportOpen, setSummaryReportOpen] = useState(false);
+  const [referenceGuideOpen, setReferenceGuideOpen] = useState(false);
 
   type LatestRemarkInfo = { remark: string | null; created_at: string; status_flag_id: number | null; user_id: number | null };
   type UserInfo = { fullname: string; division_name: string | null };
@@ -885,13 +886,22 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-right">
-              <button
-                onClick={() => setSummaryReportOpen(true)}
-                className="mb-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 text-sm font-medium"
-              >
-                <RiFileTextLine size={16} />
-                Summary Report
-              </button>
+              <div className="flex flex-wrap justify-end gap-2 mb-2">
+                <button
+                  onClick={() => setSummaryReportOpen(true)}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 text-sm font-medium"
+                >
+                  <RiFileTextLine size={16} />
+                  Summary Report
+                </button>
+                <button
+                  onClick={() => setReferenceGuideOpen(true)}
+                  className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors inline-flex items-center gap-2 text-sm font-medium"
+                >
+                  <RiInformationLine size={16} />
+                  Reference Guide
+                </button>
+              </div>
               <p className="mono text-xs text-gray-400">Total Budget Tracked</p>
               <p className="mono text-2xl font-bold text-emerald-700">
                 ₱{totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -1295,12 +1305,7 @@ export default function DashboardPage() {
             <AnalyticsDashboard />
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <ProcurementTimeline />
-          </div>
-
-
-
+    
           {/* ── DETAILS MODAL ── */}
           {viewModalOpen && selectedRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1383,6 +1388,29 @@ export default function DashboardPage() {
           open={summaryReportOpen}
           onClose={() => setSummaryReportOpen(false)}
         />
+
+        {/* Reference Guide Modal */}
+        {referenceGuideOpen && (
+          <div className="fixed inset-0 z-50 bg-transparent flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full min-h-[72vh] overflow-hidden">
+              <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Reference Guide</p>
+                  <h2 className="text-xl font-semibold text-gray-900">Procurement Workflow</h2>
+                </div>
+                <button
+                  onClick={() => setReferenceGuideOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition"
+                >
+                  <RiCloseLine size={20} />
+                </button>
+              </div>
+              <div className="h-[calc(72vh-80px)] overflow-y-auto p-4 bg-slate-50">
+                <ProcurementTimeline modalView />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuthGuard>
   );
