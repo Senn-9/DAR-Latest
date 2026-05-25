@@ -158,6 +158,35 @@ function isAccountingUser(user: POUserContext) {
   return user?.role_id === 9 || normalizeText(user?.roles?.role_name).includes("accounting");
 }
 
+function isEndUser(user: POUserContext) {
+  const roleName = normalizeText(user?.roles?.role_name);
+  const username = normalizeText(user?.username);
+  const hasElevatedRole =
+    user?.role_id === 1 ||
+    roleName.includes("admin") ||
+    roleName.includes("division head") ||
+    roleName.includes("bac") ||
+    roleName.includes("budget") ||
+    roleName.includes("supply") ||
+    roleName.includes("parpo") ||
+    roleName.includes("accounting") ||
+    roleName.includes("ppmp") ||
+    roleName.includes("point person") ||
+    username === "admin" ||
+    username === "budget" ||
+    username === "supply" ||
+    username === "parpo" ||
+    username === "bac";
+
+  return !hasElevatedRole;
+}
+
+function canManageORSDocument(user: POUserContext, statusId: number | null | undefined) {
+  if (statusId !== 13 && statusId !== 14) return false;
+  if (user?.role_id === 1) return true;
+  return isBudgetUser(user) || isEndUser(user);
+}
+
 function nextStatusOptions(statusId: number, user: POUserContext, divisionName?: string | null) {
   const roleId = user?.role_id ?? 0;
 
@@ -202,6 +231,7 @@ function canProcessPO(user: POUserContext, statusId: number | null, divisionName
   if (statusId == null) return false;
   // Completed POs (status 38) cannot be processed further
   if (statusId === 38) return false;
+  if (canManageORSDocument(user, statusId)) return true;
   return nextStatusOptions(statusId, user, divisionName).length > 0;
 }
 
@@ -861,7 +891,7 @@ export default function PurchaseOrderPage() {
       <div className="w-full px-4 py-4 sm:p-6 space-y-4 md:space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Purchase Order Portal</p>
+            <p className="text-xs font-bold tracking-widest text-emerald-600 uppercase mb-1">Procurement Portal</p>
             <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
             {currentUser && (
               <p className="text-sm text-gray-400 mt-1">
@@ -1305,7 +1335,7 @@ export default function PurchaseOrderPage() {
         currentUser={currentUser}
       />
 
-      {selectedPo?.status_id === 13 ? (
+      {selectedPo && canManageORSDocument(currentUser, selectedPo.status_id) ? (
         <ORSProcessModal
           visible={processOpen}
           po={selectedPo}

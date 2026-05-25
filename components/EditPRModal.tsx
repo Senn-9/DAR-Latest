@@ -243,17 +243,17 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
         if (itemErr) {
           console.error("Error fetching PR items:", itemErr?.message || itemErr);
         } else if (itemData) {
-          setItems(
-            itemData.map((i: any) => ({
-              stock_no: i.stock_no || "",
-              unit: i.unit || "",
-              description: i.description || "",
-              quantity: String(i.quantity ?? ""),
-              unit_price: String(i.unit_price ?? ""),
-              subtotal: String(i.subtotal ?? ""),
-              created_at: i.created_at || new Date().toISOString(),
-            }))
-          );
+          const loaded = itemData.map((i: any) => ({
+            stock_no: i.stock_no || "",
+            unit: i.unit || "",
+            description: i.description || "",
+            quantity: String(i.quantity ?? ""),
+            unit_price: String(i.unit_price ?? ""),
+            subtotal: String(i.subtotal ?? ""),
+            created_at: i.created_at || new Date().toISOString(),
+          }));
+          while (loaded.length < 20) loaded.push(emptyItem());
+          setItems(loaded);
         }
 
         setLoading(false);
@@ -328,7 +328,6 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
       await supabase.from("purchase_request_items").delete().eq("pr_id", prId);
 
       const itemsToInsert = items
-        .filter((item) => stripHtml(item.description).trim() !== "")
         .map((item) => ({
           pr_id: prId,
           stock_no: item.stock_no || "",
@@ -684,9 +683,6 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
 // PR Preview Component
 function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
   const itemRows = [...items];
-  while (itemRows.length < 30) {
-    itemRows.push(emptyItem());
-  }
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>

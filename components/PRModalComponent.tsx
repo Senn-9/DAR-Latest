@@ -131,12 +131,8 @@ function PREditablePreview({
   //     rows.push({ ...line, isTextLine: true });
   //   });
   // });
-  const rows = items;
+  const rows = [...items];
   const grandTotal = getGrandTotal(items);
-  
-  while (rows.length < 30) {
-    rows.push(emptyItem());
-  }
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>
@@ -203,53 +199,36 @@ function PREditablePreview({
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {/* Text-only lines feature commented out */}
           {rows.map((item, idx) => {
-            const originalItemIndex = items.indexOf(item);
-            const isPadding = originalItemIndex === -1 || originalItemIndex >= items.length;
-            
-            if (isPadding) {
-              return (
-                <tr key={`item-pad-${idx}`}>
-                  <td style={{ ...tdStyle }}></td>
-                  <td style={{ ...tdStyle }}></td>
-                  <td style={{ ...tdStyle }}></td>
-                  <td style={{ ...tdStyle }}></td>
-                  <td style={{ ...tdStyle }}></td>
-                  <td style={{ ...tdStyle }}></td>
-                </tr>
-              );
-            }
-
             const total = getItemTotal(item);
             return (
-              <React.Fragment key={`item-frag-${originalItemIndex}`}>
-                <tr>
+              <React.Fragment key={`item-frag-${idx}`}>
+                <tr style={{ height: "22px" }}>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.stock_num} onChange={e => updateItem(originalItemIndex, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.stock_num} onChange={e => updateItem(idx, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.unit} onChange={e => updateItem(originalItemIndex, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, padding: "1px 4px", verticalAlign: "top" }}>
                     <RichEditor
                       value={item.description}
-                      onChange={(html) => updateItem(originalItemIndex, 'description', html)}
+                      onChange={(html) => updateItem(idx, 'description', html)}
                       compact
                       className={editableInputCls}
                       style={{ width: "95%", fontFamily: "'Times New Roman', Times, serif" }}
                     />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.quantity} onChange={e => updateItem(originalItemIndex, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
-                    <textarea value={item.unit_cost} onChange={e => updateItem(originalItemIndex, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.unit_cost} onChange={e => updateItem(idx, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
                     {total > 0 ? "₱" + total.toFixed(2) : ""}
                     {items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(originalItemIndex)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove item">×</button>
+                      <button type="button" onClick={() => removeItem(idx)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove row">×</button>
                     )}
                   </td>
                 </tr>
@@ -445,7 +424,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
     created_at: new Date().toISOString().slice(0, 10),
   });
 
-  const [items, setItems] = useState<ItemDataType[]>([emptyItem()]);
+  const [items, setItems] = useState<ItemDataType[]>(() => Array.from({ length: 20 }, () => emptyItem()));
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -508,9 +487,11 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
   };
 
   const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
+    setItems((currentItems) => (
+      currentItems.length > 1
+        ? currentItems.filter((_, i) => i !== index)
+        : currentItems
+    ));
   };
 
   const updateItem = (index: number, field: keyof ItemDataType, value: string) => {
@@ -571,27 +552,18 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       }
 
       const itemsToInsert = items
-        .filter((item) => stripHtml(item.description).trim() !== "")
         .map((item) => ({
           pr_id: formResult.id,
           stock_no: item.stock_num || "",
           unit: item.unit || "",
           description: stripHtml(item.description),
-          quantity: item.quantity.trim() === "" ? null : parseInt(item.quantity),
-          unit_price: item.unit_cost.trim() === "" ? null : parseInt(item.unit_cost),
+          quantity: item.quantity.trim() === "" ? null : parseFloat(item.quantity),
+          unit_price: item.unit_cost.trim() === "" ? null : parseFloat(item.unit_cost),
           subtotal: Math.round(getItemTotal(item)),
         }));
 
       console.log("Form Result PR_ID:", formResult.id);
       console.log("Items to insert:", itemsToInsert);
-
-      if (itemsToInsert.length === 0) {
-        setErrorMsg("No items with descriptions to save. PR Form saved but no items added.");
-        resetForm();
-        setModalOpen(false);
-        if (onSave) onSave();
-        return;
-      }
 
       const { data: itemData, error: itemError } = await supabase
         .from("purchase_request_items")
@@ -634,7 +606,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
       app_desig: "",
       created_at: new Date().toISOString().slice(0, 10),
     });
-    setItems([emptyItem()]);
+    setItems(Array.from({ length: 20 }, () => emptyItem()));
     setTab("form");
   };
 

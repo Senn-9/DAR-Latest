@@ -47,6 +47,17 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+function formatMetaDate(value: string | null | undefined) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 function toWords(amount: number): string {
   if (!amount || isNaN(amount)) return "ZERO PESOS";
 
@@ -468,6 +479,8 @@ function ORSPreview({
 // Static PO Preview - read-only display for print
 function POPreview({
   poNo,
+  prNo,
+  createdAt,
   supplier,
   address,
   tin,
@@ -490,6 +503,8 @@ function POPreview({
   poDate,
 }: {
   poNo: string;
+  prNo?: string | null;
+  createdAt?: string | null;
   supplier: string;
   address: string;
   tin: string;
@@ -515,6 +530,7 @@ function POPreview({
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
   const displayDate = poDate || today;
+  const footerMeta = [prNo, formatMetaDate(createdAt)].filter(Boolean).join("  | ");
 
   const normalizedItems = useMemo(
     () =>
@@ -554,6 +570,11 @@ function POPreview({
           </tr>
         </tbody>
       </table>
+
+      <div style={{ borderRadius: "30px", padding: "10px 12px 8px", margin: "0 18px 10px" }}>
+        <div style={{ textAlign: "center", fontSize: "16pt", fontWeight: "bold", letterSpacing: "0.5px" }}>PURCHASE ORDER</div>
+        <div style={{ textAlign: "center", fontSize: "10.5pt", fontWeight: "bold" }}>DEPARTMENT OF AGRARIAN REFORM - CAMARINES SUR 1</div>
+      </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #111", tableLayout: "fixed" }}>
         <colgroup>
@@ -707,6 +728,9 @@ function POPreview({
           </tr>
         </tbody>
       </table>
+      {footerMeta ? (
+        <div style={{ marginTop: "6px", fontSize: "8pt", fontStyle: "italic", color: "#444" }}>{footerMeta}</div>
+      ) : null}
     </div>
   );
 }
@@ -1209,6 +1233,8 @@ function downloadContractPDF(data: {
 function downloadPDF(data: {
   poNo: string;
   poId: number | null;
+  prNo?: string | null;
+  createdAt?: string | null;
   supplier: string;
   address: string;
   tin: string;
@@ -1629,6 +1655,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                       downloadPDF({
                         poNo: poHeader.po_no || "",
                         poId: poHeader.id,
+                        prNo: poHeader.pr_no,
+                        createdAt: poHeader.created_at,
                         supplier: editablePOSupplier,
                         address: editablePOAddress,
                         tin: poHeader.tin || "",
@@ -1663,6 +1691,8 @@ export default function Viewpomodal({ visible, poId, onClose, currentUser }: Vie
                 <div className="bg-white rounded-lg shadow-lg p-4 text-black">
                   <POPreview
                     poNo={poHeader.po_no || ""}
+                    prNo={poHeader.pr_no}
+                    createdAt={poHeader.created_at}
                     supplier={editablePOSupplier}
                     address={editablePOAddress}
                     tin={poHeader.tin || ""}

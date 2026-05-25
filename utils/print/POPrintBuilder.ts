@@ -11,6 +11,7 @@ export interface POPrintItem {
 
 export interface POPrintData {
   poNo: string;
+  prNo?: string | null;
   supplier: string;
   address: string;
   tin: string;
@@ -22,6 +23,7 @@ export interface POPrintData {
   fundCluster: string;
   items: POPrintItem[];
   poDate?: string | null;
+  createdAt?: string | null;
   officialName?: string | null;
   officialDesig?: string | null;
   conformeDate?: string | null;
@@ -44,11 +46,26 @@ function getGrandTotal(items: POPrintItem[]): number {
   return items.reduce((sum, item) => sum + getItemTotal(item), 0);
 }
 
+function formatDocumentDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return escapeHtml(String(value));
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   const grandTotal = getGrandTotal(data.items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
   const displayDate = data.poDate || today;
+  const footerMeta = [data.prNo, formatDocumentDate(data.createdAt)]
+    .filter((value) => String(value ?? "").trim() !== "")
+    .map((value) => escapeHtml(String(value)))
+    .join("  | ");
 
   const normalizedItems = data.items.filter(
     (item) =>
@@ -118,6 +135,11 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
   <table style="margin-bottom:8px;border:none">
     <tr><td style="border:none;text-align:right;font-size:10pt;font-weight:normal;font-style:italic;padding:0">Appendix 61</td></tr>
   </table>
+
+  <div style="border-radius:30px;padding:10px 12px 8px;margin:0 18px 10px">
+    <div style="text-align:center;font-size:16pt;font-weight:bold;letter-spacing:0.5px">PURCHASE ORDER</div>
+    <div style="text-align:center;font-size:10.5pt;font-weight:bold">DEPARTMENT OF AGRARIAN REFORM - CAMARINES SUR 1</div>
+  </div>
 
   <table class="po-table" style="border:1px solid #111;">
     <colgroup>
@@ -229,6 +251,7 @@ export function buildPurchaseOrderPrintHtml(data: POPrintData): string {
       </tbody>
     </table>
   </div>
+  ${footerMeta ? `<div style="margin-top:6px;font-size:8pt;font-style:italic;color:#444">${footerMeta}</div>` : ""}
 </body>
 </html>`;
 }

@@ -73,6 +73,17 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+function formatMetaDate(value: string | null | undefined) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 function toWords(amount: number): string {
   if (!amount || isNaN(amount)) return "ZERO PESOS";
 
@@ -129,6 +140,8 @@ type POItemWithBold = PurchaseOrderItemRow;
 // Editable PO Preview - allows manual input directly in the preview panel
 function POEditablePreview({
   poNo,
+  prNo,
+  createdAt,
   setPoNo,
   supplier,
   setSupplier,
@@ -171,6 +184,8 @@ function POEditablePreview({
   setConformeDate,
 }: {
   poNo: string;
+  prNo: string;
+  createdAt: string;
   setPoNo: (v: string) => void;
   supplier: string;
   setSupplier: (v: string) => void;
@@ -214,6 +229,7 @@ function POEditablePreview({
 }) {
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
+  const footerMeta = [prNo, formatMetaDate(createdAt)].filter(Boolean).join("   ");
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", color: "#000", padding: 0, margin: 0 }}>
@@ -224,6 +240,11 @@ function POEditablePreview({
           </tr>
         </tbody>
       </table>
+
+      <div style={{ borderRadius: "30px", padding: "10px 12px 8px", margin: "0 18px 10px" }}>
+        <div style={{ textAlign: "center", fontSize: "16pt", fontWeight: "bold", letterSpacing: "0.5px" }}>PURCHASE ORDER</div>
+        <div style={{ textAlign: "center", fontSize: "10.5pt", fontWeight: "bold" }}>DEPARTMENT OF AGRARIAN REFORM - CAMARINES SUR 1</div>
+      </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #111", tableLayout: "fixed" }}>
         <colgroup>
@@ -549,12 +570,18 @@ function POEditablePreview({
           </tr>
         </tbody>
       </table>
+      {footerMeta ? (
+        <div style={{ marginTop: "6px", fontSize: "8pt", fontStyle: "italic", color: "#444" }}>{footerMeta}</div>
+      ) : null}
     </div>
   );
 }
 
 // Static PO Preview - read-only display for print
 function POPreview({
+  poNo,
+  prNo,
+  createdAt,
   supplier,
   address,
   tin,
@@ -569,6 +596,9 @@ function POPreview({
   textOnlyLines,
   currentUserFullname,
 }: {
+  poNo: string;
+  prNo: string;
+  createdAt: string;
   supplier: string;
   address: string;
   tin: string;
@@ -586,6 +616,7 @@ function POPreview({
   const grandTotal = getGrandTotal(items);
   const amountWords = toWords(grandTotal);
   const today = new Date().toISOString().slice(0, 10);
+  const footerMeta = [prNo, formatMetaDate(createdAt)].filter(Boolean).join("  | ");
 
   const normalizedItems = useMemo(
     () =>
@@ -625,6 +656,11 @@ function POPreview({
         </tbody>
       </table>
 
+      <div style={{ borderRadius: "30px", padding: "10px 12px 8px", margin: "0 18px 10px" }}>
+        <div style={{ textAlign: "center", fontSize: "16pt", fontWeight: "bold", letterSpacing: "0.5px" }}>PURCHASE ORDER</div>
+        <div style={{ textAlign: "center", fontSize: "10.5pt", fontWeight: "bold" }}>DEPARTMENT OF AGRARIAN REFORM - CAMARINES SUR 1</div>
+      </div>
+
       <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #111", tableLayout: "fixed" }}>
         <colgroup>
           <col style={{ width: "14%" }} />
@@ -640,7 +676,7 @@ function POPreview({
               Supplier : <span style={{ fontWeight: "normal" }}>{supplier}</span>
             </td>
             <td colSpan={3} style={{ border: "1px solid #111", padding: "2px 4px", fontSize: "9pt", fontWeight: "bold" }}>
-              P.O. No. : <span style={{ fontWeight: "normal" }}></span>
+              P.O. No. : <span style={{ fontWeight: "normal" }}>{poNo}</span>
             </td>
           </tr>
           <tr>
@@ -723,6 +759,9 @@ function POPreview({
           </tr>
         </tbody>
       </table>
+      {footerMeta ? (
+        <div style={{ marginTop: "6px", fontSize: "8pt", fontStyle: "italic", color: "#444" }}>{footerMeta}</div>
+      ) : null}
     </div>
   );
 }
@@ -954,6 +993,8 @@ function buildPurchaseOrderPrintHtml(data: {
 
 function downloadPDF(data: {
   poNo: string;
+  prNo?: string | null;
+  createdAt?: string | null;
   supplier: string;
   address: string;
   tin: string;
@@ -1301,6 +1342,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [poDate, setPoDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [previewCreatedAt] = useState(() => new Date().toISOString());
   const [officialName, setOfficialName] = useState("");
   const [officialDesig, setOfficialDesig] = useState("");
   const [accountantName, setAccountantName] = useState("");
@@ -2204,6 +2246,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                 onClick={() =>
                   downloadPDF({
                     poNo,
+                    prNo: selectedPRNo || null,
+                    createdAt: previewCreatedAt,
                     supplier,
                     address,
                     tin,
@@ -2331,6 +2375,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                 ) : (
                 <POEditablePreview
                   poNo={poNo}
+                  prNo={selectedPRNo}
+                  createdAt={previewCreatedAt}
                   setPoNo={setPoNo}
                   supplier={supplier}
                   setSupplier={setSupplier}

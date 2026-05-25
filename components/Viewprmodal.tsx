@@ -64,9 +64,6 @@ function getGrandTotal(items: ItemDataType[]): number {
 
 function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
   const itemRows = [...items];
-  while (itemRows.length < 30) {
-    itemRows.push(emptyItem());
-  }
   const grandTotal = getGrandTotal(items);
 
   return (

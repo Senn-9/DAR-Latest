@@ -1162,6 +1162,8 @@ export default function ORSProcessModal({
   visible, po, currentUser, onClose, onSubmit,
 }: ORSProcessModalProps) {
   const supabase = createClient();
+  const isEditingProcessing = po?.status_id === 14;
+  const canAdvanceToAccounting = isEditingProcessing && (currentUser?.role_id === 1 || currentUser?.role_id === 4);
 
   // Pre-fetch all UACS codes on modal open for instant local fuzzy search
   const [allUacsCodes, setAllUacsCodes] = useState<UacsCode[]>([]);
@@ -1209,6 +1211,8 @@ export default function ORSProcessModal({
   const [remarks, setRemarks] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<StatusFlag | null>(null);
+  const [existingOrsId, setExistingOrsId] = useState<number | null>(null);
+  const [loadingExistingOrs, setLoadingExistingOrs] = useState(false);
 
   // Text-only lines state (for printing only - descriptive lines in particulars)
   const [textOnlyLines, setTextOnlyLines] = useState<TextOnlyLine[]>([]);
@@ -1269,6 +1273,9 @@ export default function ORSProcessModal({
 
   useEffect(() => {
     if (po && visible) {
+      setExistingOrsId(null);
+      setOrsNo(po.ors_no || "");
+      setOrsDate(po.ors_date || new Date().toISOString().slice(0, 10));
       setPayee(po.supplier || "");
       setPayeeAddress("");
       // Set office from PO and try to match division
@@ -1287,10 +1294,77 @@ export default function ORSProcessModal({
       setMfoPap("");
       setPreparedByName(currentUser?.fullname || "");
       setObligationAmount(Number(po.total_amount || 0));
-      setReferenceNo(orsNo || "");
+      setReferenceNo(po.ors_no || "");
+      setPaymentAmount(0);
+      setNotYetDueBalance(0);
+      setDueDemandableBalance(0);
+      setPreparedByDesig("");
+      setCertifiedByName("");
+      setCertifiedByDesig("");
+      setPreparedByDate("");
+      setCertifiedByDate("");
+      setSectionCParticulars("");
+      setRemarks("");
       fetchBudgetInfo(po.pr_no);
     }
   }, [po, visible, currentUser, divisions]);
+
+  useEffect(() => {
+    if (!visible || !po || po.status_id !== 14 || !po.ors_no) {
+      setLoadingExistingOrs(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingExistingOrs(true);
+
+    supabase
+      .from("ors_entries")
+      .select("*")
+      .eq("ors_no", po.ors_no)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+        if (error) {
+          console.error("Failed to load ORS entry:", error);
+          return;
+        }
+        if (!data) return;
+
+        setExistingOrsId(data.id);
+        handleOrsNoChange(data.ors_no || po.ors_no || "");
+        setOrsDate(data.date_created || po.ors_date || new Date().toISOString().slice(0, 10));
+        setEntityName(data.entity_name || "Department of Agrarian Reform - Camarines Sur 1");
+        setPayee(data.payee || po.supplier || "");
+        setPayeeAddress(data.payee_address || "");
+        setOffice(data.office || po.office_section || "");
+        setFundCluster(data.fund_cluster || po.fund_cluster || "");
+        setResponsibilityCenter(data.responsibility_center || "");
+        setParticulars(data.particulars || "");
+        setMfoPap(data.mfo_pap || "");
+        setUacsCode(data.uacs_code || "");
+        setReferenceNo(data.reference_no || data.ors_no || "");
+        setObligationAmount(Number(data.obligation_amount ?? data.amount ?? po.total_amount ?? 0));
+        setPaymentAmount(Number(data.payment_amount ?? 0));
+        setNotYetDueBalance(Number(data.not_yet_due_balance ?? 0));
+        setDueDemandableBalance(Number(data.due_demandable_balance ?? 0));
+        setPreparedByName(data.prepared_by_name || currentUser?.fullname || "");
+        setPreparedByDesig(data.prepared_by_desig || "");
+        setCertifiedByName(data.certified_by_name || "");
+        setCertifiedByDesig(data.certified_by_desig || "");
+        setPreparedByDate(data.prepared_by_date || "");
+        setCertifiedByDate(data.certified_by_date || "");
+        setSectionCParticulars(data.section_c_particulars || "");
+        setBlankStatusSection(Boolean(data.blank_status_section));
+      })
+      .finally(() => {
+        if (isMounted) setLoadingExistingOrs(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [visible, po, supabase, currentUser?.fullname]);
 
   async function fetchBudgetInfo(prNo: string | null) {
     if (!prNo) return;
@@ -1307,8 +1381,94 @@ export default function ORSProcessModal({
 
   const amount = useMemo(() => Number(po?.total_amount || 0), [po]);
 
+  const [successTitle, setSuccessTitle] = useState("ORS Saved");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
+
+  const buildOrsPayload = () => ({
+    ors_no: orsNo,
+    pr_id: po?.pr_id ?? null,
+    pr_no: po?.pr_no ?? null,
+    division_id: selectedDivisionId,
+    fiscal_year: new Date().getFullYear(),
+    amount: obligationAmount,
+    status: "Pending",
+    prepared_by: currentUser?.id || null,
+    notes: remarks,
+    fund_cluster: fundCluster || null,
+    responsibility_center: responsibilityCenter || null,
+    particulars: particulars || null,
+    mfo_pap: mfoPap || null,
+    uacs_code: uacsCode || null,
+    prepared_by_name: preparedByName || null,
+    prepared_by_desig: preparedByDesig || null,
+    date_created: orsDate || null,
+    entity_name: entityName || null,
+    payee_address: payeeAddress || null,
+    office: office || null,
+    reference_no: referenceNo || null,
+    obligation_amount: obligationAmount,
+    payable_amount: null,
+    payment_amount: paymentAmount,
+    not_yet_due_balance: notYetDueBalance,
+    due_demandable_balance: dueDemandableBalance,
+    blank_status_section: blankStatusSection,
+    certified_by_name: certifiedByName || null,
+    certified_by_desig: certifiedByDesig || null,
+    section_c_particulars: sectionCParticulars || null,
+    payee: payee || null,
+    prepared_by_date: preparedByDate || null,
+    certified_by_date: certifiedByDate || null,
+  });
+
+  const syncPurchaseOrderORSFields = async (statusId?: number) => {
+    if (!po) return null;
+
+    return supabase
+      .from("purchase_orders")
+      .update({
+        ors_no: orsNo,
+        ors_date: orsDate || null,
+        ors_amount: obligationAmount,
+        funds_available: fundCluster || null,
+        ...(statusId ? { status_id: statusId } : {}),
+      })
+      .eq("id", po.id);
+  };
+
+  const updateExistingORS = async () => {
+    if (!po || po.status_id !== 14) {
+      throw new Error("ORS editing is only allowed while the document is in ORS (Processing).");
+    }
+
+    if (!existingOrsId && !po.ors_no) {
+      throw new Error("The existing ORS record could not be identified.");
+    }
+
+    const orsPayload = buildOrsPayload();
+    const query = supabase.from("ors_entries").update(orsPayload);
+    const { error: orsError } = existingOrsId
+      ? await query.eq("id", existingOrsId)
+      : await query.eq("ors_no", po.ors_no);
+
+    if (orsError) {
+      throw new Error(`Failed to update ORS entry: ${orsError.message}`);
+    }
+
+    const { error: poUpdateError } = await syncPurchaseOrderORSFields();
+    if (poUpdateError) {
+      throw new Error(`Failed to update PO ORS fields: ${poUpdateError.message}`);
+    }
+
+    await supabase.from("remarks").insert({
+      po_id: Number(po.id),
+      pr_id: po.pr_id,
+      user_id: currentUser?.id || null,
+      remark: `[ORS Updated] ORS No: ${orsNo}. ${remarks.trim()}`,
+      phase: "po",
+      status_flag_id: selectedFlag ? getFlagId(selectedFlag) : null,
+    });
+  };
 
   const handleSave = async () => {
     if (!po) return;
@@ -1316,56 +1476,24 @@ export default function ORSProcessModal({
     if (!selectedDivisionId) { setErrorMsg("Office / Division is required"); return; }
     setSaving(true);
     try {
-      const { error: orsError } = await supabase.from("ors_entries").insert({
-        ors_no: orsNo,
-        pr_id: po.pr_id,
-        pr_no: po.pr_no,
-        division_id: selectedDivisionId,
-        fiscal_year: new Date().getFullYear(),
-        amount: obligationAmount,
-        status: "Pending",
-        prepared_by: currentUser?.id || null,
-        notes: remarks,
-        fund_cluster: fundCluster || null,
-        responsibility_center: responsibilityCenter || null,
-        particulars: particulars || null,
-        mfo_pap: mfoPap || null,
-        uacs_code: uacsCode || null,
-        prepared_by_name: preparedByName || null,
-        prepared_by_desig: preparedByDesig || null,
-        date_created: orsDate || null,
-        entity_name: entityName || null,
-        payee_address: payeeAddress || null,
-        office: office || null,
-        reference_no: referenceNo || null,
-        obligation_amount: obligationAmount,
-        payable_amount: null,
-        payment_amount: paymentAmount,
-        not_yet_due_balance: notYetDueBalance,
-        due_demandable_balance: dueDemandableBalance,
-        blank_status_section: blankStatusSection,
-        certified_by_name: certifiedByName || null,
-        certified_by_desig: certifiedByDesig || null,
-        section_c_particulars: sectionCParticulars || null,
-        payee: payee || null,
-        prepared_by_date: preparedByDate || null,
-        certified_by_date: certifiedByDate || null,
-      });
+      if (isEditingProcessing) {
+        await updateExistingORS();
+        setSuccessTitle("ORS Updated");
+        setSuccessMsg(`ORS ${orsNo} has been updated successfully.`);
+        return;
+      }
 
-      if (orsError) { setSaving(false); setErrorMsg(`Failed to create ORS entry: ${orsError.message}`); return; }
+      const { error: orsError } = await supabase.from("ors_entries").insert(buildOrsPayload());
+      if (orsError) {
+        setErrorMsg(`Failed to create ORS entry: ${orsError.message}`);
+        return;
+      }
 
-      const { error: updateError } = await supabase
-        .from("purchase_orders")
-        .update({
-          ors_no: orsNo,
-          ors_date: orsDate || null,
-          ors_amount: obligationAmount,
-          funds_available: fundCluster || null,
-          status_id: 14,
-        })
-        .eq("id", po.id);
-
-      if (updateError) { setSaving(false); setErrorMsg(`Failed to update PO: ${updateError.message}`); return; }
+      const { error: updateError } = await syncPurchaseOrderORSFields(14);
+      if (updateError) {
+        setErrorMsg(`Failed to update PO: ${updateError.message}`);
+        return;
+      }
 
       await supabase.from("remarks").insert({
         po_id: Number(po.id),
@@ -1377,10 +1505,31 @@ export default function ORSProcessModal({
       });
 
       await onSubmit(14, `ORS ${orsNo} created`, selectedFlag ? getFlagId(selectedFlag) : null);
+      setSuccessTitle("ORS Created");
       setSuccessMsg(`ORS ${orsNo} has been created successfully.`);
     } catch (err) {
       console.error("Error saving ORS:", err);
-      setErrorMsg("Failed to save ORS. Please try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to save ORS. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAdvanceToAccounting = async () => {
+    if (!po || po.status_id !== 14) {
+      setErrorMsg("Only ORS documents in ORS (Processing) can be forwarded.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateExistingORS();
+      await onSubmit(15, remarks.trim() || `ORS ${orsNo} forwarded to Accounting`, selectedFlag ? getFlagId(selectedFlag) : null);
+      setSuccessTitle("ORS Forwarded");
+      setSuccessMsg(`ORS ${orsNo} has been updated and forwarded to Accounting.`);
+    } catch (err) {
+      console.error("Error forwarding ORS:", err);
+      setErrorMsg(err instanceof Error ? err.message : "Failed to forward the ORS.");
     } finally {
       setSaving(false);
     }
@@ -1392,7 +1541,7 @@ export default function ORSProcessModal({
     <>
     <SuccessModal
       visible={!!successMsg}
-      title="ORS Created"
+      title={successTitle}
       message={successMsg ?? ""}
       onConfirm={() => { setSuccessMsg(null); onClose(); }}
     />
@@ -1421,6 +1570,16 @@ export default function ORSProcessModal({
           ════════════════════════════════════════════════ */}
           <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-100">
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+              <div className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                isEditingProcessing
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                  : "border-orange-200 bg-orange-50 text-orange-700"
+              }`}>
+                {isEditingProcessing
+                  ? "ORS editing is active only while this PO remains in ORS (Processing). Once it advances, the ORS data becomes locked."
+                  : "Create the ORS record here. After creation, it moves into ORS (Processing) where authorized users can still update it."}
+              </div>
 
               {/* ① ORS No. + Date */}
               <FormSection title="ORS Details">
@@ -1746,13 +1905,24 @@ export default function ORSProcessModal({
               </button>
               <button
                 type="button"
-                disabled={saving || !orsNo.trim() || !selectedDivisionId}
+                disabled={saving || loadingExistingOrs || !orsNo.trim() || !selectedDivisionId}
                 onClick={handleSave}
                 className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-50 transition"
               >
                 <RiSaveLine size={16} />
-                {saving ? "Saving..." : "Create ORS"}
+                {loadingExistingOrs ? "Loading ORS..." : saving ? "Saving..." : isEditingProcessing ? "Update ORS" : "Create ORS"}
               </button>
+              {canAdvanceToAccounting && (
+                <button
+                  type="button"
+                  disabled={saving || loadingExistingOrs || !orsNo.trim() || !selectedDivisionId}
+                  onClick={handleAdvanceToAccounting}
+                  className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-50 transition"
+                >
+                  <RiSaveLine size={16} />
+                  {saving ? "Forwarding..." : "Forward to Accounting"}
+                </button>
+              )}
             </div>
           </div>
 
