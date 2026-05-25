@@ -41,7 +41,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       </tr>`;
   });
 
-  while (itemRows.length < 30) {
+  while (itemRows.length < 20) {
     itemRows.push(`
       <tr style="height:16px">
         <td style="border:1px solid black"></td>

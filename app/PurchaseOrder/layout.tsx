@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine, RiMenuLine, RiCloseLine } from "react-icons/ri";
+import { RiDashboardLine, RiFileList3Line, RiMoneyDollarCircleLine, RiFileTextLine, RiMenuLine, RiCloseLine, RiArchiveLine } from "react-icons/ri";
 import { MdLogout } from "react-icons/md";
 import SignoutModal from "@/components/SignOutModal";
 
@@ -20,6 +20,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const baseButtons = [
     { id: "dashboard", icon: RiDashboardLine, label: "Dashboard", href: "/Dashboard" },
     { id: "procurement", icon: RiFileList3Line, label: "Procurement", href: "/Procurement" },
+    { id: "archive", icon: RiArchiveLine, label: "Archive", href: "/Procurement/Archive" },
     { id: "purchase-order", icon: RiFileList3Line, label: "Purchase Order", href: "/PurchaseOrder" },
     { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
     { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
@@ -83,7 +84,12 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="flex-1 overflow-y-auto">
           <div className="space-y-2">
             {buttons.map((btn) => {
-              const isActive = pathname.toLowerCase().startsWith(btn.href.toLowerCase());
+              const isActive =
+                btn.href === "/Procurement"
+                  ? pathname.toLowerCase() === "/procurement" ||
+                    (pathname.toLowerCase().startsWith("/procurement/") &&
+                      !pathname.toLowerCase().startsWith("/procurement/archive"))
+                  : pathname.toLowerCase().startsWith(btn.href.toLowerCase());
 
               return (
                 <Link key={btn.id} href={btn.href} onClick={() => setSidebarOpen(false)}>

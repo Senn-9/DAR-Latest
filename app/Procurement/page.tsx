@@ -8,6 +8,8 @@ import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { AuthGuard } from "@/components/AuthGuard";
 import { deletePRCascade, fetchPRDeletePreview, type PRDeletePreview } from "@/utils/supabase/deletePR";
+import CancelModal from "@/components/CancelModal";
+import { cancelPR } from "@/utils/supabase/cancelEntry";
 import PRModalComponent from "@/components/PRModalComponent";
 import ViewPRModal from "@/components/Viewprmodal";
 import EditPRModal from "@/components/EditPRModal";
@@ -21,6 +23,7 @@ import {
   RiSearchLine, RiArrowUpLine, RiArrowDownLine,
   RiArrowLeftLine, RiArrowRightLine, RiTruckLine, RiEyeLine, RiPlayCircleLine, RiChat3Line,
   RiCalendarLine, RiCheckLine, RiCloseLine, RiFilter3Line, RiDeleteBinLine,
+  RiMore2Line, RiArchiveLine,
 } from "react-icons/ri";
 
 export default function ProcurementPage() {
@@ -106,6 +109,17 @@ export default function ProcurementPage() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [deleteRemarkText,   setDeleteRemarkText]   = useState("");
 
+  const [cancelPrTarget,      setCancelPrTarget]      = useState<{ prId: number; prNo: string } | null>(null);
+  const [cancelPrAction,      setCancelPrAction]      = useState<"cancel" | "archive">("cancel");
+  const [cancelPrConfirming,  setCancelPrConfirming]  = useState(false);
+  const [cancelPrConfirmInput, setCancelPrConfirmInput] = useState("");
+  const [cancelPrRemarkText,  setCancelPrRemarkText]  = useState("");
+  const [cancelPrSuccessMsg,  setCancelPrSuccessMsg]  = useState<string | null>(null);
+  const [cancelPrErrorMsg,    setCancelPrErrorMsg]    = useState<string | null>(null);
+  const [cancelPreview,       setCancelPreview]       = useState<PRDeletePreview | null>(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
+  const [moreMenuOpenPr,      setMoreMenuOpenPr]      = useState<number | null>(null);
+
   const [activeTab, setActiveTab] = useState<"pr" | "canvass" | "abstract" | "purchase order" | "delivery" | "payment">("pr"); //added tabs
   const router = useRouter();
 
@@ -169,6 +183,7 @@ export default function ProcurementPage() {
     currentUser?.roles?.role_name?.toLowerCase().includes("accounting") ?? false;
 
   const isEndUser = !isAdmin && !isDivisionHead && !isBACAccount && !isPARPOAccount && !isBudgetAccount && !isSupplyAccount && !isAccountingAccount;
+  const isCanvasser = currentUser?.role_id === 7;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -203,6 +218,7 @@ export default function ProcurementPage() {
             fund_cluster, req_name, app_name, app_no,
             created_at, purchase_request_items (*)
           `)
+          .not("status_id", "in", "(41,42)")
           .order("created_at", { ascending: false });
         
         if (prError) {
@@ -278,6 +294,20 @@ export default function ProcurementPage() {
   }, [supabase, list]);
 
   useEffect(() => {
+    if (!cancelPrTarget) { setCancelPrRemarkText(""); return; }
+    const actor = currentUser?.fullname ?? "Admin";
+    const prefix = cancelPrAction === "cancel" ? "CANCELLED" : "ARCHIVED";
+    setCancelPrRemarkText(`[${prefix} by ${actor}] PR: ${cancelPrTarget.prNo}`);
+  }, [cancelPrTarget, currentUser, cancelPrAction]);
+
+  useEffect(() => {
+    if (moreMenuOpenPr === null) return;
+    const close = () => setMoreMenuOpenPr(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [moreMenuOpenPr]);
+
+  useEffect(() => {
     if (!deletePrTarget) { setDeletePreview(null); return; }
     setDeletePreview(null);
     setDeletePreviewLoading(true);
@@ -298,6 +328,16 @@ export default function ProcurementPage() {
     const actor = currentUser?.fullname ?? "Admin";
     setDeleteRemarkText(`[DELETED by ${actor}] ${parts.join(" | ")}`);
   }, [deletePreview, deletePrTarget, currentUser]);
+
+  // Fetch cancel/archive preview when cancelPrTarget changes
+  useEffect(() => {
+    if (!cancelPrTarget) { setCancelPreview(null); return; }
+    setCancelPreview(null);
+    setCancelPreviewLoading(true);
+    fetchPRDeletePreview(cancelPrTarget.prId)
+      .then((preview) => setCancelPreview(preview))
+      .finally(() => setCancelPreviewLoading(false));
+  }, [cancelPrTarget]);
 
   const getStatusInfo = (statusId: number | null) => {
     const statusMap: Record<number, { name: string; color: string }> = {
@@ -338,6 +378,8 @@ export default function ProcurementPage() {
       38: { name: "Completed (PO)",              color: "completed"  },
       39: { name: "Completed (Delivery)",        color: "completed"  },
       40: { name: "Completed (Payment)",         color: "completed"  },
+      41: { name: "Cancelled",                    color: "cancelled"  },
+      42: { name: "Archived",                     color: "cancelled"  },
     };
     return statusMap[statusId!] || { name: "Unknown", color: "default" };
   };
@@ -354,6 +396,7 @@ export default function ProcurementPage() {
     delivery:   "bg-cyan-50 text-cyan-800 border border-cyan-200",
     payment:    "bg-orange-50 text-orange-800 border border-orange-200",
     rejected:   "bg-red-50 text-red-800 border border-red-200",
+    cancelled:  "bg-gray-100 text-gray-500 border border-gray-200",
     default:    "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
@@ -592,6 +635,7 @@ export default function ProcurementPage() {
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery", href: "/Procurement/Delivery"     },
             { key: "payment", label: "Payment", href: "/Procurement/Payment"     },
+            { key: "archive", label: "Archive", href: "/Procurement/Archive"     },
 
           ] as const).map(({ key, label, href }) => (
             <button
@@ -1023,6 +1067,34 @@ export default function ProcurementPage() {
                                 </button>
                               )}
 
+                              {/* More dropdown — visible to all roles */}
+                              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => setMoreMenuOpenPr(moreMenuOpenPr === form.id ? null : form.id)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center"
+                                >
+                                  <RiMore2Line size={14} />
+                                </button>
+                                {moreMenuOpenPr === form.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                                    {!isCanvasser && (
+                                      <button
+                                        onClick={() => { setCancelPrAction("cancel"); setCancelPrTarget({ prId: form.id, prNo: form.pr_no }); setMoreMenuOpenPr(null); }}
+                                        className="w-full px-3 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 transition-colors"
+                                      >
+                                        <RiCloseCircleLine size={12} /> Cancel Entry
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => { setCancelPrAction("archive"); setCancelPrTarget({ prId: form.id, prNo: form.pr_no }); setMoreMenuOpenPr(null); }}
+                                      className="w-full px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
+                                    >
+                                      <RiArchiveLine size={12} /> Archive Entry
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
                             </div>
                           </td>
                         </tr>
@@ -1300,6 +1372,73 @@ export default function ProcurementPage() {
         visible={!!deleteErrorMsg}
         message={deleteErrorMsg ?? ""}
         onDismiss={() => setDeleteErrorMsg(null)}
+      />
+
+      {/* ── CANCEL PR MODAL ── */}
+      {cancelPrTarget && (
+        <CancelModal
+          visible={true}
+          onClose={() => { setCancelPrTarget(null); setCancelPrConfirmInput(""); setCancelPrRemarkText(""); }}
+          title={cancelPrAction === "cancel" ? "Cancel Purchase Request?" : "Archive Purchase Request?"}
+          subtitle={cancelPrTarget.prNo}
+          rows={cancelPreview ? [
+            { label: "PR Line Items",         count: cancelPreview.prItems },
+            { label: "Purchase Orders",       count: cancelPreview.purchaseOrders, refs: cancelPreview.poNos },
+            { label: "PO Line Items",         count: cancelPreview.poItems },
+            { label: "Deliveries",            count: cancelPreview.deliveries,     refs: cancelPreview.deliveryNos },
+            { label: "Delivery Documents",    count: cancelPreview.deliveryDocs },
+            { label: "Canvass Sessions",      count: cancelPreview.canvassSessions, refs: cancelPreview.bacNos },
+            { label: "Canvass Entries",       count: cancelPreview.canvassEntries },
+            { label: "Canvasser Assignments", count: cancelPreview.canvasserAssignments },
+            { label: "AAA Documents",         count: cancelPreview.aaaDocs },
+            { label: "ORS Entries",           count: cancelPreview.orsEntries, refs: cancelPreview.orsNos },
+            { label: "BAC Resolution Links",  count: cancelPreview.bacLinks,  refs: cancelPreview.resolutionNos },
+            { label: "Proposals",             count: cancelPreview.proposals, refs: cancelPreview.proposalNos },
+            { label: "Remarks",               count: cancelPreview.remarks },
+          ].filter((r) => r.count > 0) : []}
+          totalCount={cancelPreview?.total}
+          loadingPreview={cancelPreviewLoading}
+          remarkText={cancelPrRemarkText}
+          onRemarkChange={setCancelPrRemarkText}
+          confirmTarget={cancelPrTarget.prNo}
+          confirmInput={cancelPrConfirmInput}
+          onConfirmInputChange={setCancelPrConfirmInput}
+          confirming={cancelPrConfirming}
+          confirmButtonLabel={cancelPrAction === "cancel" ? "Confirm Cancellation" : "Confirm Archive"}
+          onConfirm={async () => {
+            setCancelPrConfirming(true);
+            const target = cancelPrTarget;
+            const { error } = await cancelPR(target.prId, {
+              userId: currentUser?.id ?? null,
+              cancelledBy: currentUser?.fullname ?? "Admin",
+              prNo: target.prNo,
+              remark: cancelPrRemarkText,
+              action: cancelPrAction,
+            });
+            setCancelPrConfirming(false);
+            setCancelPrTarget(null);
+            setCancelPrConfirmInput("");
+            setCancelPrRemarkText("");
+            setCancelPrAction("cancel");
+            if (error) {
+              setCancelPrErrorMsg((cancelPrAction === "cancel" ? "Cancellation" : "Archive") + " failed: " + error);
+            } else {
+              setList((prev) => prev.filter((p) => p.id !== target.prId));
+              setCancelPrSuccessMsg(`PR ${target.prNo} has been ${cancelPrAction === "cancel" ? "cancelled" : "archived"} and moved to the Archive.`);
+            }
+          }}
+        />
+      )}
+      <SuccessModal
+        visible={!!cancelPrSuccessMsg}
+        title={cancelPrAction === "cancel" ? "Entry Cancelled" : "Entry Archived"}
+        message={cancelPrSuccessMsg ?? ""}
+        onConfirm={() => setCancelPrSuccessMsg(null)}
+      />
+      <ErrorModal
+        visible={!!cancelPrErrorMsg}
+        message={cancelPrErrorMsg ?? ""}
+        onDismiss={() => setCancelPrErrorMsg(null)}
       />
 
       {/* ── REMARKS MODAL ── */}

@@ -419,6 +419,7 @@ export default function CanvassPage() {
             { key: "purchase order", label: "Purchase Order", href: "/Procurement/PurchaseOrder" },
             { key: "delivery", label: "Delivery",           href: "/Procurement/Delivery" },
             { key: "payment", label: "Payment",           href: "/Procurement/Payment" },
+            { key: "archive", label: "Archive",           href: "/Procurement/Archive" },
 
           ] as const).map(({ key, label, href }) => (
             <button

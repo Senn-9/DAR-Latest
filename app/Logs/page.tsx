@@ -108,6 +108,8 @@ export default function LogsPage() {
   const [divisionFilter, setDivisionFilter] = useState<number | "all">("all");
   const [statusFilter, setStatusFilter] = useState<number | "all">("all");
 
+  const [hoveredRemark, setHoveredRemark] = useState<{ text: string; flagLabel: string; actor: string; divisionName: string; dateStr: string; right: number; y: number; showBelow: boolean } | null>(null);
+
   const [threadOpen, setThreadOpen] = useState(false);
   const [threadTarget, setThreadTarget] = useState<{ poId?: number | null; prId?: number | null; deliveryId?: number | null }>({});
   const [threadTitle, setThreadTitle] = useState<string | undefined>(undefined);
@@ -505,21 +507,19 @@ export default function LogsPage() {
                   </button>
                 </div>
 
-                {!isRoleRestricted && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Division</label>
-                    <select
-                      value={divisionFilter}
-                      onChange={(e) => setDivisionFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-                      className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white"
-                    >
-                      <option value="all">All Divisions</option>
-                      {allDivisions.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Division</label>
+                  <select
+                    value={divisionFilter}
+                    onChange={(e) => setDivisionFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                    className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white"
+                  >
+                    <option value="all">All Divisions</option>
+                    {allDivisions.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Status</label>
@@ -642,7 +642,7 @@ export default function LogsPage() {
                     </td>
                   </tr>
                 ) : (
-                  pageRows.map((r) => (
+                  pageRows.map((r, rowIndex) => (
                     <tr key={r.id} className="hover:bg-emerald-50/40 transition-colors">
                       <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
                         {new Date(r.created_at).toLocaleDateString("en-PH", {
@@ -682,7 +682,29 @@ export default function LogsPage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-2 text-gray-700 max-w-md">
+                      <td
+                        className="px-2 py-2 text-gray-700 max-w-md cursor-default"
+                        onMouseEnter={(e) => {
+                          const clean = (r.remark ?? "").replace(/\[(PR|PO|DELIVERY|PAYMENT|SYSTEM)\]\s*/i, "") || "—";
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          // Force the first 2 rows to always show tooltip below so it doesn't get clipped at the top
+                          const showBelow = rowIndex < 2 || rect.top < window.innerHeight * 0.4;
+                          const flagLabel = r.status_flag_id ? (FLAG_OPTIONS.find((f) => f.id === r.status_flag_id)?.label ?? `Flag ${r.status_flag_id}`) : "—";
+                          const divName = r.divisionId != null ? (allDivisions.find((d) => d.id === r.divisionId)?.name ?? "") : "";
+                          const dateStr = new Date(r.created_at).toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                          setHoveredRemark({
+                            text: clean,
+                            flagLabel,
+                            actor: r.actor,
+                            divisionName: divName,
+                            dateStr,
+                            right: window.innerWidth - rect.right,
+                            y: showBelow ? rect.bottom : rect.top,
+                            showBelow,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredRemark(null)}
+                      >
                         <p className="line-clamp-2">
                           {(r.remark ?? "").replace(/\[(PR|PO|DELIVERY|PAYMENT|SYSTEM)\]\s*/i, "") || "—"}
                         </p>
@@ -785,6 +807,29 @@ export default function LogsPage() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+      {hoveredRemark && (
+        <div
+          className="fixed z-[9999] w-60 bg-gray-900 text-white rounded-xl shadow-2xl px-3 py-2.5 pointer-events-none"
+          style={{
+            right: hoveredRemark.right,
+            top: hoveredRemark.y,
+            transform: hoveredRemark.showBelow ? "translateY(10px)" : "translateY(calc(-100% - 10px))",
+          }}
+        >
+          <p className="text-[11px] whitespace-nowrap"><span className="text-gray-400">Status Flag:</span> <span className="font-semibold">{hoveredRemark.flagLabel}</span></p>
+          <p className="text-[11px] mt-1 text-gray-200 break-words whitespace-normal"><span className="text-gray-400">Remark:</span> {hoveredRemark.text}</p>
+          <div className="mt-2 pt-1.5 border-t border-gray-700 space-y-0.5">
+            <p className="text-[10px] text-gray-300"><span className="text-gray-500">By:</span> {hoveredRemark.actor}</p>
+            {hoveredRemark.divisionName && <p className="text-[10px] text-gray-300"><span className="text-gray-500">Division:</span> {hoveredRemark.divisionName}</p>}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1.5">{hoveredRemark.dateStr}</p>
+          {hoveredRemark.showBelow ? (
+            <div className="absolute bottom-full right-4 border-[5px] border-transparent border-b-gray-900" />
+          ) : (
+            <div className="absolute top-full right-4 border-[5px] border-transparent border-t-gray-900" />
+          )}
         </div>
       )}
     </div>

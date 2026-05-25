@@ -1400,6 +1400,7 @@ export default function DeliveryPage() {
                 label: "Payment",
                 href: "/Procurement/Payment",
               },
+              { key: "archive", label: "Archive", href: "/Procurement/Archive" },
             ] as const
           ).map(({ key, label, href }) => (
             <button

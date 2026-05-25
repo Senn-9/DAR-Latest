@@ -682,7 +682,9 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
 
 // PR Preview Component
 function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
-  const itemRows = [...items];
+  const MIN_ROWS = 20;
+  const itemRows: (ItemDataType | null)[] = [...items];
+  while (itemRows.length < MIN_ROWS) itemRows.push(null);
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>
@@ -747,20 +749,31 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {itemRows.map((item, idx) => (
-            <tr key={idx} style={{ height: "16px" }}>
-              <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
-              <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-              <td style={{ ...tdStyle, paddingLeft: "4px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
-              <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
-              <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                {item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}
-              </td>
-              <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                {getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}
-              </td>
-            </tr>
-          ))}
+          {itemRows.map((item, idx) =>
+            item === null ? (
+              <tr key={`pad-${idx}`} style={{ height: "16px" }}>
+                <td style={{ ...tdStyle, textAlign: "center" }}></td>
+                <td style={{ ...tdStyle, textAlign: "center" }}></td>
+                <td style={tdStyle}></td>
+                <td style={{ ...tdStyle, textAlign: "center" }}></td>
+                <td style={{ ...tdStyle, textAlign: "right" }}></td>
+                <td style={{ ...tdStyle, textAlign: "right" }}></td>
+              </tr>
+            ) : (
+              <tr key={idx} style={{ height: "16px" }}>
+                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
+                <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
+                <td style={{ ...tdStyle, paddingLeft: "4px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
+                <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
+                <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
+                  {item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}
+                </td>
+                <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
+                  {getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}
+                </td>
+              </tr>
+            )
+          )}
           <tr style={{ height: "17px" }}>
             <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
               <b>Purpose:</b> {formData.purpose}

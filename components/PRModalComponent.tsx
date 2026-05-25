@@ -131,7 +131,9 @@ function PREditablePreview({
   //     rows.push({ ...line, isTextLine: true });
   //   });
   // });
-  const rows = [...items];
+  const MIN_ROWS = 20;
+  const rows: (ItemDataType | null)[] = [...items];
+  while (rows.length < MIN_ROWS) rows.push(null);
   const grandTotal = getGrandTotal(items);
 
   return (
@@ -200,6 +202,18 @@ function PREditablePreview({
             <th style={thStyle}>Total Cost</th>
           </tr>
           {rows.map((item, idx) => {
+            if (item === null) {
+              return (
+                <tr key={`pad-${idx}`} style={{ height: "22px" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
+                  <td style={{ ...tdStyle, padding: "1px 4px", verticalAlign: "top" }}></td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
+                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}></td>
+                  <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}></td>
+                </tr>
+              );
+            }
             const total = getItemTotal(item);
             return (
               <React.Fragment key={`item-frag-${idx}`}>

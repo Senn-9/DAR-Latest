@@ -8,6 +8,8 @@ import RemarksModal from "@/components/RemarksModal";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 import { deletePOCascade, fetchPODeletePreview, type PODeletePreview } from "@/utils/supabase/deletePO";
+import CancelModal from "@/components/CancelModal";
+import { cancelPO } from "@/utils/supabase/cancelEntry";
 import CreatePOModal from "../../components/PO/CreatePOModal";
 import POPARPOProcessModal from "@/components/PO/POPARPOProcessModal";
 import POServingProcessModal from "@/components/PO/POServingProcessModal";
@@ -43,6 +45,8 @@ import {
   RiCloseLine,
   RiFilter3Line,
   RiDeleteBinLine,
+  RiMore2Line,
+  RiArchiveLine,
 } from "react-icons/ri";
 
 type CurrentUser = {
@@ -615,6 +619,18 @@ export default function PurchaseOrderPage() {
   const [deleteErrorMsg, setDeleteErrorMsg] = useState<string | null>(null);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [deleteRemarkText, setDeleteRemarkText] = useState("");
+
+  const [cancelPoTarget,      setCancelPoTarget]      = useState<{ poId: number; poNo: string } | null>(null);
+  const [cancelPoAction,      setCancelPoAction]      = useState<"cancel" | "archive">("cancel");
+  const [cancelPoConfirming,  setCancelPoConfirming]  = useState(false);
+  const [cancelPoConfirmInput, setCancelPoConfirmInput] = useState("");
+  const [cancelPoRemarkText,  setCancelPoRemarkText]  = useState("");
+  const [cancelPoSuccessMsg,  setCancelPoSuccessMsg]  = useState<string | null>(null);
+  const [cancelPoErrorMsg,    setCancelPoErrorMsg]    = useState<string | null>(null);
+  const [cancelPreview,       setCancelPreview]       = useState<PODeletePreview | null>(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
+  const [moreMenuOpenPo,      setMoreMenuOpenPo]      = useState<number | null>(null);
+  const isCanvasser = currentUser?.role_id === 7;
   const yearOptions = useMemo(() => {
     const years: number[] = [];
     for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
@@ -692,7 +708,7 @@ export default function PurchaseOrderPage() {
         : currentUser?.division_id != null
           ? await fetchPurchaseOrdersByDivision(currentUser.division_id)
           : [];
-      setList(rows);
+      setList(rows.filter((po: PurchaseOrderRow) => po.status_id !== 41 && po.status_id !== 42));
     } finally {
       setLoading(false);
     }
@@ -745,6 +761,20 @@ export default function PurchaseOrderPage() {
       });
   }, [list, searchQuery, statusFilter, sortField, sortDir, sectionFilter, fiscalYear]);
 
+  useEffect(() => {
+    if (!cancelPoTarget) { setCancelPoRemarkText(""); return; }
+    const actor = currentUser?.fullname ?? "Admin";
+    const prefix = cancelPoAction === "cancel" ? "CANCELLED" : "ARCHIVED";
+    setCancelPoRemarkText(`[${prefix} by ${actor}] PO: ${cancelPoTarget.poNo}`);
+  }, [cancelPoTarget, currentUser, cancelPoAction]);
+
+  useEffect(() => {
+    if (moreMenuOpenPo === null) return;
+    const close = () => setMoreMenuOpenPo(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [moreMenuOpenPo]);
+
   // Fetch delete preview when deletePoTarget changes
   useEffect(() => {
     if (!deletePoTarget) { setDeletePreview(null); return; }
@@ -760,6 +790,16 @@ export default function PurchaseOrderPage() {
     const actor = currentUser?.fullname ?? "Admin";
     setDeleteRemarkText(`[DELETED by ${actor}] PO: ${deletePoTarget.poNo}`);
   }, [deletePreview, deletePoTarget, currentUser]);
+
+  // Fetch cancel/archive preview when cancelPoTarget changes
+  useEffect(() => {
+    if (!cancelPoTarget) { setCancelPreview(null); return; }
+    setCancelPreview(null);
+    setCancelPreviewLoading(true);
+    fetchPODeletePreview(cancelPoTarget.poId)
+      .then((preview) => setCancelPreview(preview))
+      .finally(() => setCancelPreviewLoading(false));
+  }, [cancelPoTarget]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const pagedList = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -1129,6 +1169,32 @@ export default function PurchaseOrderPage() {
                             Delete
                           </button>
                         )}
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setMoreMenuOpenPo(moreMenuOpenPo === po.id ? null : po.id)}
+                            className="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 font-semibold hover:bg-gray-100 transition-colors inline-flex items-center text-xs"
+                          >
+                            <RiMore2Line size={16} />
+                          </button>
+                          {moreMenuOpenPo === po.id && (
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                              {!isCanvasser && (
+                                <button
+                                  onClick={() => { setCancelPoAction("cancel"); setCancelPoTarget({ poId: po.id, poNo: po.po_no ?? "" }); setMoreMenuOpenPo(null); }}
+                                  className="w-full px-3 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 transition-colors"
+                                >
+                                  <RiCloseCircleLine size={12} /> Cancel Entry
+                                </button>
+                              )}
+                              <button
+                                onClick={() => { setCancelPoAction("archive"); setCancelPoTarget({ poId: po.id, poNo: po.po_no ?? "" }); setMoreMenuOpenPo(null); }}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
+                              >
+                                <RiArchiveLine size={12} /> Archive Entry
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1236,6 +1302,32 @@ export default function PurchaseOrderPage() {
                                   Delete
                                 </button>
                               )}
+                              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => setMoreMenuOpenPo(moreMenuOpenPo === po.id ? null : po.id)}
+                                  className="px-2 py-1 text-xs font-semibold rounded border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors inline-flex items-center"
+                                >
+                                  <RiMore2Line size={14} />
+                                </button>
+                                {moreMenuOpenPo === po.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                                    {!isCanvasser && (
+                                      <button
+                                        onClick={() => { setCancelPoAction("cancel"); setCancelPoTarget({ poId: po.id, poNo: po.po_no ?? "" }); setMoreMenuOpenPo(null); }}
+                                        className="w-full px-3 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 transition-colors"
+                                      >
+                                        <RiCloseCircleLine size={12} /> Cancel Entry
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => { setCancelPoAction("archive"); setCancelPoTarget({ poId: po.id, poNo: po.po_no ?? "" }); setMoreMenuOpenPo(null); }}
+                                      className="w-full px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
+                                    >
+                                      <RiArchiveLine size={12} /> Archive Entry
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1462,6 +1554,67 @@ export default function PurchaseOrderPage() {
         visible={!!deleteErrorMsg}
         message={deleteErrorMsg ?? ""}
         onDismiss={() => setDeleteErrorMsg(null)}
+      />
+
+      {/* ── CANCEL PO MODAL ── */}
+      {cancelPoTarget && (
+        <CancelModal
+          visible={true}
+          onClose={() => { setCancelPoTarget(null); setCancelPoConfirmInput(""); setCancelPoRemarkText(""); }}
+          title={cancelPoAction === "cancel" ? "Cancel Purchase Order?" : "Archive Purchase Order?"}
+          subtitle={`PO ${cancelPoTarget.poNo}`}
+          rows={cancelPreview ? [
+            { label: "Purchase Order Items",  count: cancelPreview.poItems },
+            { label: "Deliveries",            count: cancelPreview.deliveries },
+            { label: "IAR Documents",         count: cancelPreview.iarDocuments },
+            { label: "LOA Documents",         count: cancelPreview.loaDocuments },
+            { label: "DV Documents",          count: cancelPreview.dvDocuments },
+            { label: "Contract Documents",    count: cancelPreview.contractDocuments },
+            { label: "Remarks",               count: cancelPreview.remarks },
+          ].filter((r) => r.count > 0) : []}
+          totalCount={cancelPreview?.total}
+          loadingPreview={cancelPreviewLoading}
+          remarkText={cancelPoRemarkText}
+          onRemarkChange={setCancelPoRemarkText}
+          confirmTarget={cancelPoTarget.poNo}
+          confirmInput={cancelPoConfirmInput}
+          onConfirmInputChange={setCancelPoConfirmInput}
+          confirming={cancelPoConfirming}
+          confirmButtonLabel={cancelPoAction === "cancel" ? "Confirm Cancellation" : "Confirm Archive"}
+          onConfirm={async () => {
+            setCancelPoConfirming(true);
+            const target = cancelPoTarget;
+            const { error } = await cancelPO(target.poId, {
+              userId: currentUser?.id ?? null,
+              cancelledBy: currentUser?.fullname ?? "Admin",
+              poNo: target.poNo,
+              remark: cancelPoRemarkText,
+              action: cancelPoAction,
+            });
+            setCancelPoConfirming(false);
+            setCancelPoTarget(null);
+            setCancelPoConfirmInput("");
+            setCancelPoRemarkText("");
+            setCancelPoAction("cancel");
+            if (error) {
+              setCancelPoErrorMsg((cancelPoAction === "cancel" ? "Cancellation" : "Archive") + " failed: " + error);
+            } else {
+              setList((prev) => prev.filter((p) => p.id !== target.poId));
+              setCancelPoSuccessMsg(`PO ${target.poNo} has been ${cancelPoAction === "cancel" ? "cancelled" : "archived"} and moved to the Archive.`);
+            }
+          }}
+        />
+      )}
+      <SuccessModal
+        visible={!!cancelPoSuccessMsg}
+        title={cancelPoAction === "cancel" ? "Entry Cancelled" : "Entry Archived"}
+        message={cancelPoSuccessMsg ?? ""}
+        onConfirm={() => setCancelPoSuccessMsg(null)}
+      />
+      <ErrorModal
+        visible={!!cancelPoErrorMsg}
+        message={cancelPoErrorMsg ?? ""}
+        onDismiss={() => setCancelPoErrorMsg(null)}
       />
     </div>
     </AuthGuard>
