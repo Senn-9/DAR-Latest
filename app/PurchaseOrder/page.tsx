@@ -139,7 +139,13 @@ function isSupplyUser(user: POUserContext) {
 function isPPMPPointPerson(user: POUserContext) {
   const roleName = normalizeText(user?.roles?.role_name);
   const username = normalizeText(user?.username);
-  return roleName.includes("ppmp") || roleName.includes("point person") || username.includes("ppmp");
+  // Treat End Users as PPMP point persons when they are assigned that duty.
+  return (
+    roleName.includes("ppmp") ||
+    roleName.includes("point person") ||
+    roleName.includes("end user") ||
+    username.includes("ppmp")
+  );
 }
 
 function isPARPOUser(user: POUserContext) {
@@ -288,7 +294,7 @@ function ProcessModal({
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
             {isStod
               ? "STOD divisions follow the direct PCAO approval path for status 16."
-              : "Non-STOD divisions require the PPMP point person signature before PO serving."}
+              : "Non-STOD divisions require the PPMP point person (assigned End User) signature before PO serving."}
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><p className="text-xs text-gray-500">PR No</p><p className="font-semibold">{po.pr_no ?? "—"}</p></div>

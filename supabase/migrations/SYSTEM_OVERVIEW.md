@@ -18,7 +18,7 @@ The system supports multiple user roles, each with specific permissions and resp
 | **4** | **Budget Office** | Review PRs for budget availability (Status 4); allocate funds to POs (Status 12); create and process ORS documents (Status 13-14); manage division budgets |
 | **5** | **PARPO (Procurement Office)** | Review and approve PRs (Status 5); approve POs (Status 16); sign payment documents (Status 32, 34); coordinate procurement compliance |
 | **6** | **Canvasser** | Assigned to canvass sessions; release RFQs to suppliers (Status 8); collect quotations (Status 9); enter supplier quotes; manage quotation numbers |
-| **7** | **PPMP Point Person** | Coordinate canvassing activities; manage canvasser assignments; track RFQ deadlines; oversee quotation collection |
+| **7** | **PPMP (assigned duty — End User)** | PPMP duties (canvassing coordination, canvasser assignment, RFQ tracking) are typically performed by assigned End Users; this is no longer a separate role in current configurations. |
 | **8** | **Supply / Warehouse** | Create POs (Status 11); serve POs to suppliers (Status 17); log deliveries (Status 18-19); prepare IAR documents (Status 20-21); prepare LOA documents (Status 22) |
 | **9** | **Accounting / PCAO** | Review POs for completeness (Status 15); prepare and verify DV documents (Status 29-30); process accounting entries; manage tax processing (Status 35) |
 | **10** | **Division User** | Create purchase requests; view own division's PRs and POs; submit remarks; track request status |
@@ -39,7 +39,7 @@ The system supports multiple user roles, each with specific permissions and resp
 ### Special Access Rules
 
 - **STOD Division**: Requires PCAO signature for certain documents
-- **PPMP Point Person**: Can assign canvassers and manage canvass sessions
+-- **PPMP duties (assigned to End Users)**: Can assign canvassers and manage canvass sessions when the division designates an End User for PPMP responsibilities
 - **Canvassers**: Receive assignments, manage quotations, track supplier responses
 - **Inspectors**: External role for IAR verification and quality control
 
@@ -317,7 +317,7 @@ This phase handles payment processing, voucher verification, and completion.
 
 ### Division Type (Step 15)
 - **STOD**: Requires PCAO signature
-- **Other Divisions**: Requires PPMP Point Person signature
+-- **Other Divisions**: Requires PPMP (assigned End User) signature
 
 ### Payment Classification (Step 35)
 - **Check**: Traditional payment method
@@ -531,7 +531,7 @@ This phase handles payment processing, voucher verification, and completion.
 - **Main Phases**: 4 (PR, PO, Delivery, Payment)
 - **Departments Involved**: 8+ (End Users, Division Heads, BAC, Budget, PARPO, Supply, Accounting, Cash)
 - **Document Types**: 10+ (PR, PO, ORS, BAC Resolution, AAA, IAR, LOA, DV, Contract, Remarks)
-- **User Roles**: 9+ (Admin, Budget, BAC, PARPO, Accounting, Supply, Division, PPMP, Canvasser)
+-- **User Roles**: 9+ (Admin, Budget, BAC, PARPO, Accounting, Supply, Division, PPMP duties assigned to End Users, Canvasser)
 - **Critical Decision Points**: Multiple (Budget availability, Document completeness, Inspection results)
 - **Average Timeline**: 2-6 weeks from request to payment (varies by complexity and procurement mode)
 
@@ -557,6 +557,6 @@ This phase handles payment processing, voucher verification, and completion.
 ### Recent Enhancements
 - **Contract documents**: Full contract generation with inline text-indent paragraphs
 - **Payment timestamps**: Granular tracking of payment phase completion
-- **PPMP point person**: Role-based canvasser assignment
+-- **PPMP duties (assigned to End Users)**: Role-based canvasser assignment
 - **Hard delete**: Admin cascade deletion with preview
 - **Contract toggle**: Dynamic tab in PO view when contract exists

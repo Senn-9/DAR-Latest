@@ -539,7 +539,7 @@ const AnalyticsDashboard = () => {
         )}
       </div>
 
-      {/* Original PPMP Summary Cards */}
+      {/* Original PPMP Summary Cards (PPMP duties are assigned to End Users) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {loading ? (
           <>

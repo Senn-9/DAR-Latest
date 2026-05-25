@@ -102,7 +102,7 @@ function IAREditablePreview({
   };
 
   // Update IAR field
-  const updateIarField = (field: string, value: string) => {
+  const updateIarField = (field: string, value: string | boolean | null) => {
     setIar({ ...iar, [field]: value });
   };
 
@@ -2190,7 +2190,6 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "52.3%",
                       width: "52.5%",
                       borderRight: "1px solid #000",
                       padding: "4px 6px",
@@ -2276,7 +2275,6 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "65px",
                       width: "68px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
