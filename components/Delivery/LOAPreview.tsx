@@ -33,12 +33,12 @@ export function buildLOAHtml(data: any): string {
     @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: 'Times New Roman', serif; color: #000; }
+    body { font-family: 'Times New Roman', serif; color: #000; font-size: 14px; }
     .underline { border-bottom: 1.5px solid #000; display: inline-block; min-width: 180px; }
   </style>
 </head>
 <body>
-  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 64px 80px;">
+  <div style="max-width: 850px; min-height: 1100px; margin: 0 auto; padding: 16px 24px;">
     <!-- Header Section -->
     <div style="position: relative; margin-bottom: 40px;">
       <!-- DAR Logo - Absolute Position -->
@@ -48,28 +48,28 @@ export function buildLOAHtml(data: any): string {
       
       <!-- Office Details - With left padding for logo -->
       <div style="text-align: center; padding-left: 64px;">
-        <div style="font-size: 11px; margin-bottom: 4px; font-family: 'Times New Roman', serif;">Republic of the Philippines</div>
-        <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: 'Times New Roman', serif;">DEPARTMENT OF AGRARIAN REFORM</div>
-        <div style="font-size: 10px; margin-bottom: 2px; font-family: 'Times New Roman', serif;">Camarines Sur Provincial Office</div>
-        <div style="font-size: 10px; font-family: 'Times New Roman', serif;">2/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY</div>
+        <div style="font-size: 15px; margin-bottom: 4px; font-family: 'Times New Roman', serif;">Republic of the Philippines</div>
+        <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; font-family: 'Times New Roman', serif;">DEPARTMENT OF AGRARIAN REFORM</div>
+        <div style="font-size: 14px; margin-bottom: 2px; font-family: 'Times New Roman', serif;">Camarines Sur Provincial Office</div>
+        <div style="font-size: 14px; font-family: 'Times New Roman', serif;">3/FHL BLDG., CARNATION ST., BRGY. TRIANGULO, NAGA CITY</div>
       </div>
     </div>
 
     <!-- Title -->
     <div style="text-align: center; margin-bottom: 32px; margin-top: 28px;">
-      <div style="font-family: 'Times New Roman', serif; font-weight: 700; font-size: 14px; text-transform: uppercase;">LETTER OF ACCEPTANCE</div>
+      <div style="font-family: 'Times New Roman', serif; font-weight: 700; font-size: 18px; text-transform: uppercase;">LETTER OF ACCEPTANCE</div>
     </div>
 
     <!-- Date Field - Right Aligned -->
     <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
       <div style="width: 150px; text-align: center;">
-        <div style="font-size: 9px; border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; text-align: center;">${escapeHtml(data.accepted_at || "")}</div>
-        <div style="font-size: 9px; margin-top: 4px;">Date</div>
+        <div style="font-size: 14px; border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; text-align: center;">${escapeHtml(data.accepted_at || "")}</div>
+        <div style="font-size: 14px; margin-top: 4px;">Date</div>
       </div>
     </div>
 
     <!-- Acceptance Text -->
-    <div style="font-family: 'Times New Roman', serif; font-size: 11px;">
+    <div style="font-family: 'Times New Roman', serif; font-size: 15px;">
       <!-- Line 1 - indented -->
       <div style="height: 32px; display: flex; align-items: flex-end; padding-bottom: 4px;">
         <span style="padding-left: 50px; font-family: 'Times New Roman', serif; word-spacing: 10px;">
@@ -112,19 +112,19 @@ export function buildLOAHtml(data: any): string {
     <!-- Signature Section - Right Aligned -->
     <div style="display: flex; justify-content: flex-end; margin-top: 100px;">
       <div style="width: 200px; text-align: center;">
-        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: 'Times New Roman', serif; font-size: 11px;">${escapeHtml(data.accepted_by_name || "")}</div>
-        <div style="font-size: 9px; margin-top: 4px; margin-bottom: 24px; font-family: 'Times New Roman', serif; word-spacing: 15px;">(Printed Name &amp; Signature)</div>
+        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-weight: 700; font-family: 'Times New Roman', serif; font-size: 15px;">${escapeHtml(data.accepted_by_name || "")}</div>
+        <div style="font-size: 14px; margin-top: 4px; margin-bottom: 24px; font-family: 'Times New Roman', serif;">(Printed Name &amp; Signature)</div>
 
-        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: 'Times New Roman', serif; font-weight: 700; font-size: 11px;">${escapeHtml(data.accepted_by_title || "")}</div>
-        <div style="font-size: 9px; margin-top: 4px; margin-bottom: 4px; font-family: 'Times New Roman', serif; word-spacing: 15px;">(Official Title)</div>
-        <div style="font-size: 9px; font-family: 'Times New Roman', serif;;">(Head of Agency/Authorized Representative)</div>
+        <div style="border-bottom: 1.5px solid #000; min-height: 22px; padding-bottom: 2px; font-family: 'Times New Roman', serif; font-weight: 700; font-size: 15px;">${escapeHtml(data.accepted_by_title || "")}</div>
+        <div style="font-size: 14px; margin-top: 4px; margin-bottom: 4px; font-family: 'Times New Roman', serif;">(Official Title)</div>
+        <div style="font-size: 14px; font-family: 'Times New Roman', serif;">(Head of Agency/Authorized Representative)</div>
       </div>
     </div>
 
     <!-- Form Reference - Bottom Right -->
-    <div style="display: flex; justify-content: flex-end; margin-top: 40px;">
-      <div style="font-size: 9px; font-weight: 700; font-family: 'Times New Roman', serif;">DAR CS1-QF-STO-016 REV 00</div>
-    </div>
+   <div style="position: absolute; bottom: 30px; right: 30px; font-size: 14px; font-family: 'Times New Roman', serif;">
+  DAR CS1-QF-STO-016 REV 00
+</div>
   </div>
 </body>
 </html>`;
@@ -180,7 +180,7 @@ export default function LOAPreview({
   mergedData.po_items = transformedPoData.po_items;
   if (transformedPoData.po_no) mergedData.po_no = transformedPoData.po_no;
   if (transformedPoData.po_date) mergedData.po_date = transformedPoData.po_date;
-      
+
   const items = mergedData.po_items || [];
 
   // Handle print
@@ -208,10 +208,7 @@ export default function LOAPreview({
       )}
 
       {/* Live JSX Preview Container */}
-      <div
-        className="overflow-auto"
-        style={{ height: containerHeight }}
-      >
+      <div className="overflow-auto" style={{ height: containerHeight }}>
         <div
           style={{
             display: "flex",
@@ -311,7 +308,7 @@ export default function LOAPreview({
                   >
                     {mergedData.accepted_at || ""}
                   </div>
-                  <div style={{ fontSize: "9px", marginTop: "4px" }}>Date</div>
+                  <div style={{ fontSize: "10px", marginTop: "4px" }}>Date</div>
                 </div>
               </div>
 
@@ -359,7 +356,14 @@ export default function LOAPreview({
                   >
                     rendered&nbsp;by&nbsp;
                   </span>
-                  <span style={{ flex: 1, borderBottom: "1.5px solid #000", textAlign: "center", paddingBottom: "2px" }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      borderBottom: "1.5px solid #000",
+                      textAlign: "center",
+                      paddingBottom: "2px",
+                    }}
+                  >
                     {mergedData.supplier_name || mergedData.supplier || ""}
                   </span>
                 </div>
@@ -382,7 +386,14 @@ export default function LOAPreview({
                   >
                     listed&nbsp;in&nbsp;the&nbsp;attached&nbsp;Invoice&nbsp;No.&nbsp;
                   </span>
-                  <span style={{ flex: 1, borderBottom: "1.5px solid #000", textAlign: "center", paddingBottom: "2px" }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      borderBottom: "1.5px solid #000",
+                      textAlign: "center",
+                      paddingBottom: "2px",
+                    }}
+                  >
                     {mergedData.invoice_no || ""}
                   </span>
                   <span
@@ -447,7 +458,14 @@ export default function LOAPreview({
                   >
                     stipulated&nbsp;under&nbsp;Order&nbsp;No./Purchase&nbsp;Order&nbsp;No.&nbsp;
                   </span>
-                  <span style={{ flex: 1, borderBottom: "1.5px solid #000", textAlign: "center", paddingBottom: "2px" }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      borderBottom: "1.5px solid #000",
+                      textAlign: "center",
+                      paddingBottom: "2px",
+                    }}
+                  >
                     {mergedData.po_no || ""}
                   </span>
                   <span
@@ -471,7 +489,12 @@ export default function LOAPreview({
                   }}
                 >
                   <span
-                    style={{ width: "180px", borderBottom: "1.5px solid #000", textAlign: "center", paddingBottom: "2px" }}
+                    style={{
+                      width: "180px",
+                      borderBottom: "1.5px solid #000",
+                      textAlign: "center",
+                      paddingBottom: "2px",
+                    }}
                   >
                     {mergedData.po_date || ""}
                   </span>
@@ -495,7 +518,7 @@ export default function LOAPreview({
                   </div>
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       marginTop: "4px",
                       marginBottom: "24px",
                       fontFamily: "'Times New Roman', serif",
@@ -519,7 +542,7 @@ export default function LOAPreview({
                   </div>
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       marginTop: "4px",
                       marginBottom: "4px",
                       fontFamily: "'Times New Roman', serif",
@@ -530,7 +553,7 @@ export default function LOAPreview({
                   </div>
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       fontFamily: "'Times New Roman', serif",
                       wordSpacing: "15px",
                     }}
@@ -544,7 +567,7 @@ export default function LOAPreview({
               <div className="flex justify-end" style={{ marginTop: "40px" }}>
                 <div
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     fontWeight: 700,
                     fontFamily: "'Times New Roman', serif",
                   }}

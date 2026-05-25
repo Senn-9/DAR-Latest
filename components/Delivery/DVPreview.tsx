@@ -68,12 +68,12 @@ export function buildDVHtml(data: any): string {
     @page { size: A4; margin: 12mm 15mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: 'Times New Roman', serif; color: #000; font-size: 9px; }
+    body { font-family: 'Times New Roman', serif; color: #000; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; }
   </style>
 </head>
 <body>
-  <div style="width: 600px; min-height: 1056px; margin: 0 auto; padding: 16px; font-family: 'Times New Roman', serif; font-size: 9px; color: #000;">
+  <div style="width: 700px; min-height: 1056px; margin: 0 auto; padding: 16px; font-family: 'Times New Roman', serif; font-size: 14px; color: #000;">
     <!-- Appendix -->
     <div style="text-align: right; font-style: italic; margin-bottom: 2px; font-family: 'Times New Roman', serif;">Appendix 32</div>
 
@@ -84,9 +84,9 @@ export function buildDVHtml(data: any): string {
           <img src="/temp_pic/image_1195822096_1.jpg" alt="DAR Logo" style="width: 72px; height: 44px; object-fit: contain;" />
         </td>
         <td style="border-right: 1px solid #000; padding: 4px; vertical-align: top;">
-          <div style="font-size: 12px; font-weight: bold; text-align: center; font-family: 'Times New Roman', serif;">DEPARTMENT OF AGRARIAN REFORM</div>
-          <div style="font-size: 10px; text-align: center; margin-bottom: 4px; font-family: 'Times New Roman', serif;">Camarines Sur Provincial Office</div>
-          <div style="font-size: 14px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px; font-family: 'Times New Roman', serif;">DISBURSEMENT VOUCHER</div>
+          <div style="font-size: 16px; font-weight: bold; text-align: center; font-family: 'Times New Roman', serif;">DEPARTMENT OF AGRARIAN REFORM</div>
+          <div style="font-size: 14px; text-align: center; margin-bottom: 4px; font-family: 'Times New Roman', serif;">Camarines Sur Provincial Office</div>
+          <div style="font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 1px; padding-top: 4px; font-family: 'Times New Roman', serif;">DISBURSEMENT VOUCHER</div>
         </td>
         <td style="width: 160px; padding: 0; vertical-align: top;">
           <table style="width: 100%; height: 100%; border-collapse: collapse;">
@@ -110,16 +110,16 @@ export function buildDVHtml(data: any): string {
         <td style="width: 50px; border-right: 1px solid #000; padding: 3px 6px; vertical-align: top;"><b style="font-family: 'Times New Roman', serif;">Mode of <br /> payment</b></td>
         <td style="padding: 3px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
           <div style="display: flex; gap: 35px; margin-top: 3px;">
-            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 14px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "MDS Check" ? "checked" : ""} style="margin: 0;" />MDS Check
             </label>
-            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 14px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "Commercial Check" ? "checked" : ""} style="margin: 0;" />Commercial Check
             </label>
-            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 14px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "ADA" ? "checked" : ""} style="margin: 0;" />ADA
             </label>
-            <label style="display: flex; align-items: center; gap: 3px; font-size: 9px; font-family: 'Times New Roman', serif;">
+            <label style="display: flex; align-items: center; gap: 3px; font-size: 14px; font-family: 'Times New Roman', serif;">
               <input type="checkbox" ${data.mode_of_payment === "Others" ? "checked" : ""} style="margin: 0;" />Others (Please specify)
             </label>
           </div>
@@ -147,29 +147,29 @@ export function buildDVHtml(data: any): string {
     <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Particulars</th>
-          <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Responsibility Center</th>
-          <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">MFO/PAP</th>
-          <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Amount</th>
+          <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Particulars</th>
+          <th style="width: 130px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Responsibility Center</th>
+          <th style="width: 90px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">MFO/PAP</th>
+          <th style="width: 100px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Amount</th>
         </tr>
       </thead>
       <tbody>
-        <tr style="height: 0px;">
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; white-space: pre-wrap;">${escapeHtml(data.particulars || "")}</td>
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif;">${escapeHtml(data.responsibility_center || "")}</td>
-          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif;">${escapeHtml(data.mfo_pap || "")}</td>
-          <td style="padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(data.amount_due || "")}</td>
+<tr style="height: 60px;">
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; white-space: pre-wrap; font-size: 12px;">${escapeHtml(data.particulars || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; font-size: 12px;">${escapeHtml(data.responsibility_center || "")}</td>
+          <td style="border-right: 1px solid #000; padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; font-size: 12px;">${escapeHtml(data.mfo_pap || "")}</td>
+          <td style="padding: 3px 4px; vertical-align: top; font-family: 'Times New Roman', serif; text-align: right; font-size: 12px;">${escapeHtml(data.amount_due || "")}</td>
         </tr>
-        ${[...Array(7)].map(() => `
-        <tr style="height: 0px;">
+      ${[...Array(2)].map(() => `
+<tr style="height: 18px;">
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td style="border-right: 1px solid #000;">&nbsp;</td>
           <td>&nbsp;</td>
         </tr>`).join("")}
         <tr>
-          <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold; font-family: 'Times New Roman', serif;">Amount Due</td>
-          <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right; font-family: 'Times New Roman', serif;">${escapeHtml(data.amount_due || "")}</td>
+          <td colspan="3" style="border-right: 1px solid #000; border-top: 1px solid #000; text-align: right; padding: 3px 4px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Amount Due</td>
+          <td style="border-top: 1px solid #000; padding: 3px 4px; text-align: right; font-family: 'Times New Roman', serif; font-size: 12px;">${escapeHtml(data.amount_due || "")}</td>
         </tr>
       </tbody>
     </table>
@@ -182,10 +182,10 @@ export function buildDVHtml(data: any): string {
       <tr>
         <td style="padding: 4px 6px; font-family: 'Times New Roman', serif; text-align: center;">
           <div style="margin-bottom: 4px; margin-top: 20px;">
-            <span style="font-weight: bold; font-size: 10px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_name || "")}</span>
+            <span style="font-weight: bold; font-size: 14px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_name || "")}</span>
           </div>
           <div style="margin-bottom: 20px;">
-            <span style="font-size: 10px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_position || "")}</span>
+            <span style="font-size: 14px; font-family: 'Times New Roman', serif;">${escapeHtml(data.certified_by_position || "")}</span>
           </div>
         </td>
       </tr>
@@ -197,29 +197,29 @@ export function buildDVHtml(data: any): string {
         <td colspan="4" style="border-bottom: 1px solid #000; padding: 3px 6px; font-family: 'Times New Roman', serif;"><b>B.</b> Accounting Entry:</td>
       </tr>
       <tr>
-        <th style="border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Account Title</th>
-        <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">UACS Code</th>
-        <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Debit</th>
-        <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif;">Credit</th>
+        <th style="width: 52.9%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Account Title</th>
+        <th style="width: 110px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">UACS Code</th>
+        <th style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Debit</th>
+        <th style="width: 80px; border-bottom: 1px solid #000; text-align: center; padding: 3px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">Credit</th>
       </tr>
       ${(() => {
-        const accountingEntries = data.accounting_entries || [];
-        const rows = accountingEntries.slice(0, accountingEntries.length).map((entry: any) => `
+      const accountingEntries = data.accounting_entries || [];
+      const rows = accountingEntries.slice(0, accountingEntries.length).map((entry: any) => `
           <tr style="height: 24px;">
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.account_title || "")}</td>
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">${escapeHtml(entry.uacs_code || "")}</td>
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.debit || "")}</td>
-            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">${escapeHtml(entry.credit || "")}</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">${escapeHtml(entry.account_title || "")}</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">${escapeHtml(entry.uacs_code || "")}</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right; font-size: 12px;">${escapeHtml(entry.debit || "")}</td>
+            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right; font-size: 12px;">${escapeHtml(entry.credit || "")}</td>
           </tr>`).join("");
-        const blankRows = Math.max(4 - accountingEntries.length, 0);
-        return rows + Array.from({ length: blankRows }, () => `
+      const blankRows = Math.max(4 - accountingEntries.length, 0);
+      return rows + Array.from({ length: blankRows }, () => `
           <tr style="height: 24px;">
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">&nbsp;</td>
-            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right;">&nbsp;</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">&nbsp;</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">&nbsp;</td>
+            <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right; font-size: 12px;">&nbsp;</td>
+            <td style="border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; text-align: right; font-size: 12px;">&nbsp;</td>
           </tr>`).join("");
-      })()}
+    })()}
       <tr style="height: 20px;">
         <td style="border-right: 1px solid #000;">&nbsp;</td>
         <td style="border-right: 1px solid #000;">&nbsp;</td>
@@ -231,7 +231,7 @@ export function buildDVHtml(data: any): string {
     <!-- SECTIONS C & D -->
     <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 52.5%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
+        <td style="width: 52.9%; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; font-family: 'Times New Roman', serif;">
           <div style="font-weight: bold; margin-bottom: 4px; font-family: 'Times New Roman', serif;">C. Certified:</div>
           <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px;">
             <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px;"></span>
@@ -257,32 +257,32 @@ export function buildDVHtml(data: any): string {
     <!-- SIGNATURES -->
     <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tr>
-        <td style="width: 68px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Signature</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Signature</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="width: 68px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Signature</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif; text-align: center; font-size: 12px;">&nbsp;</td>
+        <td style="width: 80px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Signature</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 28px; font-family: 'Times New Roman', serif; text-align: center; font-size: 12px;">&nbsp;</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Printed Name</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Printed Name</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Printed Name</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-weight: bold; text-align: center; font-size: 12px;">${escapeHtml(data.certified_printed_name || "")}</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Printed Name</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-weight: bold; text-align: center; font-size: 12px;">${escapeHtml(data.approved_printed_name || "")}</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;" rowspan="2">Position</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;" rowspan="2">Position</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;" rowspan="2">Position</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-weight: bold; text-align: center; font-size: 12px;">${escapeHtml(data.certified_position || "")}</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;" rowspan="2">Position</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-weight: bold; text-align: center; font-size: 12px;">${escapeHtml(data.approved_position || "")}</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">Head, Accounting Unit/Authorized Representative</td>
-        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif;">Agency Head/Authorized Representative</td>
+        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-size: 10px;">Head, Accounting Unit/Authorized Representative</td>
+        <td style="border-bottom: 1px solid #000; padding: 3px 4px; height: 24px; font-family: 'Times New Roman', serif; font-size: 10px;">Agency Head/Authorized Representative</td>
       </tr>
       <tr>
-        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Date</td>
-        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
-        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif;">Date</td>
-        <td style="padding: 3px 4px; font-family: 'Times New Roman', serif;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Date</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">&nbsp;</td>
+        <td style="border-right: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">Date</td>
+        <td style="padding: 3px 4px; font-family: 'Times New Roman', serif; font-size: 12px;">&nbsp;</td>
       </tr>
     </table>
 
@@ -290,23 +290,23 @@ export function buildDVHtml(data: any): string {
     <table style="border: 1px solid #000; border-top: none; border-collapse: collapse;">
       <tbody>
         <tr>
-          <td colspan="3" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 6px; font-weight: bold; font-family: 'Times New Roman', serif;">E. Receipt of Payment</td>
-          <td rowspan="2" style="padding: 3px 6px; font-family: 'Times New Roman', serif; vertical-align: top;"><b style="font-family: 'Times New Roman', serif;">JEV No.</b></td>
+          <td colspan="3" style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 6px; font-weight: bold; font-family: 'Times New Roman', serif; font-size: 12px;">E. Receipt of Payment</td>
+          <td rowspan="2" style="padding: 3px 6px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;"><b style="font-family: 'Times New Roman', serif;">JEV No.</b></td>
         </tr>
         <tr>
-          <td style="width: 100px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Check/<br/>ADA No.:</td>
-          <td style="width: 120px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date:</td>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Bank Name &amp; Account Number:</td>
+          <td style="width: 100px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">Check/<br/>ADA No.:</td>
+          <td style="width: 120px; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">Date:</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">Bank Name &amp; Account Number:</td>
         </tr>
         <tr>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; height: 44px;">Signature</td>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date:</td>
-          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;"><div style="font-family: 'Times New Roman', serif;">Printed Name:</div><div style="text-align: center; font-family: 'Times New Roman', serif; margin-top: 6px; font-size: 9px;">${escapeHtml(data.payee || data.supplier || "")}</div></td>
-          <td style="border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">Date</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; height: 44px; font-size: 12px;">Signature</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">Date:</td>
+          <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;"><div style="font-family: 'Times New Roman', serif;">Printed Name:</div><div style="text-align: center; font-family: 'Times New Roman', serif; margin-top: 6px; font-size: 12px;">${escapeHtml(data.payee || data.supplier || "")}</div></td>
+          <td style="border-top: 1px solid #000; padding: 3px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">Date</td>
         </tr>
         <tr>
-          <td colspan="3" style="padding: 6px 6px; font-family: 'Times New Roman', serif; height: 40px; vertical-align: top; border-right: 1px solid #000;">Official Receipt No. &amp; Date/Other Documents</td>
-          <td style="padding: 6px 4px; font-family: 'Times New Roman', serif; vertical-align: top;">&nbsp;</td>
+          <td colspan="3" style="padding: 6px 6px; font-family: 'Times New Roman', serif; height: 40px; vertical-align: top; border-right: 1px solid #000; font-size: 12px;">Official Receipt No. &amp; Date/Other Documents</td>
+          <td style="padding: 6px 4px; font-family: 'Times New Roman', serif; vertical-align: top; font-size: 12px;">&nbsp;</td>
         </tr>
       </tbody>
     </table>
@@ -328,12 +328,12 @@ export default function DVPreview({
   // Transform PO data - keep all fields and just add the transformed ones
   const transformedPoData = poData
     ? {
-        ...poData,
-        po_items: poData.purchase_order_items || [],
-        po_date: poData.date,
-      }
+      ...poData,
+      po_items: poData.purchase_order_items || [],
+      po_date: poData.date,
+    }
     : {};
-  
+
   // Merge delivery data with transformed PO data and DV data
   const mergedData = { ...delivery, ...transformedPoData, ...dv };
   mergedData.po_items = transformedPoData.po_items;
@@ -352,6 +352,10 @@ export default function DVPreview({
   if (!mergedData.particulars && dv?.particulars) mergedData.particulars = dv.particulars;
   if (!mergedData.certified_by_name && dv?.certified_by_name) mergedData.certified_by_name = dv.certified_by_name;
   if (!mergedData.certified_by_position && dv?.certified_by_position) mergedData.certified_by_position = dv.certified_by_position;
+  if (!mergedData.certified_printed_name && dv?.certified_printed_name) mergedData.certified_printed_name = dv.certified_printed_name;
+  if (!mergedData.approved_printed_name && dv?.approved_printed_name) mergedData.approved_printed_name = dv.approved_printed_name;
+  if (!mergedData.certified_position && dv?.certified_position) mergedData.certified_position = dv.certified_position;
+  if (!mergedData.approved_position && dv?.approved_position) mergedData.approved_position = dv.approved_position;
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 2));
@@ -382,6 +386,14 @@ export default function DVPreview({
     if (!dvMerged.amount_due && dv?.amount_due) dvMerged.amount_due = dv.amount_due;
     if (!dvMerged.mode_of_payment && dv?.mode_of_payment) dvMerged.mode_of_payment = dv.mode_of_payment;
     if (!dvMerged.particulars && dv?.particulars) dvMerged.particulars = dv.particulars;
+    if (dv?.certified_printed_name !== undefined)
+      dvMerged.certified_printed_name = dv.certified_printed_name;
+    if (dv?.approved_printed_name !== undefined)
+      dvMerged.approved_printed_name = dv.approved_printed_name;
+    if (dv?.certified_position !== undefined)
+      dvMerged.certified_position = dv.certified_position;
+    if (dv?.approved_position !== undefined)
+      dvMerged.approved_position = dv.approved_position;
     const html = buildDVHtml(dvMerged);
     downloadPDF(html);
   };
@@ -450,7 +462,7 @@ export default function DVPreview({
               minHeight: "1056px",
               margin: "0 auto",
               fontFamily: "Times New Roman, serif",
-              fontSize: "9px",
+              fontSize: "10px",
               color: "#000",
             }}
           >
@@ -625,7 +637,7 @@ export default function DVPreview({
                               display: "flex",
                               alignItems: "center",
                               gap: "3px",
-                              fontSize: "9px",
+                              fontSize: "10px",
                               fontFamily: "Times New Roman, serif",
                             }}
                           >
@@ -709,7 +721,7 @@ export default function DVPreview({
                       borderRight: "1px solid #000",
                       borderTop: "1px solid #000",
                       padding: "3px 4px",
-                        fontFamily: "Times New Roman, serif",
+                      fontFamily: "Times New Roman, serif",
                     }}
                   >
                     {mergedData.address || ""}
@@ -806,7 +818,7 @@ export default function DVPreview({
                       padding: "3px 4px",
                       verticalAlign: "top",
                       fontFamily: "Times New Roman, serif",
-                      fontSize: "9px",
+                      fontSize: "10px",
                       whiteSpace: "pre-wrap",
                     }}
                   >
@@ -818,7 +830,7 @@ export default function DVPreview({
                       padding: "3px 4px",
                       verticalAlign: "top",
                       fontFamily: "Times New Roman, serif",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   >
                     {mergedData.responsibility_center || ""}
@@ -829,7 +841,7 @@ export default function DVPreview({
                       padding: "3px 4px",
                       verticalAlign: "top",
                       fontFamily: "Times New Roman, serif",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   >
                     {mergedData.mfo_pap || ""}
@@ -839,7 +851,7 @@ export default function DVPreview({
                       padding: "3px 4px",
                       verticalAlign: "top",
                       fontFamily: "Times New Roman, serif",
-                      fontSize: "9px",
+                      fontSize: "10px",
                       textAlign: "right",
                     }}
                   >
@@ -874,7 +886,7 @@ export default function DVPreview({
                       padding: "3px 4px",
                       textAlign: "right",
                       fontFamily: "Times New Roman, serif",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   >
                     {mergedData.amount_due || ""}
@@ -1018,7 +1030,7 @@ export default function DVPreview({
                       &nbsp;
                     </td>
                     <td
-                      style={{  
+                      style={{
                         borderRight: "1px solid #000",
                         borderBottom: "1px solid #000",
                       }}
@@ -1413,7 +1425,7 @@ export default function DVPreview({
                         textAlign: "center",
                         fontFamily: "Times New Roman, serif",
                         marginTop: "6px",
-                        fontSize: "9px",
+                        fontSize: "10px",
                       }}
                     >
                       {mergedData.payee || mergedData.supplier || ""}

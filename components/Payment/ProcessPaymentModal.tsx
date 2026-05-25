@@ -3369,11 +3369,7 @@ export default function ProcessPaymentModal({
                     </div>
                   </div>
 
-                  {/* Step-specific checklist / form */}
-                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-                    {renderFormContent()}
-                  </div>
-
+                  
                   {/* Status Flag */}
                   <div className={`bg-white rounded-xl border shadow-sm p-4
                     ${statusFlag ? "border-emerald-200" : "border-gray-100"}`}>
@@ -3401,21 +3397,7 @@ export default function ProcessPaymentModal({
                     )}
                   </div>
 
-                  {/* Notes */}
-                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Notes <span className="normal-case font-normal text-gray-400">(optional)</span>
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
-                      placeholder="Add remarks for this step…"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none transition-colors"
-                    />
-                  </div>
-
-                  {/* Submit */}
+                   {/* Submit */}
                   <div className="pt-1 pb-2">
                     {!isFormValid && (
                       <div className="mb-3 flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
@@ -3435,6 +3417,29 @@ export default function ProcessPaymentModal({
                       {currentStepInfo.label}
                     </button>
                   </div>
+
+                  {/* Step-specific checklist / form */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    {renderFormContent()}
+                  </div>
+
+              
+
+                  {/* Notes */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Notes <span className="normal-case font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="Add remarks for this step…"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none transition-colors"
+                    />
+                  </div>
+
+                 
                 </form>
               </div>
             </div>

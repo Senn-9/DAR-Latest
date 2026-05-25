@@ -24,10 +24,6 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-
-
-
-
 function downloadPDF(html: string) {
   try {
     const printWindow = window.open("", "_blank", "height=800,width=1200");

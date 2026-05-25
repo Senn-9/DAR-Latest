@@ -36,12 +36,12 @@ export function buildIARHtml(data: any): string {
 
     itemRows += `
       <tr style="height:24px;">
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${escapeHtml(item.stock_no || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${escapeHtml(item.unit || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px; font-size:12px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
-        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:10px;">${quantity || ""}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:10px; font-weight:bold;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
-        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:10px; font-weight:bold;">${amount ? amount.toFixed(2) : ""}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:14px;">${escapeHtml(item.stock_no || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:14px;">${escapeHtml(item.unit || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px; font-size:16px; overflow:hidden; word-wrap:break-word; white-space:normal;">${escapeHtml(item.description || "")}</td>
+        <td style="border:0.5px solid #000; padding:4px; text-align:center; font-size:14px;">${quantity || ""}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:14px; font-weight:bold;">${unitPrice ? unitPrice.toFixed(2) : ""}</td>
+        <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:14px; font-weight:bold;">${amount ? amount.toFixed(2) : ""}</td>
       </tr>`;
   });
 
@@ -63,14 +63,14 @@ export function buildIARHtml(data: any): string {
   const totalAmount = items.reduce((sum: number, item: any) => {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.unit_price || item.unit_cost || 0);
-    return sum + (quantity * unitPrice);
+    return sum + quantity * unitPrice;
   }, 0);
 
   // Add total amount row
   itemRows += `
     <tr>
       <td colspan="5" style="border:0.5px solid #000; padding:4px;">&nbsp;</td>
-      <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:9px; font-weight:bold;">${totalAmount.toFixed(2)}</td>
+      <td style="border:0.5px solid #000; padding:4px 8px 4px 4px; text-align:right; font-size:14px; font-weight:bold;">${totalAmount.toFixed(2)}</td>
     </tr>`;
 
   return `<!DOCTYPE html>
@@ -91,24 +91,24 @@ export function buildIARHtml(data: any): string {
   <div style="width: 816px; margin: 0 auto; min-height: 1056px; padding: 32px; background: white;">
     <!-- Appendix Header -->
     <div style="text-align: right; margin-bottom: 8px;">
-      <span style="font-size: 10px; font-style: italic;">Appendix 62</span>
+      <span style="font-size: 14px; font-style: italic;">Appendix 62</span>
     </div>
 
     <!-- Title -->
     <div style="text-align: center; margin-bottom: 24px;">
-      <div style="font-size: 16px; font-weight: 700; letter-spacing: 1px; font-family: "Times New Roman", serif;">INSPECTION AND ACCEPTANCE REPORT</div>
+      <div style="font-size: 20px; font-weight: 700; letter-spacing: 1px; font-family: "Times New Roman", serif;">INSPECTION AND ACCEPTANCE REPORT</div>
     </div>
 
     <!-- Entity Name and Fund Cluster Row -->
-    <div style="margin-bottom: 12px; font-size: 10px; font-family: "Times New Roman", serif; display: flex; align-items: baseline;">
+    <div style="margin-bottom: 12px; font-size: 14px; font-family: "Times New Roman", serif; display: flex; align-items: baseline;">
       <span style="font-weight: 600;">Entity Name :</span>
-      <span style="font-size: 12px; flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
+      <span style="font-size: 16px; flex: 1; padding: 0 8px;">DEPARTMENT OF AGRARIAN REFORM-CAM SUR I</span>
       <span style="font-weight: 600;">Fund Cluster :</span>
       <span style="padding: 0 8px;">${escapeHtml(data.fund_cluster || "")}</span>
     </div>
 
     <!-- Main Info Box -->
-    <div style="border: 0.5px solid #000; margin-bottom: 0; font-size: 10px; font-family: "Times New Roman", serif;">
+    <div style="border: 0.5px solid #000; margin-bottom: 0; font-size: 14px; font-family: "Times New Roman", serif;">
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <!-- Left Section -->
@@ -156,7 +156,7 @@ export function buildIARHtml(data: any): string {
 
     <!-- Items Table -->
     <div>
-      <table style="border-collapse: collapse; border: 0.5px solid #000; font-size: 9px; width: 100%; font-family: "Times New Roman", serif;">
+      <table style="border-collapse: collapse; border: 0.5px solid #000; font-size: 14px; width: 100%; font-family: "Times New Roman", serif;">
         <thead>
           <tr>
             <th style="border: 0.5px solid #000; padding: 4px; text-align: center; font-weight: bold; width: 80px;">
@@ -177,86 +177,88 @@ export function buildIARHtml(data: any): string {
     </div>
 
     <!-- Inspection and Acceptance Section -->
-    <div style="border: 0.5px solid #000; font-size: 10px; font-family: "Times New Roman", serif;">
-      <table style="width: 100%; border-collapse: collapse; min-height: 160px;">
-        <tr>
-          <!-- Inspection Column -->
-          <td style="border-right: 0.5px solid #000; width: 50%; vertical-align: top;">
-            <div style="border-bottom: 0.5px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: "Times New Roman", serif;">INSPECTION</div>
-            <div style="padding: 12px; position: relative; height: 140px;">
-              <div style="margin-bottom: 12px;">
-                <span style="font-weight: 600;">Date Inspected :</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.inspected_at || "")}</span>
-              </div>
-              
-              <div style="margin-bottom: 16px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="width: 18px; vertical-align: top; padding: 0;">
-                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
-                        ${data.inspection_verified ? "✓" : ""}
-                      </div>
-                    </td>
-                    <td style="padding-left: 8px; vertical-align: top;">
-                      <span style="font-size: 9px; font-family: "Times New Roman", serif;">Inspected, verified and found in order as to quantity and specifications</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
+  <div style="border: 0.5px solid #000; font-size: 14px; font-family: 'Times New Roman', serif;">
+  <table style="width: 100%; border-collapse: collapse; min-height: 160px;">
+    <tr>
+      <td style="border-right: 0.5px solid #000; width: 50%; vertical-align: top;">
+        <div style="border-bottom: 0.5px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: 'Times New Roman', serif;">INSPECTION</div>
+        <div style="padding: 12px; position: relative; height: 175px;">
+          <div style="margin-bottom: 12px;">
+            <span style="font-weight: 600;">Date Inspected :</span>
+            <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.inspected_at || "")}</span>
+          </div>
+          
+          <div style="margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="width: 18px; vertical-align: top; padding: 0;">
+                  <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                    ${data.inspection_verified ? "✓" : ""}
+                  </div>
+                </td>
+                <td style="padding-left: 8px; vertical-align: top;">
+                  <span style="font-size: 14px; font-family: 'Times New Roman', serif;">Inspected, verified and found in order as to quantity and specifications</span>
+                </td>
+              </tr>
+            </table>
+          </div>
 
-              <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
-                <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: "Times New Roman", serif;">${escapeHtml(data.inspection_officer || "")}</div>
-                <div style="font-size: 12px; margin-top: 4px; font-family: "Times New Roman", serif;">Inspection Officer/Inspection Committee</div>
-              </div>
-            </div>
-          </td>
+          <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
+            <div style="height: 35px;"></div>
+            <div style="border-bottom: 1px solid #000; padding-bottom: 2px; font-weight: 700; font-family: 'Times New Roman', serif;">${escapeHtml(data.inspection_officer || "")}</div>
+            <div style="font-size: 14px; margin-top: 4px; font-family: 'Times New Roman', serif;">Inspection Officer/Inspection Committee</div>
+          </div>
+        </div>
+      </td>
 
-          <!-- Acceptance Column -->
-          <td style="width: 50%; vertical-align: top;">
-            <div style="border-bottom: 0.5px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: "Times New Roman", serif;">ACCEPTANCE</div>
-            <div style="padding: 12px; position: relative; height: 140px;">
-              <div style="margin-bottom: 12px;">
-                <span style="font-weight: 600;">Date Received :</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.received_at || "")}</span>
-              </div>
-              
-              <div style="margin-bottom: 8px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="width: 18px; vertical-align: middle; padding: 0;">
-                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
-                      </div>
-                    </td>
-                    <td style="padding-left: 8px; vertical-align: middle;">
-                      <span style="font-size: 9px; font-family: "Times New Roman", serif;">Complete</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-              
-              <div style="margin-bottom: 16px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="width: 18px; vertical-align: middle; padding: 0;">
-                      <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
-                      </div>
-                    </td>
-                    <td style="padding-left: 8px; vertical-align: middle;">
-                      <span style="font-size: 9px; font-family: "Times New Roman", serif;">Partial (pls. specify quantity)</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
+      <td style="width: 50%; vertical-align: top;">
+        <div style="border-bottom: 0.5px solid #000; padding: 8px; text-align: center; font-weight: bold; font-style: italic; font-family: 'Times New Roman', serif;">ACCEPTANCE</div>
+        <div style="padding: 12px; position: relative; height: 175px;">
+          <div style="margin-bottom: 12px;">
+            <span style="font-weight: 600;">Date Received :</span>
+            <span style="border-bottom: 1px solid #000; display: inline-block; margin-left: 8px; min-width: 150px;">${escapeHtml(data.received_at || "")}</span>
+          </div>
+          
+          <div style="margin-bottom: 8px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="width: 18px; vertical-align: middle; padding: 0;">
+                  <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                    ${data.items_complete === true ? "✓" : ""}
+                  </div>
+                </td>
+                <td style="padding-left: 8px; vertical-align: middle;">
+                  <span style="font-size: 14px; font-family: 'Times New Roman', serif;">Complete</span>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="width: 18px; vertical-align: middle; padding: 0;">
+                  <div style="border: 1px solid #000; width: 18px; height: 18px; text-align: center; line-height: 14px;">
+                    ${data.items_complete === false ? "✓" : ""}
+                  </div>
+                </td>
+                <td style="padding-left: 8px; vertical-align: middle;">
+                  <span style="font-size: 14px; font-family: 'Times New Roman', serif;">Partial (pls. specify quantity)</span>
+                </td>
+              </tr>
+            </table>
+          </div>
 
-              <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
-                <div style="border-bottom: 1px solid #000; padding-top: 24px; padding-bottom: 0; font-weight: 700; font-family: "Times New Roman", serif;">${escapeHtml(data.supply_officer || "")}</div>
-                <div style="font-size: 12px; margin-top: 4px; font-family: "Times New Roman", serif;">ARPT/SUPPLY OFFICER</div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; text-align: center;">
+            <div style="height: 35px;"></div>
+            <div style="border-bottom: 1px solid #000; padding-bottom: 2px; font-weight: 700; font-family: 'Times New Roman', serif;">${escapeHtml(data.supply_officer || "")}</div>
+            <div style="font-size: 14px; margin-top: 4px; font-family: 'Times New Roman', serif;">ARPT/SUPPLY OFFICER</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
   </div>
 </body>
 </html>`;
@@ -292,7 +294,7 @@ function downloadPDF(html: string) {
 }
 
 export default function IARPreview({
-  delivery = {},  
+  delivery = {},
   iar = {},
   poData = {},
   className = "",
@@ -357,11 +359,22 @@ export default function IARPreview({
         >
           <div
             className="bg-white shadow-lg"
-            style={{ width: "816px", minHeight: "1056px", padding: "32px", fontFamily: "Times New Roman, serif" }}
+            style={{
+              width: "816px",
+              minHeight: "1056px",
+              padding: "32px",
+              fontFamily: "Times New Roman, serif",
+            }}
           >
             {/* Appendix Header */}
             <div className="text-right mb-2">
-              <span style={{ fontSize: "10px", fontStyle: "italic", fontFamily: "Times New Roman, serif" }}>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontStyle: "italic",
+                  fontFamily: "Times New Roman, serif",
+                }}
+              >
                 Appendix 62
               </span>
             </div>
@@ -385,46 +398,99 @@ export default function IARPreview({
               className="mb-3 flex items-baseline"
               style={{ fontSize: "10px", fontFamily: "Times New Roman, serif" }}
             >
-              <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Entity Name :</span>
-              <span className="flex-1 px-2" style={{ fontFamily: "Times New Roman, serif" }}>
+              <span
+                className="font-semibold"
+                style={{ fontFamily: "Times New Roman, serif" }}
+              >
+                Entity Name :
+              </span>
+              <span
+                className="flex-1 px-2"
+                style={{ fontFamily: "Times New Roman, serif" }}
+              >
                 DEPARTMENT OF AGRARIAN REFORM-CAM SUR I
               </span>
-              <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Fund Cluster :</span>
-              <span className="px-2" style={{ fontFamily: "Times New Roman, serif" }}>{mergedData.fund_cluster || ""}</span>
+              <span
+                className="font-semibold"
+                style={{ fontFamily: "Times New Roman, serif" }}
+              >
+                Fund Cluster :
+              </span>
+              <span
+                className="px-2"
+                style={{ fontFamily: "Times New Roman, serif" }}
+              >
+                {mergedData.fund_cluster || ""}
+              </span>
             </div>
 
             {/* Main Info Box */}
             <div
-              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif", border: "0.5px solid #000" }}
+              style={{
+                fontSize: "10px",
+                fontFamily: "Times New Roman, serif",
+                border: "0.5px solid #000",
+              }}
             >
               <div className="grid grid-cols-2">
                 {/* Left Section */}
-                <div className="p-2 space-y-1" style={{ borderRight: "0.5px solid #000" }}>
+                <div
+                  className="p-2 space-y-1"
+                  style={{ borderRight: "0.5px solid #000" }}
+                >
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Supplier :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      Supplier :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       {mergedData.supplier_name || mergedData.supplier || ""}
                     </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>PO No./Date :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      PO No./Date :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       {mergedData.po_no || ""} / {mergedData.po_date || ""}
                     </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       Requisitioning Office/Dept. :
                     </span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       {mergedData.office_section || ""}
                     </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       Responsibility Center Code :
                     </span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       {mergedData.responsibility_center_code || ""}
                     </span>
                   </div>
@@ -433,20 +499,58 @@ export default function IARPreview({
                 {/* Right Section */}
                 <div className="p-2 space-y-1">
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>IAR No. :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>{mergedData.iar_no || ""}</span>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      IAR No. :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      {mergedData.iar_no || ""}
+                    </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Date :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>{mergedData.iar_date || ""}</span>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      Date :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      {mergedData.iar_date || ""}
+                    </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Invoice No. :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>{mergedData.invoice_no || ""}</span>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      Invoice No. :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      {mergedData.invoice_no || ""}
+                    </span>
                   </div>
                   <div style={{ fontFamily: "Times New Roman, serif" }}>
-                    <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Date :</span>
-                    <span className="ml-2" style={{ fontFamily: "Times New Roman, serif" }}>
+                    <span
+                      className="font-semibold"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      Date :
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
                       {mergedData.invoice_date || ""}
                     </span>
                   </div>
@@ -458,44 +562,90 @@ export default function IARPreview({
             <div>
               <table
                 className="w-full border-collapse"
-                style={{ fontSize: "9px", fontFamily: "Times New Roman, serif", border: "0.5px solid #000" }}
+                style={{
+                  fontSize: "10px",
+                  fontFamily: "Times New Roman, serif",
+                  border: "0.5px solid #000",
+                }}
               >
                 <thead>
                   <tr>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "80px", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        width: "80px",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
-                      <div style={{ fontStyle: "italic", fontFamily: "Times New Roman, serif" }}>Stock/</div>
-                      <div style={{ fontStyle: "italic", fontFamily: "Times New Roman, serif" }}>Property No.</div>
+                      <div
+                        style={{
+                          fontStyle: "italic",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        Stock/
+                      </div>
+                      <div
+                        style={{
+                          fontStyle: "italic",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        Property No.
+                      </div>
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "50px", fontStyle: "italic", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        width: "50px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       Unit
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ fontStyle: "italic", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       Description
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "70px", fontStyle: "italic", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        width: "70px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       Quantity
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "80px", fontStyle: "italic", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        width: "80px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       Unit Cost
                     </th>
                     <th
                       className="p-1 text-center font-bold"
-                      style={{ width: "90px", fontStyle: "italic", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        width: "90px",
+                        fontStyle: "italic",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       Amount
                     </th>
@@ -504,10 +654,22 @@ export default function IARPreview({
                 <tbody>
                   {items.map((item: any, i: number) => (
                     <tr key={i} style={{ height: "24px" }}>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
                         {item.stock_no || ""}
                       </td>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
                         {item.unit || ""}
                       </td>
                       <td
@@ -522,16 +684,35 @@ export default function IARPreview({
                       >
                         {item.description || ""}
                       </td>
-                      <td className="p-1 text-center" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>
+                      <td
+                        className="p-1 text-center"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
                         {item.quantity || ""}
                       </td>
-                      <td className="p-1 text-right pr-2" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>
+                      <td
+                        className="p-1 text-right pr-2"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
                         {item.unit_price || item.unit_cost || ""}
                       </td>
-                      <td className="p-1 text-right pr-2" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>
+                      <td
+                        className="p-1 text-right pr-2"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
                         {item.quantity && (item.unit_price || item.unit_cost)
                           ? (
-                              Number(item.quantity) * Number(item.unit_price || item.unit_cost)
+                              Number(item.quantity) *
+                              Number(item.unit_price || item.unit_cost)
                             ).toFixed(2)
                           : ""}
                       </td>
@@ -540,12 +721,60 @@ export default function IARPreview({
                   {/* Fill empty rows */}
                   {[...Array(Math.max(0, 15 - items.length))].map((_, i) => (
                     <tr key={`empty-${i}`} style={{ height: "24px" }}>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
-                      <td className="p-1" style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}>&nbsp;</td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                      <td
+                        className="p-1"
+                        style={{
+                          border: "0.5px solid #000",
+                          fontFamily: "Times New Roman, serif",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
                     </tr>
                   ))}
                   {/* Total Amount Row */}
@@ -553,22 +782,31 @@ export default function IARPreview({
                     <td
                       colSpan={5}
                       className="p-1"
-                      style={{ border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       &nbsp;
                     </td>
                     <td
                       className="p-1 text-right pr-2 font-bold"
-                      style={{ fontSize: "9px", border: "0.5px solid #000", fontFamily: "Times New Roman, serif" }}
+                      style={{
+                        fontSize: "10px",
+                        border: "0.5px solid #000",
+                        fontFamily: "Times New Roman, serif",
+                      }}
                     >
                       {items
                         .reduce(
                           (sum: number, item: any) =>
                             sum +
-                            (item.quantity && (item.unit_price || item.unit_cost)
-                              ? Number(item.quantity) * Number(item.unit_price || item.unit_cost)
+                            (item.quantity &&
+                            (item.unit_price || item.unit_cost)
+                              ? Number(item.quantity) *
+                                Number(item.unit_price || item.unit_cost)
                               : 0),
-                          0
+                          0,
                         )
                         .toFixed(2)}
                     </td>
@@ -579,11 +817,18 @@ export default function IARPreview({
 
             {/* Inspection and Acceptance Section */}
             <div
-              style={{ fontSize: "10px", fontFamily: "Times New Roman, serif", border: "0.5px solid #000" }}
+              style={{
+                fontSize: "10px",
+                fontFamily: "Times New Roman, serif",
+                border: "0.5px solid #000",
+              }}
             >
               <div className="flex" style={{ minHeight: "160px" }}>
                 {/* Inspection Column */}
-                <div className="flex-1 h-full" style={{ borderRight: "0.5px solid #000" }}>
+                <div
+                  className="flex-1 h-full"
+                  style={{ borderRight: "0.5px solid #000" }}
+                >
                   <div
                     className="p-2 text-center font-bold"
                     style={{
@@ -598,11 +843,22 @@ export default function IARPreview({
                     className="p-3 relative flex flex-col"
                     style={{ height: "140px" }}
                   >
-                    <div className="mb-3" style={{ fontFamily: "Times New Roman, serif" }}>
-                      <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Date Inspected :</span>
+                    <div
+                      className="mb-3"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      <span
+                        className="font-semibold"
+                        style={{ fontFamily: "Times New Roman, serif" }}
+                      >
+                        Date Inspected :
+                      </span>
                       <span
                         className="border-b border-black inline-block ml-2"
-                        style={{ minWidth: "150px", fontFamily: "Times New Roman, serif" }}
+                        style={{
+                          minWidth: "150px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
                       >
                         {mergedData.inspected_at || ""}
                       </span>
@@ -628,7 +884,7 @@ export default function IARPreview({
                       </div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -652,7 +908,7 @@ export default function IARPreview({
                       </div>
                       <div
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -678,11 +934,22 @@ export default function IARPreview({
                     className="p-3 relative flex flex-col"
                     style={{ height: "140px" }}
                   >
-                    <div className="mb-3" style={{ fontFamily: "Times New Roman, serif" }}>
-                      <span className="font-semibold" style={{ fontFamily: "Times New Roman, serif" }}>Date Received :</span>
+                    <div
+                      className="mb-3"
+                      style={{ fontFamily: "Times New Roman, serif" }}
+                    >
+                      <span
+                        className="font-semibold"
+                        style={{ fontFamily: "Times New Roman, serif" }}
+                      >
+                        Date Received :
+                      </span>
                       <span
                         className="border-b border-black inline-block ml-2"
-                        style={{ minWidth: "150px", fontFamily: "Times New Roman, serif" }}
+                        style={{
+                          minWidth: "150px",
+                          fontFamily: "Times New Roman, serif",
+                        }}
                       >
                         {mergedData.received_at || ""}
                       </span>
@@ -696,11 +963,10 @@ export default function IARPreview({
                           height: "18px",
                           flexShrink: 0,
                         }}
-                      >
-                      </div>
+                      ></div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -716,11 +982,10 @@ export default function IARPreview({
                           height: "18px",
                           flexShrink: 0,
                         }}
-                      >
-                      </div>
+                      ></div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -743,7 +1008,7 @@ export default function IARPreview({
                       </div>
                       <div
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >

@@ -218,7 +218,7 @@ function IAREditablePreview({
                 value={mergedData.fund_cluster || ""}
                 onChange={(e) => updateIarField("fund_cluster", e.target.value)}
                 className={editableInputCls}
-                style={{ width: "60px", fontSize: "9px" }}
+                style={{ width: "60px", fontSize: "10px" }}
               />
             </div>
 
@@ -275,7 +275,7 @@ function IAREditablePreview({
                       value={mergedData.iar_no || ""}
                       onChange={(e) => updateIarField("iar_no", e.target.value)}
                       className={editableInputCls}
-                      style={{ width: "100px", fontSize: "9px" }}
+                      style={{ width: "100px", fontSize: "10px" }}
                     />
                   </div>
                   <div>
@@ -287,7 +287,7 @@ function IAREditablePreview({
                         updateIarField("iar_date", e.target.value)
                       }
                       className={editableInputCls}
-                      style={{ width: "100px", fontSize: "9px" }}
+                      style={{ width: "100px", fontSize: "10px" }}
                     />
                   </div>
                   <div>
@@ -299,7 +299,7 @@ function IAREditablePreview({
                         updateIarField("invoice_no", e.target.value)
                       }
                       className={editableInputCls}
-                      style={{ width: "100px", fontSize: "9px" }}
+                      style={{ width: "100px", fontSize: "10px" }}
                     />
                   </div>
                   <div>
@@ -311,7 +311,7 @@ function IAREditablePreview({
                         updateIarField("invoice_date", e.target.value)
                       }
                       className={editableInputCls}
-                      style={{ width: "100px", fontSize: "9px" }}
+                      style={{ width: "100px", fontSize: "10px" }}
                     />
                   </div>
                 </div>
@@ -323,7 +323,7 @@ function IAREditablePreview({
               <table
                 className="w-full border-collapse"
                 style={{
-                  fontSize: "9px",
+                  fontSize: "10px",
                   fontFamily: "Times New Roman, serif",
                   border: "0.5px solid #000",
                 }}
@@ -405,7 +405,7 @@ function IAREditablePreview({
                           style={{
                             width: "95%",
                             minHeight: "16px",
-                            fontSize: "9px",
+                            fontSize: "10px",
                           }}
                           rows={1}
                         />
@@ -424,7 +424,7 @@ function IAREditablePreview({
                           style={{
                             width: "95%",
                             minHeight: "16px",
-                            fontSize: "9px",
+                            fontSize: "10px",
                           }}
                           rows={1}
                         />
@@ -448,7 +448,7 @@ function IAREditablePreview({
                           style={{
                             width: "95%",
                             minHeight: "16px",
-                            fontSize: "9px",
+                            fontSize: "10px",
                           }}
                           rows={1}
                         />
@@ -467,7 +467,7 @@ function IAREditablePreview({
                           style={{
                             width: "95%",
                             minHeight: "16px",
-                            fontSize: "9px",
+                            fontSize: "10px",
                           }}
                           rows={1}
                         />
@@ -486,7 +486,7 @@ function IAREditablePreview({
                           style={{
                             width: "95%",
                             minHeight: "16px",
-                            fontSize: "9px",
+                            fontSize: "10px",
                           }}
                           rows={1}
                         />
@@ -555,7 +555,7 @@ function IAREditablePreview({
                     </td>
                     <td
                       className="p-1 text-right pr-2 font-bold"
-                      style={{ fontSize: "9px", border: "0.5px solid #000" }}
+                      style={{ fontSize: "10px", border: "0.5px solid #000" }}
                     >
                       {items
                         .reduce(
@@ -610,7 +610,7 @@ function IAREditablePreview({
                           updateIarField("inspected_at", e.target.value)
                         }
                         className={editableInputCls}
-                        style={{ minWidth: "150px", fontSize: "9px" }}
+                        style={{ minWidth: "150px", fontSize: "10px" }}
                       />
                     </div>
 
@@ -636,7 +636,7 @@ function IAREditablePreview({
                       </div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -660,7 +660,7 @@ function IAREditablePreview({
                           fontWeight: 700,
                           fontFamily: "Times New Roman, serif",
                           width: "80%",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           borderBottom: "1px solid black",
                           textAlign: "center",
                           paddingBottom: "2px",
@@ -669,7 +669,7 @@ function IAREditablePreview({
                       />
                       <div
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -704,7 +704,7 @@ function IAREditablePreview({
                           updateIarField("received_at", e.target.value)
                         }
                         className={editableInputCls}
-                        style={{ minWidth: "150px", fontSize: "9px" }}
+                        style={{ minWidth: "150px", fontSize: "10px" }}
                       />
                     </div>
 
@@ -712,7 +712,12 @@ function IAREditablePreview({
                       <div
                         className="border border-black cursor-pointer"
                         style={{ width: "18px", height: "18px", flexShrink: 0 }}
-                        onClick={() => updateIarField("items_complete", true)}
+                        onClick={() =>
+                          updateIarField(
+                            "items_complete",
+                            mergedData.items_complete === true ? null : true,
+                          )
+                        }
                       >
                         {mergedData.items_complete === true && (
                           <div
@@ -725,7 +730,7 @@ function IAREditablePreview({
                       </div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -737,7 +742,12 @@ function IAREditablePreview({
                       <div
                         className="border border-black cursor-pointer"
                         style={{ width: "18px", height: "18px", flexShrink: 0 }}
-                        onClick={() => updateIarField("items_complete", false)}
+                        onClick={() =>
+                          updateIarField(
+                            "items_complete",
+                            mergedData.items_complete === false ? null : false,
+                          )
+                        }
                       >
                         {mergedData.items_complete === false && (
                           <div
@@ -750,7 +760,7 @@ function IAREditablePreview({
                       </div>
                       <span
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -773,7 +783,7 @@ function IAREditablePreview({
                           fontWeight: 700,
                           fontFamily: "Times New Roman, serif",
                           width: "80%",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           borderBottom: "1px solid black",
                           textAlign: "center",
                           paddingBottom: "2px",
@@ -782,7 +792,7 @@ function IAREditablePreview({
                       />
                       <div
                         style={{
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -998,10 +1008,10 @@ function LOAEditablePreview({
                       minHeight: "22px",
                       paddingBottom: "2px",
                       textAlign: "center",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   />
-                  <div style={{ fontSize: "9px", marginTop: "4px" }}>Date</div>
+                  <div style={{ fontSize: "10px", marginTop: "4px" }}>Date</div>
                 </div>
               </div>
 
@@ -1083,7 +1093,7 @@ function LOAEditablePreview({
                     style={{
                       flex: 1,
                       borderBottom: "1.5px solid #000",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   />
                   <span
@@ -1117,7 +1127,7 @@ function LOAEditablePreview({
                       width: "180px",
                       flexShrink: 0,
                       borderBottom: "1.5px solid #000",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   />
                   <span
@@ -1182,7 +1192,7 @@ function LOAEditablePreview({
                     style={{
                       width: "180px",
                       borderBottom: "1.5px solid #000",
-                      fontSize: "9px",
+                      fontSize: "10px",
                     }}
                   />
                 </div>
@@ -1211,7 +1221,7 @@ function LOAEditablePreview({
                   />
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       marginTop: "4px",
                       marginBottom: "24px",
                       fontFamily: "Times New Roman, serif",
@@ -1240,7 +1250,7 @@ function LOAEditablePreview({
                   />
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       marginTop: "4px",
                       marginBottom: "4px",
                       fontFamily: "Times New Roman, serif",
@@ -1250,7 +1260,7 @@ function LOAEditablePreview({
                   </div>
                   <div
                     style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
@@ -1263,7 +1273,7 @@ function LOAEditablePreview({
               <div className="flex justify-end" style={{ marginTop: "40px" }}>
                 <div
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     fontWeight: 700,
                     fontFamily: "Times New Roman, serif",
                   }}
@@ -1330,6 +1340,11 @@ function DVEditablePreview({
     mergedData.certified_by_name = dv.certified_by_name;
   if (!mergedData.certified_by_position && dv?.certified_by_position)
     mergedData.certified_by_position = dv.certified_by_position;
+  // Ensure signature fields are available
+  if (dv?.certified_printed_name) mergedData.certified_printed_name = dv.certified_printed_name;
+  if (dv?.approved_printed_name) mergedData.approved_printed_name = dv.approved_printed_name;
+  if (dv?.certified_position) mergedData.certified_position = dv.certified_position;
+  if (dv?.approved_position) mergedData.approved_position = dv.approved_position;
 
   return (
     <div className="space-y-2">
@@ -1382,7 +1397,7 @@ function DVEditablePreview({
               minHeight: "1056px",
               margin: "0 auto",
               fontFamily: "Times New Roman, serif",
-              fontSize: "9px",
+              fontSize: "10px",
               color: "#000",
             }}
           >
@@ -1494,7 +1509,7 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "60px",
-                                fontSize: "9px",
+                                fontSize: "10px",
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
@@ -1519,7 +1534,7 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "80px",
-                                fontSize: "9px",
+                                fontSize: "10px",
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
@@ -1539,7 +1554,7 @@ function DVEditablePreview({
                               className={editableInputCls}
                               style={{
                                 width: "100px",
-                                fontSize: "9px",
+                                fontSize: "10px",
                                 fontFamily: "Times New Roman, serif",
                               }}
                             />
@@ -1590,7 +1605,7 @@ function DVEditablePreview({
                           display: "flex",
                           alignItems: "center",
                           gap: "3px",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1612,7 +1627,7 @@ function DVEditablePreview({
                           display: "flex",
                           alignItems: "center",
                           gap: "3px",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1636,7 +1651,7 @@ function DVEditablePreview({
                           display: "flex",
                           alignItems: "center",
                           gap: "3px",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1658,7 +1673,7 @@ function DVEditablePreview({
                           display: "flex",
                           alignItems: "center",
                           gap: "3px",
-                          fontSize: "9px",
+                          fontSize: "10px",
                           fontFamily: "Times New Roman, serif",
                         }}
                       >
@@ -1718,7 +1733,7 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -1766,7 +1781,7 @@ function DVEditablePreview({
                       }
                       onChange={(e) => updateDvField("address", e.target.value)}
                       className={editableInputCls}
-                      style={{ width: "95%", fontSize: "9px" }}
+                      style={{ width: "95%", fontSize: "10px" }}
                     />
                   </td>
                   <td
@@ -1787,7 +1802,7 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                       placeholder="VAT 766-956-523-000"
@@ -1808,7 +1823,7 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -1898,7 +1913,7 @@ function DVEditablePreview({
                       style={{
                         width: "95%",
                         minHeight: "110px",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                       rows={6}
@@ -1920,7 +1935,7 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -1939,7 +1954,7 @@ function DVEditablePreview({
                       className={editableInputCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -1954,7 +1969,7 @@ function DVEditablePreview({
                       className={editableInputRightCls}
                       style={{
                         width: "95%",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontFamily: "Times New Roman, serif",
                       }}
                     />
@@ -2190,7 +2205,7 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "52.5%",
+                      width: "52.3%",
                       borderRight: "1px solid #000",
                       padding: "4px 6px",
                       verticalAlign: "top",
@@ -2254,7 +2269,6 @@ function DVEditablePreview({
                         fontFamily: "Times New Roman, serif",
                       }}
                     >
-                      D. Approved for Payment
                     </div>
                     <div style={{ height: "70px" }}></div>
                   </td>
@@ -2275,7 +2289,7 @@ function DVEditablePreview({
                 <tr>
                   <td
                     style={{
-                      width: "68px",
+                      width: "66px",
                       borderRight: "1px solid #000",
                       borderBottom: "1px solid #000",
                       padding: "3px 4px",
@@ -2337,7 +2351,20 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <input
+                      type="text"
+                      value={mergedData.certified_printed_name || ""}
+                      onChange={(e) =>
+                        updateDvField("certified_printed_name", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "10px",
+                        fontFamily: "Times New Roman, serif",
+                        textAlign: "center",
+                      }}
+                    />
                   </td>
                   <td
                     style={{
@@ -2357,7 +2384,20 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <input
+                      type="text"
+                      value={mergedData.approved_printed_name || ""}
+                      onChange={(e) =>
+                        updateDvField("approved_printed_name", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "10px",
+                        fontFamily: "Times New Roman, serif",
+                        textAlign: "center",
+                      }}
+                    />
                   </td>
                 </tr>
                 <tr>
@@ -2381,7 +2421,20 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <input
+                      type="text"
+                      value={mergedData.certified_position || ""}
+                      onChange={(e) =>
+                        updateDvField("certified_position", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "10px",
+                        fontFamily: "Times New Roman, serif",
+                        textAlign: "center",
+                      }}
+                    />
                   </td>
                   <td
                     style={{
@@ -2402,7 +2455,20 @@ function DVEditablePreview({
                       fontFamily: "Times New Roman, serif",
                     }}
                   >
-                    &nbsp;
+                    <input
+                      type="text"
+                      value={mergedData.approved_position || ""}
+                      onChange={(e) =>
+                        updateDvField("approved_position", e.target.value)
+                      }
+                      className={editableInputCls}
+                      style={{
+                        width: "95%",
+                        fontSize: "10px",
+                        fontFamily: "Times New Roman, serif",
+                        textAlign: "center",
+                      }}
+                    />
                   </td>
                 </tr>
                 <tr>
@@ -3075,6 +3141,12 @@ export default function ProcessDeliveryModal({
       documents.push("iar", "loa", "dv");
     }
 
+    // If IAR is marked as Partial (items_complete === false), LOA and DV
+    // should not be accessible from the modal — hide those tabs.
+    if (iar?.items_complete === false) {
+      return documents.filter((d) => d === "delivery" || d === "iar");
+    }
+
     return documents;
   };
 
@@ -3121,6 +3193,21 @@ export default function ProcessDeliveryModal({
       setSelectedDocument(availableDocuments[0]);
     }
   }, [active?.status_id]);
+
+  // If IAR is toggled to Partial, ensure LOA/DV tabs are not selected
+  useEffect(() => {
+    const available = getAvailableDocuments();
+
+    if (!available.includes(selectedDocument)) {
+      setSelectedDocument(available[0] ?? "delivery");
+    }
+    // when items_complete explicitly false, prefer `iar` if available
+    if (iar?.items_complete === false) {
+      if (available.includes("iar") && selectedDocument !== "iar") {
+        setSelectedDocument("iar");
+      }
+    }
+  }, [iar?.items_complete, active?.status_id, selectedDocument]);
 
   // Initialize iar_po_items with PO items when poData is available and iar_po_items is empty
   useEffect(() => {
@@ -3376,6 +3463,58 @@ export default function ProcessDeliveryModal({
                 <span>
                   Prepare LOA documents in advance for faster processing
                 </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    // Status 25 (Division Chief) - Preview only and status flag toggle
+
+    if (active?.status_id === 25) {
+      return (
+        <div className="max-h-[600px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100 sticky top-0 bg-white z-10">
+            Delivery Status: Division Chief Review
+          </h3>
+
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-xs font-bold">25</span>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-emerald-900 mb-2">
+                  Division Chief Review
+                </h4>
+
+                <p className="text-xs text-emerald-800 leading-5">
+                  This stage is for Division Chief verification. Use the document
+                  tabs to preview the IAR, LOA and DV documents, then choose a
+                  status flag to complete the delivery review.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-700 mb-3">
+              What to do in this stage
+            </h4>
+            <ul className="space-y-2 text-xs text-gray-700">
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-500 mt-0.5">•</span>
+                Review the available IAR, LOA and DV documents in the preview.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-500 mt-0.5">•</span>
+                Confirm the documents are complete and correct before submitting.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-500 mt-0.5">•</span>
+                Set or update the status flag to reflect the current review state.
               </li>
             </ul>
           </div>
@@ -3997,7 +4136,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  IAR No. <span className="text-red-500">*</span>
+                  IAR No.
                 </label>
 
                 <input
@@ -4045,10 +4184,122 @@ export default function ProcessDeliveryModal({
               </div>
             </div>
 
+                 {/* Inspection Verification */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Inspection Verification
+              </label>
+
+              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label
+                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
+                    active?.status_id === 25
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer hover:bg-white"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={iar?.inspection_verified === true}
+                    onChange={(e) =>
+                      setIar((p: any) => ({
+                        ...(p ?? {}),
+
+                        inspection_verified: e.target.checked,
+                      }))
+                    }
+                    disabled={active?.status_id === 25}
+                    className={`w-4 h-4 rounded focus:ring-2 ${
+                      active?.status_id === 25
+                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                    }`}
+                  />
+
+                  <span className="text-sm text-gray-700">
+                    Inspected, verified and found in order as to quantity and
+                    specifications
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Inspection Confirmation */}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Inspection Confirmation
+              </label>
+
+              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label
+                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
+                    active?.status_id === 25
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer hover:bg-white"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={iar?.items_complete === true}
+                    onChange={(e) =>
+                      setIar((p: any) => ({
+                        ...(p ?? {}),
+
+                        items_complete: e.target.checked ? true : null,
+                      }))
+                    }
+                    disabled={active?.status_id === 25}
+                    className={`w-4 h-4 rounded focus:ring-2 ${
+                      active?.status_id === 25
+                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                    }`}
+                  />
+
+                  <span className="text-sm text-gray-700">
+                    Complete Delivery
+                  </span>
+                </label>
+
+                {/* Always show Partial row next to Complete — mutually exclusive via `items_complete` */}
+                <label
+                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
+                    active?.status_id === 25
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer hover:bg-white"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={iar?.items_complete === false}
+                    onChange={(e) =>
+                      setIar((p: any) => ({
+                        ...(p ?? {}),
+
+                        items_complete: e.target.checked ? false : null,
+                      }))
+                    }
+                    disabled={active?.status_id === 25}
+                    className={`w-4 h-4 rounded focus:ring-2 ${
+                      active?.status_id === 25
+                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                    }`}
+                  />
+
+                  <span className="text-sm text-gray-700">
+                    Partial (please specify quantity)
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Invoice No. <span className="text-red-500">*</span>
+                  Invoice No.
                 </label>
 
                 <input
@@ -4075,7 +4326,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Invoice Date <span className="text-red-500">*</span>
+                  Invoice Date
                 </label>
 
                 <input
@@ -4100,7 +4351,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  IAR Date <span className="text-red-500">*</span>
+                  IAR Date
                 </label>
 
                 <input
@@ -4179,8 +4430,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Inspection Officer/Inspection Committee{" "}
-                  <span className="text-red-500">*</span>
+                  Inspection Officer/Inspection Committee
                 </label>
 
                 <input
@@ -4205,7 +4455,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  ARPT/SUPPLY OFFICER <span className="text-red-500">*</span>
+                  ARPT/SUPPLY OFFICER
                 </label>
 
                 <input
@@ -4229,119 +4479,7 @@ export default function ProcessDeliveryModal({
               </div>
             </div>
 
-            {/* Inspection Verification */}
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Inspection Verification <span className="text-red-500">*</span>
-              </label>
-
-              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <label
-                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
-                    active?.status_id === 25
-                      ? "cursor-not-allowed"
-                      : "cursor-pointer hover:bg-white"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={iar?.inspection_verified === true}
-                    onChange={(e) =>
-                      setIar((p: any) => ({
-                        ...(p ?? {}),
-
-                        inspection_verified: e.target.checked,
-                      }))
-                    }
-                    disabled={active?.status_id === 25}
-                    className={`w-4 h-4 rounded focus:ring-2 ${
-                      active?.status_id === 25
-                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
-                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                    }`}
-                  />
-
-                  <span className="text-sm text-gray-700">
-                    Inspected, verified and found in order as to quantity and
-                    specifications
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Inspection Confirmation */}
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Inspection Confirmation <span className="text-red-500">*</span>
-              </label>
-
-              <div className="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <label
-                  className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
-                    active?.status_id === 25
-                      ? "cursor-not-allowed"
-                      : "cursor-pointer hover:bg-white"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={iar?.items_complete === true}
-                    onChange={(e) =>
-                      setIar((p: any) => ({
-                        ...(p ?? {}),
-
-                        items_complete: e.target.checked,
-                      }))
-                    }
-                    disabled={active?.status_id === 25}
-                    className={`w-4 h-4 rounded focus:ring-2 ${
-                      active?.status_id === 25
-                        ? "text-gray-400 border-gray-300 cursor-not-allowed"
-                        : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                    }`}
-                  />
-
-                  <span className="text-sm text-gray-700">
-                    Complete Delivery
-                  </span>
-                </label>
-
-                {/* Partial row — only shown when Complete is NOT checked */}
-                {iar?.items_complete === false && (
-                  <label
-                    className={`flex items-center gap-3 p-2 transition-colors rounded-lg ${
-                      active?.status_id === 25
-                        ? "cursor-not-allowed"
-                        : "cursor-pointer hover:bg-white"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={iar?.items_complete === false}
-                      onChange={(e) =>
-                        setIar((p: any) => ({
-                          ...(p ?? {}),
-
-                          items_complete: !e.target.checked,
-                        }))
-                      }
-                      disabled={active?.status_id === 25}
-                      className={`w-4 h-4 rounded focus:ring-2 ${
-                        active?.status_id === 25
-                          ? "text-gray-400 border-gray-300 cursor-not-allowed"
-                          : "text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                      }`}
-                    />
-
-                    <span className="text-sm text-gray-700">
-                      Partial (please specify quantity)
-                    </span>
-                  </label>
-                )}
-              </div>
-            </div>
+       
 
             {/* Missing Units - Optional Input Field */}
             <div>
@@ -4657,7 +4795,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Invoice No. <span className="text-red-500">*</span>
+                  Invoice No.
                 </label>
 
                 <input
@@ -4682,7 +4820,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  PO Date <span className="text-red-500">*</span>
+                  PO Date
                 </label>
 
                 <input
@@ -4709,7 +4847,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Invoice Date <span className="text-red-500">*</span>
+                  Invoice Date
                 </label>
 
                 <input
@@ -4734,7 +4872,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Acceptance Date <span className="text-red-500">*</span>
+                  Acceptance Date
                 </label>
 
                 <input
@@ -4761,7 +4899,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Accepted By (Name) <span className="text-red-500">*</span>
+                  Accepted By (Name)
                 </label>
 
                 <input
@@ -4786,8 +4924,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Accepted By (Title/Designation){" "}
-                  <span className="text-red-500">*</span>
+                  Accepted By (Title/Designation)
                 </label>
 
                 <input
@@ -4835,7 +4972,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Payee <span className="text-red-500">*</span>
+                  Payee
                 </label>
 
                 <input
@@ -4851,7 +4988,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Payee TIN <span className="text-red-500">*</span>
+                  Payee TIN
                 </label>
 
                 <input
@@ -4872,7 +5009,7 @@ export default function ProcessDeliveryModal({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Address <span className="text-red-500">*</span>
+                Address
               </label>
 
               <input
@@ -4888,7 +5025,7 @@ export default function ProcessDeliveryModal({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Particulars <span className="text-red-500">*</span>
+                Particulars
               </label>
 
               <textarea
@@ -4909,7 +5046,7 @@ export default function ProcessDeliveryModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Certified Name <span className="text-red-500">*</span>
+                  Certified Name
                 </label>
 
                 <input
@@ -4928,7 +5065,7 @@ export default function ProcessDeliveryModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Position <span className="text-red-500">*</span>
+                  Position
                 </label>
 
                 <input
@@ -5147,6 +5284,14 @@ export default function ProcessDeliveryModal({
         dvData.po_items = mergedData.po_items;
         if (mergedData.po_no) dvData.po_no = mergedData.po_no;
         if (mergedData.po_date) dvData.po_date = mergedData.po_date;
+        if (dv?.certified_printed_name !== undefined)
+          dvData.certified_printed_name = dv.certified_printed_name;
+        if (dv?.approved_printed_name !== undefined)
+          dvData.approved_printed_name = dv.approved_printed_name;
+        if (dv?.certified_position !== undefined)
+          dvData.certified_position = dv.certified_position;
+        if (dv?.approved_position !== undefined)
+          dvData.approved_position = dv.approved_position;
 
         // Use JSX-based HTML generation (synchronous now)
         html = buildDVHtml(dvData);
@@ -5493,5 +5638,5 @@ export default function ProcessDeliveryModal({
         onClose={onCloseFlagPicker}
       />
     </div>
-  );
+  )
 }
