@@ -85,6 +85,14 @@ export function buildIARHtml(data: any): string {
     html, body { margin: 0; padding: 0; }
     body { font-family: "Times New Roman", serif; color: #000; }
     table { width: 100%; border-collapse: collapse; }
+
+    /* Ensure table headers/footers repeat when printing */
+    @media print {
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+    }
   </style>
 </head>
 <body>
@@ -366,6 +374,7 @@ export default function IARPreview({
               fontFamily: "Times New Roman, serif",
             }}
           >
+            <style>{`@media print { thead { display: table-header-group; } tfoot { display: table-footer-group; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } }`}</style>
             {/* Appendix Header */}
             <div className="text-right mb-2">
               <span

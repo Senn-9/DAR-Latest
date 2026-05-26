@@ -61,6 +61,10 @@ export default function CreateDeliveryModal({
     [poOptions, selectedPoId],
   );
 
+  // Normalize active/completed ID lists into Sets for reliable lookups
+  const poActiveIdSet = useMemo(() => new Set((poActiveIds ?? []).map((id) => Number(id))), [poActiveIds]);
+  const poCompletedIdSet = useMemo(() => new Set((poCompletedIds ?? []).map((id) => Number(id))), [poCompletedIds]);
+
   const sections = useMemo(() => {
     return [
       "All",
@@ -75,6 +79,8 @@ export default function CreateDeliveryModal({
   const filteredPOs = useMemo(() => {
     const q = poSearch.trim().toLowerCase();
     return (poOptions ?? []).filter((p) => {
+      // Exclude POs that already have a completed delivery
+      if (poCompletedIdSet.has(Number(p.id))) return false;
       const section = String(p.office_section ?? "");
       if (sectionFilter !== "All" && section !== sectionFilter) return false;
       if (!q) return true;
@@ -90,7 +96,8 @@ export default function CreateDeliveryModal({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [poOptions, poSearch, sectionFilter]);
+  }, [poOptions, poSearch, sectionFilter, poCompletedIdSet]);
+  
 
   if (!visible) return null;
 
@@ -186,8 +193,8 @@ export default function CreateDeliveryModal({
             <div className="max-h-64 overflow-y-auto space-y-2">
                 {filteredPOs.map((p) => {
                   const selected = Number(selectedPoId) === Number(p.id);
-                  const hasActiveDelivery = Array.isArray(poActiveIds) && poActiveIds.includes(Number(p.id));
-                  const hasCompletedDelivery = Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(p.id));
+                  const hasActiveDelivery = poActiveIdSet.has(Number(p.id));
+                  const hasCompletedDelivery = poCompletedIdSet.has(Number(p.id));
                   const disabled = hasActiveDelivery || hasCompletedDelivery;
                   const baseClass = `w-full p-3 rounded-xl border text-left transition-all `;
                   return (
@@ -253,10 +260,10 @@ export default function CreateDeliveryModal({
               <p className="text-xs text-gray-600">
                 Office/Section: {selectedPo.office_section || "—"}
               </p>
-              {selectedPo && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPo.id)) && (
+              {selectedPo && poActiveIdSet.has(Number(selectedPo.id)) && (
                 <p className="text-xs text-red-600 mt-1">Note: This PO currently has an active delivery process and cannot be logged until the process completes.</p>
               )}
-              {selectedPo && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPo.id)) && (
+              {selectedPo && poCompletedIdSet.has(Number(selectedPo.id)) && (
                 <p className="text-xs text-red-600 mt-1">Note: This PO already has a completed delivery and cannot be logged again.</p>
               )}
             </div>
@@ -275,13 +282,13 @@ export default function CreateDeliveryModal({
             onClick={handleSubmit}
             disabled={
               !selectedPoId ||
-              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) ||
-              Boolean(selectedPoId && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPoId)))
+              Boolean(selectedPoId && poActiveIdSet.has(Number(selectedPoId))) ||
+              Boolean(selectedPoId && poCompletedIdSet.has(Number(selectedPoId)))
             }
             className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold transition-colors ${
               !selectedPoId ||
-              Boolean(selectedPoId && Array.isArray(poActiveIds) && poActiveIds.includes(Number(selectedPoId))) ||
-              Boolean(selectedPoId && Array.isArray(poCompletedIds) && poCompletedIds.includes(Number(selectedPoId)))
+              Boolean(selectedPoId && poActiveIdSet.has(Number(selectedPoId))) ||
+              Boolean(selectedPoId && poCompletedIdSet.has(Number(selectedPoId)))
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-emerald-700 hover:bg-emerald-800"
             }`}

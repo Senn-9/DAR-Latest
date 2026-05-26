@@ -54,6 +54,7 @@ import {
   insertDeliveryProcessRemark,
   fetchPoIdsWithActiveDeliveries,
   fetchPoIdsWithCompletedDeliveries,
+  hasCompletedDeliveryForPo,
   hasActiveDeliveryForPo,
   fetchPODataForDelivery,
 } from "@/utils/supabase/delivery";
@@ -560,6 +561,16 @@ export default function DeliveryPage() {
           return;
         }
       } catch (e) {}
+
+        try {
+          const completed = await hasCompletedDeliveryForPo(selectedPoId);
+          if (completed) {
+            alert(
+              "Selected PO already has a completed delivery in the payment phase. Cannot create a new Log Delivery.",
+            );
+            return;
+          }
+        } catch (e) {}
 
       const selectedPo = poCandidates.find((p) => p.id === selectedPoId);
 
@@ -1799,7 +1810,7 @@ export default function DeliveryPage() {
                                 </button>
                               )}
 
-                              {(isAdmin || isSupplyAccount) && (
+                              {isAdmin && (
                                 <button
                                   onClick={() =>
                                     handleOpenDeleteModal(delivery)

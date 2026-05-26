@@ -50,7 +50,7 @@ export default function DeleteDeliveryModal({
   }, [visible, deliveryId]);
 
   if (!visible || deliveryId == null) return null;
-  if (roleId !== undefined && roleId !== 1 && roleId !== 8) return null;
+  if (roleId !== undefined && roleId !== 1) return null;
 
   const targetNo = preview?.deliveryNo ?? deliveryNo ?? `DEL#${deliveryId}`;
   const canConfirm = !saving && confirmNo.trim().toUpperCase() === targetNo.toUpperCase();

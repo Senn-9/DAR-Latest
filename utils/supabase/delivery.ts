@@ -440,6 +440,23 @@ export async function insertDelivery(payload: {
     }
   }
 
+  // Additional guard: if a completed/payment-phase delivery already exists for this PO,
+  // do not allow creating a new Log Delivery for it.
+  if (payload.po_id != null) {
+    const COMPLETED_DELIVERY_STATUS_IDS = [...PAYMENT_PHASE_STATUS_IDS];
+    const { data: completedRows, error: compErr } = await supabase
+      .from("deliveries")
+      .select("id")
+      .eq("po_id", payload.po_id)
+      .in("status_id", COMPLETED_DELIVERY_STATUS_IDS)
+      .limit(1);
+
+    if (compErr) throw compErr;
+    if (completedRows && (completedRows as any).length > 0) {
+      throw new Error("This PO already has a completed delivery in the payment phase. Cannot create another Log Delivery.");
+    }
+  }
+
   // Generate unique delivery number with retry mechanism
   const generateUniqueDeliveryNo = async (drNo?: string | null): Promise<string> => {
     const now = new Date();
@@ -551,8 +568,9 @@ export async function fetchPoIdsWithActiveDeliveries(): Promise<number[]> {
 export async function fetchPoIdsWithCompletedDeliveries(): Promise<number[]> {
   const supabase = createClient();
 
-  // Completed delivery statuses (28+ are payment phase statuses)
-  const COMPLETED_DELIVERY_STATUS_IDS = [28, 29, 30, 32, 33, 34, 35, 36, 37];
+  // Treat all payment-phase statuses as "completed" for the purposes
+  // of excluding POs from the Create Delivery modal.
+  const COMPLETED_DELIVERY_STATUS_IDS = [...PAYMENT_PHASE_STATUS_IDS];
 
   const { data, error } = await supabase
     .from("deliveries")
@@ -590,6 +608,24 @@ export async function hasActiveDeliveryForPo(poId: number): Promise<boolean> {
 
   return (data ?? []).length > 0;
 
+}
+
+
+export async function hasCompletedDeliveryForPo(poId: number): Promise<boolean> {
+  const supabase = createClient();
+
+  const COMPLETED_DELIVERY_STATUS_IDS = [...PAYMENT_PHASE_STATUS_IDS];
+
+  const { data, error } = await supabase
+    .from("deliveries")
+    .select("id")
+    .eq("po_id", poId)
+    .in("status_id", COMPLETED_DELIVERY_STATUS_IDS)
+    .limit(1);
+
+  if (error) throw error;
+
+  return (data ?? []).length > 0;
 }
 
 
