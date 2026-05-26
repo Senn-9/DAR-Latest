@@ -41,17 +41,6 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       </tr>`;
   });
 
-  while (itemRows.length < 20) {
-    itemRows.push(`
-      <tr style="height:16px">
-        <td style="border:1px solid black"></td>
-        <td style="border:1px solid black"></td>
-        <td style="border:1px solid black"></td>
-        <td style="border:1px solid black"></td>
-        <td style="border:1px solid black"></td>
-        <td style="border:1px solid black"></td>
-      </tr>`);
-  }
   const grandTotal = data.items.reduce((sum, item) => sum + getItemTotal(item), 0);
 
   return `<!DOCTYPE html>

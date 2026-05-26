@@ -45,7 +45,7 @@ export default function FilesPage() {
 
 		try {
 			const user = JSON.parse(storedUser) as { role_id?: number };
-			if (user?.role_id === 3) {
+			if (user?.role_id === 1 || user?.role_id === 2 || user?.role_id === 3 || user?.role_id === 5) {
 				setAuthorized(true);
 			} else {
 				router.replace("/Dashboard");

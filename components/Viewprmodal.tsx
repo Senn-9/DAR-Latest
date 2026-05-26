@@ -8,10 +8,12 @@ import {
   RiCloseLine,
   RiFilePdf2Line,
   RiEditLine,
+  RiDeleteBinLine,
 } from "react-icons/ri";
 import { RichEditor } from "@/components/RichEditor";
 
 type ItemDataType = {
+  uiId: string;
   stock_no: string;
   unit: string;
   description: string;
@@ -38,12 +40,12 @@ const thStyle: React.CSSProperties = {
   fontWeight: "bold",
 };
 
-// Read-only input — same look as the form but no interaction
-const readonlyCls =
-  "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
+const inputCls =
+  "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300";
 
 function emptyItem(): ItemDataType {
   return {
+    uiId: crypto.randomUUID(),
     stock_no: "",
     unit: "",
     description: "",
@@ -54,6 +56,28 @@ function emptyItem(): ItemDataType {
   };
 }
 
+function createTableItem(): ItemDataType {
+  return emptyItem();
+}
+
+function padItems(items: ItemDataType[], minRows: number): ItemDataType[] {
+  const nextItems = [...items];
+  while (nextItems.length < minRows) {
+    nextItems.push(createTableItem());
+  }
+  return nextItems;
+}
+
+function isEmptyItem(item: ItemDataType): boolean {
+  return (
+    item.stock_no.trim() === "" &&
+    item.unit.trim() === "" &&
+    item.description.trim() === "" &&
+    item.quantity.trim() === "" &&
+    item.unit_price.trim() === ""
+  );
+}
+
 function getItemTotal(item: ItemDataType): number {
   return (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
 }
@@ -62,11 +86,30 @@ function getGrandTotal(items: ItemDataType[]): number {
   return items.reduce((sum, item) => sum + getItemTotal(item), 0);
 }
 
-function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
-  const MIN_ROWS = 20;
-  const itemRows: (ItemDataType | null)[] = [...items];
-  while (itemRows.length < MIN_ROWS) itemRows.push(null);
+function PRPreview({
+  formData,
+  items,
+  onItemChange,
+  onRemoveItem,
+  onAddItem,
+}: {
+  formData: any;
+  items: ItemDataType[];
+  onItemChange: (uiId: string, field: keyof ItemDataType, value: string) => void;
+  onRemoveItem: (uiId: string) => void;
+  onAddItem: () => void;
+}) {
   const grandTotal = getGrandTotal(items);
+  const editableInputCls =
+    "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+  const editableInputCenterCls = `${editableInputCls} text-center`;
+  const editableInputRightCls = `${editableInputCls} text-right`;
+
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = "auto";
+    target.style.height = `${target.scrollHeight}px`;
+  };
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>
@@ -132,27 +175,81 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {itemRows.map((item, idx) =>
-            item === null ? (
-              <tr key={`pad-${idx}`} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={{ ...tdStyle, textAlign: "left" }}></td>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={{ ...tdStyle, textAlign: "right" }}></td>
-                <td style={{ ...tdStyle, textAlign: "right" }}></td>
-              </tr>
-            ) : (
-              <tr key={idx} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-                <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px" }} dangerouslySetInnerHTML={{ __html: item.description || "" }} />
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}</td>
-              </tr>
-            )
-          )}
+          {items.map((item) => (
+            <tr key={item.uiId} style={{ height: "16px" }}>
+              <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                <textarea
+                  value={item.stock_no}
+                  onChange={(e) => onItemChange(item.uiId, "stock_no", e.target.value)}
+                  onInput={autoResize}
+                  className={editableInputCenterCls}
+                  style={{ width: "95%", minHeight: "16px" }}
+                  rows={1}
+                />
+              </td>
+              <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                <textarea
+                  value={item.unit}
+                  onChange={(e) => onItemChange(item.uiId, "unit", e.target.value)}
+                  onInput={autoResize}
+                  className={editableInputCenterCls}
+                  style={{ width: "95%", minHeight: "16px" }}
+                  rows={1}
+                />
+              </td>
+              <td style={{ ...tdStyle, textAlign: "left", padding: "1px 4px", verticalAlign: "top" }}>
+                <RichEditor
+                  value={item.description}
+                  onChange={(html) => onItemChange(item.uiId, "description", html)}
+                  compact
+                  className={editableInputCls}
+                  style={{ width: "95%", fontFamily: "'Times New Roman', Times, serif" }}
+                />
+              </td>
+              <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                <textarea
+                  value={item.quantity}
+                  onChange={(e) => onItemChange(item.uiId, "quantity", e.target.value)}
+                  onInput={autoResize}
+                  className={editableInputCenterCls}
+                  style={{ width: "95%", minHeight: "16px" }}
+                  rows={1}
+                />
+              </td>
+              <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
+                <textarea
+                  value={item.unit_price}
+                  onChange={(e) => onItemChange(item.uiId, "unit_price", e.target.value)}
+                  onInput={autoResize}
+                  className={editableInputRightCls}
+                  style={{ width: "95%", minHeight: "16px" }}
+                  rows={1}
+                />
+              </td>
+              <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
+                {getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}
+                <button
+                  type="button"
+                  onClick={() => onRemoveItem(item.uiId)}
+                  className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]"
+                  title="Remove row"
+                >
+                  ×
+                </button>
+              </td>
+            </tr>
+          ))}
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "4px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={onAddItem}
+                className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold"
+              >
+                + Add Item
+              </button>
+            </td>
+          </tr>
           <tr style={{ height: "17px" }}>
             <td colSpan={5} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", fontSize: "8.5pt", padding: "2px 4px", textAlign: "right", fontWeight: "bold" }}>
               TOTAL
@@ -204,18 +301,13 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
   );
 }
 
-// Helper function to escape HTML special characters
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?: string, currentUserId?: number | null, prId?: number) {
+function downloadPDF(
+  formData: any,
+  items: Array<Omit<ItemDataType, "uiId">>,
+  currentUserFullname?: string,
+  currentUserId?: number | null,
+  prId?: number,
+) {
   // Post remark if currentUser is available
   if (currentUserFullname) {
     postPrintRemark(currentUserFullname, 'PR', currentUserId, prId);
@@ -294,7 +386,21 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
   // Editable styled fields for print (not saved to DB)
   const [editablePREntityName, setEditablePREntityName] = useState<string>("");
   const [editablePRPurpose, setEditablePRPurpose] = useState<string>("");
-  const [editablePRItemDescs, setEditablePRItemDescs] = useState<string[]>([]);
+
+  const updateItem = (uiId: string, field: keyof ItemDataType, value: string) => {
+    setItems((currentItems) => {
+      const nextItems = currentItems.map((item) => (item.uiId === uiId ? { ...item, [field]: value } : item));
+      return nextItems;
+    });
+  };
+
+  const addItem = () => {
+    setItems((currentItems) => [...currentItems, createTableItem()]);
+  };
+
+  const removeItem = (uiId: string) => {
+    setItems((currentItems) => currentItems.filter((item) => item.uiId !== uiId));
+  };
 
   // Load current user from localStorage
   useEffect(() => {
@@ -369,6 +475,7 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
         console.error("Error fetching PR items:", itemErr?.message || itemErr);
       } else if (itemData) {
         const mappedItems = itemData.map((i: any) => ({
+            uiId: crypto.randomUUID(),
             stock_no:   i.stock_no    || "",
             unit:       i.unit        || "",
             description: i.description || "",
@@ -377,8 +484,7 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
             subtotal:   String(i.subtotal   ?? ""),
             created_at: i.created_at  || new Date().toISOString(),
           }));
-        setItems(mappedItems);
-        setEditablePRItemDescs(mappedItems.map(item => item.description));
+        setItems(padItems(mappedItems, 20));
       }
 
       setLoading(false);
@@ -397,9 +503,8 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
-
-        {/* ── HEADER ── same gradient as PRModalComponent */}
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
+        {/* Header */}
+        <div className="bg-linear-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
           <div>
             <h2 className="text-xl font-bold">View Purchase Request</h2>
             <p className="text-emerald-100 text-sm mt-1">Appendix 60 · Official Government Form</p>
@@ -414,187 +519,25 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
                 <RiEditLine size={16} /> Edit
               </button>
             )}
+            {/* Download PDF */}
+            <button
+              onClick={() => downloadPDF(
+                { ...formData, entity_name: editablePREntityName, purpose: editablePRPurpose },
+                items.map(({ uiId, ...item }) => item),
+                currentUserFullname, currentUserId, prId
+              )}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors text-sm font-semibold"
+            >
+              <RiFilePdf2Line size={18} /> Download PDF
+            </button>
             <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
               <RiCloseLine size={24} />
             </button>
           </div>
         </div>
 
-        {/* ── BODY ── */}
         <div className="flex flex-1 overflow-hidden">
-
-          {/* View Mode — read-only */}
-          <div className="flex flex-[2] flex-col overflow-hidden border-r border-gray-200">
-            {loading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="space-y-3 w-full px-8">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-y-auto flex-1 px-8 py-6 space-y-6">
-
-                  {/* View-only notice */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
-                    <span>👁</span> This PR is in <b>{status || "Unknown"}</b> status. {status === "Pending" ? "Click 'Edit PR' to make changes." : "Editing is disabled."}
-                  </div>
-
-                  {/* Print styling notice */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
-                    <span>🎨</span> <b>Print Styling:</b> Fields marked <span className="text-emerald-600">(Editable)</span> support Bold, Italic, Underline, and alignment for the printed document only. Changes are not saved.
-                  </div>
-
-                  {/* Header Information */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Header Information</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Entity Name <span className="text-emerald-600">(Editable)</span></label>
-                        <RichEditor value={editablePREntityName} onChange={setEditablePREntityName} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white" compact />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Fund Cluster</label>
-                          <input className={readonlyCls} value={formData.fund_cluster} readOnly tabIndex={-1} />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number</label>
-                          <input className={readonlyCls} value={formData.pr_no} readOnly tabIndex={-1} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Office / Section</label>
-                          <input className={readonlyCls} value={formData.office_section} readOnly tabIndex={-1} />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Date</label>
-                          <input className={readonlyCls} value={formData.created_at} readOnly tabIndex={-1} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Responsibility Center Code</label>
-                        <input className={readonlyCls} value={formData.resp_code} readOnly tabIndex={-1} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div>
-                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-                        Items <span className="text-gray-400 font-normal normal-case ml-1">({items.length})</span>
-                      </h3>
-                    </div>
-                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                      {items.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">No items on this PR.</p>
-                      ) : (
-                        items.map((item, index) => (
-                          <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                            <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Item {index + 1}</div>
-                            <div className="mb-2">
-                              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Description <span className="text-emerald-600 normal-case">(Editable)</span></label>
-                              <RichEditor
-                                value={editablePRItemDescs[index] ?? item.description ?? ""}
-                                onChange={(html) => {
-                                  const updated = [...editablePRItemDescs];
-                                  updated[index] = html;
-                                  setEditablePRItemDescs(updated);
-                                }}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white"
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 mb-2">
-                              <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Stock/Prop No.</label>
-                                <input className={readonlyCls} value={item.stock_no} readOnly tabIndex={-1} />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit</label>
-                                <input className={readonlyCls} value={item.unit} readOnly tabIndex={-1} />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Qty</label>
-                                <input className={readonlyCls} value={item.quantity} readOnly tabIndex={-1} />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Unit Cost</label>
-                                <input className={readonlyCls} value={item.unit_price ? parseFloat(item.unit_price).toFixed(2) : ""} readOnly tabIndex={-1} />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
-                                <input className={`${readonlyCls} bg-emerald-50 font-bold text-emerald-700`} value={getItemTotal(item).toFixed(2)} readOnly tabIndex={-1} />
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Grand Total */}
-                  <div className="bg-emerald-700 text-white px-4 py-3 rounded-lg flex justify-between items-center font-bold">
-                    <span>GRAND TOTAL</span>
-                    <span className="text-lg">₱{grandTotal.toFixed(2)}</span>
-                  </div>
-
-                  {/* Signatures */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Signatures</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Requested By</label>
-                        <input className={readonlyCls} value={formData.req_name} readOnly tabIndex={-1} />
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={readonlyCls} value={formData.req_desig} readOnly tabIndex={-1} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2">Approved By</label>
-                        <input className={readonlyCls} value={formData.app_name} readOnly tabIndex={-1} />
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-2 mt-3">Designation</label>
-                        <input className={readonlyCls} value={formData.app_desig} readOnly tabIndex={-1} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Purpose */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4 pb-2 border-b border-emerald-100">Purpose <span className="text-emerald-600 normal-case text-xs font-normal">(Editable)</span></h3>
-                    <RichEditor value={editablePRPurpose} onChange={setEditablePRPurpose} className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white" />
-                  </div>
-                </div>
-
-                {/* Footer — PDF only, no Save */}
-                <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                  <button
-                    onClick={() => downloadPDF(
-                      { ...formData, entity_name: editablePREntityName, purpose: editablePRPurpose },
-                      items.map((item, i) => ({ ...item, description: editablePRItemDescs[i] ?? item.description })),
-                      currentUserFullname, currentUserId, prId
-                    )}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-                  >
-                    <RiFilePdf2Line size={18} /> Download PDF
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg transition-colors"
-                  >
-                    <RiCloseLine size={18} /> Close
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Preview Side */}
-          <div className="flex flex-[3] overflow-y-auto bg-gray-100 flex-col">
+          <div className="flex-1 overflow-y-auto bg-gray-100 flex-col">
             <div className="flex-1 overflow-y-auto p-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600">LIVE PREVIEW</h3>
@@ -602,12 +545,14 @@ export default function ViewPRModal({ prId, onClose, onEdit }: ViewPRModalProps)
               <div id="pr-preview-content" className="bg-white rounded-lg shadow-lg p-8 text-black">
                 <PRPreview
                   formData={{ ...formData, entity_name: editablePREntityName, purpose: editablePRPurpose }}
-                  items={items.map((item, i) => ({ ...item, description: editablePRItemDescs[i] ?? item.description }))}
+                  items={items}
+                  onItemChange={updateItem}
+                  onRemoveItem={removeItem}
+                  onAddItem={addItem}
                 />
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

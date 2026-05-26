@@ -38,15 +38,14 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [poDates, setPoDates] = useState<Date[]>([]);
   const [deliveryDates, setDeliveryDates] = useState<Date[]>([]);
   const [paymentDates, setPaymentDates] = useState<Date[]>([]);
-  const buttons =
-    currentUser?.role_id === 1
-      ? [
-          ...baseButtons,
-          { id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" },
-        ]
-      : currentUser?.role_id === 3
-      ? [...baseButtons, filesButton]
-      : baseButtons;
+  const canAccessFiles = currentUser?.role_id === 1 || currentUser?.role_id === 2 || currentUser?.role_id === 3 || currentUser?.role_id === 5;
+  const buttons = [
+    ...baseButtons,
+    ...(currentUser?.role_id === 1
+      ? [{ id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" }]
+      : []),
+    ...(canAccessFiles ? [filesButton] : []),
+  ];
 
   useEffect(() => {
     setMounted(true);
