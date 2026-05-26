@@ -1318,11 +1318,13 @@ export default function ORSProcessModal({
     let isMounted = true;
     setLoadingExistingOrs(true);
 
-    supabase
-      .from("ors_entries")
-      .select("*")
-      .eq("ors_no", po.ors_no)
-      .maybeSingle()
+    Promise.resolve(
+      supabase
+        .from("ors_entries")
+        .select("*")
+        .eq("ors_no", po.ors_no)
+        .maybeSingle()
+    )
       .then(({ data, error }) => {
         if (!isMounted) return;
         if (error) {
@@ -1455,9 +1457,9 @@ export default function ORSProcessModal({
       throw new Error(`Failed to update ORS entry: ${orsError.message}`);
     }
 
-    const { error: poUpdateError } = await syncPurchaseOrderORSFields();
-    if (poUpdateError) {
-      throw new Error(`Failed to update PO ORS fields: ${poUpdateError.message}`);
+    const poUpdateResult = await syncPurchaseOrderORSFields();
+    if (poUpdateResult?.error) {
+      throw new Error(`Failed to update PO ORS fields: ${poUpdateResult.error.message}`);
     }
 
     await supabase.from("remarks").insert({
@@ -1489,9 +1491,9 @@ export default function ORSProcessModal({
         return;
       }
 
-      const { error: updateError } = await syncPurchaseOrderORSFields(14);
-      if (updateError) {
-        setErrorMsg(`Failed to update PO: ${updateError.message}`);
+      const updateResult = await syncPurchaseOrderORSFields(14);
+      if (updateResult?.error) {
+        setErrorMsg(`Failed to update PO: ${updateResult.error.message}`);
         return;
       }
 
