@@ -55,6 +55,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 	const [resoYear, setResoYear] = useState(currentYear.toString());
 	const [resoSequence, setResoSequence] = useState("");
 	const [alternativeMode, setAlternativeMode] = useState("");
+	const [procurementMethod, setProcurementMethod] = useState("SVP method");
 	const [whereasClauses, setWhereasClauses] = useState<{ id: number; lines: string[] }[]>([
 		{ 
 			id: 1, 
@@ -317,6 +318,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 				resoYear,
 				resoSequence,
 				alternativeMode,
+				procurementMethod,
 				dateResolved,
 				bacChairperson,
 				bacViceChairperson,
@@ -584,7 +586,15 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 								<span style={{ fontSize: "11px", fontWeight: 700, marginLeft: "4px" }}>RESOLVE,</span>
 								<span className="ml-1" style={{ fontSize: "11px" }}>as it is hereby</span>
 								<span style={{ fontSize: "11px", fontWeight: 700, marginLeft: "4px" }}>RESOLVED,</span>
-								<span className="ml-1" style={{ fontSize: "11px" }}>to recommend to the Head of Procuring Entity the procurement of items through SVP method.</span>
+								<span className="ml-1" style={{ fontSize: "11px" }}>to recommend to the Head of Procuring Entity the procurement of items through</span>
+								<input
+									value={procurementMethod}
+									onChange={(e) => setProcurementMethod(e.target.value)}
+									className="mx-1 border-b border-black bg-transparent outline-none text-center"
+									style={{ fontSize: "11px" }}
+									size={12}
+								/>
+								<span style={{ fontSize: "11px" }}>.</span>
 							</div>
 						</div>
 

@@ -147,6 +147,12 @@ export function buildResolutionHtml(
 		line-height: 1.15;
 		vertical-align: middle;
 	}
+	thead {
+		display: table-header-group;
+	}
+	tbody {
+		display: table-row-group;
+	}
 	/* data cells match livePreview input style: px-2 py-1 text-[10px] */
 	.dcell {
 		padding: 4px 8px;
@@ -158,6 +164,14 @@ export function buildResolutionHtml(
 		max-width: 768px;
 		margin: 0 auto;
 		padding: 12px 24px 24px;
+	}
+
+	/* Prevent page breaks inside grouped signature/footer sections */
+	.no-break {
+		page-break-inside: avoid;
+		break-inside: avoid;
+		-webkit-column-break-inside: avoid;
+		-webkit-page-break-inside: avoid;
 	}
 </style>
 </head>
@@ -217,7 +231,7 @@ export function buildResolutionHtml(
 	<!-- Data table: fontSize 10px text-center -->
 	<table style="text-align:center;">
 		<colgroup>${colGroupHtml}</colgroup>
-		<tbody>
+		<thead>
 			<tr style="height:20px;">
 				<td class="cell" style="font-weight:bold;text-transform:uppercase;" rowspan="2">ITEM NO.</td>
 				<td class="cell" style="font-weight:bold;text-transform:uppercase;" rowspan="2">QTY</td>
@@ -228,6 +242,8 @@ export function buildResolutionHtml(
 			<tr style="height:48px;">
 				${dealerNameCells}
 			</tr>
+		</thead>
+		<tbody>
 			${bodyRows}
 			<tr style="height:18px;">
 				<td class="cell">&nbsp;</td>
@@ -239,76 +255,82 @@ export function buildResolutionHtml(
 		</tbody>
 	</table>
 
-	<!-- BAC header: fontSize 10px marginTop 4px -->
-	<div style="text-align:center;font-weight:bold;text-transform:uppercase;font-size:10px;margin-top:4px;">BY THE BIDS AND AWARDS COMMITTEE</div>
+	<!-- Group the BAC header and resolution body to avoid splitting them across pages -->
+	<div class="no-break">
+		<!-- BAC header: fontSize 10px marginTop 4px -->
+		<div style="text-align:center;font-weight:bold;text-transform:uppercase;font-size:10px;margin-top:4px;">BY THE BIDS AND AWARDS COMMITTEE</div>
 
-	<!-- Resolution body: mt-3(12px) fontSize 10px lineHeight 1.15 -->
-	<div style="margin-top:12px;font-size:10px;line-height:1.15;">
-		<!-- wider paragraph block for fewer wraps -->
-		<div style="max-width:680px;margin:0 auto;text-align:justify;width:100%;">
-			<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Based on the above abstract of quotation of prices offered by different leading dealers on various materials called for as above,</p>
-			<p style="margin-top:4px;">the Committee found that:</p>
-		</div>
-		<!-- winning item line -->
-		<div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto;">
-			${forItemLines}
-		</div>
-		<!-- WHEREOF paragraph -->
-		<div style="max-width:720px;margin:8px auto 0;text-align:justify;width:100%;">
-			<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
-			<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ${meta.date.trim() ? escapeHtml(formatDateLegal(meta.date)) : "____ day of ______, 20___"}</p>
+		<!-- Resolution body: mt-3(12px) fontSize 10px lineHeight 1.15 -->
+		<div style="margin-top:12px;font-size:10px;line-height:1.15;">
+			<!-- wider paragraph block for fewer wraps -->
+			<div style="max-width:680px;margin:0 auto;text-align:justify;width:100%;">
+				<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Based on the above abstract of quotation of prices offered by different leading dealers on various materials called for as above,</p>
+				<p style="margin-top:4px;">the Committee found that:</p>
+			</div>
+			<!-- winning item line -->
+			<div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto;">
+				${forItemLines}
+			</div>
+			<!-- WHEREOF paragraph -->
+			<div style="max-width:720px;margin:8px auto 0;text-align:justify;width:100%;">
+				<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">WHEREOF</span>, considering the above premises, the members of the Bids and Awards Committee hereby recommend to the<br/>Head of the Procuring Entity the award of the aforementioned document to the lowest price quoted by the respective dealer/s.</p>
+				<p style="margin-top:8px;margin-left:12px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-weight:bold;">RESOLVED</span> at the DAR Camarines Sur 1 Provincial Office, HL Building, Carnation St., Triangulo, Naga City this ${meta.date.trim() ? escapeHtml(formatDateLegal(meta.date)) : "____ day of ______, 20___"}</p>
+			</div>
 		</div>
 	</div>
 
-	<!-- Chairperson: mt-10(40px) fontSize 10px lineHeight 1.1 -->
-	<div style="margin-top:40px;text-align:center;font-size:10px;line-height:1.1;">
-		<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacChair)}</div>
-		<div>BAC Chairperson</div>
-	</div>
-
-	<!-- Members: mt-5(20px) grid-cols-2 gap-x-10(40px) -->
-	<div style="margin-top:20px;font-size:10px;line-height:1.1;">
-		<table style="width:100%;border-collapse:collapse;border:none;">
-			<tr>
-				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacViceChair)}</div>
-					<div>BAC Vice-Chairperson</div>
-				</td>
-				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember1)}</div>
-					<div>BAC Member</div>
-				</td>
-			</tr>
-			<!-- mt-8(32px) spacer -->
-			<tr><td style="border:none;padding:0;height:32px;" colspan="2"></td></tr>
-			<tr>
-				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember2)}</div>
-					<div>BAC Member</div>
-				</td>
-				<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
-					<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember3)}</div>
-					<div>BAC Member</div>
-				</td>
-			</tr>
-		</table>
-	</div>
-
-	<!-- Approved by: mt-7(28px) -->
-	<div style="margin-top:28px;text-align:center;font-size:10px;">
-		<div>APPROVED BY:</div>
-		<!-- mt-6(24px) -->
-		<div style="margin-top:24px;font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.hope)}</div>
-		<div>HOPE</div>
-	</div>
-
-	<!-- Footer: mt-6(24px) -->
-	<div style="margin-top:24px;display:flex;align-items:flex-end;justify-content:space-between;font-size:10px;">
-		<div>
-			<div>ASA/LCO</div>
-			<div>PhilGEPS Ref.</div>
+	<!-- Group signatures, approval and footer to avoid splitting across pages -->
+	<div class="no-break">
+		<!-- Chairperson: mt-10(40px) fontSize 10px lineHeight 1.1 -->
+		<div style="margin-top:40px;text-align:center;font-size:10px;line-height:1.1;">
+			<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacChair)}</div>
+			<div>BAC Chairperson</div>
 		</div>
-		<div style="font-weight:bold;">DARCS1-QF-STO-010 Rev 00</div>
+
+		<!-- Members: mt-5(20px) grid-cols-2 gap-x-10(40px) -->
+		<div style="margin-top:20px;font-size:10px;line-height:1.1;">
+			<table style="width:100%;border-collapse:collapse;border:none;">
+				<tr>
+					<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
+						<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacViceChair)}</div>
+						<div>BAC Vice-Chairperson</div>
+					</td>
+					<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
+						<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember1)}</div>
+						<div>BAC Member</div>
+					</td>
+				</tr>
+				<!-- mt-8(32px) spacer -->
+				<tr><td style="border:none;padding:0;height:32px;" colspan="2"></td></tr>
+				<tr>
+					<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
+						<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember2)}</div>
+						<div>BAC Member</div>
+					</td>
+					<td style="text-align:center;vertical-align:top;padding:0;border:none;width:50%;">
+						<div style="font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.bacMember3)}</div>
+						<div>BAC Member</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<!-- Approved by: mt-7(28px) -->
+		<div style="margin-top:28px;text-align:center;font-size:10px;">
+			<div>APPROVED BY:</div>
+			<!-- mt-6(24px) -->
+			<div style="margin-top:24px;font-weight:bold;text-transform:uppercase;">${escapeHtml(meta.hope)}</div>
+			<div>HOPE</div>
+		</div>
+
+		<!-- Footer: mt-6(24px) -->
+		<div style="margin-top:24px;display:flex;align-items:flex-end;justify-content:space-between;font-size:10px;">
+			<div>
+				<div>ASA/LCO</div>
+				<div>PhilGEPS Ref.</div>
+			</div>
+			<div style="font-weight:bold;">DARCS1-QF-STO-010 Rev 00</div>
+		</div>
 	</div>
 
 </div>

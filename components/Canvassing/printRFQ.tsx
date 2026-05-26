@@ -101,11 +101,15 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 	}
+	@page {
+		size: A4;
+		margin: 12mm 0 14mm;
+	}
 	.page {
 		width: 100%;
 		max-width: 210mm;
 		margin: 0 auto;
-		padding: 10mm;
+		padding: 0 10mm;
 	}
 	.top-grid {
 		display: flex;

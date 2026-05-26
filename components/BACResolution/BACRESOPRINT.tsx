@@ -2,6 +2,7 @@ export type BACResoMeta = {
 	resoYear: string;
 	resoSequence: string;
 	alternativeMode: string;
+	procurementMethod?: string;
 	dateResolved: string;
 	bacChairperson?: string;
 	bacViceChairperson?: string;
@@ -81,7 +82,7 @@ export function buildBACResoHtml(
 			<td class="border border-black p-1 text-center" style="font-size: 10px;">
 				${escapeHtml(row.date)}
 			</td>
-			<td class="border border-black p-1 text-right" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 10px;">
 				${escapeHtml(row.cost)}
 			</td>
 			<td class="border border-black p-1 text-center" style="font-size: 10px;">
@@ -198,9 +199,13 @@ export function buildBACResoHtml(
 			text-align: center;
 			max-width: 200px;
 		}
+		.narrow-content {
+			width: 100%;
+			max-width: 600px;
+			margin: 0 auto;
+		}
 		.whereas-section {
-			margin-top: 8px;
-			margin-bottom: 8px;
+			margin: 8px 0;
 			font-size: 11px;
 			line-height: 1.6;
 		}
@@ -217,6 +222,7 @@ export function buildBACResoHtml(
 			border-collapse: collapse;
 			margin-bottom: 24px;
 			font-size: 10px;
+			table-layout: fixed;
 		}
 		.items-table th,
 		.items-table td {
@@ -352,48 +358,49 @@ export function buildBACResoHtml(
 
 		<!-- WHEREAS Clauses -->
 		<div class="whereas-section">
-			${whereasSections}
-		</div>
+			<div class="narrow-content">
+				${whereasSections}
 
-		<!-- Items Table -->
-		<div class="mb-4">
-			<table class="items-table">
-				<thead>
-					<tr>
-						<th style="width: 15%;">PR NUMBER</th>
-						<th style="width: 15%;">DATE</th>
-						<th style="width: 20%;">ESTIMATED COST (Php)</th>
-						<th style="width: 25%;">END USER</th>
-						<th style="width: 25%;">RECOMMENDED PROCUREMENT MODE</th>
-					</tr>
-				</thead>
-				<tbody>
-					${tableRows_}
-				</tbody>
-			</table>
-		</div>
+				<!-- Items Table -->
+				<div class="mb-4">
+					<table class="items-table">
+						<thead>
+							<tr>
+								<th style="width: 15%;">PR NUMBER</th>
+								<th style="width: 15%;">DATE</th>
+								<th style="width: 20%;">ESTIMATED COST (Php)</th>
+								<th style="width: 25%;">END USER</th>
+								<th style="width: 25%;">RECOMMENDED PROCUREMENT MODE</th>
+							</tr>
+						</thead>
+						<tbody>
+							${tableRows_}
+						</tbody>
+					</table>
+				</div>
 
-		<!-- Attachment note -->
-		<div class="attachment-note mb-4">
-			Please see attached purchase request/s.
-		</div>
+				<!-- Attachment note -->
+				<div class="attachment-note mb-4">
+					Please see attached purchase request/s.
+				</div>
 
-		<!-- RESOLVE section -->
-		<div class="resolve-section mb-4">
-			<span class="resolve-label">NOW, THEREFORE,</span>
-			<span>we, the members of the Bids and Awards Committee, hereby</span>
-			<span class="resolve-label">RESOLVE,</span>
-			<span>as it is hereby</span>
-			<span class="resolve-label">RESOLVED,</span>
-			<span>to recommend to the Head of Procuring Entity the procurement of items through SVP method.</span>
-		</div>
+				<!-- RESOLVE section -->
+				<div class="resolve-section mb-4">
+					<span class="resolve-label">NOW, THEREFORE,</span>
+					<span>we, the members of the Bids and Awards Committee, hereby</span>
+					<span class="resolve-label">RESOLVE,</span>
+					<span>as it is hereby</span>
+					<span class="resolve-label">RESOLVED,</span>
+					<span>to recommend to the Head of Procuring Entity the procurement of items through ${escapeHtml(meta.procurementMethod || "SVP method") }.</span>
+				</div>
 
-		<!-- Resolution location and date -->
-		<div class="date-section mb-6">
-			<span class="resolve-label">RESOLVED</span>
-			<span>at the HL Bldg. Carnation St, Triangulo Naga City, this</span>
-			<span>${escapeHtml(meta.dateResolved)}</span>
-		</div>
+				<!-- Resolution location and date -->
+				<div class="date-section mb-6">
+					<span class="resolve-label">RESOLVED</span>
+					<span>at the HL Bldg. Carnation St, Triangulo Naga City, this</span>
+					<span>${escapeHtml(meta.dateResolved)}</span>
+				</div>
+			</div>
 
 		<!-- Signatures -->
 		<div class="signature-section">

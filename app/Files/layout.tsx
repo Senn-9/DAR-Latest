@@ -24,9 +24,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     { id: "archive", icon: RiArchiveLine, label: "Archive", href: "/Procurement/Archive" },
     { id: "budget", icon: RiMoneyDollarCircleLine, label: "Budget", href: "/Budget" },
     { id: "logs", icon: RiFileTextLine, label: "Procurement Logs", href: "/Logs" },
+    { id: "files", icon: RiFileList3Line, label: "Files", href: "/Files" },
   ];
-
-  const filesButton = { id: "files", icon: RiFileList3Line, label: "Files", href: "/Files" };
 
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -44,8 +43,6 @@ export default function Layout({ children }: { children: ReactNode }) {
           ...baseButtons,
           { id: "user-management", icon: RiFileList3Line, label: "User Management", href: "/UserManagement" },
         ]
-      : currentUser?.role_id === 3
-      ? [...baseButtons, filesButton]
       : baseButtons;
 
   useEffect(() => {
