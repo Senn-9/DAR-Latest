@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { AuthGuard } from "@/components/AuthGuard";
 import ViewPRModal from "@/components/Viewprmodal";
@@ -67,6 +68,9 @@ export default function ArchivePage() {
   const CURRENT_YEAR = new Date().getFullYear();
   const [fiscalYear, setFiscalYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const canViewFilesButton = currentUser
+    ? currentUser.role_id === 1 || currentUser.role_id === 2 || currentUser.role_id === 3 || currentUser.role_id === 5
+    : false;
   const yearOptions = useMemo(() => {
     const years: number[] = [];
     for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
@@ -242,6 +246,15 @@ export default function ArchivePage() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {canViewFilesButton && (
+                <Link
+                  href="/Procurement/Archive/Files"
+                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-amber-400 hover:text-amber-700"
+                >
+                  <RiFileListLine size={16} className="text-amber-600" />
+                  <span>Files</span>
+                </Link>
+              )}
               <button
                 onClick={() => setShowYearPicker(true)}
                 className="flex items-center gap-2 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl px-4 py-2.5 transition-colors shadow-sm"

@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { AuthGuard } from "@/components/AuthGuard";
 import ViewPRModal from "@/components/Viewprmodal";
 import CanvassLivePreview from "@/components/Canvassing/CanvassLivePreview";
 import BACRESO from "@/components/BACResolution/BACRESO";
 import LivePreview from "@/components/test/livePreview";
+import { RiArchiveLine, RiSearchLine, RiCalendarLine, RiCloseLine, RiCheckLine } from "react-icons/ri";
 
 type PRRow = {
 	id: number;
@@ -17,6 +19,11 @@ type PRRow = {
 };
 
 type PreviewType = "canvass" | "bacreso" | "live" | null;
+
+type CurrentUser = {
+	fullname: string;
+	role_id: number;
+};
 
 export default function FilesPage() {
 	const router = useRouter();
@@ -28,12 +35,21 @@ export default function FilesPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [dateSortDir, setDateSortDir] = useState<"asc" | "desc">("desc");
 	const PAGE_SIZE = 10;
+	const CURRENT_YEAR = new Date().getFullYear();
+	const [fiscalYear, setFiscalYear] = useState(CURRENT_YEAR);
+	const [showYearPicker, setShowYearPicker] = useState(false);
+	const yearOptions = useMemo(() => {
+		const years: number[] = [];
+		for (let y = CURRENT_YEAR + 1; y >= CURRENT_YEAR - 5; y--) years.push(y);
+		return years;
+	}, [CURRENT_YEAR]);
 
 	const [viewPrId, setViewPrId] = useState<number | null>(null);
 	const [selectedPrNo, setSelectedPrNo] = useState("");
 	const [openPreview, setOpenPreview] = useState<PreviewType>(null);
 	const [roleChecked, setRoleChecked] = useState(false);
 	const [authorized, setAuthorized] = useState(false);
+	const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
 	useEffect(() => {
 		const storedUser = localStorage.getItem("currentUser");
@@ -45,6 +61,7 @@ export default function FilesPage() {
 
 		try {
 			const user = JSON.parse(storedUser) as { role_id?: number };
+			setCurrentUser(user as CurrentUser);
 			if (user?.role_id === 1 || user?.role_id === 2 || user?.role_id === 3 || user?.role_id === 5) {
 				setAuthorized(true);
 			} else {
@@ -104,13 +121,16 @@ export default function FilesPage() {
 
 	const filteredRows = useMemo(() => {
 		const term = search.trim().toLowerCase();
-		if (!term) return rows;
 		return rows.filter(
 			(row) =>
-				row.pr_no.toLowerCase().includes(term) ||
-				(row.office_section || "").toLowerCase().includes(term)
+				(!row.created_at || new Date(row.created_at).getFullYear() === fiscalYear) &&
+				(
+					!term ||
+					row.pr_no.toLowerCase().includes(term) ||
+					(row.office_section || "").toLowerCase().includes(term)
+				)
 		);
-	}, [rows, search]);
+	}, [rows, search, fiscalYear]);
 
 	const sortedRows = useMemo(() => {
 		return [...filteredRows].sort((a, b) => {
@@ -149,28 +169,57 @@ export default function FilesPage() {
 
 	return (
 		<AuthGuard>
-			<main className="p-6 sm:p-8">
-				<div className="mx-auto w-full max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-sm">
-					<div className="border-b border-gray-200 px-6 py-4">
-						<h1 className="text-xl font-semibold text-gray-900">Files Preview Table</h1>
-						<p className="mt-1 text-sm text-gray-500">
-							Select a PR number and open any preview document.
-						</p>
-						<div className="mt-3 max-w-sm">
-							<input
-								type="text"
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								placeholder="Search PR number or section..."
-								className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-							/>
+			<main className="min-h-screen bg-gray-100 text-gray-900 font-[family-name:var(--font-sora)]">
+				<div className="w-full px-4 py-4 sm:p-6 space-y-4 md:space-y-6">
+					<div className="flex flex-wrap items-end justify-between gap-4">
+						<div>
+							<p className="text-xs font-bold tracking-widest text-amber-600 uppercase mb-1">Procurement Archive</p>
+							<h1 className="text-3xl font-bold text-gray-900">Files Preview Table</h1>
+							<p className="mt-1 text-sm text-gray-400">
+								Select a PR number and open any preview document.
+							</p>
+							{currentUser && (
+								<p className="text-sm text-gray-400 mt-1">
+									Signed in as <span className="text-gray-700 font-semibold">{currentUser.fullname}</span>
+								</p>
+							)}
 						</div>
-						<p className="mt-3 text-sm text-gray-600">
-							Showing {firstItem}-{lastItem} of {filteredRows.length} PRs ({shownCount} on this page)
-						</p>
+						<div className="flex items-center gap-3">
+							<Link
+								href="/Procurement/Archive"
+								className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-amber-400 hover:text-amber-700"
+							>
+								<RiArchiveLine size={16} className="text-amber-600" />
+								<span>Archive</span>
+							</Link>
+							<button
+								onClick={() => setShowYearPicker(true)}
+								className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-emerald-400 hover:text-emerald-700"
+							>
+								<RiCalendarLine size={16} className="text-emerald-600" />
+								<span>FY {fiscalYear}</span>
+							</button>
+						</div>
 					</div>
 
-					<div className="overflow-x-auto">
+					<div className="mx-auto w-full max-w-6xl rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+						<div className="border-b border-gray-200 px-6 py-4">
+							<div className="relative max-w-sm">
+								<input
+									type="text"
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+									placeholder="Search PR number or section..."
+									className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+								/>
+								<RiSearchLine size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+							</div>
+							<p className="mt-3 text-sm text-gray-600">
+								Showing {firstItem}-{lastItem} of {filteredRows.length} PRs ({shownCount} on this page)
+							</p>
+						</div>
+
+						<div className="overflow-x-auto">
 						<table className="min-w-full">
 							<thead className="bg-gray-50">
 								<tr>
@@ -248,8 +297,8 @@ export default function FilesPage() {
 						</table>
 					</div>
 
-					{!loading && filteredRows.length > 0 && (
-						<div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+						{!loading && filteredRows.length > 0 && (
+							<div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
 							<p className="text-sm text-gray-600">
 								Page {safePage} of {totalPages}
 							</p>
@@ -270,22 +319,51 @@ export default function FilesPage() {
 								</button>
 							</div>
 						</div>
+						)}
+					</div>
+
+					{viewPrId !== null && (
+						<ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} onEdit={() => {}} />
 					)}
+
+					{showYearPicker && (
+						<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+							<div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 transform scale-100 transition-transform">
+								<div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
+									<div className="flex items-center gap-2.5">
+										<RiCalendarLine size={20} className="text-emerald-600" />
+										<h3 className="text-lg font-bold text-gray-900 mt-0.5">Fiscal Year</h3>
+									</div>
+									<button onClick={() => setShowYearPicker(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+										<RiCloseLine size={22} className="text-gray-500" />
+									</button>
+								</div>
+								<div className="max-h-72 overflow-y-auto py-2">
+									{yearOptions.map((year) => (
+										<button
+											key={year}
+											onClick={() => { setFiscalYear(year); setShowYearPicker(false); setCurrentPage(1); }}
+											className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${fiscalYear === year ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+										>
+											<span className={`font-semibold ${fiscalYear === year ? "text-emerald-700" : "text-gray-700"}`}>FY {year}</span>
+											{fiscalYear === year && <RiCheckLine size={18} className="text-emerald-600" />}
+										</button>
+									))}
+								</div>
+							</div>
+						</div>
+					)}
+
+					<CanvassLivePreview
+						open={openPreview === "canvass"}
+						onClose={closePreviews}
+						prNo={selectedPrNo}
+					/>
+
+					<BACRESO open={openPreview === "bacreso"} onClose={closePreviews} prNo={selectedPrNo} />
+
+					<LivePreview open={openPreview === "live"} onClose={closePreviews} prNo={selectedPrNo} />
 				</div>
-
-				{viewPrId !== null && (
-					<ViewPRModal prId={viewPrId} onClose={() => setViewPrId(null)} onEdit={() => {}} />
-				)}
-
-				<CanvassLivePreview
-					open={openPreview === "canvass"}
-					onClose={closePreviews}
-					prNo={selectedPrNo}
-				/>
-
-				<BACRESO open={openPreview === "bacreso"} onClose={closePreviews} prNo={selectedPrNo} />
-
-				<LivePreview open={openPreview === "live"} onClose={closePreviews} prNo={selectedPrNo} />
 			</main>
 		</AuthGuard>
 	);
