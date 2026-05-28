@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
@@ -10,6 +10,10 @@ import CanvassLivePreview from "@/components/Canvassing/CanvassLivePreview";
 import BACRESO from "@/components/BACResolution/BACRESO";
 import LivePreview from "@/components/test/livePreview";
 import { RiArchiveLine, RiSearchLine, RiCalendarLine, RiCloseLine, RiCheckLine } from "react-icons/ri";
+import { buildPurchaseOrderPrintHtml, type POPrintData } from "@/utils/print/POPrintBuilder";
+import { buildORSPrintHtml, type ORSPrintData } from "@/utils/print/ORSPrintBuilder";
+import { buildContractPrintHtml, type ContractPrintData } from "@/utils/print/ContractPrintBuilder";
+import { printWithIframe } from "@/utils/print/printUtils";
 
 type PRRow = {
 	id: number;
@@ -19,6 +23,13 @@ type PRRow = {
 };
 
 type PreviewType = "canvass" | "bacreso" | "live" | null;
+
+type POInfo = {
+	poId: number;
+	poNo: string;
+	hasOrs: boolean;
+	hasContract: boolean;
+};
 
 type CurrentUser = {
 	fullname: string;
@@ -50,6 +61,7 @@ export default function FilesPage() {
 	const [roleChecked, setRoleChecked] = useState(false);
 	const [authorized, setAuthorized] = useState(false);
 	const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+	const [poMap, setPoMap] = useState<Record<string, POInfo[]>>({});
 
 	useEffect(() => {
 		const storedUser = localStorage.getItem("currentUser");
@@ -109,6 +121,62 @@ export default function FilesPage() {
 		void fetchPurchaseRequests();
 	}, [authorized, supabase]);
 
+	// Fetch PO/ORS/Contract associations for each PR
+	useEffect(() => {
+		if (!authorized || rows.length === 0) return;
+
+		const fetchAssociations = async () => {
+			try {
+				const prNos = rows.map((r) => r.pr_no);
+
+				const [poResult, orsResult] = await Promise.all([
+					supabase.from("purchase_orders").select("id, po_no, pr_no").in("pr_no", prNos),
+					supabase.from("ors_entries").select("id, pr_no").in("pr_no", prNos),
+				]);
+
+				if (poResult.error) throw poResult.error;
+				if (orsResult.error) throw orsResult.error;
+
+				const posByPrNo: Record<string, { id: number; poNo: string }[]> = {};
+				for (const po of poResult.data || []) {
+					const prNo = po.pr_no as string;
+					if (!posByPrNo[prNo]) posByPrNo[prNo] = [];
+					posByPrNo[prNo].push({ id: po.id as number, poNo: (po.po_no as string) || "" });
+				}
+
+				const orsExistsByPrNo = new Set<string>();
+				for (const ors of orsResult.data || []) {
+					if (ors.pr_no) orsExistsByPrNo.add(ors.pr_no as string);
+				}
+
+				const allPoIds = (poResult.data || []).map((p) => p.id as number);
+				const contractPoIds = new Set<number>();
+				if (allPoIds.length > 0) {
+					const { data: contractData } = await supabase
+						.from("contract_documents")
+						.select("po_id")
+						.in("po_id", allPoIds);
+					for (const c of contractData || []) contractPoIds.add(c.po_id as number);
+				}
+
+				const map: Record<string, POInfo[]> = {};
+				for (const [prNo, pos] of Object.entries(posByPrNo)) {
+					map[prNo] = pos.map((po) => ({
+						poId: po.id,
+						poNo: po.poNo,
+						hasOrs: orsExistsByPrNo.has(prNo),
+						hasContract: contractPoIds.has(po.id),
+					}));
+				}
+				setPoMap(map);
+			} catch (error) {
+				console.error("Error loading PO associations:", error);
+			}
+		};
+
+		void fetchAssociations();
+	}, [authorized, rows, supabase]);
+
 	const openByType = (prNo: string, type: Exclude<PreviewType, null>) => {
 		setSelectedPrNo(prNo);
 		setOpenPreview(type);
@@ -118,6 +186,117 @@ export default function FilesPage() {
 		setOpenPreview(null);
 		setSelectedPrNo("");
 	};
+
+	const handlePrintPO = useCallback(async (prNo: string) => {
+		try {
+			const poInfos = poMap[prNo];
+			if (!poInfos?.length) return;
+			const poInfo = poInfos[0];
+
+			const [headerRes, itemsRes] = await Promise.all([
+				supabase.from("purchase_orders").select("*").eq("id", poInfo.poId).single(),
+				supabase.from("purchase_order_items").select("*").eq("po_id", poInfo.poId),
+			]);
+			if (headerRes.error || !headerRes.data) throw headerRes.error;
+			if (itemsRes.error) throw itemsRes.error;
+
+			const h = headerRes.data;
+			const printData: POPrintData = {
+				poNo: h.po_no || "", prNo: h.pr_no, supplier: h.supplier || "",
+				address: h.address || "", tin: h.tin || "",
+				procurementMode: h.procurement_mode || "",
+				deliveryPlace: h.delivery_place || "", deliveryTerm: h.delivery_term || "",
+				deliveryDate: h.delivery_date || "", paymentTerm: h.payment_term || "",
+				fundCluster: h.fund_cluster || "",
+				items: (itemsRes.data || []).map((i: any) => ({
+					stock_no: i.stock_no, unit: i.unit, description: i.description,
+					quantity: i.quantity, unit_price: i.unit_price, subtotal: i.subtotal,
+				})),
+				poDate: h.date, createdAt: h.created_at,
+				officialName: h.official_name, officialDesig: h.official_desig,
+				conformeDate: h.conforme_date,
+				accountantName: h.accountant_name, accountantDesig: h.accountant_desig,
+				orsNo: h.ors_no, orsDate: h.ors_date,
+				fundsAvailable: h.funds_available, orsAmount: h.ors_amount,
+				hideTotalRow: h.hide_total_row,
+			};
+			printWithIframe(buildPurchaseOrderPrintHtml(printData));
+		} catch (err) { console.error("Error printing PO:", err); }
+	}, [poMap, supabase]);
+
+	const handlePrintORS = useCallback(async (prNo: string) => {
+		try {
+			const { data: ors, error } = await supabase
+				.from("ors_entries").select("*").eq("pr_no", prNo)
+				.order("created_at", { ascending: false }).limit(1).maybeSingle();
+			if (error) throw error;
+			if (!ors) return;
+
+			const printData: ORSPrintData = {
+				orsNo: ors.ors_no, orsDate: ors.date_created,
+				entityName: ors.entity_name, payee: ors.payee,
+				payeeAddress: ors.payee_address, office: ors.office,
+				fundCluster: ors.fund_cluster,
+				responsibilityCenter: ors.responsibility_center,
+				particulars: ors.particulars, mfoPap: ors.mfo_pap,
+				uacsCode: ors.uacs_code, amount: ors.amount,
+				referenceNo: ors.reference_no,
+				obligationAmount: ors.obligation_amount,
+				payableAmount: ors.payable_amount,
+				paymentAmount: ors.payment_amount,
+				notYetDueBalance: ors.not_yet_due_balance,
+				dueDemandableBalance: ors.due_demandable_balance,
+				preparedByName: ors.prepared_by_name,
+				preparedByDesig: ors.prepared_by_desig,
+				certifiedByName: ors.certified_by_name,
+				certifiedByDesig: ors.certified_by_desig,
+				preparedByDate: ors.prepared_by_date,
+				certifiedByDate: ors.certified_by_date,
+				sectionCParticulars: ors.section_c_particulars,
+				blankStatusSection: ors.blank_status_section,
+			};
+			printWithIframe(buildORSPrintHtml(printData));
+		} catch (err) { console.error("Error printing ORS:", err); }
+	}, [supabase]);
+
+	const handlePrintContract = useCallback(async (prNo: string) => {
+		try {
+			const poInfos = poMap[prNo];
+			const poInfo = poInfos?.find((p) => p.hasContract);
+			if (!poInfo) return;
+
+			const { data: doc, error } = await supabase
+				.from("contract_documents").select("*").eq("po_id", poInfo.poId)
+				.order("created_at", { ascending: false }).limit(1).maybeSingle();
+			if (error) throw error;
+			if (!doc) return;
+
+			const printData: ContractPrintData = {
+				contractTitle: doc.contract_title || "CONTRACT FOR SERVICES",
+				firstPartyAgency: doc.first_party_agency || "",
+				firstPartyRep: doc.first_party_rep || "",
+				firstPartyOffice: doc.first_party_office || "",
+				firstPartyCity: doc.first_party_city || "",
+				secondPartyName: doc.second_party_name || "",
+				secondPartyRep: doc.second_party_rep || "",
+				secondPartyCity: doc.second_party_city || "",
+				commencementLocation: doc.commencement_location || "",
+				considerationAmount: doc.consideration_amount || 0,
+				considerationAmountWords: doc.consideration_amount_words || "",
+				serviceDescription: doc.service_description || "",
+				deliveryLocation: doc.delivery_location || "",
+				paymentCondition: doc.payment_condition || "",
+				jobOrderDescription: doc.job_order_description || "",
+				scheduledDays: doc.scheduled_days || "",
+				liquidatedDamagesRate: doc.liquidated_damages_rate || "",
+				contractDate: doc.contract_date || "",
+				commencementDate: doc.commencement_date || "",
+				witnessOne: doc.witness_one || "",
+				witnessTwo: doc.witness_two || "",
+			};
+			printWithIframe(buildContractPrintHtml(printData));
+		} catch (err) { console.error("Error printing Contract:", err); }
+	}, [poMap, supabase]);
 
 	const filteredRows = useMemo(() => {
 		const term = search.trim().toLowerCase();
@@ -288,6 +467,30 @@ export default function FilesPage() {
 													>
 														AOA
 													</button>
+													{poMap[row.pr_no]?.length > 0 && (
+														<button
+															onClick={() => handlePrintPO(row.pr_no)}
+															className="rounded-md border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100"
+														>
+															PO
+														</button>
+													)}
+													{poMap[row.pr_no]?.some((p) => p.hasOrs) && (
+														<button
+															onClick={() => handlePrintORS(row.pr_no)}
+															className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+														>
+															ORS
+														</button>
+													)}
+													{poMap[row.pr_no]?.some((p) => p.hasContract) && (
+														<button
+															onClick={() => handlePrintContract(row.pr_no)}
+															className="rounded-md border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-100"
+														>
+															Contract
+														</button>
+													)}
 												</div>
 											</td>
 										</tr>

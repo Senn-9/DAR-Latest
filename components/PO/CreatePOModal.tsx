@@ -1319,6 +1319,8 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
   const [prFilterPO, setPrFilterPO] = useState<"all" | "no_po" | "has_po">("all");
   const [prFilterDivision, setPrFilterDivision] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [loadCurrentYearOnly, setLoadCurrentYearOnly] = useState(true);
+  const [loadWithoutPoOnly, setLoadWithoutPoOnly] = useState(true);
   
   // PO Form state
   const [poNo, setPoNo] = useState("");
@@ -1459,20 +1461,54 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         if (data) setDivisions(data);
       })();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  // Re-fetch when load options change
+  useEffect(() => {
+    if (visible) {
+      fetchAvailablePRs();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadCurrentYearOnly, loadWithoutPoOnly]);
 
   async function fetchAvailablePRs() {
     setLoadingPRs(true);
     try {
-      // tig pakaray ko na nag fe fetch na 37
-      // tig palitan ko si 33 ning 37
-      // Fetch PRs with status 37 (Completed PR Phase)
-      const { data: prsData, error: prsError } = await supabase
+      let query = supabase
         .from("purchase_requests")
         .select("id, pr_no, purpose, office_section, fund_cluster, entity_name, total_cost, division_id, created_at")
-        .eq("status_id", 37)
-        .order("created_at", { ascending: false })
-        .limit(500); // Limit to latest 500 PRs for performance
+        .eq("status_id", 37);
+
+      if (loadCurrentYearOnly) {
+        const currentYear = new Date().getFullYear();
+        query = query.gte("created_at", `${currentYear}-01-01T00:00:00.000Z`)
+                     .lte("created_at", `${currentYear}-12-31T23:59:59.999Z`);
+      }
+
+      if (loadWithoutPoOnly) {
+        // Fetch PR IDs that already have POs to exclude them
+        let poQuery = supabase.from("purchase_orders").select("pr_id").not("pr_id", "is", null);
+        if (loadCurrentYearOnly) {
+          const currentYear = new Date().getFullYear();
+          poQuery = poQuery.gte("created_at", `${currentYear}-01-01T00:00:00.000Z`);
+        }
+        const { data: posData } = await poQuery;
+        const excludedIds = (posData || []).map((po) => po.pr_id).filter(Boolean);
+        
+        if (excludedIds.length > 0) {
+          // If the list is extremely large, Supabase might reject it, but for a single year it's fine.
+          // To be safe with large arrays, we only apply this if it's less than 500 items, otherwise rely on memory filter
+          if (excludedIds.length < 500) {
+             query = query.not("id", "in", `(${excludedIds.join(',')})`);
+          }
+        }
+      }
+
+      // Limit to latest 1000 PRs for performance
+      query = query.order("created_at", { ascending: false }).limit(1000);
+
+      const { data: prsData, error: prsError } = await query;
 
       if (prsError) {
         console.error("Error fetching PRs:", prsError);
@@ -1484,7 +1520,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
         return;
       }
 
-      // Fetch existing POs to check which PRs already have POs
+      // Fetch existing POs to check which PRs already have POs (for the po_count and has_po flags)
       const prIds = prsData.map(pr => pr.id);
       const { data: posData, error: posError } = await supabase
         .from("purchase_orders")
@@ -1504,11 +1540,16 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       });
 
       // Enrich PR data with PO status
-      const enrichedPRs = prsData.map(pr => ({
+      let enrichedPRs = prsData.map(pr => ({
         ...pr,
         has_po: poCountMap.has(pr.id),
         po_count: poCountMap.get(pr.id) || 0,
       }));
+
+      if (loadWithoutPoOnly) {
+        // Double check in memory in case the excludedIds array was too large for the DB query
+        enrichedPRs = enrichedPRs.filter(pr => !pr.has_po);
+      }
 
       // Initial sort: PRs without PO first, then by created_at descending
       enrichedPRs.sort((a, b) => {
@@ -1520,8 +1561,10 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       });
 
       setAvailablePRs(enrichedPRs);
-      // Reset filters when refreshing
-      setPrFilterPO("all");
+      // Reset memory filters when refreshing
+      if (loadWithoutPoOnly) {
+        setPrFilterPO("all");
+      }
       setPrFilterDivision("all");
       setPrSortBy("date");
       setPrSortDir("desc");
@@ -1907,6 +1950,28 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                     >
                       {loadingPRs ? "Loading..." : "Refresh"}
                     </button>
+                  </div>
+
+                  {/* Load Optimizations */}
+                  <div className="flex gap-4 px-1 py-1 text-xs text-gray-600 font-medium">
+                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700">
+                      <input
+                        type="checkbox"
+                        checked={loadCurrentYearOnly}
+                        onChange={(e) => setLoadCurrentYearOnly(e.target.checked)}
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Current Fiscal Year Only
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700">
+                      <input
+                        type="checkbox"
+                        checked={loadWithoutPoOnly}
+                        onChange={(e) => setLoadWithoutPoOnly(e.target.checked)}
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Hide Abstract of Awards with Active PO
+                    </label>
                   </div>
 
                   {/* Sort and Filter Controls - Collapsible */}
