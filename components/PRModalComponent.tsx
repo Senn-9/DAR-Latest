@@ -15,6 +15,7 @@ import {
 } from "react-icons/ri";
 
 type ItemDataType = {
+  _key: string; // stable unique ID for React key tracking
   stock_num: string;
   unit: string;
   description: string;
@@ -67,8 +68,10 @@ const thStyle: React.CSSProperties = {
 const inputCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder:text-gray-300";
 
+let _itemKeyCounter = 0;
 function emptyItem(): ItemDataType {
   return {
+    _key: `item-${++_itemKeyCounter}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     stock_num: "",
     unit: "",
     description: "",
@@ -131,9 +134,6 @@ function PREditablePreview({
   //     rows.push({ ...line, isTextLine: true });
   //   });
   // });
-  const MIN_ROWS = 20;
-  const rows: (ItemDataType | null)[] = [...items];
-  while (rows.length < MIN_ROWS) rows.push(null);
   const grandTotal = getGrandTotal(items);
 
   return (
@@ -201,63 +201,39 @@ function PREditablePreview({
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {rows.map((item, idx) => {
-            if (item === null) {
-              return (
-                <tr key={`pad-${idx}`} style={{ height: "22px" }}>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
-                  <td style={{ ...tdStyle, padding: "1px 4px", verticalAlign: "top" }}></td>
-                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}></td>
-                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}></td>
-                  <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}></td>
-                </tr>
-              );
-            }
+          {items.map((item, originalIndex) => {
             const total = getItemTotal(item);
             return (
-              <React.Fragment key={`item-frag-${idx}`}>
+              <React.Fragment key={item._key}>
                 <tr style={{ height: "22px" }}>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.stock_num} onChange={e => updateItem(idx, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.stock_num} onChange={e => updateItem(originalIndex, 'stock_num', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.unit} onChange={e => updateItem(originalIndex, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, padding: "1px 4px", verticalAlign: "top" }}>
                     <RichEditor
                       value={item.description}
-                      onChange={(html) => updateItem(idx, 'description', html)}
+                      onChange={(html) => updateItem(originalIndex, 'description', html)}
                       compact
                       className={editableInputCls}
                       style={{ width: "95%", fontFamily: "'Times New Roman', Times, serif" }}
                     />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
-                    <textarea value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.quantity} onChange={e => updateItem(originalIndex, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
-                    <textarea value={item.unit_cost} onChange={e => updateItem(idx, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                    <textarea value={item.unit_cost} onChange={e => updateItem(originalIndex, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
                     {total > 0 ? "₱" + total.toFixed(2) : ""}
                     {items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove row">×</button>
+                      <button type="button" onClick={() => removeItem(originalIndex)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove row">×</button>
                     )}
                   </td>
                 </tr>
-                {/* <tr style={{ height: "auto" }}>
-                  <td colSpan={6} style={{ border: "none", padding: "1px", textAlign: "center" }}>
-                    <button
-                      type="button"
-                      onClick={() => addTextOnlyLine(originalItemIndex + 1)}
-                      className="text-gray-400 hover:text-emerald-600 text-[10px] italic transition-colors"
-                      title="Insert text-only line after this item"
-                    >
-                      + insert text line
-                    </button>
-                  </td>
-                </tr> */}
               </React.Fragment>
             );
           })}
@@ -574,6 +550,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
           quantity: item.quantity.trim() === "" ? null : parseFloat(item.quantity),
           unit_price: item.unit_cost.trim() === "" ? null : parseFloat(item.unit_cost),
           subtotal: Math.round(getItemTotal(item)),
+          // _key is excluded — not sent to DB
         }));
 
       console.log("Form Result PR_ID:", formResult.id);
@@ -703,7 +680,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                     </div>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {items.map((item, index) => (
-                        <React.Fragment key={`item-frag-${index}`}>
+                        <React.Fragment key={item._key}>
                           {/* Regular Item */}
                           <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
                             <div className="absolute top-2 right-2 flex gap-1">

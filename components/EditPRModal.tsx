@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   RiCloseLine,
@@ -14,6 +14,7 @@ import { RichEditor } from "@/components/RichEditor";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
 
 type ItemDataType = {
+  _key: string; // stable unique ID for React key tracking
   stock_no: string;
   unit: string;
   description: string;
@@ -48,8 +49,10 @@ const editableCls =
 const readonlyCls =
   "w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 cursor-default select-text outline-none";
 
+let _editItemKeyCounter = 0;
 function emptyItem(): ItemDataType {
   return {
+    _key: `eitem-${++_editItemKeyCounter}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     stock_no: "",
     unit: "",
     description: "",
@@ -244,6 +247,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
           console.error("Error fetching PR items:", itemErr?.message || itemErr);
         } else if (itemData) {
           const loaded = itemData.map((i: any) => ({
+            _key: `eitem-${++_editItemKeyCounter}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             stock_no: i.stock_no || "",
             unit: i.unit || "",
             description: i.description || "",
@@ -336,6 +340,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
           quantity: item.quantity.trim() === "" ? null : parseInt(item.quantity),
           unit_price: item.unit_price.trim() === "" ? null : parseFloat(item.unit_price),
           subtotal: Math.round(getItemTotal(item)),
+          // _key is excluded — not sent to DB
         }));
 
       if (itemsToInsert.length > 0) {
@@ -473,7 +478,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
                         <p className="text-sm text-gray-400 text-center py-6">No items on this PR.</p>
                       ) : (
                         items.map((item, index) => (
-                          <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
+                          <div key={item._key} className="border border-gray-200 rounded-lg p-3 bg-gray-50 relative">
                             <div className="absolute top-2 right-2 flex gap-1">
                               {index > 0 && (
                                 <button
@@ -656,7 +661,14 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
                 </button>
               </div>
               <div className="bg-white rounded-lg shadow-lg p-8 text-black">
-                <PRPreview formData={formData} items={items} />
+                <PREditablePreview
+                  formData={formData}
+                  setFormData={setFormData}
+                  items={items}
+                  addItem={addItem}
+                  updateItem={updateItem}
+                  removeItem={removeItem}
+                />
               </div>
             </div>
           </div>
@@ -680,11 +692,33 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
   );
 }
 
-// PR Preview Component
-function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }) {
-  const MIN_ROWS = 20;
-  const itemRows: (ItemDataType | null)[] = [...items];
-  while (itemRows.length < MIN_ROWS) itemRows.push(null);
+// Editable PR Preview Component (matches Create PR's live preview)
+function PREditablePreview({
+  formData,
+  setFormData,
+  items,
+  addItem,
+  updateItem,
+  removeItem,
+}: {
+  formData: any;
+  setFormData: (data: any) => void;
+  items: ItemDataType[];
+  addItem: () => void;
+  updateItem: (index: number, field: keyof ItemDataType, value: string) => void;
+  removeItem: (index: number) => void;
+}) {
+  const editableInputCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] whitespace-pre-wrap break-words resize-none overflow-hidden";
+  const editableInputCenterCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-center whitespace-pre-wrap break-words resize-none overflow-hidden";
+  const editableInputRightCls = "border-b border-gray-400 bg-transparent px-1 py-0 text-inherit font-inherit focus:outline-none focus:border-emerald-500 focus:bg-emerald-50/30 transition-colors w-[90%] text-[8.5pt] text-right whitespace-pre-wrap break-words resize-none overflow-hidden";
+
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = 'auto';
+    target.style.height = target.scrollHeight + 'px';
+  };
+
+  const grandTotal = getGrandTotal(items);
 
   return (
     <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "9pt", color: "#000" }}>
@@ -717,10 +751,10 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "21px" }}>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000", whiteSpace: "nowrap", overflow: "hidden" }}>
-              Entity Name: <span style={{ fontWeight: "normal" }}>{formData.entity_name}</span>
+              Entity Name: <input type="text" value={formData.entity_name} onChange={e => setFormData({ ...formData, entity_name: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "60%" }} />
             </td>
             <td colSpan={3} style={{ borderBottom: "1px solid black", fontSize: "8pt", padding: "2px 4px", fontWeight: "bold", color: "#000" }}>
-              Fund Cluster: <span style={{ fontWeight: "normal" }}>{formData.fund_cluster}</span>
+              Fund Cluster: <input type="text" value={formData.fund_cluster} onChange={e => setFormData({ ...formData, fund_cluster: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "60%" }} />
             </td>
           </tr>
           <tr style={{ height: "14px" }}>
@@ -732,51 +766,83 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
               PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no}</span>
             </td>
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
-              Date:<br />
+              Date:
+              <br />
               <span style={{ fontWeight: "normal" }}>{formData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}</span>
             </td>
           </tr>
           <tr style={{ height: "15px" }}>
             <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              Responsibility Center Code: <span style={{ fontWeight: "normal" }}>{formData.resp_code}</span>
+              Responsibility Center Code: <input type="text" value={formData.resp_code} onChange={e => setFormData({ ...formData, resp_code: e.target.value })} className={editableInputCls} style={{ fontWeight: "normal", width: "40%" }} />
             </td>
           </tr>
           <tr style={{ height: "22.5px" }}>
-            <th style={thStyle}>Stock/Property No.</th>
+            <th style={thStyle}>Stock/
+              Property No.</th>
             <th style={thStyle}>Unit</th>
             <th style={thStyle}>Item Description</th>
             <th style={thStyle}>Quantity</th>
             <th style={thStyle}>Unit Cost</th>
             <th style={thStyle}>Total Cost</th>
           </tr>
-          {itemRows.map((item, idx) =>
-            item === null ? (
-              <tr key={`pad-${idx}`} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={tdStyle}></td>
-                <td style={{ ...tdStyle, textAlign: "center" }}></td>
-                <td style={{ ...tdStyle, textAlign: "right" }}></td>
-                <td style={{ ...tdStyle, textAlign: "right" }}></td>
-              </tr>
-            ) : (
-              <tr key={idx} style={{ height: "16px" }}>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.stock_no}</td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.unit}</td>
-                <td style={{ ...tdStyle, paddingLeft: "4px", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: item.description ?? "" }} />
-                <td style={{ ...tdStyle, textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                  {item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}
-                </td>
-                <td style={{ ...tdStyle, textAlign: "right", paddingRight: "4px" }}>
-                  {getItemTotal(item) > 0 ? "₱" + getItemTotal(item).toFixed(2) : ""}
-                </td>
-              </tr>
-            )
-          )}
+          {items.map((item, originalIndex) => {
+            const total = getItemTotal(item);
+            return (
+              <React.Fragment key={item._key}>
+                <tr style={{ height: "22px" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.stock_no} onChange={e => updateItem(originalIndex, 'stock_no', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.unit} onChange={e => updateItem(originalIndex, 'unit', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, padding: "1px 4px", verticalAlign: "top" }}>
+                    <RichEditor
+                      value={item.description}
+                      onChange={(html) => updateItem(originalIndex, 'description', html)}
+                      compact
+                      className={editableInputCls}
+                      style={{ width: "95%", fontFamily: "'Times New Roman', Times, serif" }}
+                    />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", verticalAlign: "top" }}>
+                    <textarea value={item.quantity} onChange={e => updateItem(originalIndex, 'quantity', e.target.value)} onInput={autoResize} className={editableInputCenterCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", verticalAlign: "top" }}>
+                    <textarea value={item.unit_price} onChange={e => updateItem(originalIndex, 'unit_price', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
+                    {total > 0 ? "₱" + total.toFixed(2) : ""}
+                    {items.length > 1 && (
+                      <button type="button" onClick={() => removeItem(originalIndex)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove row">×</button>
+                    )}
+                  </td>
+                </tr>
+              </React.Fragment>
+            );
+          })}
+          <tr>
+            <td colSpan={6} style={{ border: "1px solid #111", padding: "4px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={addItem}
+                className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold"
+              >
+                + Add Item
+              </button>
+            </td>
+          </tr>
+          <tr style={{ height: "20px" }}>
+            <td colSpan={5} style={{ borderTop: "1px solid black", padding: "4px", textAlign: "right", fontSize: "9pt", fontWeight: "bold" }}>
+              TOTAL
+            </td>
+            <td style={{ borderTop: "1px solid black", padding: "4px", textAlign: "right", fontSize: "9pt", fontWeight: "bold" }}>
+              {grandTotal > 0 ? "₱" + grandTotal.toFixed(2) : ""}
+            </td>
+          </tr>
           <tr style={{ height: "17px" }}>
             <td colSpan={6} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8.5pt", padding: "2px 4px", color: "#000" }}>
-              <b>Purpose:</b> {formData.purpose}
+              <b>Purpose:</b> <textarea value={formData.purpose} onChange={e => setFormData({ ...formData, purpose: e.target.value })} onInput={e => { e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'; }} className={editableInputCls} style={{ width: "90%", resize: "none", overflow: "hidden", minHeight: "20px", verticalAlign: "middle" }} placeholder="State the purpose of this request..." rows={1} />
             </td>
           </tr>
           <tr style={{ height: "30px" }}>
@@ -784,27 +850,45 @@ function PRPreview({ formData, items }: { formData: any; items: ItemDataType[] }
           </tr>
           <tr style={{ height: "12px" }}>
             <td style={{ borderTop: "1px solid black", borderLeft: "1px solid black" }}></td>
-            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}><i>Requested by:</i></td>
-            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}><i>Approved by:</i></td>
+            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <i>Requested by:</i>
+            </td>
+            <td colSpan={2} style={{ borderTop: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <i>Approved by:</i>
+            </td>
             <td style={{ borderTop: "1px solid black", borderRight: "1px solid black" }}></td>
           </tr>
-          <tr style={{ height: "20px" }}>
-            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Signature :</td>
+          <tr style={{ height: "12px" }}>
+            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              Signature :
+            </td>
             <td></td>
             <td></td>
             <td></td>
             <td style={{ borderRight: "1px solid black" }}></td>
           </tr>
-          <tr style={{ height: "20px" }}>
-            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Printed Name :</td>
-            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_name}</td>
-            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_name}</td>
+          <tr style={{ height: "12px" }}>
+            <td colSpan={2} style={{ borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              Printed Name :
+            </td>
+            <td style={{ fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.req_name} onChange={e => setFormData({ ...formData, req_name: e.target.value })} className={editableInputCls} placeholder="Full name" />
+            </td>
+            <td colSpan={2} style={{ fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.app_name} onChange={e => setFormData({ ...formData, app_name: e.target.value })} className={editableInputCls} placeholder="Full name" />
+            </td>
             <td style={{ borderRight: "1px solid black" }}></td>
           </tr>
-          <tr style={{ height: "20px" }}>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>Designation :</td>
-            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.req_desig}</td>
-            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>{formData.app_desig}</td>
+          <tr style={{ height: "14.75px" }}>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", borderLeft: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              Designation :
+            </td>
+            <td style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.req_desig} onChange={e => setFormData({ ...formData, req_desig: e.target.value })} className={editableInputCls} placeholder="Designation" />
+            </td>
+            <td colSpan={2} style={{ borderBottom: "1px solid black", fontSize: "8.5pt", padding: "2px 4px" }}>
+              <input type="text" value={formData.app_desig} onChange={e => setFormData({ ...formData, app_desig: e.target.value })} className={editableInputCls} placeholder="Designation" />
+            </td>
             <td style={{ borderBottom: "1px solid black", borderRight: "1px solid black" }}></td>
           </tr>
         </tbody>
