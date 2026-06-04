@@ -132,25 +132,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-   
+
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <img 
-              src="/logo.png" 
-              alt="DAR Logo" 
+            <img
+              src="/logo.png"
+              alt="DAR Logo"
               className="w-24 h-24 object-contain"
             />
           </div>
           <h1 className="text-xl font-bold mb-8 text-center text-gray-800">
             Department of Agrarian Reform
           </h1>
-        
+
           {/* System Title */}
-            <h3 className="text-sm mb-8 text-center text-gray-800">
-            Procurement Monitoring and Document System
+          <h3 className="text-sm mb-8 text-center text-gray-800">
+            Procurement Monitoring and Automation System
           </h3>
 
           {/* Error message */}

@@ -105,6 +105,10 @@ export default function LogsPage() {
   const [statusNameById, setStatusNameById] = useState<Record<number, string>>({});
   const [allDivisions, setAllDivisions] = useState<{ id: number; name: string }[]>([]);
   const [myLogsOnly, setMyLogsOnly] = useState(false);
+  const [showUnknownUsers, setShowUnknownUsers] = useState(true);
+  const [showSystemRemarks, setShowSystemRemarks] = useState(true);
+  const [showPrintDelete, setShowPrintDelete] = useState(true);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [divisionFilter, setDivisionFilter] = useState<number | "all">("all");
   const [statusFilter, setStatusFilter] = useState<number | "all">("all");
 
@@ -271,7 +275,15 @@ export default function LogsPage() {
       const matchDivision = divisionFilter === "all" || r.divisionId === divisionFilter;
       const matchStatus = statusFilter === "all" || r.statusId === statusFilter;
 
-      return matchTab && matchFlag && matchSearch && matchYear && matchDivisionGate && matchMyLogs && matchDivision && matchStatus;
+      const isUnknownUser = r.actor === "Unknown";
+      const isSystemRemark = r.phase === "system" || (r.remark ?? "").toUpperCase().startsWith("[SYSTEM]");
+      const isPrintDelete = (r.remark ?? "").includes("[PRINT]") || (r.remark ?? "").includes("[DELETE]") || (r.remark ?? "").includes("[EDIT]");
+
+      const matchUnknownUsers = showUnknownUsers || !isUnknownUser;
+      const matchSystemRemarks = showSystemRemarks || !isSystemRemark;
+      const matchPrintDelete = showPrintDelete || !isPrintDelete;
+
+      return matchTab && matchFlag && matchSearch && matchYear && matchDivisionGate && matchMyLogs && matchDivision && matchStatus && matchUnknownUsers && matchSystemRemarks && matchPrintDelete;
     });
 
     filtered.sort((a, b) => {
@@ -286,7 +298,7 @@ export default function LogsPage() {
       prStatusById, poStatusById, deliveryStatusById,
       statusNameById, currentUser,
       activeTab, search, flagFilter, sortDir, selectedYear,
-      myLogsOnly, divisionFilter, statusFilter]);
+      myLogsOnly, showUnknownUsers, showSystemRemarks, showPrintDelete, divisionFilter, statusFilter]);
 
   const counts = useMemo(() => {
     const c: Record<PhaseFilter, number> = {
@@ -333,7 +345,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search, flagFilter, sortDir, selectedYear, myLogsOnly, divisionFilter, statusFilter]);
+  }, [activeTab, search, flagFilter, sortDir, selectedYear, myLogsOnly, showUnknownUsers, showSystemRemarks, showPrintDelete, divisionFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(enriched.length / PAGE_SIZE));
   const pageRows = enriched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -494,16 +506,16 @@ export default function LogsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">My Logs</label>
+                  <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Advanced</label>
                   <button
-                    onClick={() => setMyLogsOnly((v) => !v)}
+                    onClick={() => setAdvancedFiltersOpen(true)}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors ${
-                      myLogsOnly
+                      myLogsOnly || !showUnknownUsers || !showSystemRemarks || !showPrintDelete
                         ? "bg-emerald-700 text-white border-emerald-700"
                         : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    {myLogsOnly ? "On" : "Off"}
+                    Options
                   </button>
                 </div>
 
@@ -541,6 +553,9 @@ export default function LogsPage() {
                     setSortDir("desc");
                     setSearch("");
                     setMyLogsOnly(false);
+                    setShowUnknownUsers(true);
+                    setShowSystemRemarks(true);
+                    setShowPrintDelete(true);
                     setDivisionFilter("all");
                     setStatusFilter("all");
                   }}
@@ -830,6 +845,70 @@ export default function LogsPage() {
           ) : (
             <div className="absolute top-full right-4 border-[5px] border-transparent border-t-gray-900" />
           )}
+        </div>
+      )}
+
+      {advancedFiltersOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-emerald-700 text-white">
+              <div>
+                <h3 className="text-lg font-bold mt-0.5">Advanced Filter Options</h3>
+              </div>
+              <button
+                onClick={() => setAdvancedFiltersOpen(false)}
+                className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <RiCloseLine size={22} className="text-white" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={myLogsOnly} 
+                  onChange={(e) => setMyLogsOnly(e.target.checked)} 
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer" 
+                />
+                <span className="text-sm font-semibold text-gray-700">Show My Remarks Only</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={showUnknownUsers} 
+                  onChange={(e) => setShowUnknownUsers(e.target.checked)} 
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer" 
+                />
+                <span className="text-sm font-semibold text-gray-700">Show Unknown Users</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={showSystemRemarks} 
+                  onChange={(e) => setShowSystemRemarks(e.target.checked)} 
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer" 
+                />
+                <span className="text-sm font-semibold text-gray-700">Show System-marked Remarks</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={showPrintDelete} 
+                  onChange={(e) => setShowPrintDelete(e.target.checked)} 
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer" 
+                />
+                <span className="text-sm font-semibold text-gray-700">Show [PRINT], [EDIT], or [DELETE] Remarks</span>
+              </label>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setAdvancedFiltersOpen(false)}
+                className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

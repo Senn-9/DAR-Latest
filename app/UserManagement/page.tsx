@@ -267,13 +267,57 @@ export default function UserManagementPage() {
   const doDelete = async () => {
     if (!deleteTarget) return;
     const name = deleteTarget.fullname ?? deleteTarget.username ?? "User";
-    const { error } = await supabase.from("users").delete().eq("id", deleteTarget.id);
-    if (error) {
-      setErrorMsg("Failed to delete user: " + error.message);
-    } else {
-      setDeleteTarget(null);
-      await loadUsers();
-      setSuccessMsg(`${name} has been deleted.`);
+    const uid = deleteTarget.id;
+
+    try {
+      // Nullify foreign-key references in child tables so the user row can be
+      // deleted without violating FK constraints. This preserves the audit
+      // trail (remarks, contract docs, etc.) while de-linking them from the
+      // deleted user.
+      //
+      // Comprehensive list derived from types/tables.ts — every nullable
+      // column that references users(id):
+      const nullifyOps: { table: string; column: string }[] = [
+        { table: "remarks",               column: "user_id" },
+        { table: "contract_documents",     column: "created_by" },
+        { table: "bac_resolution",         column: "prepared_by" },
+        { table: "ors_entries",            column: "prepared_by" },
+        { table: "deliveries",             column: "created_by" },
+        { table: "dv_documents",           column: "created_by" },
+        { table: "iar_documents",          column: "created_by" },
+        { table: "loa_documents",          column: "created_by" },
+
+        { table: "canvass_sessions",       column: "released_by" },
+        { table: "canvasser_assignments",  column: "canvasser_id" },
+      ];
+
+      for (const { table, column } of nullifyOps) {
+        const { error: nErr } = await supabase
+          .from(table)
+          .update({ [column]: null })
+          .eq(column, uid);
+        if (nErr) {
+          // Skip errors for tables that don't exist in this environment
+          // ("does not exist" from Postgres, "schema cache" from PostgREST).
+          const skip = nErr.message.includes("does not exist")
+            || nErr.message.includes("schema cache");
+          if (!skip) {
+            setErrorMsg("Failed to delete user: " + nErr.message);
+            return;
+          }
+        }
+      }
+
+      const { error } = await supabase.from("users").delete().eq("id", uid);
+      if (error) {
+        setErrorMsg("Failed to delete user: " + error.message);
+      } else {
+        setDeleteTarget(null);
+        await loadUsers();
+        setSuccessMsg(`${name} has been deleted.`);
+      }
+    } catch (err: any) {
+      setErrorMsg("Failed to delete user: " + (err?.message ?? String(err)));
     }
   };
 
