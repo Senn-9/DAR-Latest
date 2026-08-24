@@ -367,10 +367,12 @@ export default function BACResolutionPage() {
                       const cost = form.total_cost || 0;
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                       const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+                      const isDraftPR = form.pr_no?.startsWith("PR-DRAFT-") || (form.status_id != null && form.status_id < 4);
+                      const displayPrNo = isDraftPR ? "" : form.pr_no;
 
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
-                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>{form.pr_no}</td>
+                          <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>{displayPrNo}</td>
                           <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>{form.office_section || <span className="text-gray-300">—</span>}</td>
                           <td className={`px-2 py-2 text-gray-500 line-clamp-2 ${rowBg}`}>{desc ? desc : <span className="text-gray-300">—</span>}</td>
                           <td className={`px-2 py-2 text-gray-500 whitespace-nowrap ${rowBg}`}>

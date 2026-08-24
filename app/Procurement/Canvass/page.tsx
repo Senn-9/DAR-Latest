@@ -552,11 +552,13 @@ export default function CanvassPage() {
                   const { name: statusName, color: statusColor } = getStatusInfo(form.status_id);
                   const cost = form.total_cost || 0;
                   const desc = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ") || "";
+                  const isDraftPR = form.pr_no?.startsWith("PR-DRAFT-") || (form.status_id != null && form.status_id < 4);
+                  const displayPrNo = isDraftPR ? "" : form.pr_no;
                   return (
                     <div key={form.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate" title={form.pr_no}>{form.pr_no}</p>
+                          <p className="text-sm font-semibold text-gray-900 truncate" title={form.pr_no}>{displayPrNo}</p>
                           <p className="mt-1 text-xs text-gray-500 truncate">{form.office_section || '—'}</p>
                         </div>
                         <div className="text-right">
@@ -664,12 +666,14 @@ export default function CanvassPage() {
                       const cost  = form.total_cost || 0;
                       const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-50";
                       const desc  = form.purchase_request_items?.map((i) => i.description).filter(Boolean).join("; ");
+                      const isDraftPR = form.pr_no?.startsWith("PR-DRAFT-") || (form.status_id != null && form.status_id < 4);
+                      const displayPrNo = isDraftPR ? "" : form.pr_no;
 
                       return (
                         <tr key={index} className="tr-row border-b border-gray-100 transition-colors hover:bg-emerald-50/50">
 
                           <td className={`mono px-2 py-2 font-semibold text-gray-800 whitespace-nowrap ${rowBg}`}>
-                            {form.pr_no}
+                            {displayPrNo}
                           </td>
 
                           <td className={`px-2 py-2 text-gray-600 truncate ${rowBg}`}>

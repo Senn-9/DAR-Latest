@@ -154,7 +154,7 @@ function PRPreview({
               {formData.office_section}
             </td>
             <td colSpan={2} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no}</span>
+              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no?.startsWith("PR-DRAFT-") ? "" : formData.pr_no}</span>
             </td>
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
               Date:<br />
@@ -313,7 +313,7 @@ function downloadPDF(
     postPrintRemark(currentUserFullname, 'PR', currentUserId, prId);
   }
   const html = buildPRPrintHtml({
-    prNo: formData.pr_no || '',
+    prNo: formData.pr_no?.startsWith("PR-DRAFT-") ? "" : formData.pr_no || '',
     entityName: formData.entity_name || '',
     fundCluster: formData.fund_cluster || '',
     officeSection: formData.office_section || '',

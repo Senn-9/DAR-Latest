@@ -600,7 +600,7 @@ export default function SummaryReportModal({ open, onClose }: SummaryReportModal
 													: (item.status_id != null ? statusNameById[item.status_id] : null) ?? statusName;
 												return (
 													<tr key={`${item.source}-${item.id}`}>
-														<td className="border border-gray-300 p-2">{item.pr_no}</td>
+														<td className="border border-gray-300 p-2">{item.pr_no?.startsWith("PR-DRAFT-") ? "" : item.pr_no}</td>
 														<td className="border border-gray-300 p-2">{item.office_section}</td>
 														<td className="border border-gray-300 p-2">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "Unknown"}</td>
 																	<td className="border border-gray-300 p-2 text-center">{getStatusAgeDays(item)}d</td>

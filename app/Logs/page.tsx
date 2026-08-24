@@ -216,12 +216,7 @@ export default function LogsPage() {
       const prNo = r.pr_id != null ? prNoById[r.pr_id] : undefined;
       const poNo = r.po_id != null ? poNoById[r.po_id] : undefined;
       const deliveryNo = r.delivery_id != null ? deliveryNoById[r.delivery_id] : undefined;
-      const ref =
-        deliveryNo ??
-        poNo ??
-        prNo ??
-        (r.delivery_id != null ? `Delivery #${r.delivery_id}` : r.po_id != null ? `PO #${r.po_id}` : r.pr_id != null ? `PR #${r.pr_id}` : `Remark #${r.id}`);
-
+      
       const divisionId =
         r.delivery_id != null ? (deliveryDivisionById[r.delivery_id] ?? null) :
         r.po_id != null ? (poDivisionById[r.po_id] ?? null) :
@@ -234,6 +229,19 @@ export default function LogsPage() {
         r.pr_id != null ? (prStatusById[r.pr_id] ?? null) :
         null;
 
+      // Determine if PR is still a draft (not processed by BAC yet)
+      // PR is considered draft if pr_no starts with "PR-DRAFT-" or status_id < 4 (not yet processed by BAC)
+      const isDraftPR = prNo?.startsWith("PR-DRAFT-") || (statusId != null && statusId < 4 && r.pr_id != null);
+      
+      // Show "PR no. unassigned" for unprocessed PRs, otherwise show the actual number
+      const displayPrNo = isDraftPR ? "PR no. unassigned" : prNo;
+      
+      const ref =
+        deliveryNo ??
+        poNo ??
+        displayPrNo ??
+        (r.delivery_id != null ? `Delivery #${r.delivery_id}` : r.po_id != null ? `PO #${r.po_id}` : r.pr_id != null ? `PR #${r.pr_id}` : `Remark #${r.id}`);
+
       return {
         ...r,
         phase,
@@ -241,6 +249,7 @@ export default function LogsPage() {
         poNo,
         deliveryNo,
         ref,
+        displayPrNo, // Add this for search functionality
         actor: r.fullname ?? r.username ?? "Unknown",
         divisionId,
         statusId,
@@ -265,7 +274,7 @@ export default function LogsPage() {
           : (r.remark ?? "").toLowerCase().includes(q) ||
             (r.ref ?? "").toLowerCase().includes(q) ||
             (r.actor ?? "").toLowerCase().includes(q) ||
-            (r.prNo ?? "").toLowerCase().includes(q) ||
+            (r.displayPrNo ?? "").toLowerCase().includes(q) ||
             (r.poNo ?? "").toLowerCase().includes(q) ||
             (r.deliveryNo ?? "").toLowerCase().includes(q);
 

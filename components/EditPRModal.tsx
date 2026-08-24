@@ -86,7 +86,7 @@ function downloadPDF(formData: any, items: ItemDataType[], currentUserFullname?:
     postPrintRemark(currentUserFullname, "PR", currentUserId, prId);
   }
   const html = buildPRPrintHtml({
-    prNo: formData.pr_no || '',
+    prNo: formData.pr_no?.startsWith("PR-DRAFT-") ? "" : formData.pr_no || '',
     entityName: formData.entity_name || '',
     fundCluster: formData.fund_cluster || '',
     officeSection: formData.office_section || '',
@@ -380,7 +380,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-5 flex items-center justify-between text-white">
           <div>
             <h2 className="text-xl font-bold">Edit Purchase Request</h2>
-            <p className="text-emerald-100 text-sm mt-1">PR #{formData.pr_no || prId}</p>
+            <p className="text-emerald-100 text-sm mt-1">PR #{formData.pr_no?.startsWith("PR-DRAFT-") ? "Draft" : formData.pr_no || prId}</p>
           </div>
           <div className="flex items-center gap-4">
             <button onClick={onClose} className="hover:bg-emerald-500/50 p-2 rounded-lg transition-colors">
@@ -432,7 +432,7 @@ export default function EditPRModal({ prId, onClose, onSave }: EditPRModalProps)
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase text-gray-600 mb-2">PR Number</label>
-                          <input className={readonlyCls} value={formData.pr_no} readOnly tabIndex={-1} />
+                          <input className={readonlyCls} value={formData.pr_no?.startsWith("PR-DRAFT-") ? "" : formData.pr_no} readOnly tabIndex={-1} />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -763,7 +763,7 @@ function PREditablePreview({
               {formData.office_section}
             </td>
             <td colSpan={2} style={{ borderTop: "1px solid black", borderLeft: "1px solid black", borderRight: "1px solid black", fontSize: "8pt", fontWeight: "bold", padding: "2px 4px", color: "#000" }}>
-              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no}</span>
+              PR No.: <span style={{ fontWeight: "normal" }}>{formData.pr_no?.startsWith("PR-DRAFT-") ? "" : formData.pr_no}</span>
             </td>
             <td rowSpan={2} colSpan={2} style={{ border: "1px solid black", fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", padding: "2px 4px", color: "#000" }}>
               Date:

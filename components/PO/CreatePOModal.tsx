@@ -1629,26 +1629,98 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
       console.log("Found winning entries:", winningEntries);
 
       if (winningEntries && winningEntries.length > 0) {
-        // Use the first winning entry for supplier info
-        const firstEntry = winningEntries[0];
+        // ── 1. Identify the winning supplier(s) ──────────────────────────
+        // Collect distinct supplier names that have at least one winning entry.
+        // A single supplier should win the entire canvass; pick the one with
+        // the most winning entries (tie-break: lowest total price).
+        const bySupplier = new Map<string, typeof winningEntries>();
+        for (const entry of winningEntries) {
+          const key = (entry.supplier_name || "").trim() || "—";
+          if (!bySupplier.has(key)) bySupplier.set(key, []);
+          bySupplier.get(key)!.push(entry);
+        }
+        const winningSupplierName = [...bySupplier.entries()]
+          .sort((a, b) => {
+            const countDiff = b[1].length - a[1].length;
+            if (countDiff !== 0) return countDiff;
+            const totalA = a[1].reduce((s, e) => s + (Number(e.total_price) || 0), 0);
+            const totalB = b[1].reduce((s, e) => s + (Number(e.total_price) || 0), 0);
+            return totalA - totalB;
+          })[0][0];
+
+        // Keep ONLY entries from the chosen winning supplier — prevents rows
+        // from all suppliers showing up when is_winning was incorrectly set
+        // on entries from multiple suppliers.
+        const supplierEntries = winningEntries.filter(
+          (e) => ((e.supplier_name || "").trim() || "—") === winningSupplierName,
+        );
+
+        // Use the first winning entry of the chosen supplier for metadata
+        const firstEntry = supplierEntries[0];
         setSupplier(firstEntry.supplier_name || "");
         setAddress(firstEntry.supplier_address || "");
         setTin(firstEntry.tin_no || "");
         setDeliveryTerm(firstEntry.delivery_days ? `${firstEntry.delivery_days} days` : "");
 
-        // Build line items from all winning entries
-        const poItems: PurchaseOrderItemRow[] = winningEntries
+        // ── 2. Index PR items by id AND by 1-based position (item_no) ────
+        // canvass entries link via pr_items (new flow) OR item_no (old
+        // CollectCanvass flow) — we must be able to resolve both.
+        const orderedPRItems = [...(prItemsData ?? [])].sort(
+          (a, b) => (a.id ?? 0) - (b.id ?? 0),
+        );
+        const prItemById = new Map(orderedPRItems.map((it) => [it.id, it] as const));
+        const prItemByIndex = new Map(
+          orderedPRItems.map((it, idx) => [idx + 1, it] as const),
+        );
+
+        // ── 3. Dedupe entries: one row per PR item only ──────────────────
+        // Multiple entries could still exist for the same PR item within a
+        // single supplier (e.g. multiple sessions or retries). Keep the
+        // first non-empty entry per item.
+        const seenItemKeys = new Set<string>();
+        const dedupedEntries: typeof supplierEntries = [];
+        for (const entry of supplierEntries) {
+          const key = entry.pr_items != null
+            ? `id:${entry.pr_items}`
+            : entry.item_no != null
+              ? `no:${entry.item_no}`
+              : `row:${dedupedEntries.length}`;
+          if (seenItemKeys.has(key)) continue;
+          seenItemKeys.add(key);
+          dedupedEntries.push(entry);
+        }
+
+        // ── 4. Build PO line items with correct PR fallbacks ─────────────
+        const poItems: PurchaseOrderItemRow[] = dedupedEntries
+          // Keep only entries that actually carry line-item content
           .filter((entry) => entry.unit || entry.unit_price || entry.quantity)
           .map((entry) => {
-            // Find the corresponding PR item to get the description
-            const prItem = prItemsData?.find((item) => item.id === entry.pr_items);
+            // Resolve the matching PR item
+            const prItem = entry.pr_items != null
+              ? prItemById.get(entry.pr_items)
+              : entry.item_no != null
+                ? prItemByIndex.get(Number(entry.item_no))
+                : undefined;
+
+            // Quantity priority: canvass entry value → PR item value → 0
+            const entryQty = Number(entry.quantity);
+            const prQty = Number(prItem?.quantity);
+            const quantity = Number.isFinite(entryQty) && entryQty > 0
+              ? entryQty
+              : Number.isFinite(prQty) && prQty > 0
+                ? prQty
+                : 0;
+
+            const unitPrice = Number(entry.unit_price) || 0;
+            const subtotal = Number(entry.total_price) || (quantity * unitPrice);
+
             return {
-              stock_no: prItem?.stock_no || null,
-              unit: entry.unit || null,
-              description: prItem?.description || null,
-              quantity: Number(entry.quantity) || 1,
-              unit_price: Number(entry.unit_price) || 0,
-              subtotal: Number(entry.total_price) || 0,
+              stock_no: prItem?.stock_no || entry.stock_no || null,
+              unit: entry.unit || prItem?.unit || null,
+              description: prItem?.description || entry.description || null,
+              quantity,
+              unit_price: unitPrice,
+              subtotal,
             };
           });
 
@@ -2059,7 +2131,7 @@ export default function CreatePOModal({ visible, onClose, onCreate }: CreatePOMo
                             : pr.purpose;
                           return (
                             <option key={pr.id} value={pr.id}>
-                              {pr.pr_no} - {purposePreview} (₱{pr.total_cost.toLocaleString()}){poStatus}
+                              {pr.pr_no?.startsWith("PR-DRAFT-") ? "" : pr.pr_no} - {purposePreview} (₱{pr.total_cost.toLocaleString()}){poStatus}
                             </option>
                           );
                         })}

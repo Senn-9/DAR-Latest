@@ -47,9 +47,9 @@ export function buildPRPrintHtml(data: PRPrintData): string {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Purchase Request - ${escapeHtml(data.prNo || "Draft")}</title>
+  <title>Purchase Request - ${data.prNo?.startsWith("PR-DRAFT-") ? "Draft" : escapeHtml(data.prNo || "Draft")}</title>
   <style>
-    @page { size: A4; margin: 15mm 20mm; }
+    @page { size: A4; margin: 0mm 0mm; }
      * { box-sizing: border-box; }
      html { margin: 0; padding: 0; }
      /* Add body margins to ensure printable content doesn't touch page edges
@@ -89,7 +89,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
           Office/Section:<br/>${escapeHtml(data.officeSection)}
         </td>
         <td colspan="2" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;border-bottom:none;font-size:calc(8pt + 2px);font-weight:bold;padding:2px 4px">
-          PR No.: <span style="font-weight:normal">${escapeHtml(data.prNo)}</span>
+          PR No.: <span style="font-weight:normal">${data.prNo?.startsWith("PR-DRAFT-") ? "" : escapeHtml(data.prNo)}</span>
         </td>
         <td rowspan="2" colspan="2" style="border:1px solid black;font-size:calc(8pt + 2px);font-weight:bold;vertical-align:top;padding:2px 4px">
           Date:<br/><span style="font-weight:normal">${escapeHtml(data.date)}</span>

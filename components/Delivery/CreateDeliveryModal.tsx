@@ -219,7 +219,7 @@ export default function CreateDeliveryModal({
                             <p className="text-xs text-gray-500 mt-0.5">{p.supplier ?? "—"}</p>
                             <p className="text-xs text-gray-400 mt-1">
                               {p.office_section ?? "—"}
-                              {p.pr_no ? ` · PR ${p.pr_no}` : ""}
+                              {p.pr_no && !p.pr_no.startsWith("PR-DRAFT-") ? ` · PR ${p.pr_no}` : ""}
                             </p>
                           </div>
                           {selected && !disabled && (
@@ -253,7 +253,7 @@ export default function CreateDeliveryModal({
                 PO Preview
               </p>
               <p className="text-sm font-bold text-gray-800">PO {selectedPo.po_no}</p>
-              {selectedPo.pr_no && (
+              {selectedPo.pr_no && !selectedPo.pr_no.startsWith("PR-DRAFT-") && (
                 <p className="text-xs text-gray-600">PR {selectedPo.pr_no}</p>
               )}
               <p className="text-xs text-gray-600">Supplier: {selectedPo.supplier || "—"}</p>

@@ -138,7 +138,7 @@ export default function RemarksModal({ visible, deliveryId, onClose }: RemarksMo
                 const cleanRemark = remark.remark.replace(/\[(PR|PO|DELIVERY|PAYMENT)\]\s*/, "");
 
                 let referenceNumber = "";
-                if (phase === "PR" && contextNumbers.pr_no) referenceNumber = `PR No. ${contextNumbers.pr_no}`;
+                if (phase === "PR" && contextNumbers.pr_no) referenceNumber = `PR No. ${contextNumbers.pr_no?.startsWith("PR-DRAFT-") ? "" : contextNumbers.pr_no}`;
                 else if (phase === "PO" && contextNumbers.po_no) referenceNumber = `PO No. ${contextNumbers.po_no}`;
                 else if ((phase === "DELIVERY" || phase === "PAYMENT") && contextNumbers.delivery_no) {
                   referenceNumber = `Del No. ${contextNumbers.delivery_no}`;
