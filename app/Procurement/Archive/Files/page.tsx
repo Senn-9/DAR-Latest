@@ -20,6 +20,7 @@ type PRRow = {
 	pr_no: string;
 	office_section: string;
 	created_at: string;
+	status_id?: number | null;
 };
 
 type PreviewType = "canvass" | "bacreso" | "live" | null;
@@ -94,7 +95,7 @@ export default function FilesPage() {
 			try {
 				const { data, error } = await supabase
 					.from("purchase_requests")
-					.select("id, pr_no, office_section, created_at")
+					.select("id, pr_no, office_section, created_at, status_id")
 					.eq("status_id", 37)
 					.order("created_at", { ascending: false });
 
@@ -107,6 +108,7 @@ export default function FilesPage() {
 						pr_no: row.pr_no as string,
 						office_section: (row.office_section as string) || "N/A",
 						created_at: (row.created_at as string) || "",
+						status_id: (row.status_id as number) ?? null,
 					}));
 
 				setRows(mappedRows);
