@@ -62,7 +62,7 @@ export function buildBACResoHtml(
 		.map((clause) => {
 			const clauseText = clause.lines.join(" ");
 			return `<div style="margin-bottom: 12px;">
-				<div style="font-size: 11px; line-height: 1.5;">
+				<div style="font-size: 15px; line-height: 1.5;">
 					<span style="font-weight: 700; display: inline;">WHEREAS,</span>
 					<span style="display: inline;">
 						${" " + clauseText}
@@ -76,19 +76,19 @@ export function buildBACResoHtml(
 		.map(
 			(row) => `
 		<tr class="h-8">
-			<td class="border border-black p-1 text-center" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 13px;">
 				${escapeHtml(row.prNo)}
 			</td>
-			<td class="border border-black p-1 text-center" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 13px;">
 				${escapeHtml(row.date)}
 			</td>
-			<td class="border border-black p-1 text-center" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 13px;">
 				${escapeHtml(row.cost)}
 			</td>
-			<td class="border border-black p-1 text-center" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 13px;">
 				${escapeHtml(row.endUser)}
 			</td>
-			<td class="border border-black p-1 text-center" style="font-size: 10px;">
+			<td class="border border-black p-1 text-center" style="font-size: 13px;">
 				${escapeHtml(row.mode)}
 			</td>
 		</tr>`
@@ -107,7 +107,7 @@ export function buildBACResoHtml(
 			color: #000;
 			background: #fff;
 			font-family: Calibri, sans-serif;
-			font-size: 13px;
+			font-size: 15px;
 			-webkit-print-color-adjust: exact;
 			print-color-adjust: exact;
 		}
@@ -150,18 +150,18 @@ export function buildBACResoHtml(
 			text-align: center;
 		}
 		.gov-text .title {
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 		}
 		.gov-text .subtitle {
-			font-size: 12px;
+			font-size: 14px;
 			font-weight: 400;
 
 		}
 		.committee-info {
 			text-align: center;
 			margin-bottom: 18px;
-			font-size: 12px;
+			font-size: 14px;
 			line-height: 1.2;
 		}
 		.committee-info .label {
@@ -171,7 +171,7 @@ export function buildBACResoHtml(
 			display: flex;
 			justify-content: center;
 			margin-bottom: 12px;
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 		}
 		.resolution-number input {
@@ -186,7 +186,7 @@ export function buildBACResoHtml(
 		.resolution-title {
 			text-align: center;
 			margin-bottom: 24px;
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 			line-height: 1.5;
 		}
@@ -194,7 +194,7 @@ export function buildBACResoHtml(
 			outline: none;
 			background: transparent;
 			border-bottom: 1px solid #000;
-			font-size: 13px;
+			font-size: 15px;
 			margin: 0 4px;
 			text-align: center;
 			max-width: 200px;
@@ -206,7 +206,7 @@ export function buildBACResoHtml(
 		}
 		.whereas-section {
 			margin: 8px 0;
-			font-size: 13px;
+			font-size: 15px;
 			line-height: 1.6;
 		}
 		.whereas-clause {
@@ -221,7 +221,6 @@ export function buildBACResoHtml(
 			width: 100%;
 			border-collapse: collapse;
 			margin-bottom: 24px;
-			font-size: 12px;
 			table-layout: fixed;
 		}
 		.items-table th,
@@ -231,18 +230,22 @@ export function buildBACResoHtml(
 			text-align: center;
 		}
 		.items-table th {
+			font-size: 14px;
 			font-weight: 700;
 			background-color: #fff;
+		}
+		.items-table td {
+			font-size: 14px;
 		}
 		.items-table td.text-right {
 			text-align: right;
 		}
 		.attachment-note {
-			font-size: 12px;
+			font-size: 14px;
 			margin-bottom: 16px;
 		}
 		.resolve-section {
-			font-size: 13px;
+			font-size: 15px;
 			line-height: 1.6;
 			margin-bottom: 16px;
 		}
@@ -250,7 +253,7 @@ export function buildBACResoHtml(
 			font-weight: 700;
 		}
 		.date-section {
-			font-size: 13px;
+			font-size: 15px;
 			margin-bottom: 32px;
 			line-height: 1.6;
 		}
@@ -259,7 +262,7 @@ export function buildBACResoHtml(
 			background: transparent;
 			border: none;
 			flex: 1;
-			font-size: 13px;
+			font-size: 15px;
 		}
 		.signature-section {
 			margin-top: 28px;
@@ -289,26 +292,26 @@ export function buildBACResoHtml(
 			text-align: center;
 		}
 		.signature-name {
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 			text-transform: uppercase;
 			margin-bottom: 4px;
 		}
 		.signature-role {
-			font-size: 12px;
+			font-size: 14px;
 		}
 		.approved-by {
 			text-align: center;
 			margin-top: 18px;
 		}
 		.approved-by-name {
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 			text-transform: uppercase;
 			margin: 4px 0;
 		}
 		.approved-by-role {
-			font-size: 12px;
+			font-size: 14px;
 		}
 		.flex {
 			display: flex;
