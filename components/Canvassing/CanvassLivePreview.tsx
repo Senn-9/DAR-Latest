@@ -162,6 +162,9 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 		deadline: "",
 		deliveryDays: "7",
 		chairpersonName: "ATTY. JAIME G. RESOCO, JR.",
+		canvasserName: "ECT/asa",
+		prNo: prNo,
+		docCode: "DARCS1-QF-STO-009 Rev 01",
 		canvassersLine1: "IMELDA R. BALAAG / JACOB K. GUEVARRA / ANTHONY KEVIN D. TEJADA / RUBEN R. VELASCO III",
 		canvassersLine2: "SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA",
 	});
@@ -274,8 +277,12 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 
 		// Blur the button to prevent focus issues
 		(e.currentTarget as HTMLButtonElement).blur();
-		printRFQ({ ...meta, prNo }, items);
+		printRFQ({ ...meta, prNo: meta.prNo || prNo }, items);
 	};
+
+	useEffect(() => {
+		setMeta((prev) => ({ ...prev, prNo: prev.prNo || prNo }));
+	}, [prNo]);
 
 	useEffect(() => {
 		if (!open || !prNo) return;
@@ -757,8 +764,18 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 							</div>
 							<div className="mt-8 space-y-1 text-[10px]">
 								<div className="font-bold">CANVASSER</div>
-								<div>ECT/asa</div>
-								<div>{prNo}</div>
+									<input
+										type="text"
+										value={meta.canvasserName}
+										onChange={(e) => setMeta((prev) => ({ ...prev, canvasserName: e.target.value }))}
+										className="w-full border-b border-black bg-transparent px-1 text-left outline-none"
+									/>
+									<input
+										type="text"
+										value={meta.prNo}
+										onChange={(e) => setMeta((prev) => ({ ...prev, prNo: e.target.value }))}
+										className="w-full border-b border-black bg-transparent px-1 text-left outline-none"
+									/>
 							</div>
 						</div>
 
@@ -787,7 +804,12 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 								</div>
 								<div className="text-center font-bold text-[9px]">(Please check - VAT or NON-VAT)</div>
 							</div>
-							<div className="text-right font-bold mt-1 text-[9px]">DARCS1-QF-STO-009 Rev 01</div>
+								<input
+									type="text"
+									value={meta.docCode}
+									onChange={(e) => setMeta((prev) => ({ ...prev, docCode: e.target.value }))}
+									className="w-full border-b border-black bg-transparent px-1 text-right font-bold mt-1 text-[9px] outline-none"
+								/>
 						</div>
 					</div>
 

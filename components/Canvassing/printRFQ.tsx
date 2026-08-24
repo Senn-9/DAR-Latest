@@ -5,6 +5,8 @@ export type RFQMeta = {
 	address: string;
 	deadline: string;
 	prNo: string;
+	canvasserName?: string;
+	docCode?: string;
 };
 
 // Extended printable metadata (matches runtime meta spread from the preview)
@@ -377,8 +379,8 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 			<div class="names">${escapeHtml((m.canvassersLine2 as string) || "SANTOS CLOYD PAPA / ELDA D. EMILA / JOAN MIRZI CALLO / FRANCES JOY DE SILVA")}</div>
 			<div class="canvasser">
 				<div class="b">CANVASSER</div>
-				<div>ECT/asa</div>
-				<div>${escapeHtml(meta.prNo)}</div>
+				<div>${escapeHtml((meta.canvasserName as string) || "ECT/asa")}</div>
+				<div>${escapeHtml(meta.prNo || "")}</div>
 			</div>
 		</div>
 		<div class="footer-right">
@@ -394,7 +396,7 @@ export function buildRFQHtml(meta: RFQMeta, items: RFQItem[]) {
 				</div>
 				<div class="vat-label">(Please check - VAT or NON-VAT)</div>
 			</div>
-			<div class="doc-code">DARCS1-QF-STO-009 Rev 01</div>
+			<div class="doc-code">${escapeHtml(meta.docCode || "DARCS1-QF-STO-009 Rev 01")}</div>
 		</div>
 	</div>
 </div>
