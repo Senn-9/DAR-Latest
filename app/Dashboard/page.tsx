@@ -13,6 +13,7 @@ import {
 import AnalyticsDashboard from "../analytics/analytics";
 import SummaryReportModal from "@/components/Reporting/SummaryReportModal";
 import ProcurementTimeline from "./procurementtimeline";
+import RoleGuide from "@/app/UserManagement/RoleGuide";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const [selectedRecord, setSelectedRecord] = useState<PRListRow | null>(null);
   const [summaryReportOpen, setSummaryReportOpen] = useState(false);
   const [referenceGuideOpen, setReferenceGuideOpen] = useState(false);
+  const [referenceGuideTab, setReferenceGuideTab] = useState<"workflow" | "roles">("workflow");
 
   type LatestRemarkInfo = { remark: string | null; created_at: string; status_flag_id: number | null; user_id: number | null };
   type UserInfo = { fullname: string; division_name: string | null };
@@ -1406,17 +1408,47 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-gray-400">Reference Guide</p>
-                  <h2 className="text-xl font-semibold text-gray-900">Procurement Workflow</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {referenceGuideTab === "workflow" ? "Procurement Workflow" : "User Roles & Permissions"}
+                  </h2>
                 </div>
-                <button
-                  onClick={() => setReferenceGuideOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition"
-                >
-                  <RiCloseLine size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setReferenceGuideTab("workflow")}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        referenceGuideTab === "workflow"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Workflow
+                    </button>
+                    <button
+                      onClick={() => setReferenceGuideTab("roles")}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        referenceGuideTab === "roles"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Roles
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setReferenceGuideOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition"
+                  >
+                    <RiCloseLine size={20} />
+                  </button>
+                </div>
               </div>
               <div className="h-[calc(72vh-80px)] overflow-y-auto p-4 bg-slate-50">
-                <ProcurementTimeline modalView />
+                {referenceGuideTab === "workflow" ? (
+                  <ProcurementTimeline modalView />
+                ) : (
+                  <RoleGuide />
+                )}
               </div>
             </div>
           </div>

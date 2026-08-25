@@ -75,6 +75,8 @@ export default function BudgetPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [isEndUser, setIsEndUser] = useState(false);
+  const [isAccountingRole, setIsAccountingRole] = useState(false);
+  const [isCashRole, setIsCashRole] = useState(false);
 
   // Year selection
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
@@ -108,9 +110,17 @@ export default function BudgetPage() {
       const isBudgetRole =
         (user?.username?.toLowerCase() === "budget") ||
         (user?.roles?.role_name?.toLowerCase().includes("budget") ?? false);
+      const isAccountingRole =
+        (user?.username?.toLowerCase() === "accounting") ||
+        (user?.roles?.role_name?.toLowerCase().includes("accounting") ?? false);
+      const isCashRole =
+        (user?.username?.toLowerCase() === "cash") ||
+        (user?.roles?.role_name?.toLowerCase().includes("cash") ?? false);
       setIsAdmin(roleId === 1);
       setCanEdit(roleId === 1 || isBudgetRole);
       setIsEndUser(roleId === ENDUSER_ROLE);
+      setIsAccountingRole(isAccountingRole);
+      setIsCashRole(isCashRole);
     }
   }, []);
 
@@ -133,10 +143,12 @@ export default function BudgetPage() {
     try {
       // ═══════════════════════════════════════════════════════════════════
       // STEP 1: Determine user's division for filtering
+      // Accounting and Cash roles can view all divisions, no filtering needed
       // ═══════════════════════════════════════════════════════════════════
       let userDivisionId: number | undefined;
-      
-      if (isEndUser && currentUser?.divisions?.division_name) {
+
+      // Only apply division filtering for end users, not for accounting/cash roles
+      if (isEndUser && !isAccountingRole && !isCashRole && currentUser?.divisions?.division_name) {
         const { data: userDivision } = await supabase
           .from("divisions")
           .select("division_id")
@@ -149,6 +161,7 @@ export default function BudgetPage() {
 
       // ═══════════════════════════════════════════════════════════════════
       // STEP 2: Fetch budgets and ORS entries in parallel
+      // Accounting and Cash roles get all divisions (undefined userDivisionId)
       // ═══════════════════════════════════════════════════════════════════
       const [budgetsData, orsData] = await Promise.all([
         fetchBudgets(selectedYear),
@@ -157,6 +170,7 @@ export default function BudgetPage() {
 
       // ═══════════════════════════════════════════════════════════════════
       // STEP 3: Filter budgets by user's division if end user
+      // Accounting and Cash roles see all budgets (no filtering)
       // ═══════════════════════════════════════════════════════════════════
       const filteredBudgets = userDivisionId
         ? budgetsData.filter((b) => b.division_id === userDivisionId)
@@ -189,10 +203,16 @@ export default function BudgetPage() {
         
         // Utilization is calculated using ORS obligated amounts only
         const utilized = orsAmount;
-        
+
         const remaining = allocated - utilized;
+
+        // Calculate percentages with proper handling for edge cases
+        // Utilization: How much of the allocated budget has been obligated (works for any amount)
         const utilizationPercent = allocated > 0 ? (utilized / allocated) * 100 : 0;
-        const remainingPercent = allocated > 0 ? (remaining / allocated) * 100 : 0;
+
+        // Remaining: What percentage of the allocated budget is still available
+        // This ensures accuracy even for very small obligated amounts
+        const remainingPercent = allocated > 0 ? Math.max(0, (remaining / allocated) * 100) : 0;
 
         // Determine status based on utilization AND remaining budget
         let status: "on-track" | "warning" | "critical" = "on-track";
@@ -232,13 +252,16 @@ export default function BudgetPage() {
       setTotalEarmarked(totalEarmarked);
       setTotalSpent(totalSpent);
       setTotalRemaining(totalAllocated - totalUtilized);
+
+      // Calculate overall utilization rate using the same logic as individual budgets
+      // This ensures consistency even with small obligated amounts
       setUtilizationRate(totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0);
     } catch (err) {
       console.error("Error fetching budget data:", err);
     }
 
     setLoading(false);
-  }, [currentUser, isEndUser, selectedYear, supabase]);
+  }, [currentUser, isEndUser, isAccountingRole, isCashRole, selectedYear, supabase]);
 
   useEffect(() => {
     loadBudgetData();
@@ -450,9 +473,9 @@ export default function BudgetPage() {
         </div>
 
         {/* Remaining */}
-        <div className={`bg-white rounded-2xl p-5 border shadow-sm group ${totalRemaining < 0 ? 'border-red-300 bg-red-50' : totalRemaining / totalAllocated < 0.25 ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}>
+        <div className={`bg-white rounded-2xl p-5 border shadow-sm group ${totalRemaining < 0 ? 'border-red-300 bg-red-50' : (totalAllocated > 0 && totalRemaining / totalAllocated < 0.25) ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between mb-2">
-            <p className={`text-xs font-semibold uppercase tracking-wide ${totalRemaining < 0 ? 'text-red-500' : totalRemaining / totalAllocated < 0.25 ? 'text-amber-600' : 'text-gray-400'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wide ${totalRemaining < 0 ? 'text-red-500' : (totalAllocated > 0 && totalRemaining / totalAllocated < 0.25) ? 'text-amber-600' : 'text-gray-400'}`}>
               Remaining
             </p>
             {totalRemaining < 0 && (
@@ -460,25 +483,30 @@ export default function BudgetPage() {
                 OVER BUDGET
               </span>
             )}
-            {totalRemaining >= 0 && totalRemaining / totalAllocated < 0.25 && (
+            {totalRemaining >= 0 && totalAllocated > 0 && totalRemaining / totalAllocated < 0.25 && (
               <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">
                 LOW
               </span>
             )}
           </div>
           <div className="flex items-baseline gap-1">
-            <span className={`text-2xl font-bold ${totalRemaining < 0 ? "text-red-600" : totalRemaining / totalAllocated < 0.25 ? "text-amber-600" : "text-emerald-600"}`}>
+            <span className={`text-2xl font-bold ${totalRemaining < 0 ? "text-red-600" : (totalAllocated > 0 && totalRemaining / totalAllocated < 0.25) ? "text-amber-600" : "text-emerald-600"}`}>
               {formatFull(Math.abs(totalRemaining))}
             </span>
+            {totalRemaining >= 0 && totalAllocated > 0 && (
+              <span className={`text-sm font-medium ${totalRemaining / totalAllocated < 0.25 ? 'text-amber-600' : 'text-gray-500'}`}>
+                ({((totalRemaining / totalAllocated) * 100).toFixed(1)}%)
+              </span>
+            )}
           </div>
           <div className="h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
             <div
-              className={`h-full rounded-full ${totalRemaining < 0 ? 'bg-red-500' : totalRemaining / totalAllocated < 0.25 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              className={`h-full rounded-full ${totalRemaining < 0 ? 'bg-red-500' : (totalAllocated > 0 && totalRemaining / totalAllocated < 0.25) ? 'bg-amber-500' : 'bg-emerald-500'}`}
               style={{ width: `${Math.max(0, Math.min(totalAllocated > 0 ? (totalRemaining / totalAllocated) * 100 : 0, 100))}%` }}
             />
           </div>
-          <p className={`text-xs mt-2 ${totalRemaining < 0 ? 'text-red-600 font-medium' : totalRemaining / totalAllocated < 0.25 ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
-            {totalRemaining < 0 
+          <p className={`text-xs mt-2 ${totalRemaining < 0 ? 'text-red-600 font-medium' : (totalAllocated > 0 && totalRemaining / totalAllocated < 0.25) ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+            {totalRemaining < 0
               ? <>Over budget by ₱{formatFull(Math.abs(totalRemaining))}</>
               : totalAllocated > 0
               ? `${((totalRemaining / totalAllocated) * 100).toFixed(1)}% of budget remaining`
@@ -559,9 +587,16 @@ export default function BudgetPage() {
                     </div>
                     <div className="rounded-xl bg-white p-3 border border-gray-100">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Remaining</p>
-                      <p className={`mt-1 font-bold ${item.total_remaining < 0 ? 'text-red-600' : item.remainingPercent < 25 ? 'text-amber-600' : 'text-emerald-700'}`}>
-                        ₱{formatCompact(Math.abs(item.total_remaining))}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`mt-1 font-bold ${item.total_remaining < 0 ? 'text-red-600' : item.remainingPercent < 25 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                          ₱{formatCompact(Math.abs(item.total_remaining))}
+                        </p>
+                        {item.total_remaining >= 0 && (
+                          <span className={`text-[10px] font-medium ${item.remainingPercent < 25 ? 'text-amber-600' : 'text-gray-500'}`}>
+                            ({item.remainingPercent.toFixed(0)}%)
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="rounded-xl bg-white p-3 border border-gray-100">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Utilization</p>
@@ -668,10 +703,12 @@ export default function BudgetPage() {
                               </div>
                               <span className="text-xs font-semibold text-gray-700 w-10 text-right">{item.utilizationPercent.toFixed(1)}%</span>
                             </div>
-                            {item.remainingPercent < 25 && item.total_remaining >= 0 && (
-                              <span className="text-[10px] text-amber-600 font-medium">{item.remainingPercent.toFixed(0)}% left</span>
-                            )}
-                            {item.total_remaining < 0 && (
+                            {/* Always show remaining percentage for better visibility */}
+                            {item.total_remaining >= 0 ? (
+                              <span className={`text-[10px] font-medium ${item.remainingPercent < 25 ? 'text-amber-600' : 'text-gray-500'}`}>
+                                {item.remainingPercent.toFixed(0)}% remaining
+                              </span>
+                            ) : (
                               <span className="text-[10px] text-red-600 font-bold">Over budget!</span>
                             )}
                           </div>
@@ -880,6 +917,8 @@ export default function BudgetPage() {
           <p className="text-sm text-blue-800">
             {isEndUser
               ? "You are viewing your division's budget summary. Contact the Budget office to request changes."
+              : (isAccountingRole || isCashRole)
+              ? "You have full visibility of all division budgets for financial oversight and payment processing."
               : "You have read-only access to the budget module. Contact an administrator for modifications."}
           </p>
         </div>
