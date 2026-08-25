@@ -142,6 +142,9 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 		bacMember2: "ENGR. JOSE JESUS B. REY, JR.",
 		bacMember3: "MARIA REBECCA R. TAROG",
 		hope: "RICARDO C. GARCIA",
+		asaLco: "ASA/LCO",
+		philgepsRef: "PhilGEPS Ref.",
+		formNo: "DARCS1-QF-STO-010 Rev 00",
 	});
 	const [supplierNames, setSupplierNames] = useState<string[]>([]);
 	const [supplierTotals, setSupplierTotals] = useState<Record<string, number>>({});
@@ -374,7 +377,7 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						
 						if (!Number.isNaN(numericPrice) && rawValue !== "") {
 							next[itemRow][4 + supplierIndex] = { 
-								value: numericPrice > 0 ? formatMoney(numericPrice) : "0.00", 
+								value: numericPrice > 0 ? formatMoney(numericPrice) : "", 
 								isCenter: true 
 							};
 						} else {
@@ -725,10 +728,22 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 
 						<div className="mt-6 flex items-end justify-between" style={{ fontSize: "10px" }}>
 							<div>
-								<div>ASA/LCO</div>
-								<div>PhilGEPS Ref.</div>
+								<input
+									value={meta.asaLco}
+									onChange={(e) => setMetaField("asaLco", e.target.value)}
+									className="bg-transparent outline-none block"
+								/>
+								<input
+									value={meta.philgepsRef}
+									onChange={(e) => setMetaField("philgepsRef", e.target.value)}
+									className="bg-transparent outline-none block mt-0"
+								/>
 							</div>
-							<div className="font-bold">DARCS1-QF-STO-010 Rev 00</div>
+							<input
+								value={meta.formNo}
+								onChange={(e) => setMetaField("formNo", e.target.value)}
+								className="font-bold bg-transparent outline-none text-right"
+							/>
 						</div>
 					</div>
 				</div>

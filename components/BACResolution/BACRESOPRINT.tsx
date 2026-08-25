@@ -116,7 +116,7 @@ export function buildBACResoHtml(
 			max-width: 850px;
 			min-height: 1100px;
 			margin: 0 auto;
-			padding: 36px 28px;
+			padding: 36px 40px;
 		}
 		.top-grid {
 			display: flex;
@@ -201,7 +201,6 @@ export function buildBACResoHtml(
 		}
 		.narrow-content {
 			width: 100%;
-			max-width: 600px;
 			margin: 0 auto;
 		}
 		.whereas-section {
@@ -278,7 +277,7 @@ export function buildBACResoHtml(
 			column-gap: 64px;
 			row-gap: 28px;
 			margin: 0 auto 32px;
-			max-width: 660px;
+			max-width: 780px;
 		}
 		.signature-block {
 			text-align: center;
