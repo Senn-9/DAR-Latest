@@ -67,6 +67,7 @@ export default function PrepareAbstractModal({
 	const [isSaving, setIsSaving] = useState(false);
 	const [feedback, setFeedback] = useState<SubmitResult | null>(null);
 	const [showPreview, setShowPreview] = useState(false);
+	const [showEmptyItems, setShowEmptyItems] = useState(false);
 
 	useEffect(() => {
 		if (!open) {
@@ -191,6 +192,15 @@ export default function PrepareAbstractModal({
 	}, [open, prId, supabase]);
 
 	if (!open) return null;
+
+	const isEmptyOrZero = (val: string | undefined) =>
+		!val || val.trim() === "" || val.trim() === "0";
+
+	const visibleItems = showEmptyItems
+		? items
+		: items.filter((item) =>
+				supplierQuotes.some((s) => !isEmptyOrZero(s.prices[item.id]))
+		  );
 
 	const addSupplierQuote = () => {
 		setSupplierQuotes((prev) => [
@@ -405,7 +415,17 @@ export default function PrepareAbstractModal({
 										<div className="space-y-3">
 											<div className="grid grid-cols-[minmax(220px,1.3fr)_minmax(0,1fr)_44px] gap-3 items-end rounded-xl bg-emerald-100/70 border border-emerald-100 p-4 text-[10px] font-bold uppercase tracking-wider text-gray-500">
 												<div>Supplier Name</div>
-												<div className="text-center">Quotation per Item</div>
+												<div className="flex items-center justify-between gap-3">
+													<span className="text-center flex-1">Quotation per Item</span>
+													<button
+														type="button"
+														onClick={() => setShowEmptyItems((prev) => !prev)}
+														className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 border border-emerald-200 transition-all normal-case tracking-normal shadow-sm"
+													>
+														<RiEyeLine size={12} />
+														{showEmptyItems ? "Hide Empty" : "Show All"}
+													</button>
+												</div>
 												<div />
 											</div>
 
@@ -442,11 +462,11 @@ export default function PrepareAbstractModal({
 														<div
 															className="grid gap-3"
 															style={{
-																gridTemplateColumns: `repeat(${items.length}, minmax(180px, 1fr))`,
-																minWidth: `${Math.max(items.length, 1) * 180}px`,
+																gridTemplateColumns: `repeat(${visibleItems.length}, minmax(180px, 1fr))`,
+																minWidth: `${Math.max(visibleItems.length, 1) * 180}px`,
 															}}
 														>
-															{items.map((item) => (
+															{visibleItems.map((item) => (
 																<div key={item.id} className="space-y-1">
 																	<div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
 																		{item.description}

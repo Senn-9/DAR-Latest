@@ -1111,7 +1111,7 @@ export default function PurchaseOrderPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-900 truncate">{po.po_no ?? "—"}</p>
-                          <p className="mt-0.5 text-xs text-gray-500 truncate">{po.pr_no ? `PR: ${po.pr_no}` : "—"}</p>
+                          <p className="mt-0.5 text-xs text-gray-500 truncate">{po.pr_no && !po.pr_no.startsWith("PR-DRAFT-") ? `PR: ${po.pr_no}` : "—"}</p>
                         </div>
                         <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${meta.bg} ${meta.text}`}>
                           {meta.label}

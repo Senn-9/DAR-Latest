@@ -877,7 +877,7 @@ export default function PrepareBACResolutionModal({ onClose, onProcessed }: Prop
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <span className={`font-medium ${isSelectable || isSelected ? "text-gray-900" : "text-gray-400"}`}>{pr.pr_no}</span>
+                                  <span className={`font-medium ${isSelectable || isSelected ? "text-gray-900" : "text-gray-400"}`}>{(pr.pr_no?.startsWith("PR-DRAFT-") || (pr.status_id != null && pr.status_id < 4)) ? "" : pr.pr_no}</span>
                                   {hasExistingResolution && (
                                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
                                       Saved

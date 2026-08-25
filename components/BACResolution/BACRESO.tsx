@@ -264,8 +264,8 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 					// Update table with ALL found PRs
 					const rows = allRelatedPRs.map((pr, index) => ({
 						id: index,
-						prNo: pr.pr_no || "",
-						date: pr.created_at 
+						prNo: pr.pr_no?.startsWith("PR-DRAFT-") ? "" : pr.pr_no || "",
+						date: pr.created_at
 							? new Date(pr.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
 							: "",
 						cost: pr.total_cost ? `₱${pr.total_cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "",

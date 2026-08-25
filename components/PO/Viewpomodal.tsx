@@ -875,67 +875,52 @@ function buildPurchaseOrderPrintHtml(data: {
       <tr>
         <td colSpan="6" style="padding:3px 6px;font-size:9pt"><span style="font-weight:bold">(Total Amount in Words) </span>${amountWords}</td>
       </tr>
+      <tr>
+        <td colSpan="6" style="padding:0">
+          <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+          <table style="border:none;width:100%">
+            <tr>
+              <td style="border:none;padding:10px 8px 6px;font-size:9pt;width:50%">Conforme:</td>
+              <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left;width:50%">Very truly yours,</td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:24px 8px 0;text-align:center">
+                <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
+              </td>
+              <td style="border:none;padding:24px 8px 0;text-align:center">
+                <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
+              <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:8px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:85%;margin:0 auto"></div></td>
+              <td style="border:none;padding:4px 8px 2px;text-align:center;font-size:9pt">${escapeHtml(data.officialDesig || "")}</td>
+            </tr>
+            <tr>
+              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
+              <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Designation</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+          <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
+          <div style="font-size:10pt;margin-bottom:8px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable || "")}</div>
+          <div style="border-bottom:1px solid #111;width:80%;margin:20px auto 0;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.accountantName || "")}</div>
+          <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+        </td>
+        <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
+          <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> ${escapeHtml(data.orsNo || "")}</div>
+          <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> ${escapeHtml(data.orsDate || "")}</div>
+          <div style="font-size:10pt"><b>Amount :</b> ${data.orsAmount ? formatMoney(data.orsAmount) : ""}</div>
+        </td>
+      </tr>
     </tbody>
   </table>
-
-  <div class="po-footer">
-    <table>
-      <colgroup>
-        <col style="width:14%" />
-        <col style="width:11%" />
-        <col style="width:34%" />
-        <col style="width:16%" />
-        <col style="width:10.5%" />
-        <col style="width:14.5%" />
-      </colgroup>
-      <tbody>
-        <tr>
-          <td colSpan="6" style="padding:0">
-            <div style="padding:8px 10px 8px 20px;font-size:9pt;line-height:1.28">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
-            <table style="border:none">
-              <tr>
-                <td style="border:none;padding:10px 8px 6px;font-size:9pt">Conforme:</td>
-                <td style="border:none;padding:10px 8px 6px;font-size:9pt;text-align:left">Very truly yours,</td>
-              </tr>
-              <tr>
-                <td style="border:none;padding:24px 8px 0;text-align:center">
-                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.supplier)}</div>
-                </td>
-                <td style="border:none;padding:24px 8px 0;text-align:center">
-                  <div style="border-bottom:1px solid #111;width:85%;margin:0 auto;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.officialName || "")}</div>
-                </td>
-              </tr>
-              <tr>
-                <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Supplier</td>
-                <td style="border:none;padding:2px 8px;text-align:center;font-size:9pt">Signature over Printed Name of Authorized Official</td>
-              </tr>
-              <tr>
-                <td style="border:none;padding:8px 8px 2px;text-align:center"><div style="border-bottom:1px solid #111;width:45%;margin:0 auto"></div></td>
-                <td style="border:none;padding:4px 8px 2px;text-align:center;font-size:9pt">${escapeHtml(data.officialDesig || "")}</td>
-              </tr>
-              <tr>
-                <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Date</td>
-                <td style="border:none;padding:2px 8px 10px;text-align:center;font-size:9pt">Designation</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
-            <div style="font-size:10pt;margin-bottom:8px"><b>Fund Cluster :</b> ${escapeHtml(data.fundCluster)}</div>
-            <div style="font-size:10pt;margin-bottom:8px"><b>Funds Available :</b> ${escapeHtml(data.fundsAvailable || "")}</div>
-            <div style="border-bottom:1px solid #111;width:80%;margin:20px auto 0;font-size:9pt;font-weight:bold;text-align:center;padding-bottom:2px">${escapeHtml(data.accountantName || "")}</div>
-            <div style="text-align:center;font-size:9pt">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-          </td>
-          <td colSpan="3" style="vertical-align:top;padding:10px 8px;height:135px">
-            <div style="font-size:10pt;margin-bottom:8px"><b>ORS No. :</b> ${escapeHtml(data.orsNo || "")}</div>
-            <div style="font-size:10pt;margin-bottom:8px"><b>Date of the ORS:</b> ${escapeHtml(data.orsDate || "")}</div>
-            <div style="font-size:10pt"><b>Amount :</b> ${data.orsAmount ? formatMoney(data.orsAmount) : ""}</div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
 </body>
 </html>`;
 }

@@ -15,6 +15,9 @@ export function buildResolutionHtml(
 		bacMember2: string;
 		bacMember3: string;
 		hope: string;
+		asaLco: string;
+		philgepsRef: string;
+		formNo: string;
 	},
 	cells: { value: string; isCenter?: boolean }[][],
 	supplierNames: string[],
@@ -326,10 +329,10 @@ export function buildResolutionHtml(
 		<!-- Footer: mt-6(24px) -->
 		<div style="margin-top:24px;display:flex;align-items:flex-end;justify-content:space-between;font-size:10px;">
 			<div>
-				<div>ASA/LCO</div>
-				<div>PhilGEPS Ref.</div>
+				<div>${escapeHtml(meta.asaLco)}</div>
+				<div>${escapeHtml(meta.philgepsRef)}</div>
 			</div>
-			<div style="font-weight:bold;">DARCS1-QF-STO-010 Rev 00</div>
+			<div style="font-weight:bold;">${escapeHtml(meta.formNo)}</div>
 		</div>
 	</div>
 
@@ -357,6 +360,9 @@ export function printLivePreview(
 		bacMember2: string;
 		bacMember3: string;
 		hope: string;
+		asaLco: string;
+		philgepsRef: string;
+		formNo: string;
 	},
 	cells: { value: string; isCenter?: boolean }[][],
 	supplierNames: string[],

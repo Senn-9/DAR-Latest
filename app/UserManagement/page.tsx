@@ -10,11 +10,13 @@ import {
   RiEdit2Line,
   RiSearchLine,
   RiFilter3Line,
-  RiShieldUserLine,
   RiArrowUpDownLine,
+  RiInformationLine,
+  RiShieldUserLine,
 } from "react-icons/ri";
 import { hashPassword } from "@/utils/auth/password";
 import { SuccessModal, ErrorModal } from "@/components/StatusModal";
+import RoleGuide from "./RoleGuide";
 
 type RoleRow = { role_id: number; role_name: string | null };
 type DivisionRow = { division_id: number; division_name: string | null };
@@ -76,6 +78,7 @@ export default function UserManagementPage() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
+  const [roleGuideOpen, setRoleGuideOpen] = useState(false);
 
   const [formUsername, setFormUsername] = useState("");
   const [formFullname, setFormFullname] = useState("");
@@ -217,6 +220,18 @@ export default function UserManagementPage() {
     if (!username || !fullname || !password) return;
     if (typeof formRoleId !== "number") return;
 
+    // Check if username already exists
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("username")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (existingUser) {
+      setErrorMsg(`Username "${username}" is already in use. Please choose a different username.`);
+      return;
+    }
+
     const hashedPassword = await hashPassword(password);
     const { error } = await supabase.from("users").insert({
       username,
@@ -243,6 +258,21 @@ export default function UserManagementPage() {
     const fullname = formFullname.trim();
     if (!username || !fullname) return;
     if (typeof formRoleId !== "number") return;
+
+    // Check if username is being changed and if it's already used by another user
+    if (username !== editTarget.username) {
+      const { data: existingUser, error: checkError } = await supabase
+        .from("users")
+        .select("username, id")
+        .eq("username", username)
+        .maybeSingle();
+
+      // If user exists and it's not the current user, show error
+      if (existingUser && existingUser.id !== editTarget.id) {
+        setErrorMsg(`Username "${username}" is already in use by another user. Please choose a different username.`);
+        return;
+      }
+    }
 
     const patch: Record<string, any> = {
       username,
@@ -367,13 +397,23 @@ export default function UserManagementPage() {
               <span className="font-semibold text-gray-600">{users.length}</span> total users in the system
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className="px-4 py-2.5 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2 shadow-sm"
-          >
-            <RiAddLine size={18} />
-            New User
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRoleGuideOpen(true)}
+              className="px-3 py-2.5 bg-slate-700 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm"
+              title="Role Guide"
+            >
+              <RiInformationLine size={18} />
+              Role Guide
+            </button>
+            <button
+              onClick={openCreate}
+              className="px-4 py-2.5 bg-emerald-700 text-white rounded-xl font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <RiAddLine size={18} />
+              New User
+            </button>
+          </div>
         </div>
 
         {/* ── ADMIN SELF CARD ── */}
@@ -720,7 +760,7 @@ export default function UserManagementPage() {
                 <div className="grid grid-cols-1 gap-3">
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
-                      Username
+                      Username <span className="text-red-500">*</span>
                     </label>
                     <input
                       value={formUsername}
@@ -728,10 +768,13 @@ export default function UserManagementPage() {
                       className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
                       placeholder="e.g. juan.dela.cruz"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This username will be used for logging into the system.
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
-                      Full Name
+                      Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       value={formFullname}
@@ -742,7 +785,7 @@ export default function UserManagementPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
-                      Password {editTarget ? "(leave blank to keep)" : ""}
+                      Password {editTarget ? "(leave blank to keep)" : ""} {!editTarget && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       value={formPassword}
@@ -755,7 +798,7 @@ export default function UserManagementPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold uppercase text-gray-600 mb-1">
-                        Role
+                        Role <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={formRoleId}
@@ -812,6 +855,29 @@ export default function UserManagementPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Role Guide Modal */}
+      {roleGuideOpen && (
+        <div className="fixed inset-0 z-50 bg-transparent flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full min-h-[70vh] overflow-hidden">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-gray-400">Reference Guide</p>
+                <h2 className="text-xl font-semibold text-gray-900">User Roles & Permissions</h2>
+              </div>
+              <button
+                onClick={() => setRoleGuideOpen(false)}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition"
+              >
+                <RiCloseLine size={20} />
+              </button>
+            </div>
+            <div className="h-[calc(70vh-80px)] overflow-y-auto p-6 bg-slate-50">
+              <RoleGuide />
+            </div>
           </div>
         </div>
       )}

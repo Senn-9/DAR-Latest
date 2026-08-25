@@ -20,6 +20,7 @@ type PRRow = {
 	pr_no: string;
 	office_section: string;
 	created_at: string;
+	status_id?: number | null;
 };
 
 type PreviewType = "canvass" | "bacreso" | "live" | null;
@@ -94,7 +95,7 @@ export default function FilesPage() {
 			try {
 				const { data, error } = await supabase
 					.from("purchase_requests")
-					.select("id, pr_no, office_section, created_at")
+					.select("id, pr_no, office_section, created_at, status_id")
 					.eq("status_id", 37)
 					.order("created_at", { ascending: false });
 
@@ -107,6 +108,7 @@ export default function FilesPage() {
 						pr_no: row.pr_no as string,
 						office_section: (row.office_section as string) || "N/A",
 						created_at: (row.created_at as string) || "",
+						status_id: (row.status_id as number) ?? null,
 					}));
 
 				setRows(mappedRows);
@@ -436,9 +438,14 @@ export default function FilesPage() {
 										</td>
 									</tr>
 								) : (
-									paginatedRows.map((row) => (
+									paginatedRows.map((row) => {
+										// Determine if PR is still a draft (not processed by BAC yet)
+										const isDraftPR = row.pr_no?.startsWith("PR-DRAFT-") || (row.status_id != null && row.status_id < 4);
+										const displayPrNo = isDraftPR ? "" : row.pr_no;
+										
+										return (
 										<tr key={row.id} className="hover:bg-gray-50">
-											<td className="px-6 py-4 text-sm font-medium text-gray-900">{row.pr_no}</td>
+											<td className="px-6 py-4 text-sm font-medium text-gray-900">{displayPrNo}</td>
 											<td className="px-6 py-4 text-sm text-gray-700">{row.office_section}</td>
 											<td className="px-6 py-4 text-sm text-gray-700">{formatDate(row.created_at)}</td>
 											<td className="px-6 py-4">
@@ -494,7 +501,8 @@ export default function FilesPage() {
 												</div>
 											</td>
 										</tr>
-									))
+										);
+									})
 								)}
 							</tbody>
 						</table>
