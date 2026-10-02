@@ -27,6 +27,14 @@ function getItemTotal(item: PRPrintItem): number {
   return (parseFloat(item.quantity ?? "0") || 0) * (parseFloat(item.unit_price ?? "0") || 0);
 }
 
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function buildPRPrintHtml(data: PRPrintData): string {
   const itemRows: string[] = data.items.map((item) => {
     const total = getItemTotal(item);
@@ -36,8 +44,8 @@ export function buildPRPrintHtml(data: PRPrintData): string {
         <td style="border:1px solid black;text-align:center;font-size:calc(8pt + 2px)">${escapeHtml(item.unit)}</td>
         <td style="border:1px solid black;font-size:calc(8pt + 2px);padding:1px 4px;word-wrap:break-word;overflow-wrap:break-word">${item.description ?? ""}</td>
         <td style="border:1px solid black;text-align:center;font-size:calc(8pt + 2px)">${escapeHtml(item.quantity)}</td>
-        <td style="border:1px solid black;text-align:right;font-size:calc(8pt + 2px)">${item.unit_price ? "₱" + parseFloat(item.unit_price).toFixed(2) : ""}</td>
-        <td style="border:1px solid black;text-align:right;font-size:calc(8pt + 2px)">${total > 0 ? "₱" + total.toFixed(2) : ""}</td>
+        <td style="border:1px solid black;text-align:right;font-size:calc(8pt + 2px)">${item.unit_price ? "₱" + formatMoney(parseFloat(item.unit_price)) : ""}</td>
+        <td style="border:1px solid black;text-align:right;font-size:calc(8pt + 2px)">${total > 0 ? "₱" + formatMoney(total) : ""}</td>
       </tr>`;
   });
 
@@ -111,7 +119,7 @@ export function buildPRPrintHtml(data: PRPrintData): string {
       ${itemRows.join("")}
       <tr style="height:17px">
         <td colspan="5" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;border-bottom:none;font-size:calc(8.5pt + 2px);padding:2px 4px;text-align:right;font-weight:bold">TOTAL</td>
-        <td style="border-top:1px solid black;border-right:1px solid black;text-align:right;font-size:calc(8.5pt + 2px);padding:2px 4px;font-weight:bold">${grandTotal > 0 ? "₱" + grandTotal.toFixed(2) : ""}</td>
+        <td style="border-top:1px solid black;border-right:1px solid black;text-align:right;font-size:calc(8.5pt + 2px);padding:2px 4px;font-weight:bold">${grandTotal > 0 ? "₱" + formatMoney(grandTotal) : ""}</td>
       </tr>
       <tr style="height:17px">
         <td colspan="6" style="border-top:1px solid black;border-left:1px solid black;border-right:1px solid black;border-bottom:none;font-size:calc(8.5pt + 2px);padding:2px 4px;vertical-align:top">
