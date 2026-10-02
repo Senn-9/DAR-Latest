@@ -91,6 +91,13 @@ function getGrandTotal(items: ItemDataType[]): number {
   return items.reduce((sum, item) => sum + getItemTotal(item), 0);
 }
 
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function PREditablePreview({
   formData,
   setFormData,
@@ -228,7 +235,7 @@ function PREditablePreview({
                     <textarea value={item.unit_cost} onChange={e => updateItem(originalIndex, 'unit_cost', e.target.value)} onInput={autoResize} className={editableInputRightCls} style={{ width: "95%", minHeight: "16px" }} rows={1} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", position: "relative", verticalAlign: "top" }}>
-                    {total > 0 ? "₱" + total.toFixed(2) : ""}
+                    {total > 0 ? "₱" + formatMoney(total) : ""}
                     {items.length > 1 && (
                       <button type="button" onClick={() => removeItem(originalIndex)} className="absolute right-1 top-1 text-red-500 hover:text-red-700 text-[10px]" title="Remove row">×</button>
                     )}
@@ -253,7 +260,7 @@ function PREditablePreview({
               TOTAL
             </td>
             <td style={{ borderTop: "1px solid black", padding: "4px", textAlign: "right", fontSize: "9pt", fontWeight: "bold" }}>
-              {grandTotal > 0 ? "₱" + grandTotal.toFixed(2) : ""}
+              {grandTotal > 0 ? "₱" + formatMoney(grandTotal) : ""}
             </td>
           </tr>
           <tr style={{ height: "17px" }}>
@@ -525,7 +532,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
         created_at: new Date().toISOString(),
         status_id: 1,
         status: "Pending",
-        total_cost: Math.round(grandTotal),
+        total_cost: Number(grandTotal.toFixed(2)),
         division_id: currentUser?.division_id ?? null,
       };
 
@@ -549,7 +556,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
           description: stripHtml(item.description),
           quantity: item.quantity.trim() === "" ? null : parseFloat(item.quantity),
           unit_price: item.unit_cost.trim() === "" ? null : parseFloat(item.unit_cost),
-          subtotal: Math.round(getItemTotal(item)),
+          subtotal: Number(getItemTotal(item).toFixed(2)),
           // _key is excluded — not sent to DB
         }));
 
@@ -738,7 +745,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                               </div>
                               <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Total Cost</label>
-                                <input className={`${inputCls} bg-emerald-50 font-bold text-emerald-700`} value={getItemTotal(item).toFixed(2)} readOnly />
+                                <input className={`${inputCls} bg-emerald-50 font-bold text-emerald-700`} value={formatMoney(getItemTotal(item))} readOnly />
                               </div>
                             </div>
                           </div>
@@ -824,7 +831,7 @@ export default function PRModalComponent({ onSave }: PRModalComponentProps) {
                   {/* Grand Total */}
                   <div className="bg-emerald-700 text-white px-4 py-3 rounded-lg flex justify-between items-center font-bold">
                     <span>GRAND TOTAL</span>
-                    <span className="text-lg">₱{grandTotal.toFixed(2)}</span>
+                    <span className="text-lg">₱{formatMoney(grandTotal)}</span>
                   </div>
 
                   {/* Signatures */}
