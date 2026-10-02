@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RiCloseLine, RiPrinterLine, RiAddLine } from "react-icons/ri";
+import { RiCloseLine, RiPrinterLine, RiAddLine, RiSaveLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printBACReso } from "./BACRESOPRINT";
 
@@ -120,6 +120,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 	};
 	const [tableRows, setTableRows] = useState<TableRow[]>([]);
 	const [dateResolved, setDateResolved] = useState("");
+	const [savingDraft, setSavingDraft] = useState(false);
 
 	const getOrdinal = (n: number) => {
 		const s = ["th", "st", "nd", "rd"];
@@ -328,6 +329,47 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 					} else {
 						setDateResolved(formattedToday);
 					}
+
+					// #9: Load the last saved editable BAC Resolution copy, if one exists.
+					// The saved copy overrides the generated/default document values above,
+					// while the underlying PR and canvass records remain unchanged.
+					const { data: savedDraft, error: savedDraftError } = await supabase
+						.from("procurement_document_drafts")
+						.select("document_data")
+						.eq("pr_no", prNo)
+						.eq("document_type", "BAC_RESOLUTION")
+						.maybeSingle();
+
+					if (savedDraftError) {
+						console.warn("Could not load saved BAC Resolution copy:", savedDraftError);
+					}
+
+					if (isActive && savedDraft?.document_data) {
+						const draft = savedDraft.document_data as any;
+
+						if (draft.resoYear != null) setResoYear(String(draft.resoYear));
+						if (draft.resoSequence != null) setResoSequence(String(draft.resoSequence));
+						if (draft.alternativeMode != null) setAlternativeMode(String(draft.alternativeMode));
+						if (draft.procurementMethod != null) setProcurementMethod(String(draft.procurementMethod));
+
+						if (Array.isArray(draft.whereasClauses)) {
+							setWhereasClauses(draft.whereasClauses);
+						}
+
+						if (Array.isArray(draft.tableRows)) {
+							setTableRows(draft.tableRows);
+						}
+
+						if (draft.dateResolved != null) setDateResolved(String(draft.dateResolved));
+						if (draft.endUser != null) setEndUser(String(draft.endUser));
+
+						if (draft.bacChairperson != null) setBacChairperson(String(draft.bacChairperson));
+						if (draft.bacViceChairperson != null) setBacViceChairperson(String(draft.bacViceChairperson));
+						if (draft.bacMember1 != null) setBacMember1(String(draft.bacMember1));
+						if (draft.bacMember2 != null) setBacMember2(String(draft.bacMember2));
+						if (draft.bacMember3 != null) setBacMember3(String(draft.bacMember3));
+						if (draft.hope != null) setHope(String(draft.hope));
+					}
 				}
 			} catch (err) {
 				console.error("Error fetching PR data:", err);
@@ -359,6 +401,58 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 		};
 	}, [open, onClose]);
 
+	const handleSaveDraft = async () => {
+		if (!prNo) return;
+
+		setSavingDraft(true);
+
+		try {
+			const documentData = {
+				resoYear,
+				resoSequence,
+				alternativeMode,
+				procurementMethod,
+				whereasClauses,
+				tableRows,
+				dateResolved,
+				endUser,
+				bacChairperson,
+				bacViceChairperson,
+				bacMember1,
+				bacMember2,
+				bacMember3,
+				hope,
+			};
+
+			const { error } = await supabase
+				.from("procurement_document_drafts")
+				.upsert(
+					{
+						pr_no: prNo,
+						document_type: "BAC_RESOLUTION",
+						document_data: documentData,
+						updated_at: new Date().toISOString(),
+					},
+					{
+						onConflict: "pr_no,document_type",
+					}
+				);
+
+			if (error) throw error;
+
+			alert("BAC Resolution editable copy saved.");
+		} catch (error) {
+			console.error("Error saving BAC Resolution draft:", error);
+			alert(
+				error instanceof Error
+					? error.message
+					: "Could not save BAC Resolution editable copy."
+			);
+		} finally {
+			setSavingDraft(false);
+		}
+	};
+
 	const handlePrint = () => {
 		printBACReso(
 			{
@@ -386,6 +480,16 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 			<div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
 			<div className="absolute right-4 top-4 z-20 flex gap-2">
+				<button
+					type="button"
+					onClick={handleSaveDraft}
+					disabled={savingDraft}
+					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-1 ring-black/10 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+					aria-label="Save editable BAC Resolution"
+					title={savingDraft ? "Saving..." : "Save Editable Copy"}
+				>
+					<RiSaveLine size={20} />
+				</button>
 				<button
 					type="button"
 					onClick={handlePrint}
