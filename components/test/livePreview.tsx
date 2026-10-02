@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { RiCloseLine, RiPrinterLine, RiBold, RiAlignCenter, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine } from "react-icons/ri";
+import { RiCloseLine, RiPrinterLine, RiBold, RiAlignCenter, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiSaveLine } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printLivePreview } from "./printResolution";
 
@@ -153,6 +153,7 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 	const [isBoldActive, setIsBoldActive] = useState(false);
 
 	const [cells, setCells] = useState<Cells>(() => makeEmptyCells());
+	const [savingDraft, setSavingDraft] = useState(false);
 	const dealerCount = Math.max(3, supplierNames.length);
 
 	// Ensure cells matrix matches dealer count (4 fixed cols + dealer columns)
@@ -226,6 +227,50 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 			next[index] = value;
 			return next;
 		});
+	};
+
+	const handleSaveDraft = async () => {
+		if (!prNo) return;
+
+		setSavingDraft(true);
+
+		try {
+			const { error } = await supabase
+				.from("procurement_document_drafts")
+				.upsert(
+					{
+						pr_no: prNo,
+						document_type: "ABSTRACT_OF_AWARD",
+						document_data: {
+							meta: {
+								...meta,
+								prNo: meta.prNo || prNo,
+							},
+							cells,
+							supplierNames,
+							supplierTotals,
+							winningItems,
+						},
+						updated_at: new Date().toISOString(),
+					},
+					{
+						onConflict: "pr_no,document_type",
+					}
+				);
+
+			if (error) throw error;
+
+			alert("Award / Abstract editable copy saved.");
+		} catch (error) {
+			console.error("Error saving Award / Abstract draft:", error);
+			alert(
+				error instanceof Error
+					? error.message
+					: "Could not save Award / Abstract editable copy."
+			);
+		} finally {
+			setSavingDraft(false);
+		}
 	};
 
 	const handlePrint = () => {
@@ -317,78 +362,128 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 
 				if (!isActive) return;
 
-				setCells(() => {
-					const rows = Math.max(ROW_COUNT, itemsData.length);
-					const next = makeEmptyCells(rows, 4 + Math.max(3, uniqueSupplierNames.length));
-					const itemRowById = new Map<number, number>();
-					const itemQuantityById = new Map<number, number>();
+				const rows = Math.max(ROW_COUNT, itemsData.length);
+				const generatedCells = makeEmptyCells(rows, 4 + Math.max(3, uniqueSupplierNames.length));
+				const itemRowById = new Map<number, number>();
+				const itemQuantityById = new Map<number, number>();
 
-					for (let rowIndex = 0; rowIndex < itemsData.length && rowIndex < rows; rowIndex++) {
-						const item = itemsData[rowIndex];
-						itemRowById.set(item.id, rowIndex);
-						itemQuantityById.set(item.id, Number(item.quantity ?? 0));
-						next[rowIndex][0] = { value: item.stock_no ?? "", isCenter: true };
-						next[rowIndex][1] = { value: item.quantity != null ? String(item.quantity) : "", isCenter: true };
-						next[rowIndex][2] = { value: item.unit ?? "", isCenter: true };
-						next[rowIndex][3] = { value: item.description ?? "", isCenter: false };
-					}
+				for (let rowIndex = 0; rowIndex < itemsData.length && rowIndex < rows; rowIndex++) {
+					const item = itemsData[rowIndex];
+					itemRowById.set(item.id, rowIndex);
+					itemQuantityById.set(item.id, Number(item.quantity ?? 0));
+					generatedCells[rowIndex][0] = { value: item.stock_no ?? "", isCenter: true };
+					generatedCells[rowIndex][1] = { value: item.quantity != null ? String(item.quantity) : "", isCenter: true };
+					generatedCells[rowIndex][2] = { value: item.unit ?? "", isCenter: true };
+					generatedCells[rowIndex][3] = { value: item.description ?? "", isCenter: false };
+				}
 
-					for (const entry of canvassData) {
-						const supplierName = (entry.supplier_name || "").trim();
-						const itemId = entry.pr_items ?? null;
-						const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
-						if (itemRow == null) continue;
-						
-						const rawUnitPrice = entry.unit_price ?? "";
-						const supplierPrices = supplierPricesByItem.get(supplierName);
-						if (!supplierPrices) continue;
-						supplierPrices.set(itemId, rawUnitPrice);
-					}
+				for (const entry of canvassData) {
+					const supplierName = (entry.supplier_name || "").trim();
+					const itemId = entry.pr_items ?? null;
+					const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
+					if (itemRow == null) continue;
 
-					const totalsBySupplier: Record<string, number> = {};
-					for (const supplierName of uniqueSupplierNames) {
-						let total = 0;
-						for (const [itemId, rawValue] of supplierPricesByItem.get(supplierName) ?? []) {
-							const quantity = itemQuantityById.get(itemId) ?? 0;
-							const numericPrice = Number(rawValue);
-							const unitPrice = !Number.isNaN(numericPrice) ? numericPrice : 0;
-							total += unitPrice * quantity;
-						}
-						totalsBySupplier[supplierName] = total;
-					}
+					const rawUnitPrice = entry.unit_price ?? "";
+					const supplierPrices = supplierPricesByItem.get(supplierName);
+					if (!supplierPrices) continue;
+					supplierPrices.set(itemId, rawUnitPrice);
+				}
 
-					const sortedSupplierNames = [...uniqueSupplierNames].sort((left, right) => {
-						const leftTotal = totalsBySupplier[left] ?? 0;
-						const rightTotal = totalsBySupplier[right] ?? 0;
-						if (leftTotal !== rightTotal) return leftTotal - rightTotal;
-						return left.localeCompare(right);
-					});
-
-					const supplierIndexByName = new Map(sortedSupplierNames.map((name, index) => [name, index] as const));
-					for (const entry of canvassData) {
-						const supplierName = (entry.supplier_name || "").trim();
-						const supplierIndex = supplierIndexByName.get(supplierName);
-						const itemId = entry.pr_items ?? null;
-						const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
-						if (supplierIndex == null || itemRow == null) continue;
-
-						const rawValue = entry.unit_price ?? "";
+				const totalsBySupplier: Record<string, number> = {};
+				for (const supplierName of uniqueSupplierNames) {
+					let total = 0;
+					for (const [itemId, rawValue] of supplierPricesByItem.get(supplierName) ?? []) {
+						const quantity = itemQuantityById.get(itemId) ?? 0;
 						const numericPrice = Number(rawValue);
-						
-						if (!Number.isNaN(numericPrice) && rawValue !== "") {
-							next[itemRow][4 + supplierIndex] = { 
-								value: numericPrice > 0 ? formatMoney(numericPrice) : "", 
-								isCenter: true 
-							};
-						} else {
-							next[itemRow][4 + supplierIndex] = { value: String(rawValue), isCenter: true };
-						}
+						const unitPrice = !Number.isNaN(numericPrice) ? numericPrice : 0;
+						total += unitPrice * quantity;
+					}
+					totalsBySupplier[supplierName] = total;
+				}
+
+				const sortedSupplierNames = [...uniqueSupplierNames].sort((left, right) => {
+					const leftTotal = totalsBySupplier[left] ?? 0;
+					const rightTotal = totalsBySupplier[right] ?? 0;
+					if (leftTotal !== rightTotal) return leftTotal - rightTotal;
+					return left.localeCompare(right);
+				});
+
+				const supplierIndexByName = new Map(sortedSupplierNames.map((name, index) => [name, index] as const));
+				for (const entry of canvassData) {
+					const supplierName = (entry.supplier_name || "").trim();
+					const supplierIndex = supplierIndexByName.get(supplierName);
+					const itemId = entry.pr_items ?? null;
+					const itemRow = itemId != null ? itemRowById.get(itemId) : undefined;
+					if (supplierIndex == null || itemRow == null) continue;
+
+					const rawValue = entry.unit_price ?? "";
+					const numericPrice = Number(rawValue);
+
+					if (!Number.isNaN(numericPrice) && rawValue !== "") {
+						generatedCells[itemRow][4 + supplierIndex] = {
+							value: numericPrice > 0 ? formatMoney(numericPrice) : "",
+							isCenter: true,
+						};
+					} else {
+						generatedCells[itemRow][4 + supplierIndex] = {
+							value: String(rawValue),
+							isCenter: true,
+						};
+					}
+				}
+
+				if (!isActive) return;
+
+				// Default document is generated from the current PR / canvass records.
+				setSupplierNames(sortedSupplierNames);
+				setSupplierTotals(totalsBySupplier);
+				setCells(generatedCells);
+
+				// If an editable copy was previously saved, restore that exact copy.
+				const { data: savedDraft, error: savedDraftError } = await supabase
+					.from("procurement_document_drafts")
+					.select("document_data")
+					.eq("pr_no", prNo)
+					.eq("document_type", "ABSTRACT_OF_AWARD")
+					.maybeSingle();
+
+				if (savedDraftError) {
+					console.warn("Could not load saved Award / Abstract copy:", savedDraftError);
+				}
+
+				if (isActive && savedDraft?.document_data) {
+					const draft = savedDraft.document_data as {
+						meta?: Partial<typeof meta>;
+						cells?: Cells;
+						supplierNames?: string[];
+						supplierTotals?: Record<string, number>;
+						winningItems?: string[];
+					};
+
+					if (draft.meta) {
+						setMeta((m) => ({
+							...m,
+							...draft.meta,
+							prNo: draft.meta?.prNo || prNo,
+						}));
 					}
 
-					setSupplierNames(sortedSupplierNames);
-					setSupplierTotals(totalsBySupplier);
-					return next;
-				});
+					if (Array.isArray(draft.supplierNames)) {
+						setSupplierNames(draft.supplierNames);
+					}
+
+					if (draft.supplierTotals && typeof draft.supplierTotals === "object") {
+						setSupplierTotals(draft.supplierTotals);
+					}
+
+					if (Array.isArray(draft.winningItems)) {
+						setWinningItems(draft.winningItems);
+					}
+
+					if (Array.isArray(draft.cells) && draft.cells.length > 0) {
+						setCells(draft.cells);
+					}
+				}
 			} catch (err) {
 				console.error("Error fetching PR items:", err);
 			}
@@ -454,6 +549,16 @@ export default function LivePreview({ open, onClose, prNo = "" }: LivePreviewPro
 						</button>
 					</div>
 				)}
+				<button
+					type="button"
+					onClick={handleSaveDraft}
+					disabled={savingDraft}
+					className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-1 ring-black/10 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+					aria-label="Save editable Award / Abstract copy"
+					title={savingDraft ? "Saving..." : "Save Editable Copy"}
+				>
+					<RiSaveLine size={20} />
+				</button>
 				<button
 					type="button"
 					onClick={handlePrint}
