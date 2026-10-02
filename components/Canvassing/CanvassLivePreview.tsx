@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { RiCloseLine, RiPrinterLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiDraggable } from "react-icons/ri";
+import { RiCloseLine, RiPrinterLine, RiSaveLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiDraggable } from "react-icons/ri";
 import { createClient } from "@/utils/supabase/client";
 import { printRFQ } from "./printRFQ";
 
@@ -179,11 +179,13 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 		action: 60,
 	});
 	const [rowHeights, setRowHeights] = useState<{ [key: number]: number }>({});
+	const [savingDraft, setSavingDraft] = useState(false);
 	const [resizingColumn, setResizingColumn] = useState<string | null>(null);
 	const [resizingRow, setResizingRow] = useState<number | null>(null);
 	const [startX, setStartX] = useState(0);
 	const [startY, setStartY] = useState(0);
 	const tableRef = useRef<HTMLTableElement>(null);
+	const skipNextDeadlineRecalcRef = useRef(false);
 
 	const handleItemChange = (index: number, field: keyof ItemRow, value: string) => {
 		setItems((prev) => {
@@ -266,6 +268,54 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 			};
 		}
 	}, [resizingColumn, resizingRow, startX, startY]);
+
+	const handleSaveDraft = async () => {
+		if (!prNo) {
+			alert("Cannot save canvass: PR number is missing.");
+			return;
+		}
+
+		setSavingDraft(true);
+
+		try {
+			const documentData = {
+				meta: {
+					...meta,
+					prNo: meta.prNo || prNo,
+				},
+				items,
+				columnWidths,
+				rowHeights,
+			};
+
+			const { error } = await supabase
+				.from("procurement_document_drafts")
+				.upsert(
+					{
+						pr_no: prNo,
+						document_type: "CANVASS",
+						document_data: documentData,
+						updated_at: new Date().toISOString(),
+					},
+					{
+						onConflict: "pr_no,document_type",
+					}
+				);
+
+			if (error) throw error;
+
+			alert("Canvass editable copy saved.");
+		} catch (error) {
+			console.error("Error saving canvass draft:", error);
+			alert(
+				error instanceof Error
+					? error.message
+					: "Could not save canvass editable copy."
+			);
+		} finally {
+			setSavingDraft(false);
+		}
+	};
 
 	const handlePrint = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -357,6 +407,49 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 					}
 					setItems(finalItems);
 				}
+
+				// 4. Load the last saved editable Canvass copy, if one exists.
+				// Saved document state takes priority over the generated PR defaults.
+				const { data: savedDraft, error: savedDraftError } = await supabase
+					.from("procurement_document_drafts")
+					.select("document_data")
+					.eq("pr_no", prNo)
+					.eq("document_type", "CANVASS")
+					.maybeSingle();
+
+				if (savedDraftError) {
+					console.warn("Could not load saved canvass copy:", savedDraftError);
+				}
+
+				if (isActive && savedDraft?.document_data) {
+					const draft = savedDraft.document_data as any;
+
+					if (draft.meta && typeof draft.meta === "object") {
+						// Preserve an explicitly edited deadline from the saved copy
+						// instead of immediately recalculating it on load.
+						skipNextDeadlineRecalcRef.current = true;
+						setMeta((prev) => ({
+							...prev,
+							...draft.meta,
+							prNo: draft.meta.prNo || prNo,
+						}));
+					}
+
+					if (Array.isArray(draft.items)) {
+						setItems(draft.items as ItemRow[]);
+					}
+
+					if (draft.columnWidths && typeof draft.columnWidths === "object") {
+						setColumnWidths((prev) => ({
+							...prev,
+							...draft.columnWidths,
+						}));
+					}
+
+					if (draft.rowHeights && typeof draft.rowHeights === "object") {
+						setRowHeights(draft.rowHeights);
+					}
+				}
 			} catch (err) {
 				console.error("Error fetching PR items:", err);
 			}
@@ -371,6 +464,11 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 
 	useEffect(() => {
 		if (!open) return;
+
+		if (skipNextDeadlineRecalcRef.current) {
+			skipNextDeadlineRecalcRef.current = false;
+			return;
+		}
 
 		const deliveryDays = Number.parseInt(meta.deliveryDays, 10);
 		const normalizedDays = Number.isFinite(deliveryDays) && deliveryDays > 0 ? deliveryDays : 7;
@@ -413,6 +511,16 @@ export default function CanvassLivePreview({ open, onClose, prNo = "" }: Canvass
 			<div className="relative pointer-events-none min-h-screen flex items-center justify-center p-3 sm:p-6">
 				{/* Modal Actions (Fixed at top-right of the viewport) */}
 				<div className="fixed right-4 top-4 z-20 flex gap-2 pointer-events-auto">
+					<button
+						type="button"
+						onClick={handleSaveDraft}
+						disabled={savingDraft}
+						className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-1 ring-black/10 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+						aria-label="Save editable canvass"
+						title={savingDraft ? "Saving..." : "Save Editable Copy"}
+					>
+						<RiSaveLine size={20} />
+					</button>
 					<button
 						type="button"
 						onClick={handlePrint}
