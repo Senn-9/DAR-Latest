@@ -261,18 +261,65 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 					const today = new Date();
 					const formattedToday = formatDateToOrdinal(today.toISOString());
 					
-					// Update table with ALL found PRs
-					const rows = allRelatedPRs.map((pr, index) => ({
-						id: index,
-						prNo: pr.pr_no?.startsWith("PR-DRAFT-") ? "" : pr.pr_no || "",
-						date: pr.created_at
-							? new Date(pr.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
-							: "",
-						cost: pr.total_cost ? `₱${pr.total_cost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "",
-						endUser: pr.office_section || "",
-						mode: "SVP",
-					}));
-					
+					// Update table with ALL found PRs using the ACTUAL winning canvass amount.
+					// purchase_requests.total_cost remains the PR ABC and is never overwritten here.
+					const rows = await Promise.all(
+						allRelatedPRs.map(async (pr, index) => {
+							const { data: winningEntries, error: winningError } = await supabase
+								.from("canvass_entries")
+								.select("total_price, unit_price, quantity")
+								.eq("pr_no", pr.pr_no)
+								.eq("is_winning", true);
+
+							if (winningError) {
+								console.warn(
+									`Could not load winning canvass amount for ${pr.pr_no}:`,
+									winningError
+								);
+							}
+
+							const awardAmount = (winningEntries || []).reduce((sum, entry: any) => {
+								const savedTotal = Number(entry.total_price);
+
+								// Preferred source: the total_price saved during awarding.
+								if (Number.isFinite(savedTotal) && savedTotal > 0) {
+									return sum + savedTotal;
+								}
+
+								// Fallback for older canvass records where total_price is empty.
+								const quantity = Number(entry.quantity) || 0;
+								const unitPrice = Number(entry.unit_price) || 0;
+								return sum + quantity * unitPrice;
+							}, 0);
+
+							// If there is no winning entry yet, keep the existing ABC as a fallback
+							// so older/incomplete records do not show a blank amount.
+							const displayedAmount =
+								awardAmount > 0 ? awardAmount : Number(pr.total_cost) || 0;
+
+							return {
+								id: index,
+								prNo: pr.pr_no?.startsWith("PR-DRAFT-") ? "" : pr.pr_no || "",
+								date: pr.created_at
+									? new Date(pr.created_at).toLocaleDateString("en-PH", {
+										month: "long",
+										day: "numeric",
+										year: "numeric",
+									})
+									: "",
+								cost:
+									displayedAmount > 0
+										? `₱${displayedAmount.toLocaleString("en-PH", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}`
+										: "",
+								endUser: pr.office_section || "",
+								mode: "SVP",
+							};
+						})
+					);
+
 					setTableRows(rows);
 
 					// If the first row has a date from DB, use it for dateResolved, otherwise use today
@@ -519,7 +566,7 @@ export default function BACRESO({ open, onClose, prNo = "" }: BACRESOProps) {
 									<tr>
 										<th className="border border-black p-1 text-center w-[15%] font-bold" style={{ fontSize: "10px" }}>PR NUMBER</th>
 										<th className="border border-black p-1 text-center w-[15%] font-bold" style={{ fontSize: "10px" }}>DATE</th>
-										<th className="border border-black p-1 text-center w-[20%] font-bold" style={{ fontSize: "10px" }}>ESTIMATED COST (Php)</th>
+										<th className="border border-black p-1 text-center w-[20%] font-bold" style={{ fontSize: "10px" }}>AWARD AMOUNT (Php)</th>
 										<th className="border border-black p-1 text-center w-[25%] font-bold" style={{ fontSize: "10px" }}>END USER</th>
 										<th className="border border-black p-1 text-center w-[25%] font-bold" style={{ fontSize: "10px" }}>RECOMMENDED PROCUREMENT MODE</th>
 									</tr>
